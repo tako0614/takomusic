@@ -1,13 +1,29 @@
 // MIDI file generator for band tracks (SMF format)
 
-import type { SongIR, MidiTrack, NoteEvent, TempoEvent, TimeSigEvent, CCEvent, PitchBendEvent } from '../types/ir.js';
+import type {
+  SongIR,
+  MidiTrack,
+  NoteEvent,
+  TempoEvent,
+  TimeSigEvent,
+  CCEvent,
+  PitchBendEvent,
+  AftertouchEvent,
+  PolyAftertouchEvent,
+  NRPNEvent,
+  SysExEvent,
+} from '../types/ir.js';
 
 // MIDI event types
 const NOTE_OFF = 0x80;
 const NOTE_ON = 0x90;
+const POLY_AFTERTOUCH = 0xA0;
 const CONTROL_CHANGE = 0xB0;
 const PROGRAM_CHANGE = 0xC0;
+const CHANNEL_AFTERTOUCH = 0xD0;
 const PITCH_BEND = 0xE0;
+const SYSEX_START = 0xF0;
+const SYSEX_END = 0xF7;
 const META_EVENT = 0xFF;
 const META_TEMPO = 0x51;
 const META_TIME_SIG = 0x58;
@@ -103,26 +119,29 @@ function buildNoteTrack(track: MidiTrack, ir: SongIR): Buffer {
   // Program change at start
   events.push(buildProgramChange(0, track.channel, track.program));
 
-  // Build all MIDI events (notes, CC, pitch bend)
-  interface NoteOff {
-    tick: number;
-    key: number;
-    channel: number;
-  }
-
+  // Build all MIDI events (notes, CC, pitch bend, aftertouch, NRPN, SysEx)
   interface MidiEvent {
     tick: number;
-    type: 'noteOn' | 'noteOff' | 'cc' | 'pitchBend';
+    type: 'noteOn' | 'noteOff' | 'cc' | 'pitchBend' | 'aftertouch' | 'polyAftertouch' | 'nrpn' | 'sysex';
     key?: number;
     vel?: number;
     controller?: number;
     value?: number;
+    paramMSB?: number;
+    paramLSB?: number;
+    valueMSB?: number;
+    valueLSB?: number;
+    data?: number[];
   }
 
   const midiEvents: MidiEvent[] = [];
   const noteEvents = track.events.filter((e): e is NoteEvent => e.type === 'note');
   const ccEvents = track.events.filter((e): e is CCEvent => e.type === 'cc');
   const pitchBendEvents = track.events.filter((e): e is PitchBendEvent => e.type === 'pitchBend');
+  const aftertouchEvents = track.events.filter((e): e is AftertouchEvent => e.type === 'aftertouch');
+  const polyAftertouchEvents = track.events.filter((e): e is PolyAftertouchEvent => e.type === 'polyAftertouch');
+  const nrpnEvents = track.events.filter((e): e is NRPNEvent => e.type === 'nrpn');
+  const sysexEvents = track.events.filter((e): e is SysExEvent => e.type === 'sysex');
 
   // Add note on/off events
   for (const note of noteEvents) {
@@ -158,11 +177,51 @@ function buildNoteTrack(track: MidiTrack, ir: SongIR): Buffer {
     });
   }
 
+  // Add aftertouch events
+  for (const at of aftertouchEvents) {
+    midiEvents.push({
+      tick: at.tick,
+      type: 'aftertouch',
+      value: at.value,
+    });
+  }
+
+  // Add polyphonic aftertouch events
+  for (const pat of polyAftertouchEvents) {
+    midiEvents.push({
+      tick: pat.tick,
+      type: 'polyAftertouch',
+      key: pat.key,
+      value: pat.value,
+    });
+  }
+
+  // Add NRPN events
+  for (const nrpn of nrpnEvents) {
+    midiEvents.push({
+      tick: nrpn.tick,
+      type: 'nrpn',
+      paramMSB: nrpn.paramMSB,
+      paramLSB: nrpn.paramLSB,
+      valueMSB: nrpn.valueMSB,
+      valueLSB: nrpn.valueLSB,
+    });
+  }
+
+  // Add SysEx events
+  for (const sysex of sysexEvents) {
+    midiEvents.push({
+      tick: sysex.tick,
+      type: 'sysex',
+      data: sysex.data,
+    });
+  }
+
   // Sort all events by tick, then by type (noteOff before noteOn at same tick)
   midiEvents.sort((a, b) => {
     if (a.tick !== b.tick) return a.tick - b.tick;
-    // At same tick: noteOff < cc < pitchBend < noteOn
-    const typeOrder = { noteOff: 0, cc: 1, pitchBend: 2, noteOn: 3 };
+    // At same tick: noteOff < cc < aftertouch < pitchBend < nrpn < sysex < noteOn
+    const typeOrder = { noteOff: 0, cc: 1, aftertouch: 2, polyAftertouch: 3, pitchBend: 4, nrpn: 5, sysex: 6, noteOn: 7 };
     return typeOrder[a.type] - typeOrder[b.type];
   });
 
@@ -183,6 +242,18 @@ function buildNoteTrack(track: MidiTrack, ir: SongIR): Buffer {
         break;
       case 'pitchBend':
         events.push(buildPitchBendEvent(delta, track.channel, event.value!));
+        break;
+      case 'aftertouch':
+        events.push(buildAftertouch(delta, track.channel, event.value!));
+        break;
+      case 'polyAftertouch':
+        events.push(buildPolyAftertouch(delta, track.channel, event.key!, event.value!));
+        break;
+      case 'nrpn':
+        events.push(buildNRPN(delta, track.channel, event.paramMSB!, event.paramLSB!, event.valueMSB!, event.valueLSB));
+        break;
+      case 'sysex':
+        events.push(buildSysEx(delta, event.data!));
         break;
     }
   }
@@ -343,4 +414,72 @@ function encodeVarLen(value: number): Buffer {
 
   bytes.reverse();
   return Buffer.from(bytes);
+}
+
+function buildAftertouch(delta: number, channel: number, value: number): Buffer {
+  const deltaBytes = encodeVarLen(delta);
+  const data = Buffer.alloc(deltaBytes.length + 2);
+
+  deltaBytes.copy(data, 0);
+  data[deltaBytes.length] = CHANNEL_AFTERTOUCH | (channel & 0x0F);
+  data[deltaBytes.length + 1] = value & 0x7F;
+
+  return data;
+}
+
+function buildPolyAftertouch(delta: number, channel: number, key: number, value: number): Buffer {
+  const deltaBytes = encodeVarLen(delta);
+  const data = Buffer.alloc(deltaBytes.length + 3);
+
+  deltaBytes.copy(data, 0);
+  data[deltaBytes.length] = POLY_AFTERTOUCH | (channel & 0x0F);
+  data[deltaBytes.length + 1] = key & 0x7F;
+  data[deltaBytes.length + 2] = value & 0x7F;
+
+  return data;
+}
+
+function buildNRPN(delta: number, channel: number, paramMSB: number, paramLSB: number, valueMSB: number, valueLSB?: number): Buffer {
+  // Check if this is RPN (high bit set) or NRPN
+  const isRPN = (paramMSB & 0x80) !== 0;
+  const actualParamMSB = paramMSB & 0x7F;
+
+  // NRPN/RPN requires multiple CC messages:
+  // CC 99/101 = Param MSB, CC 98/100 = Param LSB, CC 6 = Value MSB, CC 38 = Value LSB (optional)
+  const paramMSBCC = isRPN ? 101 : 99;
+  const paramLSBCC = isRPN ? 100 : 98;
+
+  const events: Buffer[] = [];
+
+  // First event has the delta, rest have delta 0
+  events.push(buildControlChange(delta, channel, paramMSBCC, actualParamMSB));
+  events.push(buildControlChange(0, channel, paramLSBCC, paramLSB));
+  events.push(buildControlChange(0, channel, 6, valueMSB)); // Data Entry MSB
+
+  if (valueLSB !== undefined) {
+    events.push(buildControlChange(0, channel, 38, valueLSB)); // Data Entry LSB
+  }
+
+  return Buffer.concat(events);
+}
+
+function buildSysEx(delta: number, data: number[]): Buffer {
+  const deltaBytes = encodeVarLen(delta);
+  const lengthBytes = encodeVarLen(data.length + 1); // +1 for F7 end marker
+  const buffer = Buffer.alloc(deltaBytes.length + 1 + lengthBytes.length + data.length + 1);
+
+  let offset = 0;
+  deltaBytes.copy(buffer, offset);
+  offset += deltaBytes.length;
+
+  buffer[offset++] = SYSEX_START;
+  lengthBytes.copy(buffer, offset);
+  offset += lengthBytes.length;
+
+  for (const byte of data) {
+    buffer[offset++] = byte & 0x7F;
+  }
+  buffer[offset] = SYSEX_END;
+
+  return buffer;
 }

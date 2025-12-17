@@ -20,6 +20,10 @@ import type {
   TimeSigEvent,
   CCEvent,
   PitchBendEvent,
+  AftertouchEvent,
+  PolyAftertouchEvent,
+  NRPNEvent,
+  SysExEvent,
   Articulation,
   VocaloidParamEvent,
   VocaloidParamType,
@@ -28,6 +32,12 @@ import type {
   SlurEvent,
   CrescendoEvent,
   NotationEvents,
+  TupletInfo,
+  GraceNoteEvent,
+  FermataEvent,
+  RepeatEvent,
+  OttavaEvent,
+  NoteEventFull,
 } from '../types/ir.js';
 import {
   RuntimeValue,
@@ -72,6 +82,14 @@ interface TrackState {
   notation?: NotationEvents;
   // Current slur tracking
   currentSlurStart?: number;
+  // Extended notation state
+  currentTuplet?: TupletInfo;
+  currentVoice?: number;
+  currentOttava?: { startTick: number; shift: number };
+  graceNotes?: GraceNoteEvent[];
+  repeats?: RepeatEvent[];
+  fermatas?: FermataEvent[];
+  ottavas?: OttavaEvent[];
 }
 
 export class Interpreter {
@@ -575,6 +593,61 @@ export class Interpreter {
         return this.builtinDecrescendo(args, position);
       case 'tie':
         return this.builtinTie(args, position);
+      // Advanced MIDI functions
+      case 'aftertouch':
+        return this.builtinAftertouch(args, position);
+      case 'polyAftertouch':
+        return this.builtinPolyAftertouch(args, position);
+      case 'nrpn':
+        return this.builtinNRPN(args, position);
+      case 'rpn':
+        return this.builtinRPN(args, position);
+      case 'sysex':
+        return this.builtinSysEx(args, position);
+      // Extended notation functions
+      case 'tuplet':
+        return this.builtinTuplet(args, position);
+      case 'tupletEnd':
+        return this.builtinTupletEnd(args, position);
+      case 'triplet':
+        return this.builtinTriplet(args, position);
+      case 'grace':
+        return this.builtinGrace(args, position);
+      case 'acciaccatura':
+        return this.builtinAcciaccatura(args, position);
+      case 'appoggiatura':
+        return this.builtinAppoggiatura(args, position);
+      case 'fermata':
+        return this.builtinFermata(args, position);
+      case 'repeatStart':
+        return this.builtinRepeatStart(args, position);
+      case 'repeatEnd':
+        return this.builtinRepeatEnd(args, position);
+      case 'dc':
+        return this.builtinDC(args, position);
+      case 'ds':
+        return this.builtinDS(args, position);
+      case 'fine':
+        return this.builtinFine(args, position);
+      case 'coda':
+        return this.builtinCoda(args, position);
+      case 'segno':
+        return this.builtinSegno(args, position);
+      case 'toCoda':
+        return this.builtinToCoda(args, position);
+      case 'ottava':
+        return this.builtinOttava(args, position);
+      case 'ottavaEnd':
+        return this.builtinOttavaEnd(args, position);
+      case 'voice':
+        return this.builtinVoice(args, position);
+      // Vocaloid extended functions
+      case 'portamento':
+        return this.builtinPortamento(args, position);
+      case 'growl':
+        return this.builtinGrowl(args, position);
+      case 'xsynth':
+        return this.builtinXSynth(args, position);
     }
 
     // User-defined proc
@@ -1973,6 +2046,454 @@ export class Interpreter {
     }
 
     track.cursor += dur1Ticks + dur2Ticks;
+    return makeNull();
+  }
+
+  // Advanced MIDI functions
+  private builtinAftertouch(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'aftertouch() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const value = this.evaluate(args[0]);
+    const valueNum = toNumber(value);
+    if (valueNum < 0 || valueNum > 127) {
+      throw createError('E121', `Aftertouch value ${valueNum} out of range 0..127`, position, this.filePath);
+    }
+
+    const event: AftertouchEvent = {
+      type: 'aftertouch',
+      tick: track.cursor,
+      value: valueNum,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinPolyAftertouch(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'polyAftertouch() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const pitch = this.evaluate(args[0]);
+    const value = this.evaluate(args[1]);
+
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'polyAftertouch() first argument must be Pitch', position, this.filePath);
+    }
+    const valueNum = toNumber(value);
+    if (valueNum < 0 || valueNum > 127) {
+      throw createError('E121', `Aftertouch value ${valueNum} out of range 0..127`, position, this.filePath);
+    }
+
+    const event: PolyAftertouchEvent = {
+      type: 'polyAftertouch',
+      tick: track.cursor,
+      key: pitch.midi,
+      value: valueNum,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinNRPN(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'nrpn() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const paramMSB = toNumber(this.evaluate(args[0]));
+    const paramLSB = toNumber(this.evaluate(args[1]));
+    const valueMSB = toNumber(this.evaluate(args[2]));
+    const valueLSB = args.length > 3 ? toNumber(this.evaluate(args[3])) : undefined;
+
+    if (paramMSB < 0 || paramMSB > 127 || paramLSB < 0 || paramLSB > 127) {
+      throw createError('E120', 'NRPN param MSB/LSB must be 0..127', position, this.filePath);
+    }
+    if (valueMSB < 0 || valueMSB > 127 || (valueLSB !== undefined && (valueLSB < 0 || valueLSB > 127))) {
+      throw createError('E121', 'NRPN value MSB/LSB must be 0..127', position, this.filePath);
+    }
+
+    const event: NRPNEvent = {
+      type: 'nrpn',
+      tick: track.cursor,
+      paramMSB,
+      paramLSB,
+      valueMSB,
+      valueLSB,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinRPN(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'rpn() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const paramMSB = toNumber(this.evaluate(args[0]));
+    const paramLSB = toNumber(this.evaluate(args[1]));
+    const valueMSB = toNumber(this.evaluate(args[2]));
+    const valueLSB = args.length > 3 ? toNumber(this.evaluate(args[3])) : undefined;
+
+    if (paramMSB < 0 || paramMSB > 127 || paramLSB < 0 || paramLSB > 127) {
+      throw createError('E120', 'RPN param MSB/LSB must be 0..127', position, this.filePath);
+    }
+    if (valueMSB < 0 || valueMSB > 127 || (valueLSB !== undefined && (valueLSB < 0 || valueLSB > 127))) {
+      throw createError('E121', 'RPN value MSB/LSB must be 0..127', position, this.filePath);
+    }
+
+    // RPN uses CC 101/100 for param, NRPN uses CC 99/98
+    // We store as NRPN type but mark it differently for MIDI generator
+    const event: NRPNEvent = {
+      type: 'nrpn',
+      tick: track.cursor,
+      paramMSB: paramMSB | 0x80, // Mark as RPN by setting high bit
+      paramLSB,
+      valueMSB,
+      valueLSB,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinSysEx(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'sysex() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const dataArg = this.evaluate(args[0]);
+    if (dataArg.type !== 'array') {
+      throw new MFError('TYPE', 'sysex() expects array of bytes', position, this.filePath);
+    }
+
+    const data: number[] = [];
+    for (const elem of dataArg.elements) {
+      const byteVal = toNumber(elem);
+      if (byteVal < 0 || byteVal > 127) {
+        throw new MFError('RANGE', `SysEx byte ${byteVal} out of range 0..127`, position, this.filePath);
+      }
+      data.push(byteVal);
+    }
+
+    const event: SysExEvent = {
+      type: 'sysex',
+      tick: track.cursor,
+      data,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  // Extended notation functions
+  private builtinTuplet(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const actual = toNumber(this.evaluate(args[0]));
+    const normal = toNumber(this.evaluate(args[1]));
+
+    if (actual < 2 || normal < 1) {
+      throw new MFError('RANGE', 'tuplet() actual must be >= 2 and normal >= 1', position, this.filePath);
+    }
+
+    track.currentTuplet = { actual, normal };
+    return makeNull();
+  }
+
+  private builtinTupletEnd(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    track.currentTuplet = undefined;
+    return makeNull();
+  }
+
+  private builtinTriplet(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    // triplet creates a 3:2 tuplet context for the callback
+    track.currentTuplet = { actual: 3, normal: 2 };
+
+    // If there's a callback argument (proc), execute it
+    if (args.length > 0) {
+      const callback = args[0];
+      if (callback.kind === 'CallExpression') {
+        this.evaluateCall(callback.callee, callback.arguments, position);
+      }
+      track.currentTuplet = undefined;
+    }
+
+    return makeNull();
+  }
+
+  private builtinGrace(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pitch = this.evaluate(args[0]);
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'grace() pitch must be Pitch', position, this.filePath);
+    }
+
+    const slash = args.length > 1 ? isTruthy(this.evaluate(args[1])) : true;
+    const lyric = args.length > 2 ? this.evaluate(args[2]) : undefined;
+
+    if (!track.graceNotes) {
+      track.graceNotes = [];
+    }
+
+    const graceNote: GraceNoteEvent = {
+      type: 'graceNote',
+      tick: track.cursor,
+      key: pitch.midi,
+      slash,
+      lyric: lyric?.type === 'string' ? lyric.value : undefined,
+    };
+    track.graceNotes.push(graceNote);
+    return makeNull();
+  }
+
+  private builtinAcciaccatura(args: Expression[], position: any): RuntimeValue {
+    // Acciaccatura is grace note with slash
+    const pitch = this.evaluate(args[0]);
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'acciaccatura() pitch must be Pitch', position, this.filePath);
+    }
+    // Call grace with slash=true
+    return this.builtinGrace([args[0], { kind: 'BoolLiteral', value: true } as any], position);
+  }
+
+  private builtinAppoggiatura(args: Expression[], position: any): RuntimeValue {
+    // Appoggiatura is grace note without slash
+    const pitch = this.evaluate(args[0]);
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'appoggiatura() pitch must be Pitch', position, this.filePath);
+    }
+    // Call grace with slash=false
+    return this.builtinGrace([args[0], { kind: 'BoolLiteral', value: false } as any], position);
+  }
+
+  private builtinFermata(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (!track.fermatas) {
+      track.fermatas = [];
+    }
+
+    const shape = args.length > 0 ? this.evaluate(args[0]) : undefined;
+    const shapeStr = shape?.type === 'string' ? shape.value : 'normal';
+
+    const fermata: FermataEvent = {
+      type: 'fermata',
+      tick: track.cursor,
+      shape: shapeStr as 'normal' | 'angled' | 'square',
+    };
+    track.fermatas.push(fermata);
+    return makeNull();
+  }
+
+  // Repeat signs
+  private builtinRepeatStart(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'start' });
+    return makeNull();
+  }
+
+  private builtinRepeatEnd(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'end' });
+    return makeNull();
+  }
+
+  private builtinDC(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'dc' });
+    return makeNull();
+  }
+
+  private builtinDS(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'ds' });
+    return makeNull();
+  }
+
+  private builtinFine(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'fine' });
+    return makeNull();
+  }
+
+  private builtinCoda(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'coda' });
+    return makeNull();
+  }
+
+  private builtinSegno(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'segno' });
+    return makeNull();
+  }
+
+  private builtinToCoda(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (!track.repeats) track.repeats = [];
+    track.repeats.push({ type: 'repeat', tick: track.cursor, kind: 'toCoda' });
+    return makeNull();
+  }
+
+  // Ottava functions
+  private builtinOttava(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const shift = toNumber(this.evaluate(args[0]));
+    if (shift !== 8 && shift !== -8 && shift !== 15 && shift !== -15) {
+      throw new MFError('RANGE', 'ottava() shift must be 8, -8, 15, or -15', position, this.filePath);
+    }
+
+    track.currentOttava = { startTick: track.cursor, shift };
+    return makeNull();
+  }
+
+  private builtinOttavaEnd(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.currentOttava) {
+      if (!track.ottavas) track.ottavas = [];
+      track.ottavas.push({
+        type: 'ottava',
+        tick: track.currentOttava.startTick,
+        endTick: track.cursor,
+        shift: track.currentOttava.shift as 8 | -8 | 15 | -15,
+      });
+      track.currentOttava = undefined;
+    }
+    return makeNull();
+  }
+
+  // Voice function
+  private builtinVoice(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const voiceNum = toNumber(this.evaluate(args[0]));
+    if (voiceNum < 1 || voiceNum > 4) {
+      throw new MFError('RANGE', 'voice() must be 1-4', position, this.filePath);
+    }
+
+    track.currentVoice = voiceNum;
+    return makeNull();
+  }
+
+  // Vocaloid extended functions
+  private builtinPortamento(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'portamento() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const dur = this.evaluate(args[0]);
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'portamento() duration must be Dur', position, this.filePath);
+    }
+    const durTicks = this.durToTicks(dur, position);
+
+    // Initialize vocaloidParams if needed
+    if (!track.vocaloidParams) {
+      track.vocaloidParams = [];
+    }
+
+    // POR parameter controls portamento
+    track.vocaloidParams.push({
+      type: 'vocaloidParam',
+      param: 'POR',
+      tick: track.cursor,
+      value: Math.min(127, Math.floor(durTicks / 10)), // Convert to 0-127 range
+    });
+
+    return makeNull();
+  }
+
+  private builtinGrowl(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'growl() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const intensity = toNumber(this.evaluate(args[0]));
+    if (intensity < 0 || intensity > 127) {
+      throw new MFError('RANGE', 'growl() intensity must be 0-127', position, this.filePath);
+    }
+
+    // Initialize vocaloidParams if needed
+    if (!track.vocaloidParams) {
+      track.vocaloidParams = [];
+    }
+
+    // Growl can be approximated with BRE (breathiness) parameter
+    track.vocaloidParams.push({
+      type: 'vocaloidParam',
+      param: 'BRE',
+      tick: track.cursor,
+      value: intensity,
+    });
+
+    return makeNull();
+  }
+
+  private builtinXSynth(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'xsynth() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const voice1 = this.evaluate(args[0]);
+    const voice2 = this.evaluate(args[1]);
+    const balance = toNumber(this.evaluate(args[2]));
+
+    if (voice1.type !== 'string' || voice2.type !== 'string') {
+      throw new MFError('TYPE', 'xsynth() voices must be strings', position, this.filePath);
+    }
+    if (balance < 0 || balance > 127) {
+      throw new MFError('RANGE', 'xsynth() balance must be 0-127', position, this.filePath);
+    }
+
+    // Store cross-synthesis info in meta
+    track.meta.xsynth_voice1 = voice1.value;
+    track.meta.xsynth_voice2 = voice2.value;
+    track.meta.xsynth_balance = balance;
+
     return makeNull();
   }
 

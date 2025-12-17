@@ -7,6 +7,7 @@ import { fmtCommand } from './commands/fmt.js';
 import { checkCommand } from './commands/check.js';
 import { buildCommand } from './commands/build.js';
 import { renderCommand } from './commands/render.js';
+import { playCommand } from './commands/play.js';
 import { doctorCommand } from './commands/doctor.js';
 import { ExitCodes } from '../errors.js';
 
@@ -21,6 +22,7 @@ Commands:
   check [-p profile]  Check source for errors
   build [-p profile|all]  Build IR and profile-specific outputs
   render -p <profile|all>  Render audio using external tools
+  play [file.mf]    Live preview using FluidSynth
   doctor [-p profile]  Check external dependencies
 
 Options:
@@ -33,6 +35,7 @@ Examples:
   mf fmt src/
   mf check
   mf build -p cli
+  mf play src/main.mf
   mf render -p miku
 `;
 
@@ -68,6 +71,9 @@ async function main(): Promise<number> {
 
       case 'render':
         return await renderCommand(commandArgs);
+
+      case 'play':
+        return await playCommand(commandArgs);
 
       case 'doctor':
         return await doctorCommand(commandArgs);

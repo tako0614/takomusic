@@ -77,6 +77,35 @@ export interface PitchBendEvent {
   value: number; // -8192 to 8191
 }
 
+// Advanced MIDI event types
+export interface AftertouchEvent {
+  type: 'aftertouch';
+  tick: number;
+  value: number; // 0-127 (channel pressure)
+}
+
+export interface PolyAftertouchEvent {
+  type: 'polyAftertouch';
+  tick: number;
+  key: number;   // 0-127 (note number)
+  value: number; // 0-127 (pressure)
+}
+
+export interface NRPNEvent {
+  type: 'nrpn';
+  tick: number;
+  paramMSB: number; // 0-127
+  paramLSB: number; // 0-127
+  valueMSB: number; // 0-127
+  valueLSB?: number; // 0-127 (optional for 7-bit values)
+}
+
+export interface SysExEvent {
+  type: 'sysex';
+  tick: number;
+  data: number[]; // Raw SysEx bytes (excluding F0 and F7)
+}
+
 // Articulation types
 export type Articulation = 'staccato' | 'legato' | 'accent' | 'tenuto' | 'marcato';
 
@@ -135,4 +164,79 @@ export interface NotationEvents {
   dynamics: DynamicEvent[];
   slurs: SlurEvent[];
   crescendos: CrescendoEvent[];
+}
+
+// Extended notation types
+export interface TupletInfo {
+  actual: number;    // Actual number of notes (e.g., 3 for triplet)
+  normal: number;    // Normal number of notes (e.g., 2 for triplet)
+  type?: string;     // Note type (quarter, eighth, etc.)
+}
+
+export interface GraceNoteEvent {
+  type: 'graceNote';
+  tick: number;
+  key: number;
+  slash?: boolean;   // Acciaccatura (slashed) vs appoggiatura
+  lyric?: string;
+}
+
+export interface FermataEvent {
+  type: 'fermata';
+  tick: number;
+  shape?: 'normal' | 'angled' | 'square';
+}
+
+export interface RepeatEvent {
+  type: 'repeat';
+  tick: number;
+  kind: 'start' | 'end' | 'dc' | 'ds' | 'fine' | 'coda' | 'segno' | 'toCoda';
+}
+
+export interface OttavaEvent {
+  type: 'ottava';
+  tick: number;
+  endTick: number;
+  shift: 8 | -8 | 15 | -15;  // 8va, 8vb, 15ma, 15mb
+}
+
+export interface VoiceInfo {
+  voice: number;     // Voice number (1-4 typically)
+}
+
+// Extended note event with all notation
+export interface NoteEventFull extends NoteEvent {
+  slurStart?: boolean;
+  slurEnd?: boolean;
+  tieStart?: boolean;
+  tieEnd?: boolean;
+  dynamic?: DynamicMark;
+  tuplet?: TupletInfo;
+  graceNotes?: GraceNoteEvent[];
+  fermata?: boolean;
+  voice?: number;
+  ottavaShift?: number;
+}
+
+// Vocaloid extended parameters
+export interface VocaloidPortamentoEvent {
+  type: 'portamento';
+  tick: number;
+  duration: number;  // Portamento duration in ticks
+  mode?: 'linear' | 'curve';
+}
+
+export interface VocaloidGrowlEvent {
+  type: 'growl';
+  tick: number;
+  dur: number;
+  intensity: number; // 0-127
+}
+
+export interface VocaloidXSynthEvent {
+  type: 'xsynth';
+  tick: number;
+  voice1: string;    // Primary voice
+  voice2: string;    // Secondary voice
+  balance: number;   // 0-127 (0 = voice1, 127 = voice2)
 }

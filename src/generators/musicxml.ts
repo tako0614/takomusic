@@ -8,7 +8,13 @@ import type {
   TimeSigEvent,
   DynamicMark,
   NoteEventExtended,
+  NoteEventFull,
   Articulation,
+  TupletInfo,
+  GraceNoteEvent,
+  FermataEvent,
+  RepeatEvent,
+  OttavaEvent,
 } from '../types/ir.js';
 
 const NOTE_NAMES = ['C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'];
@@ -136,7 +142,7 @@ export function generateMusicXML(ir: SongIR): string {
 }
 
 function generateNote(note: NoteEvent, divisions: number): string {
-  const extNote = note as NoteEventExtended;
+  const extNote = note as NoteEventFull;
   const octave = Math.floor(note.key / 12) - 1;
   const pitchClass = note.key % 12;
   const step = NOTE_NAMES[pitchClass];
@@ -147,6 +153,13 @@ function generateNote(note: NoteEvent, divisions: number): string {
   // Add dynamic direction if present
   if (extNote.dynamic) {
     xml += generateDynamic(extNote.dynamic);
+  }
+
+  // Generate grace notes if present
+  if (extNote.graceNotes && extNote.graceNotes.length > 0) {
+    for (const grace of extNote.graceNotes) {
+      xml += generateGraceNote(grace);
+    }
   }
 
   xml += `      <note>
@@ -174,13 +187,28 @@ function generateNote(note: NoteEvent, divisions: number): string {
 `;
   }
 
+  // Add voice if specified
+  if (extNote.voice) {
+    xml += `        <voice>${extNote.voice}</voice>
+`;
+  }
+
   xml += `        <type>${getDurationType(note.dur, divisions)}</type>
 `;
 
-  // Add notations element for slurs, ties, articulations
+  // Add time modification for tuplets
+  if (extNote.tuplet) {
+    xml += `        <time-modification>
+          <actual-notes>${extNote.tuplet.actual}</actual-notes>
+          <normal-notes>${extNote.tuplet.normal}</normal-notes>
+        </time-modification>
+`;
+  }
+
+  // Add notations element for slurs, ties, articulations, tuplets, fermata
   const hasNotations = extNote.slurStart || extNote.slurEnd ||
     extNote.tieStart || extNote.tieEnd ||
-    note.articulation;
+    note.articulation || extNote.tuplet || extNote.fermata;
 
   if (hasNotations) {
     xml += `        <notations>
@@ -208,6 +236,18 @@ function generateNote(note: NoteEvent, divisions: number): string {
 `;
     }
 
+    // Tuplet notation
+    if (extNote.tuplet) {
+      xml += `          <tuplet type="start"/>
+`;
+    }
+
+    // Fermata notation
+    if (extNote.fermata) {
+      xml += `          <fermata/>
+`;
+    }
+
     // Articulations
     if (note.articulation) {
       xml += generateArticulation(note.articulation);
@@ -226,6 +266,36 @@ function generateNote(note: NoteEvent, divisions: number): string {
   }
 
   xml += `      </note>\n`;
+  return xml;
+}
+
+function generateGraceNote(grace: GraceNoteEvent): string {
+  const octave = Math.floor(grace.key / 12) - 1;
+  const pitchClass = grace.key % 12;
+  const step = NOTE_NAMES[pitchClass];
+  const alter = NOTE_ALTERS[pitchClass];
+
+  let xml = `      <note>
+        <grace${grace.slash ? ' slash="yes"' : ''}/>
+        <pitch>
+          <step>${step}</step>
+`;
+  if (alter !== 0) {
+    xml += `          <alter>${alter}</alter>\n`;
+  }
+  xml += `          <octave>${octave}</octave>
+        </pitch>
+        <type>eighth</type>
+`;
+  if (grace.lyric) {
+    xml += `        <lyric>
+          <syllabic>single</syllabic>
+          <text>${escapeXml(grace.lyric)}</text>
+        </lyric>
+`;
+  }
+  xml += `      </note>
+`;
   return xml;
 }
 
