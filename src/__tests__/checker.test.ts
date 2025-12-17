@@ -257,4 +257,84 @@ describe('Checker', () => {
     const errors = diagnostics.filter(d => d.severity === 'error');
     expect(errors.length).toBe(0);
   });
+
+  it('should detect E210 (vocal note missing lyric)', () => {
+    const source = `
+      export proc main() {
+        ppq(480);
+        timeSig(4, 4);
+        tempo(120);
+        track(vocal, v1, {}) {
+          note(C4, 1/4);
+        }
+      }
+    `;
+    const diagnostics = check(source);
+    expect(diagnostics.some(d => d.code === 'E210')).toBe(true);
+  });
+
+  it('should detect E210 (vocal note empty lyric)', () => {
+    const source = `
+      export proc main() {
+        ppq(480);
+        timeSig(4, 4);
+        tempo(120);
+        track(vocal, v1, {}) {
+          note(C4, 1/4, "");
+        }
+      }
+    `;
+    const diagnostics = check(source);
+    expect(diagnostics.some(d => d.code === 'E210')).toBe(true);
+  });
+
+  it('should detect E220 (drum in vocal track)', () => {
+    const source = `
+      export proc main() {
+        ppq(480);
+        timeSig(4, 4);
+        tempo(120);
+        track(vocal, v1, {}) {
+          drum(kick, 1/4);
+        }
+      }
+    `;
+    const diagnostics = check(source);
+    expect(diagnostics.some(d => d.code === 'E220')).toBe(true);
+  });
+
+  it('should detect E221 (chord in vocal track)', () => {
+    const source = `
+      export proc main() {
+        ppq(480);
+        timeSig(4, 4);
+        tempo(120);
+        track(vocal, v1, {}) {
+          chord([C4, E4, G4], 1/4);
+        }
+      }
+    `;
+    const diagnostics = check(source);
+    expect(diagnostics.some(d => d.code === 'E221')).toBe(true);
+  });
+
+  it('should pass valid vocal track', () => {
+    const source = `
+      export proc main() {
+        ppq(480);
+        timeSig(4, 4);
+        tempo(120);
+        track(vocal, v1, {}) {
+          at(1:1);
+          note(C4, 1/4, "あ");
+          note(D4, 1/4, "い");
+          rest(1/4);
+          note(E4, 1/4, "う");
+        }
+      }
+    `;
+    const diagnostics = check(source);
+    const errors = diagnostics.filter(d => d.severity === 'error');
+    expect(errors.length).toBe(0);
+  });
 });

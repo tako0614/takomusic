@@ -14,10 +14,23 @@ import { generateTempoMidi } from '../../generators/tempo-midi.js';
 export async function buildCommand(args: string[]): Promise<number> {
   // Parse arguments
   let profile: string = 'all';
+  let watchMode = false;
+
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
       profile = args[i + 1];
       i++;
+    } else if (args[i] === '-w' || args[i] === '--watch') {
+      watchMode = true;
+    } else if (args[i] === '-h' || args[i] === '--help') {
+      console.log(`Usage: mf build [options]
+
+Options:
+  -p, --profile <name>  Profile to build (cli, miku, or all)
+  -w, --watch           Watch for changes and rebuild
+  -h, --help            Show this help message
+`);
+      return ExitCodes.SUCCESS;
     }
   }
 

@@ -86,6 +86,7 @@ export function generateMusicXML(ir: SongIR): string {
             <per-minute>${tempo}</per-minute>
           </metronome>
         </direction-type>
+        <sound tempo="${tempo}"/>
       </direction>
 `;
     }

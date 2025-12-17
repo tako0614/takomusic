@@ -26,6 +26,8 @@ export class Checker {
   private hasGlobalCalls: boolean = false;
   private trackStarted: boolean = false;
   private tempoEventCount: number = 0;
+  private inVocalTrack: boolean = false;
+  private currentTrackKind: 'vocal' | 'midi' | null = null;
 
   constructor(baseDir: string) {
     this.baseDir = baseDir;
@@ -157,9 +159,14 @@ export class Checker {
 
       case 'TrackBlock':
         this.trackStarted = true;
+        // Track the kind of track for context-aware checks
+        this.currentTrackKind = stmt.trackKind as 'vocal' | 'midi';
+        this.inVocalTrack = stmt.trackKind === 'vocal';
         for (const s of stmt.body) {
           this.checkStatement(s, filePath);
         }
+        this.inVocalTrack = false;
+        this.currentTrackKind = null;
         break;
 
       case 'ExpressionStatement':
@@ -251,6 +258,31 @@ export class Checker {
               this.addWarning('W100', `Extremely short note duration: ${durArg.numerator}/${durArg.denominator}`, expr.position, filePath);
             }
           }
+        }
+
+        // E210: Vocal lyric validation
+        if (expr.callee === 'note' && this.inVocalTrack) {
+          // Vocal note() requires 3 arguments: pitch, duration, lyric
+          if (expr.arguments.length < 3) {
+            this.addError('E210', 'Vocal note() requires a lyric (3rd argument)', expr.position, filePath);
+          } else {
+            const lyricArg = expr.arguments[2];
+            if (lyricArg.kind === 'StringLiteral') {
+              if (lyricArg.value.trim() === '') {
+                this.addError('E210', 'Vocal note() lyric cannot be empty', expr.position, filePath);
+              }
+            }
+          }
+        }
+
+        // E220: drum() should not be used in vocal track
+        if (expr.callee === 'drum' && this.inVocalTrack) {
+          this.addError('E220', 'drum() cannot be used in vocal track', expr.position, filePath);
+        }
+
+        // E221: chord() should not be used in vocal track
+        if (expr.callee === 'chord' && this.inVocalTrack) {
+          this.addError('E221', 'chord() cannot be used in vocal track', expr.position, filePath);
         }
 
         // Check if it's a global function called after track

@@ -6,7 +6,19 @@
       "Bash(node dist/cli/index.js:*)",
       "Bash(node ../dist/cli/index.js build:*)",
       "Bash(npm test:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(where:*)",
+      "Bash(winget install:*)",
+      "Bash(scoop install:*)",
+      "Bash(curl:*)",
+      "Bash(unzip:*)",
+      "Bash(ls:*)",
+      "Bash(C:/tools/bin/fluidsynth.exe:*)",
+      "Bash(C:/tools/bin/ffmpeg.exe:*)",
+      "Bash(node:*)",
+      "WebSearch",
+      "Bash(cat:*)",
+      "Bash(wc -l \"C:/Users/shout/desktop/github/takomusic/src\"/**/*.ts)"
     ]
   }
 }

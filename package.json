@@ -1,7 +1,7 @@
 {
   "name": "musicforge",
-  "version": "0.1.0",
-  "description": "MusicForge - A domain-specific language for music composition",
+  "version": "1.0.0",
+  "description": "MusicForge - A domain-specific language for music composition that generates VSQX, MusicXML, and MIDI",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -11,6 +11,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest",
+    "test:run": "vitest --run",
     "lint": "eslint src",
     "mf": "node dist/cli/index.js"
   },
@@ -19,8 +20,15 @@
     "dsl",
     "composition",
     "midi",
-    "vsqx"
+    "vsqx",
+    "musicxml",
+    "vocaloid",
+    "neutrino"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/musicforge"
+  },
   "author": "",
   "license": "MIT",
   "devDependencies": {

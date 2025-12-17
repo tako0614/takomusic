@@ -2,24 +2,73 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
+
+// Default timeout: 10 minutes
+const DEFAULT_TIMEOUT = 10 * 60 * 1000;
+
+// Track active process for cancellation
+let activeProcess: ChildProcess | null = null;
+let cancelled = false;
+
+// Handle Ctrl+C gracefully
+function setupCancellationHandler(): void {
+  const handler = () => {
+    if (activeProcess) {
+      console.log('\nCancelling render...');
+      cancelled = true;
+      activeProcess.kill('SIGTERM');
+      // Force kill after 3 seconds if still running
+      setTimeout(() => {
+        if (activeProcess && !activeProcess.killed) {
+          activeProcess.kill('SIGKILL');
+        }
+      }, 3000);
+    }
+  };
+
+  process.on('SIGINT', handler);
+  process.on('SIGTERM', handler);
+}
 
 export async function renderCommand(args: string[]): Promise<number> {
   // Parse arguments
   let profile: string | undefined;
+  let timeout = DEFAULT_TIMEOUT;
+  let dryRun = false;
+
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
       profile = args[i + 1];
       i++;
+    } else if (args[i] === '-t' || args[i] === '--timeout') {
+      timeout = parseInt(args[i + 1], 10) * 1000; // Convert seconds to ms
+      i++;
+    } else if (args[i] === '--dry-run') {
+      dryRun = true;
+    } else if (args[i] === '-h' || args[i] === '--help') {
+      console.log(`Usage: mf render -p <profile|all> [options]
+
+Options:
+  -p, --profile <name>  Profile to render (cli, miku, or all)
+  -t, --timeout <sec>   Timeout per command in seconds (default: 600)
+  --dry-run             Show commands without executing
+  -h, --help            Show this help message
+`);
+      return ExitCodes.SUCCESS;
     }
   }
 
   if (!profile) {
     console.error('Profile required. Usage: mf render -p <profile|all>');
+    console.error('Use -h for more options.');
     return ExitCodes.STATIC_ERROR;
   }
+
+  // Setup cancellation handler
+  setupCancellationHandler();
 
   // Find config
   const configPath = findConfigPath(process.cwd());
@@ -37,30 +86,49 @@ export async function renderCommand(args: string[]): Promise<number> {
     fs.mkdirSync(outDir, { recursive: true });
   }
 
+  // Reset cancellation state
+  cancelled = false;
+
   try {
     if (profile === 'cli' || profile === 'all') {
-      const result = await renderCliProfile(config, baseDir);
+      const result = await renderCliProfile(config, baseDir, timeout, dryRun);
+      if (cancelled) {
+        console.log('Render cancelled by user.');
+        return ExitCodes.EXTERNAL_TOOL_ERROR;
+      }
       if (result !== ExitCodes.SUCCESS) {
         return result;
       }
     }
 
     if (profile === 'miku' || profile === 'all') {
-      const result = await renderMikuProfile(config, baseDir);
+      const result = await renderMikuProfile(config, baseDir, timeout, dryRun);
+      if (cancelled) {
+        console.log('Render cancelled by user.');
+        return ExitCodes.EXTERNAL_TOOL_ERROR;
+      }
       if (result !== ExitCodes.SUCCESS) {
         return result;
       }
     }
 
-    console.log('Render complete.');
+    if (dryRun) {
+      console.log('\n[Dry run complete - no commands were executed]');
+    } else {
+      console.log('Render complete.');
+    }
     return ExitCodes.SUCCESS;
   } catch (err) {
-    console.error(`Error: ${(err as Error).message}`);
+    if (cancelled) {
+      console.log('Render cancelled by user.');
+    } else {
+      console.error(`Error: ${(err as Error).message}`);
+    }
     return ExitCodes.EXTERNAL_TOOL_ERROR;
   }
 }
 
-async function renderCliProfile(config: any, baseDir: string): Promise<number> {
+async function renderCliProfile(config: any, baseDir: string, timeout: number, dryRun: boolean): Promise<number> {
   const cliConfig = config.profiles.cli;
   if (!cliConfig) {
     console.log('CLI profile not configured, skipping.');
@@ -68,7 +136,6 @@ async function renderCliProfile(config: any, baseDir: string): Promise<number> {
   }
 
   const outDir = path.join(baseDir, config.project.out);
-  const distDir = path.join(baseDir, config.project.dist);
 
   // Template variables
   const vars: Record<string, string> = {
@@ -81,44 +148,50 @@ async function renderCliProfile(config: any, baseDir: string): Promise<number> {
 
   // Run vocal command
   if (cliConfig.vocalCmd) {
-    console.log('Running vocal synthesis...');
-    const result = await runCommand(cliConfig.vocalCmd, vars);
+    console.log('[1/3] Running vocal synthesis...');
+    if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
+    const result = await runCommand(cliConfig.vocalCmd, vars, timeout, dryRun);
     if (result !== 0) {
+      if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
       console.error('Vocal synthesis failed.');
       return ExitCodes.EXTERNAL_TOOL_ERROR;
     }
   } else {
-    console.log('No vocal_cmd configured, skipping vocal synthesis.');
+    console.log('[1/3] No vocal_cmd configured, skipping vocal synthesis.');
   }
 
   // Run MIDI command
   if (cliConfig.midiCmd) {
-    console.log('Running MIDI synthesis...');
-    const result = await runCommand(cliConfig.midiCmd, vars);
+    console.log('[2/3] Running MIDI synthesis...');
+    if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
+    const result = await runCommand(cliConfig.midiCmd, vars, timeout, dryRun);
     if (result !== 0) {
+      if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
       console.error('MIDI synthesis failed.');
       return ExitCodes.EXTERNAL_TOOL_ERROR;
     }
   } else {
-    console.log('No midi_cmd configured, skipping MIDI synthesis.');
+    console.log('[2/3] No midi_cmd configured, skipping MIDI synthesis.');
   }
 
   // Run mix command
   if (cliConfig.mixCmd) {
-    console.log('Running mix...');
-    const result = await runCommand(cliConfig.mixCmd, vars);
+    console.log('[3/3] Running mix...');
+    if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
+    const result = await runCommand(cliConfig.mixCmd, vars, timeout, dryRun);
     if (result !== 0) {
+      if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
       console.error('Mix failed.');
       return ExitCodes.EXTERNAL_TOOL_ERROR;
     }
   } else {
-    console.log('No mix_cmd configured, skipping mix.');
+    console.log('[3/3] No mix_cmd configured, skipping mix.');
   }
 
   return ExitCodes.SUCCESS;
 }
 
-async function renderMikuProfile(config: any, baseDir: string): Promise<number> {
+async function renderMikuProfile(config: any, baseDir: string, timeout: number, dryRun: boolean): Promise<number> {
   const mikuConfig = config.profiles.miku;
   if (!mikuConfig) {
     console.log('Miku profile not configured, skipping.');
@@ -150,8 +223,10 @@ async function renderMikuProfile(config: any, baseDir: string): Promise<number> 
     };
 
     console.log('Running DAW render...');
-    const result = await runCommand([mikuConfig.dawExe, ...mikuConfig.dawArgs], vars);
+    if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
+    const result = await runCommand([mikuConfig.dawExe, ...mikuConfig.dawArgs], vars, timeout, dryRun);
     if (result !== 0) {
+      if (cancelled) return ExitCodes.EXTERNAL_TOOL_ERROR;
       console.error('DAW render failed.');
       return ExitCodes.EXTERNAL_TOOL_ERROR;
     }
@@ -160,7 +235,7 @@ async function renderMikuProfile(config: any, baseDir: string): Promise<number> 
   return ExitCodes.SUCCESS;
 }
 
-function runCommand(cmdTemplate: string[], vars: Record<string, string>): Promise<number> {
+function runCommand(cmdTemplate: string[], vars: Record<string, string>, timeout: number, dryRun: boolean): Promise<number> {
   return new Promise((resolve) => {
     // Replace template variables
     const cmd = cmdTemplate.map((arg) => {
@@ -173,16 +248,48 @@ function runCommand(cmdTemplate: string[], vars: Record<string, string>): Promis
 
     console.log(`  > ${cmd.join(' ')}`);
 
+    // Dry run mode - just show the command
+    if (dryRun) {
+      console.log('  [dry-run: skipped]');
+      resolve(0);
+      return;
+    }
+
+    const startTime = Date.now();
     const proc = spawn(cmd[0], cmd.slice(1), {
       stdio: 'inherit',
       shell: true,
     });
 
+    activeProcess = proc;
+
+    // Setup timeout
+    const timeoutId = setTimeout(() => {
+      if (!proc.killed) {
+        console.error(`\nCommand timed out after ${timeout / 1000} seconds.`);
+        proc.kill('SIGTERM');
+        // Force kill after 3 seconds
+        setTimeout(() => {
+          if (!proc.killed) {
+            proc.kill('SIGKILL');
+          }
+        }, 3000);
+      }
+    }, timeout);
+
     proc.on('close', (code) => {
+      clearTimeout(timeoutId);
+      activeProcess = null;
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      if (code === 0) {
+        console.log(`  [completed in ${elapsed}s]`);
+      }
       resolve(code ?? 0);
     });
 
     proc.on('error', (err) => {
+      clearTimeout(timeoutId);
+      activeProcess = null;
       console.error(`Failed to run command: ${err.message}`);
       resolve(1);
     });
