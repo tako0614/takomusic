@@ -240,3 +240,133 @@ export interface VocaloidXSynthEvent {
   voice2: string;    // Secondary voice
   balance: number;   // 0-127 (0 = voice1, 127 = voice2)
 }
+
+// Extended notation: Grand Staff
+export interface GrandStaffInfo {
+  upperClef: 'treble' | 'alto' | 'tenor' | 'bass';
+  lowerClef: 'treble' | 'alto' | 'tenor' | 'bass';
+  splitPoint?: number; // MIDI note number for auto-split
+}
+
+// Extended notation: Tablature
+export interface TablatureInfo {
+  strings: number;           // Number of strings (4-8)
+  tuning: number[];         // MIDI note numbers for each string (low to high)
+  instrument: 'guitar' | 'bass' | 'ukulele' | 'custom';
+}
+
+export interface TabNoteEvent extends NoteEvent {
+  string: number;           // String number (1-based)
+  fret: number;            // Fret number
+  technique?: TabTechnique;
+}
+
+export type TabTechnique =
+  | 'hammer-on' | 'pull-off' | 'slide-up' | 'slide-down'
+  | 'bend' | 'release' | 'vibrato' | 'tap' | 'harmonic' | 'palm-mute';
+
+// Extended notation: Chord Symbols
+export interface ChordSymbolEvent {
+  type: 'chordSymbol';
+  tick: number;
+  root: string;           // C, D, E, F, G, A, B
+  quality: ChordQuality;
+  bass?: string;          // For slash chords (e.g., C/E)
+  extensions?: string[];  // 7, 9, 11, 13, etc.
+}
+
+export type ChordQuality =
+  | 'major' | 'minor' | 'dim' | 'aug'
+  | 'maj7' | 'min7' | '7' | 'dim7' | 'min7b5' | 'aug7'
+  | 'sus2' | 'sus4' | 'add9' | '6' | 'min6';
+
+// Extended notation: Figured Bass
+export interface FiguredBassEvent {
+  type: 'figuredBass';
+  tick: number;
+  figures: string[];      // e.g., ['6', '4', '3']
+}
+
+// Markers and Cue Points
+export interface MarkerEvent {
+  type: 'marker';
+  tick: number;
+  name: string;
+  color?: string;
+}
+
+export interface CuePointEvent {
+  type: 'cuePoint';
+  tick: number;
+  name: string;
+  action?: 'start' | 'stop' | 'loop';
+}
+
+// Pattern Sequencer
+export interface Pattern {
+  id: string;
+  name: string;
+  length: number;         // Length in ticks
+  events: TrackEvent[];
+}
+
+export interface PatternInstance {
+  patternId: string;
+  tick: number;
+  repetitions?: number;
+}
+
+// Audio Import
+export interface AudioClipEvent {
+  type: 'audioClip';
+  tick: number;
+  filePath: string;
+  duration: number;       // Duration in ticks
+  gain?: number;          // 0.0 - 1.0
+  pan?: number;           // -1.0 to 1.0
+  fadeIn?: number;        // Fade in duration in ticks
+  fadeOut?: number;       // Fade out duration in ticks
+}
+
+// Audio Effects
+export interface AudioEffect {
+  type: 'effect';
+  effectType: EffectType;
+  params: Record<string, number>;
+  bypass?: boolean;
+}
+
+export type EffectType =
+  | 'reverb' | 'delay' | 'chorus' | 'flanger' | 'phaser'
+  | 'eq' | 'compressor' | 'limiter' | 'distortion' | 'filter';
+
+// Extended Track with new features
+export interface ExtendedMidiTrack extends MidiTrack {
+  grandStaff?: GrandStaffInfo;
+  tablature?: TablatureInfo;
+  chordSymbols?: ChordSymbolEvent[];
+  figuredBass?: FiguredBassEvent[];
+  markers?: MarkerEvent[];
+  patterns?: PatternInstance[];
+  audioClips?: AudioClipEvent[];
+  effects?: AudioEffect[];
+}
+
+// Song-level additions
+export interface SongIRExtended extends SongIR {
+  markers?: MarkerEvent[];
+  cuePoints?: CuePointEvent[];
+  patterns?: Pattern[];
+  audioTracks?: AudioTrack[];
+}
+
+export interface AudioTrack {
+  id: string;
+  name: string;
+  clips: AudioClipEvent[];
+  effects?: AudioEffect[];
+  volume: number;
+  pan: number;
+  mute?: boolean;
+  solo?: boolean;
+}
