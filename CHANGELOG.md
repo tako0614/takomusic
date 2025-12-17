@@ -2,6 +2,122 @@
 
 All notable changes to TakoMusic will be documented in this file.
 
+## [1.2.0] - 2024-12-18
+
+### Added
+
+- **Advanced MIDI Events**
+  - `cc(controller, value)` - MIDI Control Change messages
+  - `pitchBend(value)` - Pitch bend (-8192 to 8191)
+  - `aftertouch(value)` - Channel aftertouch (pressure)
+  - `polyAftertouch(key, value)` - Polyphonic aftertouch
+  - `nrpn(paramMSB, paramLSB, valueMSB, valueLSB)` - NRPN messages
+  - `rpn(paramMSB, paramLSB, valueMSB, valueLSB)` - RPN messages
+  - `sysex(bytes...)` - System Exclusive messages
+
+- **Articulations**
+  - `staccato()`, `legato()`, `accent()`, `tenuto()`, `marcato()`
+
+- **Dynamics**
+  - `ppp()`, `pp()`, `p()`, `mp()`, `mf()`, `f()`, `ff()`, `fff()`, `sfz()`, `fp()`
+  - `cresc(endTick)`, `decresc(endTick)` - Hairpin dynamics
+
+- **Tempo & Automation**
+  - `tempoCurve(targetBpm, duration)` - Gradual tempo changes
+  - `automateCC(controller, startVal, endVal, duration)` - CC automation
+  - `automatePB(startVal, endVal, duration)` - Pitch bend automation
+
+- **Timing Expressions**
+  - `swing(amount)` - Swing feel (0.5 = straight, 0.67 = triplet swing)
+  - `humanize(timing, velocity)` - Humanization
+  - `quantize(grid)` - Quantization
+  - `groove(template)` - Groove templates
+
+- **Ornaments**
+  - `trill(interval, speed)`, `mordent(upper)`, `turn()`, `tremolo(speed)`
+  - `glissando(targetPitch, duration)`, `portamento(targetPitch, duration)`
+  - `arpeggio(direction, speed)`
+
+- **Music Theory Helpers**
+  - `transpose(semitones, callback)` - Transpose a section
+  - `invert(axisPitch, callback)` - Melodic inversion
+  - `retrograde(callback)` - Reverse notes
+  - `augment(factor, callback)`, `diminish(factor, callback)` - Time scaling
+
+- **Slurs and Ties**
+  - `slurStart()`, `slurEnd()` - Slur markings
+  - `tieStart()`, `tieEnd()` - Tie markings
+
+- **Vocaloid Parameters**
+  - `vocaloidParam(param, value)` - Set Vocaloid parameters (DYN, BRE, BRI, CLE, GEN, POR, OPE)
+  - `vibrato(depth, rate, delay)` - Vocaloid vibrato
+  - `portamento(duration, mode)` - Portamento control
+  - `growl(duration, intensity)` - Growl effect
+  - `xsynth(voice1, voice2, balance)` - Cross-synthesis
+
+- **Extended Notation**
+  - `tuplet(actual, normal, type, callback)` - Tuplets
+  - `triplet(callback)` - Shorthand for triplets
+  - `grace(pitch, slash)` - Grace notes
+  - `fermata(shape)` - Fermata markings
+  - `ottava(shift, callback)` - Ottava lines (8va, 8vb, 15ma, 15mb)
+  - `voice(number)` - Multiple voices per staff
+  - `repeatStart()`, `repeatEnd()` - Repeat barlines
+  - `dc()`, `ds()`, `fine()`, `coda()`, `segno()`, `toCoda()` - Navigation
+
+- **Grand Staff & Tablature**
+  - `grandStaff(upperClef, lowerClef, splitPoint)` - Piano grand staff
+  - `tablature(strings, tuning, instrument)` - Guitar/bass tablature
+  - `tabNote(string, fret, dur, technique)` - Tab notation
+
+- **Chord Symbols & Figured Bass**
+  - `chordSymbol(root, quality, bass, extensions...)` - Lead sheet chords
+  - `figuredBass(figures...)` - Baroque figured bass
+
+- **Markers & Cue Points**
+  - `marker(name, color)` - Add markers
+  - `cuePoint(name, action)` - Cue points (start/stop/loop)
+
+- **Pattern Sequencer**
+  - `pattern(id, length, callback)` - Define reusable patterns
+  - `usePattern(id, repetitions)` - Use patterns
+
+- **Audio Features**
+  - `audioClip(file, duration, gain, pan)` - Import audio clips
+  - `effect(type, params...)` - Add effects
+  - `reverb(room, mix)`, `delay(time, feedback, mix)`
+  - `eq(lowGain, midGain, highGain)`, `compressor(threshold, ratio, attack, release)`
+
+- **New CLI Commands**
+  - `mf play [file]` - Live preview using FluidSynth
+    - `-s, --soundfont` - Specify SoundFont
+    - `-l, --loop` - Loop playback
+  - `mf import <file>` - Import MusicXML/MIDI to MFS
+    - `-f, --format` - Specify format (musicxml, midi, auto)
+    - `-o, --output` - Output file path
+  - `mf record` - Record MIDI input from keyboard
+    - `-t, --tempo` - Recording tempo
+    - `-q, --quantize` - Quantize notes (4n, 8n, 16n, off)
+    - `-d, --device` - MIDI input device
+    - `-l, --list` - List MIDI devices
+
+- **Project Templates**
+  - `mf init -t <template>` - Initialize with template
+  - Available templates: `default`, `piano`, `orchestral`, `edm`, `chiptune`, `jazz`, `vocaloid`, `minimal`
+  - `mf init --list` - List available templates
+
+- **MusicXML Import**
+  - Automatic format detection
+  - Preserves tempo, time signature, key signature
+  - Converts notes, rests, chords
+  - Handles articulations and dynamics
+  - Generates clean MFS code
+
+### Changed
+
+- `mf init` now supports `-t, --template` option
+- Help messages updated with new commands
+
 ## [1.1.0] - 2024-12-17
 
 ### Added
