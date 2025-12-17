@@ -13,7 +13,7 @@ export const translations = {
       subtitleLine2: 'VSQX、MusicXML、MIDIに一度の記述で出力',
       seeExample: '例を見る',
       version: 'v1.1.0',
-      license: 'MITライセンス',
+      license: 'AGPL-3.0',
       copied: 'コピー済み',
     },
     // Features
@@ -71,7 +71,7 @@ export const translations = {
     // Footer
     footer: {
       madeWith: '音楽とコードへの愛を込めて作りました',
-      copyright: 'MITライセンス',
+      copyright: 'AGPL-3.0ライセンス',
     },
   },
   en: {
@@ -88,7 +88,7 @@ export const translations = {
       subtitleLine2: 'Write once, export to VSQX, MusicXML, and MIDI.',
       seeExample: 'See Example',
       version: 'v1.1.0',
-      license: 'MIT License',
+      license: 'AGPL-3.0',
       copied: 'Copied',
     },
     // Features
@@ -146,7 +146,7 @@ export const translations = {
     // Footer
     footer: {
       madeWith: 'Made with love for music and code.',
-      copyright: 'MIT License',
+      copyright: 'AGPL-3.0 License',
     },
   },
 } as const

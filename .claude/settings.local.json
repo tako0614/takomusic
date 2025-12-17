@@ -21,7 +21,10 @@
       "Bash(wc -l \"C:/Users/shout/desktop/github/takomusic/src\"/**/*.ts)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(npx wrangler pages project create takomusic --production-branch=main)",
+      "Bash(npx wrangler pages deploy:*)"
     ]
   }
 }
