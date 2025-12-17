@@ -1,4 +1,4 @@
-// MusicForge - Music composition with MFS language
+// TakoMusic - Music composition with MFS language
 
 export { Lexer } from './lexer/index.js';
 export { Parser } from './parser/index.js';

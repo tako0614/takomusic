@@ -1,7 +1,7 @@
 {
-  "name": "musicforge",
+  "name": "takomusic",
   "version": "1.1.0",
-  "description": "MusicForge - A domain-specific language for music composition that generates VSQX, MusicXML, and MIDI",
+  "description": "TakoMusic - A domain-specific language for music composition that generates VSQX, MusicXML, and MIDI",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -27,7 +27,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/musicforge"
+    "url": "https://github.com/user/takomusic"
   },
   "author": "",
   "license": "MIT",

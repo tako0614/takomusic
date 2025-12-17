@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to MusicForge will be documented in this file.
+All notable changes to TakoMusic will be documented in this file.
 
 ## [1.1.0] - 2024-12-17
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// MusicForge CLI entry point
+// TakoMusic CLI entry point
 
 import { parseArgs } from 'util';
 import { initCommand } from './commands/init.js';
@@ -11,12 +11,12 @@ import { doctorCommand } from './commands/doctor.js';
 import { ExitCodes } from '../errors.js';
 
 const HELP = `
-MusicForge v0.1 - Music composition with MFS language
+TakoMusic v1.1 - Music composition with MFS language
 
 Usage: mf <command> [options]
 
 Commands:
-  init              Initialize a new MusicForge project
+  init              Initialize a new TakoMusic project
   fmt [path...]     Format MFS source files
   check [-p profile]  Check source for errors
   build [-p profile|all]  Build IR and profile-specific outputs
@@ -45,7 +45,7 @@ async function main(): Promise<number> {
   }
 
   if (args[0] === '-v' || args[0] === '--version') {
-    console.log('MusicForge v0.1.0');
+    console.log('TakoMusic v1.1.0');
     return ExitCodes.SUCCESS;
   }
 

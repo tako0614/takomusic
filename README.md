@@ -1,4 +1,4 @@
-# MusicForge
+# TakoMusic
 
 A domain-specific language (DSL) for music composition that generates VSQX, MusicXML, and MIDI files.
 

@@ -5,7 +5,7 @@ import * as path from 'path';
 import { generateDefaultConfig } from '../../config/index.js';
 import { ExitCodes } from '../../errors.js';
 
-const MAIN_MF_TEMPLATE = `// MusicForge entry point
+const MAIN_MF_TEMPLATE = `// TakoMusic entry point
 
 export proc main() {
   // Project settings
@@ -70,7 +70,7 @@ export async function initCommand(args: string[]): Promise<number> {
   if (!fs.existsSync(gitignorePath)) {
     fs.writeFileSync(
       gitignorePath,
-      `# MusicForge outputs
+      `# TakoMusic outputs
 dist/
 out/
 
@@ -87,7 +87,7 @@ Thumbs.db
     console.log('Created: .gitignore');
   }
 
-  console.log('\nMusicForge project initialized!');
+  console.log('\nTakoMusic project initialized!');
   console.log('Run "mf build" to compile, "mf render -p cli" to render.');
 
   return ExitCodes.SUCCESS;

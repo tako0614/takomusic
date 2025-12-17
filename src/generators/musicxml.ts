@@ -49,7 +49,7 @@ export function generateMusicXML(ir: SongIR): string {
   </work>
   <identification>
     <encoding>
-      <software>MusicForge v0.1</software>
+      <software>TakoMusic v1.1</software>
     </encoding>
   </identification>
   <part-list>

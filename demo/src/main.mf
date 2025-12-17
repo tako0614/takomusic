@@ -1,5 +1,5 @@
 // 「星空のメロディー」
-// MusicForge Demo Song
+// TakoMusic Demo Song
 
 import { BEAT_8, FILL_1, INTRO_BEAT, OUTRO_BEAT } from "./phrases/drums.mf";
 import { BASS_C, BASS_G, BASS_Am, BASS_F, BASS_INTRO } from "./phrases/bass.mf";
