@@ -1,11 +1,13 @@
 // MIDI file generator for band tracks (SMF format)
 
-import type { SongIR, MidiTrack, NoteEvent, TempoEvent, TimeSigEvent } from '../types/ir.js';
+import type { SongIR, MidiTrack, NoteEvent, TempoEvent, TimeSigEvent, CCEvent, PitchBendEvent } from '../types/ir.js';
 
 // MIDI event types
 const NOTE_OFF = 0x80;
 const NOTE_ON = 0x90;
+const CONTROL_CHANGE = 0xB0;
 const PROGRAM_CHANGE = 0xC0;
+const PITCH_BEND = 0xE0;
 const META_EVENT = 0xFF;
 const META_TEMPO = 0x51;
 const META_TIME_SIG = 0x58;
@@ -101,50 +103,88 @@ function buildNoteTrack(track: MidiTrack, ir: SongIR): Buffer {
   // Program change at start
   events.push(buildProgramChange(0, track.channel, track.program));
 
-  // Build note on/off events
+  // Build all MIDI events (notes, CC, pitch bend)
   interface NoteOff {
     tick: number;
     key: number;
     channel: number;
   }
 
-  const noteOffs: NoteOff[] = [];
-  const noteEvents = track.events.filter((e): e is NoteEvent => e.type === 'note');
-
-  // Sort notes by tick
-  noteEvents.sort((a, b) => a.tick - b.tick);
-
-  // Process notes
-  for (const note of noteEvents) {
-    // Insert any pending note offs before this note
-    while (noteOffs.length > 0 && noteOffs[0].tick <= note.tick) {
-      const off = noteOffs.shift()!;
-      const delta = off.tick - lastTick;
-      events.push(buildNoteOff(delta, off.channel, off.key));
-      lastTick = off.tick;
-    }
-
-    // Note on
-    const delta = note.tick - lastTick;
-    const vel = note.vel ?? track.defaultVel;
-    events.push(buildNoteOn(delta, track.channel, note.key, vel));
-    lastTick = note.tick;
-
-    // Schedule note off
-    noteOffs.push({
-      tick: note.tick + note.dur,
-      key: note.key,
-      channel: track.channel,
-    });
-    noteOffs.sort((a, b) => a.tick - b.tick);
+  interface MidiEvent {
+    tick: number;
+    type: 'noteOn' | 'noteOff' | 'cc' | 'pitchBend';
+    key?: number;
+    vel?: number;
+    controller?: number;
+    value?: number;
   }
 
-  // Process remaining note offs
-  while (noteOffs.length > 0) {
-    const off = noteOffs.shift()!;
-    const delta = off.tick - lastTick;
-    events.push(buildNoteOff(delta, off.channel, off.key));
-    lastTick = off.tick;
+  const midiEvents: MidiEvent[] = [];
+  const noteEvents = track.events.filter((e): e is NoteEvent => e.type === 'note');
+  const ccEvents = track.events.filter((e): e is CCEvent => e.type === 'cc');
+  const pitchBendEvents = track.events.filter((e): e is PitchBendEvent => e.type === 'pitchBend');
+
+  // Add note on/off events
+  for (const note of noteEvents) {
+    midiEvents.push({
+      tick: note.tick,
+      type: 'noteOn',
+      key: note.key,
+      vel: note.vel ?? track.defaultVel,
+    });
+    midiEvents.push({
+      tick: note.tick + note.dur,
+      type: 'noteOff',
+      key: note.key,
+    });
+  }
+
+  // Add CC events
+  for (const cc of ccEvents) {
+    midiEvents.push({
+      tick: cc.tick,
+      type: 'cc',
+      controller: cc.controller,
+      value: cc.value,
+    });
+  }
+
+  // Add pitch bend events
+  for (const pb of pitchBendEvents) {
+    midiEvents.push({
+      tick: pb.tick,
+      type: 'pitchBend',
+      value: pb.value,
+    });
+  }
+
+  // Sort all events by tick, then by type (noteOff before noteOn at same tick)
+  midiEvents.sort((a, b) => {
+    if (a.tick !== b.tick) return a.tick - b.tick;
+    // At same tick: noteOff < cc < pitchBend < noteOn
+    const typeOrder = { noteOff: 0, cc: 1, pitchBend: 2, noteOn: 3 };
+    return typeOrder[a.type] - typeOrder[b.type];
+  });
+
+  // Process all events
+  for (const event of midiEvents) {
+    const delta = event.tick - lastTick;
+    lastTick = event.tick;
+
+    switch (event.type) {
+      case 'noteOn':
+        events.push(buildNoteOn(delta, track.channel, event.key!, event.vel!));
+        break;
+      case 'noteOff':
+        events.push(buildNoteOff(delta, track.channel, event.key!));
+        break;
+      case 'cc':
+        events.push(buildControlChange(delta, track.channel, event.controller!, event.value!));
+        break;
+      case 'pitchBend':
+        events.push(buildPitchBendEvent(delta, track.channel, event.value!));
+        break;
+    }
   }
 
   // End of track
@@ -256,6 +296,35 @@ function buildEndOfTrack(delta: number): Buffer {
   data[deltaBytes.length] = META_EVENT;
   data[deltaBytes.length + 1] = META_END_TRACK;
   data[deltaBytes.length + 2] = 0; // length
+
+  return data;
+}
+
+function buildControlChange(delta: number, channel: number, controller: number, value: number): Buffer {
+  const deltaBytes = encodeVarLen(delta);
+  const data = Buffer.alloc(deltaBytes.length + 3);
+
+  deltaBytes.copy(data, 0);
+  data[deltaBytes.length] = CONTROL_CHANGE | (channel & 0x0F);
+  data[deltaBytes.length + 1] = controller & 0x7F;
+  data[deltaBytes.length + 2] = value & 0x7F;
+
+  return data;
+}
+
+function buildPitchBendEvent(delta: number, channel: number, value: number): Buffer {
+  const deltaBytes = encodeVarLen(delta);
+  const data = Buffer.alloc(deltaBytes.length + 3);
+
+  // Convert -8192..8191 to 0..16383 (center = 8192)
+  const pitchBendValue = value + 8192;
+  const lsb = pitchBendValue & 0x7F;
+  const msb = (pitchBendValue >> 7) & 0x7F;
+
+  deltaBytes.copy(data, 0);
+  data[deltaBytes.length] = PITCH_BEND | (channel & 0x0F);
+  data[deltaBytes.length + 1] = lsb;
+  data[deltaBytes.length + 2] = msb;
 
   return data;
 }

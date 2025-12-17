@@ -1,0 +1,181 @@
+{
+  "Main Entry Point": {
+    "prefix": "main",
+    "body": [
+      "export proc main() {",
+      "\ttitle(\"${1:My Song}\");",
+      "\tppq(480);",
+      "\ttimeSig(4, 4);",
+      "\ttempo(${2:120});",
+      "",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create main entry point"
+  },
+  "Vocal Track": {
+    "prefix": "track-vocal",
+    "body": [
+      "track(vocal, ${1:v1}, { voice: \"${2:miku}\" }) {",
+      "\tat(${3:1:1});",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create vocal track"
+  },
+  "MIDI Track": {
+    "prefix": "track-midi",
+    "body": [
+      "track(midi, ${1:piano}, { ch: ${2:1}, program: ${3:0} }) {",
+      "\tat(${4:1:1});",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create MIDI track"
+  },
+  "Drum Track": {
+    "prefix": "track-drums",
+    "body": [
+      "track(midi, drums, { ch: 10, vel: ${1:100} }) {",
+      "\tat(${2:1:1});",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create drum track"
+  },
+  "Note": {
+    "prefix": "note",
+    "body": [
+      "note(${1:C4}, ${2:1/4}, \"${3:あ}\");"
+    ],
+    "description": "Add a note with lyric"
+  },
+  "Note (MIDI)": {
+    "prefix": "notem",
+    "body": [
+      "note(${1:C4}, ${2:1/4});"
+    ],
+    "description": "Add a MIDI note"
+  },
+  "Chord": {
+    "prefix": "chord",
+    "body": [
+      "chord([${1:C4}, ${2:E4}, ${3:G4}], ${4:1/4});"
+    ],
+    "description": "Add a chord"
+  },
+  "Rest": {
+    "prefix": "rest",
+    "body": [
+      "rest(${1:1/4});"
+    ],
+    "description": "Add a rest"
+  },
+  "Drum Hit": {
+    "prefix": "drum",
+    "body": [
+      "drum(${1|kick,snare,hhc,hho,tom1,crash,ride|}, ${2:1/4});"
+    ],
+    "description": "Add a drum hit"
+  },
+  "For Loop": {
+    "prefix": "for",
+    "body": [
+      "for (${1:i} in ${2:1}..=${3:4}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "For loop"
+  },
+  "If Statement": {
+    "prefix": "if",
+    "body": [
+      "if (${1:condition}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If statement"
+  },
+  "If-Else Statement": {
+    "prefix": "ife",
+    "body": [
+      "if (${1:condition}) {",
+      "\t$2",
+      "} else {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If-else statement"
+  },
+  "Procedure": {
+    "prefix": "proc",
+    "body": [
+      "proc ${1:name}(${2:params}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Define a procedure"
+  },
+  "Export Procedure": {
+    "prefix": "eproc",
+    "body": [
+      "export proc ${1:name}(${2:params}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Define an exported procedure"
+  },
+  "Import": {
+    "prefix": "imp",
+    "body": [
+      "import { ${1:name} } from \"${2:./module.mf}\";"
+    ],
+    "description": "Import from module"
+  },
+  "At Position": {
+    "prefix": "at",
+    "body": [
+      "at(${1:1}:${2:1});"
+    ],
+    "description": "Set cursor position"
+  },
+  "8-Beat Drum Pattern": {
+    "prefix": "beat8",
+    "body": [
+      "drum(kick, 1/8);",
+      "drum(hhc, 1/8);",
+      "drum(snare, 1/8);",
+      "drum(hhc, 1/8);",
+      "drum(kick, 1/8);",
+      "drum(hhc, 1/8);",
+      "drum(snare, 1/8);",
+      "drum(hhc, 1/8);"
+    ],
+    "description": "8-beat drum pattern (1 bar)"
+  },
+  "Basic Song Template": {
+    "prefix": "song",
+    "body": [
+      "export proc main() {",
+      "\ttitle(\"${1:My Song}\");",
+      "\tppq(480);",
+      "\ttimeSig(4, 4);",
+      "\ttempo(${2:120});",
+      "",
+      "\ttrack(vocal, v1, { voice: \"miku\" }) {",
+      "\t\tat(1:1);",
+      "\t\t$0",
+      "\t}",
+      "",
+      "\ttrack(midi, piano, { ch: 1, program: 0 }) {",
+      "\t\tat(1:1);",
+      "\t}",
+      "",
+      "\ttrack(midi, drums, { ch: 10, vel: 100 }) {",
+      "\t\tat(1:1);",
+      "\t}",
+      "}"
+    ],
+    "description": "Basic song template with vocal, piano, and drums"
+  }
+}

@@ -1,0 +1,78 @@
+// Demo: New expression features (CC, Pitch Bend, Articulations, Tempo Curves)
+
+proc main() {
+  ppq(480);
+  tempo(120);
+  timeSig(4, 4);
+  title("Expression Features Demo");
+
+  // Ritardando at the end (tempo curve from 120 to 80 BPM)
+  tempoCurve(4:1, 5:1, 120, 80, 8);
+
+  // Piano track with various controls
+  track(midi, "piano", { ch: 1, program: 0, vel: 80 }) {
+    // Set initial volume and pan
+    volume(100);
+    pan(64);  // Center
+
+    // Normal notes
+    note(C4, 1/4);
+    note(E4, 1/4);
+
+    // Staccato notes (short, 50% duration)
+    staccato(G4, 1/4);
+    staccato(E4, 1/4);
+
+    // Accent (louder)
+    accent(C5, 1/4);
+
+    // Legato (smooth, connected)
+    legato(B4, 1/4);
+    legato(A4, 1/4);
+    legato(G4, 1/4);
+
+    // Marcato (accented + short)
+    marcato(F4, 1/4);
+    marcato(E4, 1/4);
+
+    // Tenuto (full duration, held)
+    tenuto(D4, 1/2);
+
+    // Expression swell
+    expression(60);
+    note(C4, 1/4);
+    expression(90);
+    note(E4, 1/4);
+    expression(127);
+    note(G4, 1/4);
+    expression(90);
+    note(E4, 1/4);
+
+    // Pitch bend demo
+    pitchBend(0);        // Center
+    note(C4, 1/4);
+    pitchBend(4096);     // Half step up
+    note(C4, 1/4);
+    pitchBend(8191);     // Full range up
+    note(C4, 1/4);
+    pitchBend(0);        // Back to center
+    note(C4, 1/2);
+
+    // Modulation wheel
+    modulation(0);
+    note(G4, 1/4);
+    modulation(64);
+    note(G4, 1/4);
+    modulation(127);
+    note(G4, 1/2);
+    modulation(0);
+
+    // Sustain pedal
+    sustain(true);
+    chord([C4, E4, G4], 1/1);
+    sustain(false);
+
+    // Final chord
+    chord([C4, E4, G4, C5], 1/1);
+  }
+}

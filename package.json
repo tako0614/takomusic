@@ -1,6 +1,6 @@
 {
   "name": "takomusic",
-  "version": "1.1.0",
+  "version": "1.0.0-alpha",
   "description": "TakoMusic - A domain-specific language for music composition that generates VSQX, MusicXML, and MIDI",
   "type": "module",
   "main": "dist/index.js",
