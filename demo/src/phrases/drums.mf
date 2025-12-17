@@ -1,0 +1,48 @@
+// ドラムパターン
+
+// 基本8ビートパターン
+export proc BEAT_8() {
+  drum(kick, 1/8, 100);
+  drum(hhc, 1/8, 70);
+  drum(snare, 1/8, 100);
+  drum(hhc, 1/8, 70);
+  drum(kick, 1/8, 100);
+  drum(hhc, 1/8, 70);
+  drum(snare, 1/8, 100);
+  drum(hhc, 1/8, 70);
+}
+
+// フィルイン
+export proc FILL_1() {
+  drum(snare, 1/8, 90);
+  drum(snare, 1/8, 95);
+  drum(tom1, 1/8, 100);
+  drum(tom1, 1/8, 105);
+  drum(kick, 1/8, 110);
+  drum(kick, 1/8, 110);
+  drum(crash, 1/4, 120);
+}
+
+// イントロ用静かめパターン
+export proc INTRO_BEAT() {
+  drum(hhc, 1/8, 50);
+  drum(hhc, 1/8, 50);
+  drum(snare, 1/8, 60);
+  drum(hhc, 1/8, 50);
+  drum(hhc, 1/8, 50);
+  drum(hhc, 1/8, 50);
+  drum(snare, 1/8, 60);
+  drum(hhc, 1/8, 50);
+}
+
+// アウトロ用
+export proc OUTRO_BEAT() {
+  drum(ride, 1/8, 60);
+  drum(ride, 1/8, 55);
+  drum(snare, 1/8, 70);
+  drum(ride, 1/8, 55);
+  drum(kick, 1/8, 80);
+  drum(ride, 1/8, 55);
+  drum(snare, 1/8, 70);
+  drum(ride, 1/8, 55);
+}

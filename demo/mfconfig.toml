@@ -1,0 +1,24 @@
+[project]
+entry = "src/main.mf"
+dist  = "dist"
+out   = "out"
+default_profile = "cli"
+
+[profiles.miku]
+backend = "miku-daw"
+import_strategy = "manual"
+# daw_exe  = "reaper"
+# daw_args = ["-renderproject", "{project}"]
+# daw_project = "reaper/song.rpp"
+vsqx_out     = "dist/vocal.vsqx"
+tempo_mid_out= "dist/tempo.mid"
+render_out   = "out/mix.wav"
+
+[profiles.cli]
+backend = "headless"
+# vocal_cmd = ["neutrino-run", "{musicxml}", "{vocal_wav}"]
+# midi_cmd  = ["fluidsynth-run", "{mid}", "{band_wav}"]
+# mix_cmd   = ["ffmpeg", "-i", "{vocal_wav}", "-i", "{band_wav}", "{mix_wav}"]
+musicxml_out = "dist/vocal.musicxml"
+band_mid_out = "dist/band.mid"
+render_out   = "out/mix.wav"

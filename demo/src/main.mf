@@ -1,0 +1,26 @@
+// MusicForge entry point
+
+export proc main() {
+  // Project settings
+  title("My Song");
+  ppq(480);
+  timeSig(4, 4);
+  tempo(120);
+
+  // Add your tracks here
+  track(vocal, vocal1, { engine: "piapro", voice: "miku" }) {
+    at(1:1);
+    note(C4, 1/4, "は");
+    note(D4, 1/4, "じ");
+    note(E4, 1/4, "め");
+    note(F4, 1/4, "ま");
+  }
+
+  track(midi, drums, { ch: 10, vel: 100 }) {
+    at(1:1);
+    drum(kick, 1/4, 110);
+    drum(hhc, 1/4);
+    drum(snare, 1/4, 110);
+    drum(hhc, 1/4);
+  }
+}

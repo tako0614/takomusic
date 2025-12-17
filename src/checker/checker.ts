@@ -1,0 +1,375 @@
+// Static checker for MFS source
+
+import * as fs from 'fs';
+import * as path from 'path';
+import type { Program, Statement, Expression, ProcDeclaration } from '../types/ast.js';
+import { Lexer } from '../lexer/index.js';
+import { Parser } from '../parser/index.js';
+import type { Position } from '../types/token.js';
+
+export interface Diagnostic {
+  code: string;
+  severity: 'error' | 'warning';
+  message: string;
+  position?: Position;
+  filePath?: string;
+}
+
+export class Checker {
+  private diagnostics: Diagnostic[] = [];
+  private baseDir: string;
+  private definedSymbols: Set<string> = new Set();
+  private constSymbols: Set<string> = new Set(); // Track const-only symbols
+  private procs: Map<string, ProcDeclaration> = new Map();
+  private callGraph: Map<string, Set<string>> = new Map();
+  private currentProc: string | null = null;
+  private hasGlobalCalls: boolean = false;
+  private trackStarted: boolean = false;
+  private tempoEventCount: number = 0;
+
+  constructor(baseDir: string) {
+    this.baseDir = baseDir;
+  }
+
+  check(program: Program, filePath: string): Diagnostic[] {
+    this.diagnostics = [];
+    this.definedSymbols.clear();
+    this.constSymbols.clear();
+    this.procs.clear();
+    this.callGraph.clear();
+    this.tempoEventCount = 0;
+
+    // First pass: collect all proc declarations
+    this.collectDeclarations(program);
+
+    // Second pass: check each statement
+    for (const stmt of program.statements) {
+      this.checkStatement(stmt, filePath);
+    }
+
+    // Check for main procedure
+    if (!this.procs.has('main')) {
+      this.addError('E400', 'No main() procedure found', undefined, filePath);
+    }
+
+    // Check for recursion
+    this.checkRecursion();
+
+    // W200: Too many tempo events
+    if (this.tempoEventCount > 128) {
+      this.addWarning('W200', `Too many tempo events (${this.tempoEventCount} > 128)`, undefined, filePath);
+    }
+
+    return this.diagnostics;
+  }
+
+  private collectDeclarations(program: Program): void {
+    for (const stmt of program.statements) {
+      if (stmt.kind === 'ProcDeclaration') {
+        this.procs.set(stmt.name, stmt);
+        this.definedSymbols.add(stmt.name);
+        this.constSymbols.add(stmt.name); // procs are constant
+      } else if (stmt.kind === 'ExportStatement') {
+        if (stmt.declaration.kind === 'ProcDeclaration') {
+          this.procs.set(stmt.declaration.name, stmt.declaration);
+          this.definedSymbols.add(stmt.declaration.name);
+          this.constSymbols.add(stmt.declaration.name);
+        } else {
+          // export const
+          this.definedSymbols.add(stmt.declaration.name);
+          this.constSymbols.add(stmt.declaration.name);
+        }
+      } else if (stmt.kind === 'ConstDeclaration') {
+        this.definedSymbols.add(stmt.name);
+        this.constSymbols.add(stmt.name);
+      } else if (stmt.kind === 'LetDeclaration') {
+        this.definedSymbols.add(stmt.name);
+        // NOT added to constSymbols - let is mutable
+      } else if (stmt.kind === 'ImportStatement') {
+        for (const name of stmt.imports) {
+          this.definedSymbols.add(name);
+          this.constSymbols.add(name); // imports are constant
+        }
+      }
+    }
+  }
+
+  private checkStatement(stmt: Statement, filePath: string): void {
+    switch (stmt.kind) {
+      case 'ImportStatement':
+        this.checkImport(stmt, filePath);
+        break;
+
+      case 'ProcDeclaration':
+        this.checkProc(stmt, filePath);
+        break;
+
+      case 'ExportStatement':
+        if (stmt.declaration.kind === 'ProcDeclaration') {
+          this.checkProc(stmt.declaration, filePath);
+        } else {
+          this.checkExpression(stmt.declaration.value, filePath);
+        }
+        break;
+
+      case 'ConstDeclaration':
+        this.definedSymbols.add(stmt.name);
+        this.constSymbols.add(stmt.name);
+        this.checkExpression(stmt.value, filePath);
+        break;
+
+      case 'LetDeclaration':
+        this.definedSymbols.add(stmt.name);
+        // NOT added to constSymbols - let is mutable
+        this.checkExpression(stmt.value, filePath);
+        break;
+
+      case 'AssignmentStatement':
+        this.checkExpression(stmt.value, filePath);
+        break;
+
+      case 'IfStatement':
+        this.checkExpression(stmt.condition, filePath);
+        for (const s of stmt.consequent) {
+          this.checkStatement(s, filePath);
+        }
+        if (stmt.alternate) {
+          for (const s of stmt.alternate) {
+            this.checkStatement(s, filePath);
+          }
+        }
+        break;
+
+      case 'ForStatement':
+        this.checkExpression(stmt.range.start, filePath);
+        this.checkExpression(stmt.range.end, filePath);
+        // Check if range bounds are compile-time constants
+        if (!this.isConstant(stmt.range.start) || !this.isConstant(stmt.range.end)) {
+          this.addError('E401', 'For range bounds must be compile-time constants', stmt.position, filePath);
+        }
+        // Add loop variable to scope for body checking
+        this.definedSymbols.add(stmt.variable);
+        this.constSymbols.add(stmt.variable); // Loop variable is treated as const
+        for (const s of stmt.body) {
+          this.checkStatement(s, filePath);
+        }
+        break;
+
+      case 'TrackBlock':
+        this.trackStarted = true;
+        for (const s of stmt.body) {
+          this.checkStatement(s, filePath);
+        }
+        break;
+
+      case 'ExpressionStatement':
+        this.checkExpression(stmt.expression, filePath);
+        break;
+    }
+  }
+
+  private checkImport(stmt: Statement & { kind: 'ImportStatement' }, filePath: string): void {
+    const importPath = path.resolve(path.dirname(filePath), stmt.path);
+
+    if (!fs.existsSync(importPath)) {
+      this.addError('E400', `Import not found: ${stmt.path}`, stmt.position, filePath);
+      return;
+    }
+
+    // Check imported module for top-level execution
+    try {
+      const source = fs.readFileSync(importPath, 'utf-8');
+      const lexer = new Lexer(source, importPath);
+      const tokens = lexer.tokenize();
+      const parser = new Parser(tokens, importPath);
+      const program = parser.parse();
+
+      for (const s of program.statements) {
+        if (s.kind === 'ExpressionStatement') {
+          if (s.expression.kind === 'CallExpression') {
+            const forbidden = ['track', 'note', 'rest', 'chord', 'drum', 'at', 'advance', 'title', 'ppq', 'tempo', 'timeSig'];
+            if (forbidden.includes(s.expression.callee)) {
+              this.addError('E300', `Top-level execution in imported module: ${s.expression.callee}()`, s.position, importPath);
+            }
+          }
+        } else if (s.kind === 'TrackBlock') {
+          this.addError('E300', 'Top-level track block in imported module', s.position, importPath);
+        }
+      }
+    } catch (err) {
+      this.addError('E400', `Error reading import: ${stmt.path}`, stmt.position, filePath);
+    }
+  }
+
+  private checkProc(proc: ProcDeclaration, filePath: string): void {
+    const oldProc = this.currentProc;
+    this.currentProc = proc.name;
+    this.callGraph.set(proc.name, new Set());
+
+    for (const stmt of proc.body) {
+      this.checkStatement(stmt, filePath);
+    }
+
+    this.currentProc = oldProc;
+  }
+
+  private checkExpression(expr: Expression, filePath: string): void {
+    switch (expr.kind) {
+      case 'Identifier':
+        if (!this.definedSymbols.has(expr.name)) {
+          // Check if it's a built-in drum name
+          const drumNames = ['kick', 'snare', 'hhc', 'hho', 'tom1', 'crash', 'ride'];
+          if (!drumNames.includes(expr.name)) {
+            this.addError('E400', `Undefined symbol: ${expr.name}`, expr.position, filePath);
+          }
+        }
+        break;
+
+      case 'CallExpression':
+        // Track call in call graph
+        if (this.currentProc && this.procs.has(expr.callee)) {
+          this.callGraph.get(this.currentProc)?.add(expr.callee);
+        }
+
+        // Check arguments
+        for (const arg of expr.arguments) {
+          this.checkExpression(arg, filePath);
+        }
+
+        // Count tempo events for W200
+        if (expr.callee === 'tempo') {
+          this.tempoEventCount++;
+        }
+
+        // W100: Check for extremely short notes
+        if ((expr.callee === 'note' || expr.callee === 'drum' || expr.callee === 'rest') && expr.arguments.length >= 2) {
+          const durArg = expr.arguments[expr.callee === 'note' ? 1 : (expr.callee === 'drum' ? 1 : 0)];
+          if (durArg.kind === 'DurLiteral') {
+            // Check if duration is less than 1/64 (very short)
+            // Using 1/64 as threshold since ppq/16 with ppq=480 would be 30 ticks = 1/64
+            if (durArg.numerator === 1 && durArg.denominator > 64) {
+              this.addWarning('W100', `Extremely short note duration: ${durArg.numerator}/${durArg.denominator}`, expr.position, filePath);
+            }
+          }
+        }
+
+        // Check if it's a global function called after track
+        if (this.trackStarted) {
+          const globalFuncs = ['title', 'ppq', 'tempo', 'timeSig'];
+          if (globalFuncs.includes(expr.callee)) {
+            this.addError('E050', `${expr.callee}() called after track started`, expr.position, filePath);
+          }
+        }
+        break;
+
+      case 'BinaryExpression':
+        this.checkExpression(expr.left, filePath);
+        this.checkExpression(expr.right, filePath);
+        break;
+
+      case 'UnaryExpression':
+        this.checkExpression(expr.operand, filePath);
+        break;
+
+      case 'ArrayLiteral':
+        for (const elem of expr.elements) {
+          this.checkExpression(elem, filePath);
+        }
+        break;
+
+      case 'ObjectLiteral':
+        for (const prop of expr.properties) {
+          this.checkExpression(prop.value, filePath);
+        }
+        break;
+
+      case 'PitchLiteral':
+        if (expr.midi < 0 || expr.midi > 127) {
+          this.addError('E110', `Pitch out of range: ${expr.midi}`, expr.position, filePath);
+        }
+        // Vocal range warning
+        if (expr.midi < 48 || expr.midi > 84) {
+          this.addWarning('W110', `Pitch ${expr.midi} may be outside typical vocal range`, expr.position, filePath);
+        }
+        break;
+    }
+  }
+
+  private isConstant(expr: Expression): boolean {
+    switch (expr.kind) {
+      case 'IntLiteral':
+      case 'FloatLiteral':
+      case 'StringLiteral':
+      case 'BoolLiteral':
+        return true;
+
+      case 'Identifier':
+        // Only const declarations are compile-time constants
+        // let declarations are NOT compile-time constants
+        return this.constSymbols.has(expr.name);
+
+      case 'BinaryExpression':
+        return this.isConstant(expr.left) && this.isConstant(expr.right);
+
+      case 'UnaryExpression':
+        return this.isConstant(expr.operand);
+
+      default:
+        return false;
+    }
+  }
+
+  private checkRecursion(): void {
+    // DFS to detect cycles in call graph
+    const visited = new Set<string>();
+    const stack = new Set<string>();
+
+    const dfs = (proc: string, path: string[]): boolean => {
+      if (stack.has(proc)) {
+        this.addError('E310', `Recursion detected: ${[...path, proc].join(' -> ')}`);
+        return true;
+      }
+
+      if (visited.has(proc)) {
+        return false;
+      }
+
+      visited.add(proc);
+      stack.add(proc);
+
+      const calls = this.callGraph.get(proc) || new Set();
+      for (const callee of calls) {
+        if (dfs(callee, [...path, proc])) {
+          return true;
+        }
+      }
+
+      stack.delete(proc);
+      return false;
+    };
+
+    for (const proc of this.procs.keys()) {
+      dfs(proc, []);
+    }
+  }
+
+  private addError(code: string, message: string, position?: Position, filePath?: string): void {
+    this.diagnostics.push({
+      code,
+      severity: 'error',
+      message,
+      position,
+      filePath,
+    });
+  }
+
+  private addWarning(code: string, message: string, position?: Position, filePath?: string): void {
+    this.diagnostics.push({
+      code,
+      severity: 'warning',
+      message,
+      position,
+      filePath,
+    });
+  }
+}
