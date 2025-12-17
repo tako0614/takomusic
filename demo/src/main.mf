@@ -1,26 +1,222 @@
-// MusicForge entry point
+// 「星空のメロディー」
+// MusicForge Demo Song
+
+import { BEAT_8, FILL_1, INTRO_BEAT, OUTRO_BEAT } from "./phrases/drums.mf";
+import { BASS_C, BASS_G, BASS_Am, BASS_F, BASS_INTRO } from "./phrases/bass.mf";
+import { CHORD_C, CHORD_G, CHORD_Am, CHORD_F, ARP_C, ARP_Am, INTRO_CHORD } from "./phrases/piano.mf";
 
 export proc main() {
-  // Project settings
-  title("My Song");
+  title("星空のメロディー");
   ppq(480);
   timeSig(4, 4);
-  tempo(120);
+  tempo(128);
 
-  // Add your tracks here
+  // ========== イントロ (4小節) ==========
   track(vocal, vocal1, { engine: "piapro", voice: "miku" }) {
     at(1:1);
-    note(C4, 1/4, "は");
-    note(D4, 1/4, "じ");
-    note(E4, 1/4, "め");
-    note(F4, 1/4, "ま");
+    // イントロは歌なし
+    rest(1/1);
+    rest(1/1);
+    rest(1/1);
+    rest(1/1);
+  }
+
+  track(midi, piano, { ch: 1, program: 0, vel: 80 }) {
+    at(1:1);
+    INTRO_CHORD(C4);
+    INTRO_CHORD(G3);
+    INTRO_CHORD(A3);
+    INTRO_CHORD(F3);
+  }
+
+  track(midi, drums, { ch: 10, vel: 90 }) {
+    at(1:1);
+    for (bar in 1..=4) {
+      INTRO_BEAT();
+    }
+  }
+
+  track(midi, bass, { ch: 2, program: 33, vel: 85 }) {
+    at(1:1);
+    BASS_INTRO(C2);
+    BASS_INTRO(G2);
+    BASS_INTRO(A2);
+    BASS_INTRO(F2);
+  }
+
+  // ========== Aメロ (8小節) ==========
+  track(vocal, vocal1, { engine: "piapro", voice: "miku" }) {
+    at(5:1);
+    // 1-2小節目: C
+    note(E4, 1/4, "ほ");
+    note(E4, 1/4, "し");
+    note(G4, 1/4, "ぞ");
+    note(G4, 1/4, "ら");
+    note(A4, 1/4, "を");
+    note(G4, 1/4, "み");
+    note(E4, 1/2, "て");
+
+    // 3-4小節目: Am
+    note(E4, 1/4, "き");
+    note(D4, 1/4, "み");
+    note(C4, 1/4, "の");
+    note(D4, 1/4, "こ");
+    note(E4, 1/4, "と");
+    note(E4, 1/4, "を");
+    note(D4, 1/2, "お");
+
+    // 5-6小節目: F
+    note(C4, 1/4, "も");
+    note(D4, 1/4, "い");
+    note(E4, 1/4, "だ");
+    note(F4, 1/4, "す");
+    note(G4, 1/4, "よ");
+    note(A4, 1/4, "る");
+    note(G4, 1/2, "に");
+
+    // 7-8小節目: G -> C
+    note(G4, 1/4, "ひ");
+    note(F4, 1/4, "か");
+    note(E4, 1/4, "り");
+    note(D4, 1/4, "が");
+    note(E4, 1/4, "さ");
+    note(D4, 1/4, "す");
+    note(C4, 1/2, "よ");
+  }
+
+  track(midi, piano, { ch: 1, program: 0, vel: 80 }) {
+    at(5:1);
+    CHORD_C();
+    CHORD_C();
+    CHORD_Am();
+    CHORD_Am();
+    CHORD_F();
+    CHORD_F();
+    CHORD_G();
+    CHORD_C();
+  }
+
+  track(midi, drums, { ch: 10, vel: 90 }) {
+    at(5:1);
+    for (bar in 1..=7) {
+      BEAT_8();
+    }
+    FILL_1();
+  }
+
+  track(midi, bass, { ch: 2, program: 33, vel: 90 }) {
+    at(5:1);
+    BASS_C();
+    BASS_C();
+    BASS_Am();
+    BASS_Am();
+    BASS_F();
+    BASS_F();
+    BASS_G();
+    BASS_C();
+  }
+
+  // ========== サビ (8小節) ==========
+  track(vocal, vocal1, { engine: "piapro", voice: "miku" }) {
+    at(13:1);
+    // 1-2小節目
+    note(G4, 1/4, "き");
+    note(A4, 1/4, "ら");
+    note(B4, 1/4, "め");
+    note(C5, 1/4, "く");
+    note(B4, 1/4, "ほ");
+    note(A4, 1/4, "し");
+    note(G4, 1/2, "よ");
+
+    // 3-4小節目
+    note(E4, 1/4, "と");
+    note(G4, 1/4, "ど");
+    note(A4, 1/4, "け");
+    note(B4, 1/4, "て");
+    note(C5, 1/2, "よ");
+    note(B4, 1/2, "ー");
+
+    // 5-6小節目
+    note(A4, 1/4, "こ");
+    note(B4, 1/4, "の");
+    note(C5, 1/4, "お");
+    note(D5, 1/4, "も");
+    note(C5, 1/4, "い");
+    note(B4, 1/4, "を");
+    note(A4, 1/2, "ー");
+
+    // 7-8小節目
+    note(G4, 1/4, "い");
+    note(A4, 1/4, "つ");
+    note(B4, 1/4, "ま");
+    note(C5, 1/4, "で");
+    note(D5, 1/2, "も");
+    note(C5, 1/2, "ー");
+  }
+
+  track(midi, piano, { ch: 1, program: 0, vel: 90 }) {
+    at(13:1);
+    ARP_C();
+    ARP_C();
+    ARP_Am();
+    ARP_Am();
+    CHORD_F();
+    CHORD_F();
+    CHORD_G();
+    CHORD_C();
   }
 
   track(midi, drums, { ch: 10, vel: 100 }) {
-    at(1:1);
-    drum(kick, 1/4, 110);
-    drum(hhc, 1/4);
-    drum(snare, 1/4, 110);
-    drum(hhc, 1/4);
+    at(13:1);
+    for (bar in 1..=7) {
+      BEAT_8();
+    }
+    FILL_1();
+  }
+
+  track(midi, bass, { ch: 2, program: 33, vel: 95 }) {
+    at(13:1);
+    BASS_C();
+    BASS_C();
+    BASS_Am();
+    BASS_Am();
+    BASS_F();
+    BASS_F();
+    BASS_G();
+    BASS_C();
+  }
+
+  // ========== アウトロ (4小節) ==========
+  track(vocal, vocal1, { engine: "piapro", voice: "miku" }) {
+    at(21:1);
+    note(E4, 1/2, "ら");
+    note(D4, 1/2, "ら");
+    note(C4, 1/1, "ら");
+    note(E4, 1/2, "ら");
+    note(D4, 1/2, "ー");
+    note(C4, 1/1, "ー");
+  }
+
+  track(midi, piano, { ch: 1, program: 0, vel: 70 }) {
+    at(21:1);
+    INTRO_CHORD(C4);
+    INTRO_CHORD(G3);
+    INTRO_CHORD(A3);
+    INTRO_CHORD(C4);
+  }
+
+  track(midi, drums, { ch: 10, vel: 80 }) {
+    at(21:1);
+    for (bar in 1..=4) {
+      OUTRO_BEAT();
+    }
+  }
+
+  track(midi, bass, { ch: 2, program: 33, vel: 75 }) {
+    at(21:1);
+    BASS_INTRO(C2);
+    BASS_INTRO(G2);
+    BASS_INTRO(A2);
+    BASS_INTRO(C2);
   }
 }
