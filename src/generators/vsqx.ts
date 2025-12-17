@@ -1,6 +1,6 @@
 // VSQX (Vocaloid Sequence XML) generator for vocal tracks
 
-import type { SongIR, VocalTrack, NoteEvent } from '../types/ir.js';
+import type { SongIR, VocalTrack, NoteEvent, VocaloidParamEvent } from '../types/ir.js';
 
 export function generateVsqx(ir: SongIR): string {
   const vocalTracks = ir.tracks.filter((t): t is VocalTrack => t.kind === 'vocal');
@@ -179,9 +179,66 @@ function generateVsqxTrack(track: VocalTrack, index: number, ppq: number): strin
 `;
   }
 
+  // Add Vocaloid parameter curves if present
+  if (track.vocaloidParams && track.vocaloidParams.length > 0) {
+    xml += generateVocaloidParams(track.vocaloidParams);
+  } else {
+    // Add default empty parameter sections
+    xml += `      <plane>0</plane>
+`;
+  }
+
   xml += `    </vsPart>
   </vsTrack>
 `;
+
+  return xml;
+}
+
+function generateVocaloidParams(params: VocaloidParamEvent[]): string {
+  // Group parameters by type
+  const grouped: Map<string, VocaloidParamEvent[]> = new Map();
+  for (const param of params) {
+    const existing = grouped.get(param.param) ?? [];
+    existing.push(param);
+    grouped.set(param.param, existing);
+  }
+
+  let xml = `      <plane>0</plane>
+`;
+
+  // Map parameter types to VSQX element names
+  const paramElementMap: Record<string, string> = {
+    'PIT': 'pbs', // Pitch bend sensitivity / pitch
+    'DYN': 'dyn',
+    'BRE': 'bre',
+    'BRI': 'bri',
+    'CLE': 'cle',
+    'GEN': 'gen',
+    'OPE': 'ope',
+    'POR': 'por',
+  };
+
+  // Generate each parameter sequence
+  for (const [paramType, events] of grouped) {
+    const elementName = paramElementMap[paramType];
+    if (!elementName) continue;
+
+    // Sort by tick
+    events.sort((a, b) => a.tick - b.tick);
+
+    xml += `      <${elementName}>
+`;
+    for (const event of events) {
+      xml += `        <e>
+          <t>${event.tick}</t>
+          <v>${event.value}</v>
+        </e>
+`;
+    }
+    xml += `      </${elementName}>
+`;
+  }
 
   return xml;
 }

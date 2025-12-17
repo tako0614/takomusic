@@ -1,6 +1,15 @@
 // MusicXML generator for vocal tracks
 
-import type { SongIR, VocalTrack, NoteEvent, TempoEvent, TimeSigEvent } from '../types/ir.js';
+import type {
+  SongIR,
+  VocalTrack,
+  NoteEvent,
+  TempoEvent,
+  TimeSigEvent,
+  DynamicMark,
+  NoteEventExtended,
+  Articulation,
+} from '../types/ir.js';
 
 const NOTE_NAMES = ['C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'];
 const NOTE_ALTERS = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
@@ -127,12 +136,20 @@ export function generateMusicXML(ir: SongIR): string {
 }
 
 function generateNote(note: NoteEvent, divisions: number): string {
+  const extNote = note as NoteEventExtended;
   const octave = Math.floor(note.key / 12) - 1;
   const pitchClass = note.key % 12;
   const step = NOTE_NAMES[pitchClass];
   const alter = NOTE_ALTERS[pitchClass];
 
-  let xml = `      <note>
+  let xml = '';
+
+  // Add dynamic direction if present
+  if (extNote.dynamic) {
+    xml += generateDynamic(extNote.dynamic);
+  }
+
+  xml += `      <note>
         <pitch>
           <step>${step}</step>
 `;
@@ -142,8 +159,63 @@ function generateNote(note: NoteEvent, divisions: number): string {
   xml += `          <octave>${octave}</octave>
         </pitch>
         <duration>${note.dur}</duration>
-        <type>${getDurationType(note.dur, divisions)}</type>
 `;
+
+  // Add tie element (before type)
+  if (extNote.tieStart && extNote.tieEnd) {
+    xml += `        <tie type="stop"/>
+        <tie type="start"/>
+`;
+  } else if (extNote.tieStart) {
+    xml += `        <tie type="start"/>
+`;
+  } else if (extNote.tieEnd) {
+    xml += `        <tie type="stop"/>
+`;
+  }
+
+  xml += `        <type>${getDurationType(note.dur, divisions)}</type>
+`;
+
+  // Add notations element for slurs, ties, articulations
+  const hasNotations = extNote.slurStart || extNote.slurEnd ||
+    extNote.tieStart || extNote.tieEnd ||
+    note.articulation;
+
+  if (hasNotations) {
+    xml += `        <notations>
+`;
+    // Tied notation
+    if (extNote.tieStart && extNote.tieEnd) {
+      xml += `          <tied type="stop"/>
+          <tied type="start"/>
+`;
+    } else if (extNote.tieStart) {
+      xml += `          <tied type="start"/>
+`;
+    } else if (extNote.tieEnd) {
+      xml += `          <tied type="stop"/>
+`;
+    }
+
+    // Slur notation
+    if (extNote.slurStart) {
+      xml += `          <slur type="start" number="1"/>
+`;
+    }
+    if (extNote.slurEnd) {
+      xml += `          <slur type="stop" number="1"/>
+`;
+    }
+
+    // Articulations
+    if (note.articulation) {
+      xml += generateArticulation(note.articulation);
+    }
+
+    xml += `        </notations>
+`;
+  }
 
   if (note.lyric) {
     xml += `        <lyric>
@@ -155,6 +227,35 @@ function generateNote(note: NoteEvent, divisions: number): string {
 
   xml += `      </note>\n`;
   return xml;
+}
+
+function generateDynamic(dynamic: DynamicMark): string {
+  // Generate MusicXML dynamics direction
+  return `      <direction placement="below">
+        <direction-type>
+          <dynamics>
+            <${dynamic}/>
+          </dynamics>
+        </direction-type>
+      </direction>
+`;
+}
+
+function generateArticulation(articulation: Articulation): string {
+  // Map articulation to MusicXML element
+  const articulationMap: Record<Articulation, string> = {
+    'staccato': 'staccato',
+    'legato': 'tenuto', // MusicXML doesn't have direct legato, use tenuto
+    'accent': 'accent',
+    'tenuto': 'tenuto',
+    'marcato': 'strong-accent',
+  };
+
+  const xmlElement = articulationMap[articulation];
+  return `          <articulations>
+            <${xmlElement}/>
+          </articulations>
+`;
 }
 
 function generateRest(duration: number, divisions: number): string {

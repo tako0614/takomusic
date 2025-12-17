@@ -264,7 +264,13 @@ export class Parser {
 
     this.expect(TokenType.COMMA, "Expected ',' after track kind");
 
-    const id = this.expect(TokenType.IDENT, 'Expected track id').value;
+    // Track ID can be identifier or string
+    let id: string;
+    if (this.check(TokenType.STRING)) {
+      id = this.advance().value;
+    } else {
+      id = this.expect(TokenType.IDENT, 'Expected track id').value;
+    }
 
     let options: ObjectLiteral | null = null;
     if (this.match(TokenType.COMMA)) {

@@ -61,6 +61,12 @@ function updateDiagnostics(document: vscode.TextDocument): void {
   const text = document.getText();
   const diagnostics: vscode.Diagnostic[] = [];
 
+  // Skip empty documents
+  if (text.trim().length === 0) {
+    diagnosticCollection.set(document.uri, []);
+    return;
+  }
+
   try {
     // Lexer phase
     const lexer = new Lexer(text, document.uri.fsPath);
@@ -77,15 +83,19 @@ function updateDiagnostics(document: vscode.TextDocument): void {
     // Convert checker diagnostics to VS Code diagnostics
     for (const d of checkerDiagnostics) {
       const diagnostic = createDiagnostic(document, d);
-      diagnostics.push(diagnostic);
+      if (diagnostic) {
+        diagnostics.push(diagnostic);
+      }
     }
   } catch (error) {
     if (error instanceof MFError) {
       const diagnostic = createDiagnosticFromError(document, error);
-      diagnostics.push(diagnostic);
+      if (diagnostic) {
+        diagnostics.push(diagnostic);
+      }
     } else if (error instanceof Error) {
       // Unexpected error - show at start of document
-      const range = new vscode.Range(0, 0, 0, 0);
+      const range = new vscode.Range(0, 0, 0, Math.min(document.lineAt(0).text.length, 1));
       const diagnostic = new vscode.Diagnostic(
         range,
         `Internal error: ${error.message}`,
@@ -98,32 +108,10 @@ function updateDiagnostics(document: vscode.TextDocument): void {
   diagnosticCollection.set(document.uri, diagnostics);
 }
 
-function createDiagnostic(document: vscode.TextDocument, d: Diagnostic): vscode.Diagnostic {
-  let range: vscode.Range;
-
-  if (d.position) {
-    // VS Code uses 0-based line numbers, our lexer uses 1-based
-    const line = d.position.line - 1;
-    const col = d.position.column - 1;
-
-    // Try to get a meaningful range by finding the word at position
-    const lineText = document.lineAt(line).text;
-    let endCol = col;
-
-    // Extend to end of identifier/keyword
-    while (endCol < lineText.length && /[a-zA-Z0-9_]/.test(lineText[endCol])) {
-      endCol++;
-    }
-
-    // If we didn't find anything, at least highlight one character
-    if (endCol === col) {
-      endCol = Math.min(col + 1, lineText.length);
-    }
-
-    range = new vscode.Range(line, col, line, endCol);
-  } else {
-    // No position info - highlight first line
-    range = new vscode.Range(0, 0, 0, document.lineAt(0).text.length);
+function createDiagnostic(document: vscode.TextDocument, d: Diagnostic): vscode.Diagnostic | null {
+  const range = getRange(document, d.position);
+  if (!range) {
+    return null;
   }
 
   const severity = d.severity === 'error'
@@ -141,27 +129,15 @@ function createDiagnostic(document: vscode.TextDocument, d: Diagnostic): vscode.
   return diagnostic;
 }
 
-function createDiagnosticFromError(document: vscode.TextDocument, error: MFError): vscode.Diagnostic {
-  let range: vscode.Range;
-
-  if (error.position) {
-    const line = error.position.line - 1;
-    const col = error.position.column - 1;
-
-    const lineText = document.lineAt(line).text;
-    let endCol = col;
-
-    while (endCol < lineText.length && /[a-zA-Z0-9_]/.test(lineText[endCol])) {
-      endCol++;
-    }
-
-    if (endCol === col) {
-      endCol = Math.min(col + 1, lineText.length);
-    }
-
-    range = new vscode.Range(line, col, line, endCol);
-  } else {
-    range = new vscode.Range(0, 0, 0, document.lineAt(0).text.length);
+function createDiagnosticFromError(document: vscode.TextDocument, error: MFError): vscode.Diagnostic | null {
+  const range = getRange(document, error.position);
+  if (!range) {
+    // Fallback to first character
+    return new vscode.Diagnostic(
+      new vscode.Range(0, 0, 0, 1),
+      error.message,
+      vscode.DiagnosticSeverity.Error
+    );
   }
 
   const message = error.suggestion
@@ -177,6 +153,50 @@ function createDiagnosticFromError(document: vscode.TextDocument, error: MFError
   diagnostic.source = 'takomusic';
 
   return diagnostic;
+}
+
+function getRange(document: vscode.TextDocument, position?: { line: number; column: number }): vscode.Range | null {
+  // Handle missing position
+  if (!position) {
+    if (document.lineCount === 0) {
+      return new vscode.Range(0, 0, 0, 0);
+    }
+    return new vscode.Range(0, 0, 0, Math.min(document.lineAt(0).text.length, 10));
+  }
+
+  // VS Code uses 0-based line numbers, our lexer uses 1-based
+  const line = Math.max(0, position.line - 1);
+  const col = Math.max(0, position.column - 1);
+
+  // Bounds check for line
+  if (line >= document.lineCount) {
+    const lastLine = document.lineCount - 1;
+    const lastLineText = document.lineAt(lastLine).text;
+    return new vscode.Range(lastLine, 0, lastLine, lastLineText.length);
+  }
+
+  const lineText = document.lineAt(line).text;
+
+  // Bounds check for column
+  const safeCol = Math.min(col, lineText.length);
+  let endCol = safeCol;
+
+  // Extend to end of identifier/keyword
+  while (endCol < lineText.length && /[a-zA-Z0-9_]/.test(lineText[endCol])) {
+    endCol++;
+  }
+
+  // If we didn't find anything, at least highlight one character
+  if (endCol === safeCol) {
+    endCol = Math.min(safeCol + 1, lineText.length);
+  }
+
+  // Ensure we have at least some range
+  if (endCol === safeCol && lineText.length > 0) {
+    endCol = Math.min(safeCol + 1, lineText.length);
+  }
+
+  return new vscode.Range(line, safeCol, line, endCol);
 }
 
 export function deactivate() {
