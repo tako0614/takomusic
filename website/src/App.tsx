@@ -80,7 +80,7 @@ function App() {
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-500/20 via-transparent to-transparent" />
         <nav class="relative z-10 container mx-auto px-6 py-6 flex justify-between items-center">
           <div class="flex items-center gap-3">
-            <img src="/logo.png" alt="TakoMusic" class="w-10 h-10" />
+            <img src="/logo.png" alt="TakoMusic" class="w-10 h-10 rounded-full" />
             <span class="text-2xl font-bold">TakoMusic</span>
           </div>
           <div class="flex items-center gap-6">
@@ -232,7 +232,7 @@ function App() {
       <footer class="border-t border-slate-800 py-12">
         <div class="container mx-auto px-6 text-center text-slate-400">
           <div class="flex items-center justify-center gap-3 mb-4">
-            <img src="/logo.png" alt="TakoMusic" class="w-8 h-8" />
+            <img src="/logo.png" alt="TakoMusic" class="w-8 h-8 rounded-full" />
             <span class="text-xl font-bold text-white">TakoMusic</span>
           </div>
           <p class="text-sm">

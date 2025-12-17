@@ -292,4 +292,4 @@ tempo_mid_out = "dist/tempo.mid"
 
 ## License
 
-MIT
+AGPL-3.0
