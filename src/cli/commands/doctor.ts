@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
 import { ExitCodes } from '../../errors.js';
-import { findConfigPath, loadConfig } from '../../config/index.js';
+import { findConfigPath, loadConfig, validateConfig } from '../../config/index.js';
 
 interface DependencyCheck {
   name: string;
@@ -37,6 +37,29 @@ export async function doctorCommand(args: string[]): Promise<number> {
   console.log('=================\n');
 
   let hasIssues = false;
+
+  // Validate config file
+  console.log('Configuration:');
+  const validation = validateConfig(configPath);
+
+  if (validation.errors.length > 0) {
+    for (const err of validation.errors) {
+      console.log(`  ✗ ${err}`);
+      hasIssues = true;
+    }
+  }
+
+  if (validation.warnings.length > 0) {
+    for (const warn of validation.warnings) {
+      console.log(`  ⚠ ${warn}`);
+    }
+  }
+
+  if (validation.errors.length === 0 && validation.warnings.length === 0) {
+    console.log('  ✓ Config file is valid');
+  }
+
+  console.log('');
 
   // Check project structure
   console.log('Project Structure:');

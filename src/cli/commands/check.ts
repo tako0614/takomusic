@@ -48,24 +48,30 @@ export async function checkCommand(args: string[]): Promise<number> {
     const diagnostics = checker.check(ast, entryPath);
 
     // Report diagnostics
-    let hasErrors = false;
-    for (const diag of diagnostics) {
-      const level = diag.severity === 'error' ? 'error' : 'warning';
-      const loc = diag.position
-        ? `:${diag.position.line}:${diag.position.column}`
-        : '';
-      console.log(`[${diag.code}] ${level}${loc}: ${diag.message}`);
+    let errorCount = 0;
+    let warningCount = 0;
 
+    for (const diag of diagnostics) {
+      console.log(Checker.formatDiagnostic(diag));
       if (diag.severity === 'error') {
-        hasErrors = true;
+        errorCount++;
+      } else {
+        warningCount++;
       }
     }
 
+    // Summary
     if (diagnostics.length === 0) {
       console.log('No issues found.');
+    } else {
+      console.log('');
+      const parts: string[] = [];
+      if (errorCount > 0) parts.push(`${errorCount} error${errorCount > 1 ? 's' : ''}`);
+      if (warningCount > 0) parts.push(`${warningCount} warning${warningCount > 1 ? 's' : ''}`);
+      console.log(`Found ${parts.join(', ')}.`);
     }
 
-    return hasErrors ? ExitCodes.STATIC_ERROR : ExitCodes.SUCCESS;
+    return errorCount > 0 ? ExitCodes.STATIC_ERROR : ExitCodes.SUCCESS;
   } catch (err) {
     if (err instanceof MFError) {
       console.error(err.toString());

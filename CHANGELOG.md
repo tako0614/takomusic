@@ -2,6 +2,29 @@
 
 All notable changes to MusicForge will be documented in this file.
 
+## [1.1.0] - 2024-12-17
+
+### Added
+
+- **Watch Mode**: `mf build -w` now watches for file changes and auto-rebuilds
+- **Build Timing**: Build command shows elapsed time and file count
+- **Config Validation**: `mf doctor` validates mfconfig.toml and warns about unknown keys
+- **Error Suggestions**: Errors now include helpful suggestions
+  - Undefined symbols suggest similar names using Levenshtein distance
+  - Error codes include context-specific help messages
+- **Improved Error Format**: Rust-like error display with file:line:column and help text
+
+### Changed
+
+- Error messages now show in cleaner format:
+  ```
+  error[E400]: Undefined symbol: noot
+    --> src/main.mf:5:10
+    help: Did you mean: note?
+  ```
+- Check command shows error/warning summary count
+- Doctor command validates config structure before checking dependencies
+
 ## [1.0.0] - 2024-12-17
 
 ### Added

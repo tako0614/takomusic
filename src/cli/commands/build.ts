@@ -51,6 +51,28 @@ Options:
     return ExitCodes.IO_ERROR;
   }
 
+  // Initial build
+  const result = await runBuild(baseDir, entryPath, config, profile);
+
+  // Watch mode
+  if (watchMode) {
+    if (result !== ExitCodes.SUCCESS) {
+      console.log('\nWaiting for changes...');
+    }
+    return startWatchMode(baseDir, entryPath, config, profile);
+  }
+
+  return result;
+}
+
+async function runBuild(
+  baseDir: string,
+  entryPath: string,
+  config: any,
+  profile: string
+): Promise<number> {
+  const startTime = Date.now();
+
   try {
     // Compile to IR using Compiler (handles imports)
     console.log('Compiling...');
@@ -69,15 +91,18 @@ Options:
     console.log(`Generated: ${path.relative(baseDir, irPath)}`);
 
     // Generate profile-specific outputs
+    let fileCount = 1; // IR file
+
     if (profile === 'cli' || profile === 'all') {
-      await buildCliProfile(ir, config, baseDir);
+      fileCount += await buildCliProfile(ir, config, baseDir);
     }
 
     if (profile === 'miku' || profile === 'all') {
-      await buildMikuProfile(ir, config, baseDir);
+      fileCount += await buildMikuProfile(ir, config, baseDir);
     }
 
-    console.log('Build complete.');
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`Build complete. ${fileCount} files generated in ${elapsed}s`);
     return ExitCodes.SUCCESS;
   } catch (err) {
     if (err instanceof MFError) {
@@ -89,12 +114,54 @@ Options:
   }
 }
 
-async function buildCliProfile(ir: SongIR, config: any, baseDir: string): Promise<void> {
+function startWatchMode(
+  baseDir: string,
+  entryPath: string,
+  config: any,
+  profile: string
+): Promise<number> {
+  return new Promise((resolve) => {
+    const srcDir = path.join(baseDir, 'src');
+    let debounceTimer: NodeJS.Timeout | null = null;
+    let isBuilding = false;
+
+    console.log(`\nWatching for changes in ${path.relative(baseDir, srcDir)}...`);
+    console.log('Press Ctrl+C to stop.\n');
+
+    const watcher = fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
+      if (!filename || !filename.endsWith('.mf')) return;
+      if (isBuilding) return;
+
+      // Debounce rapid changes
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      debounceTimer = setTimeout(async () => {
+        isBuilding = true;
+        console.log(`\n[${new Date().toLocaleTimeString()}] Change detected: ${filename}`);
+        await runBuild(baseDir, entryPath, config, profile);
+        console.log('\nWaiting for changes...');
+        isBuilding = false;
+      }, 100);
+    });
+
+    // Handle Ctrl+C
+    process.on('SIGINT', () => {
+      console.log('\nStopping watch mode...');
+      watcher.close();
+      resolve(ExitCodes.SUCCESS);
+    });
+  });
+}
+
+async function buildCliProfile(ir: SongIR, config: any, baseDir: string): Promise<number> {
   const cliConfig = config.profiles.cli;
   if (!cliConfig) {
-    console.log('CLI profile not configured, skipping.');
-    return;
+    return 0;
   }
+
+  let count = 0;
 
   // Generate MusicXML for vocal tracks
   const musicxmlPath = path.join(baseDir, cliConfig.musicxmlOut);
@@ -102,6 +169,7 @@ async function buildCliProfile(ir: SongIR, config: any, baseDir: string): Promis
   const musicxml = generateMusicXML(ir);
   fs.writeFileSync(musicxmlPath, musicxml);
   console.log(`Generated: ${path.relative(baseDir, musicxmlPath)}`);
+  count++;
 
   // Generate MIDI for band tracks
   const midiPath = path.join(baseDir, cliConfig.bandMidOut);
@@ -109,14 +177,18 @@ async function buildCliProfile(ir: SongIR, config: any, baseDir: string): Promis
   const midi = generateMidi(ir);
   fs.writeFileSync(midiPath, midi);
   console.log(`Generated: ${path.relative(baseDir, midiPath)}`);
+  count++;
+
+  return count;
 }
 
-async function buildMikuProfile(ir: SongIR, config: any, baseDir: string): Promise<void> {
+async function buildMikuProfile(ir: SongIR, config: any, baseDir: string): Promise<number> {
   const mikuConfig = config.profiles.miku;
   if (!mikuConfig) {
-    console.log('Miku profile not configured, skipping.');
-    return;
+    return 0;
   }
+
+  let count = 0;
 
   // Generate VSQX for vocal tracks
   const vsqxPath = path.join(baseDir, mikuConfig.vsqxOut);
@@ -124,6 +196,7 @@ async function buildMikuProfile(ir: SongIR, config: any, baseDir: string): Promi
   const vsqx = generateVsqx(ir);
   fs.writeFileSync(vsqxPath, vsqx);
   console.log(`Generated: ${path.relative(baseDir, vsqxPath)}`);
+  count++;
 
   // Generate tempo MIDI
   const tempoMidiPath = path.join(baseDir, mikuConfig.tempoMidOut);
@@ -131,4 +204,7 @@ async function buildMikuProfile(ir: SongIR, config: any, baseDir: string): Promi
   const tempoMidi = generateTempoMidi(ir);
   fs.writeFileSync(tempoMidiPath, tempoMidi);
   console.log(`Generated: ${path.relative(baseDir, tempoMidiPath)}`);
+  count++;
+
+  return count;
 }

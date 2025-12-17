@@ -66,6 +66,12 @@ const DEFAULT_CONFIG: MFConfig = {
   },
 };
 
+export interface ConfigValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 export function loadConfig(configPath: string): MFConfig {
   try {
     const content = fs.readFileSync(configPath, 'utf-8');
@@ -75,7 +81,98 @@ export function loadConfig(configPath: string): MFConfig {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
       throw new Error(`Config file not found: ${configPath}`);
     }
+    if (err instanceof Error && err.message.includes('Syntax error')) {
+      throw new Error(`Invalid TOML syntax in ${configPath}: ${err.message}`);
+    }
     throw err;
+  }
+}
+
+export function validateConfig(configPath: string): ConfigValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const baseDir = path.dirname(configPath);
+
+  try {
+    const content = fs.readFileSync(configPath, 'utf-8');
+    const parsed = TOML.parse(content);
+
+    // Check for unknown top-level keys
+    const validTopKeys = ['project', 'profiles'];
+    for (const key of Object.keys(parsed)) {
+      if (!validTopKeys.includes(key)) {
+        warnings.push(`Unknown config key: "${key}". Valid keys are: ${validTopKeys.join(', ')}`);
+      }
+    }
+
+    // Validate [project] section
+    if (parsed.project) {
+      const validProjectKeys = ['entry', 'dist', 'out', 'default_profile', 'name', 'version'];
+      for (const key of Object.keys(parsed.project)) {
+        if (!validProjectKeys.includes(key)) {
+          warnings.push(`Unknown project key: "${key}". Valid keys are: ${validProjectKeys.join(', ')}`);
+        }
+      }
+
+      // Check entry file exists
+      if (parsed.project.entry) {
+        const entryPath = path.join(baseDir, parsed.project.entry);
+        if (!fs.existsSync(entryPath)) {
+          errors.push(`Entry file not found: ${parsed.project.entry}`);
+        }
+      }
+    } else {
+      warnings.push('Missing [project] section, using defaults');
+    }
+
+    // Validate [profiles] section
+    if (parsed.profiles) {
+      const validProfileNames = ['cli', 'miku'];
+      for (const profileName of Object.keys(parsed.profiles)) {
+        if (!validProfileNames.includes(profileName)) {
+          warnings.push(`Unknown profile: "${profileName}". Valid profiles are: ${validProfileNames.join(', ')}`);
+        }
+      }
+
+      // Validate [profiles.cli]
+      if (parsed.profiles.cli) {
+        const validCliKeys = ['backend', 'vocal_cmd', 'midi_cmd', 'mix_cmd', 'musicxml_out', 'band_mid_out', 'render_out'];
+        for (const key of Object.keys(parsed.profiles.cli)) {
+          if (!validCliKeys.includes(key)) {
+            warnings.push(`Unknown profiles.cli key: "${key}". Valid keys are: ${validCliKeys.join(', ')}`);
+          }
+        }
+
+        // Check command arrays
+        for (const cmdKey of ['vocal_cmd', 'midi_cmd', 'mix_cmd']) {
+          const cmd = parsed.profiles.cli[cmdKey];
+          if (cmd && !Array.isArray(cmd)) {
+            errors.push(`profiles.cli.${cmdKey} must be an array of strings`);
+          }
+        }
+      }
+
+      // Validate [profiles.miku]
+      if (parsed.profiles.miku) {
+        const validMikuKeys = ['backend', 'import_strategy', 'daw_exe', 'daw_args', 'daw_project', 'vsqx_out', 'tempo_mid_out', 'render_out', 'engine'];
+        for (const key of Object.keys(parsed.profiles.miku)) {
+          if (!validMikuKeys.includes(key)) {
+            warnings.push(`Unknown profiles.miku key: "${key}". Valid keys are: ${validMikuKeys.join(', ')}`);
+          }
+        }
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      errors.push(err.message);
+    }
+    return { valid: false, errors, warnings };
   }
 }
 

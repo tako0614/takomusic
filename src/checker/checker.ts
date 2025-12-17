@@ -6,6 +6,7 @@ import type { Program, Statement, Expression, ProcDeclaration } from '../types/a
 import { Lexer } from '../lexer/index.js';
 import { Parser } from '../parser/index.js';
 import type { Position } from '../types/token.js';
+import { findSimilarSymbols } from '../errors.js';
 
 export interface Diagnostic {
   code: string;
@@ -13,6 +14,7 @@ export interface Diagnostic {
   message: string;
   position?: Position;
   filePath?: string;
+  suggestion?: string;
 }
 
 export class Checker {
@@ -224,10 +226,19 @@ export class Checker {
     switch (expr.kind) {
       case 'Identifier':
         if (!this.definedSymbols.has(expr.name)) {
-          // Check if it's a built-in drum name
-          const drumNames = ['kick', 'snare', 'hhc', 'hho', 'tom1', 'crash', 'ride'];
-          if (!drumNames.includes(expr.name)) {
-            this.addError('E400', `Undefined symbol: ${expr.name}`, expr.position, filePath);
+          // Check if it's a built-in drum name or intrinsic
+          const builtins = ['kick', 'snare', 'hhc', 'hho', 'tom1', 'crash', 'ride',
+            'note', 'rest', 'chord', 'drum', 'at', 'atTick', 'advance', 'advanceTick',
+            'track', 'title', 'ppq', 'tempo', 'timeSig'];
+          if (!builtins.includes(expr.name)) {
+            // Find similar symbols for suggestion
+            const allSymbols = [...this.definedSymbols, ...builtins];
+            const similar = findSimilarSymbols(expr.name, allSymbols);
+            let suggestion: string | undefined;
+            if (similar.length > 0) {
+              suggestion = `Did you mean: ${similar.join(', ')}?`;
+            }
+            this.addError('E400', `Undefined symbol: ${expr.name}`, expr.position, filePath, suggestion);
           }
         }
         break;
@@ -385,23 +396,41 @@ export class Checker {
     }
   }
 
-  private addError(code: string, message: string, position?: Position, filePath?: string): void {
+  private addError(code: string, message: string, position?: Position, filePath?: string, suggestion?: string): void {
     this.diagnostics.push({
       code,
       severity: 'error',
       message,
       position,
       filePath,
+      suggestion,
     });
   }
 
-  private addWarning(code: string, message: string, position?: Position, filePath?: string): void {
+  private addWarning(code: string, message: string, position?: Position, filePath?: string, suggestion?: string): void {
     this.diagnostics.push({
       code,
       severity: 'warning',
       message,
       position,
       filePath,
+      suggestion,
     });
+  }
+
+  // Format diagnostic for display
+  static formatDiagnostic(d: Diagnostic): string {
+    const loc = d.position
+      ? `${d.filePath || 'unknown'}:${d.position.line}:${d.position.column}`
+      : '';
+    const severity = d.severity === 'error' ? 'error' : 'warning';
+    let result = `  ${severity}[${d.code}]: ${d.message}`;
+    if (loc) {
+      result += `\n    --> ${loc}`;
+    }
+    if (d.suggestion) {
+      result += `\n    help: ${d.suggestion}`;
+    }
+    return result;
   }
 }
