@@ -1,4 +1,4 @@
-# MusicForge v0.1 確定仕様
+# TakoMusic v0.1 確定仕様
 
 ## 0. スコープ
 

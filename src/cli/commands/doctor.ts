@@ -33,7 +33,7 @@ export async function doctorCommand(args: string[]): Promise<number> {
   const config = loadConfig(configPath);
   const baseDir = path.dirname(configPath);
 
-  console.log('MusicForge Doctor');
+  console.log('TakoMusic Doctor');
   console.log('=================\n');
 
   let hasIssues = false;

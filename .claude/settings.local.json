@@ -18,7 +18,9 @@
       "Bash(node:*)",
       "WebSearch",
       "Bash(cat:*)",
-      "Bash(wc -l \"C:/Users/shout/desktop/github/takomusic/src\"/**/*.ts)"
+      "Bash(wc -l \"C:/Users/shout/desktop/github/takomusic/src\"/**/*.ts)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
