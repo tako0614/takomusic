@@ -46,6 +46,12 @@ export const ErrorCodes = {
   E102: 'Time sub out of beat tick range',
   E110: 'Pitch out of range 0..127',
 
+  // MIDI Control
+  E120: 'CC controller out of range 0..127',
+  E121: 'CC/control value out of range 0..127',
+  E122: 'Pitch bend value out of range -8192..8191',
+  E123: 'Tempo curve steps must be at least 2',
+
   // Vocal
   E200: 'Vocal note overlap',
   E210: 'Vocal lyric missing or empty',
@@ -105,6 +111,14 @@ function getDefaultSuggestion(code: string, details?: string): string | undefine
       return 'Move global functions (ppq, tempo, timeSig, title) before any track() blocks';
     case 'E110':
       return 'Valid MIDI pitch range is 0-127 (C-1 to G9). Try using a different octave.';
+    case 'E120':
+      return 'MIDI CC controller numbers must be between 0 and 127';
+    case 'E121':
+      return 'MIDI CC/control values must be between 0 and 127';
+    case 'E122':
+      return 'Pitch bend values must be between -8192 (full down) and 8191 (full up). 0 is center.';
+    case 'E123':
+      return 'tempoCurve() needs at least 2 steps to interpolate between tempos';
     case 'E200':
       return 'Vocal notes cannot overlap. Use rest() or adjust timing with at()';
     case 'E210':

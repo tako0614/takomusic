@@ -44,7 +44,7 @@ export interface MidiTrack extends BaseTrack {
   defaultVel: number;
 }
 
-export type TrackEvent = NoteEvent | RestEvent;
+export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent;
 
 export interface NoteEvent {
   type: 'note';
@@ -53,6 +53,7 @@ export interface NoteEvent {
   key: number;
   vel?: number;
   lyric?: string;
+  articulation?: Articulation;
 }
 
 export interface RestEvent {
@@ -60,3 +61,19 @@ export interface RestEvent {
   tick: number;
   dur: number;
 }
+
+export interface CCEvent {
+  type: 'cc';
+  tick: number;
+  controller: number;
+  value: number;
+}
+
+export interface PitchBendEvent {
+  type: 'pitchBend';
+  tick: number;
+  value: number; // -8192 to 8191
+}
+
+// Articulation types
+export type Articulation = 'staccato' | 'legato' | 'accent' | 'tenuto' | 'marcato';

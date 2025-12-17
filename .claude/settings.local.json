@@ -24,7 +24,11 @@
       "Bash(npm uninstall:*)",
       "Bash(npm run deploy:*)",
       "Bash(npx wrangler pages project create takomusic --production-branch=main)",
-      "Bash(npx wrangler pages deploy:*)"
+      "Bash(npx wrangler pages deploy:*)",
+      "Bash(vsce package:*)",
+      "Bash(code --install-extension:*)",
+      "Bash(npm run compile:*)",
+      "Bash(code --uninstall-extension:*)"
     ]
   }
 }

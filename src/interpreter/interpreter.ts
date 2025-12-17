@@ -18,6 +18,9 @@ import type {
   RestEvent,
   TempoEvent,
   TimeSigEvent,
+  CCEvent,
+  PitchBendEvent,
+  Articulation,
 } from '../types/ir.js';
 import {
   RuntimeValue,
@@ -466,6 +469,35 @@ export class Interpreter {
         return this.builtinChord(args, position);
       case 'drum':
         return this.builtinDrum(args, position, args);
+      // CC and expression functions
+      case 'cc':
+        return this.builtinCC(args, position);
+      case 'expression':
+        return this.builtinExpression(args, position);
+      case 'modulation':
+        return this.builtinModulation(args, position);
+      case 'pan':
+        return this.builtinPan(args, position);
+      case 'volume':
+        return this.builtinVolume(args, position);
+      case 'sustain':
+        return this.builtinSustain(args, position);
+      case 'pitchBend':
+        return this.builtinPitchBend(args, position);
+      // Tempo curve
+      case 'tempoCurve':
+        return this.builtinTempoCurve(args, position);
+      // Articulation note variants
+      case 'staccato':
+        return this.builtinArticulatedNote(args, position, 'staccato');
+      case 'legato':
+        return this.builtinArticulatedNote(args, position, 'legato');
+      case 'accent':
+        return this.builtinArticulatedNote(args, position, 'accent');
+      case 'tenuto':
+        return this.builtinArticulatedNote(args, position, 'tenuto');
+      case 'marcato':
+        return this.builtinArticulatedNote(args, position, 'marcato');
     }
 
     // User-defined proc
@@ -793,6 +825,325 @@ export class Interpreter {
     track.events.push(event);
 
     track.cursor += durTicks;
+    return makeNull();
+  }
+
+  // CC and control functions
+  private builtinCC(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'cc() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const controller = this.evaluate(args[0]);
+    const value = this.evaluate(args[1]);
+
+    if (controller.type !== 'int') {
+      throw new MFError('TYPE', 'cc() controller must be int', position, this.filePath);
+    }
+    if (value.type !== 'int') {
+      throw new MFError('TYPE', 'cc() value must be int', position, this.filePath);
+    }
+
+    if (controller.value < 0 || controller.value > 127) {
+      throw createError('E120', `CC controller ${controller.value} out of range 0..127`, position, this.filePath);
+    }
+    if (value.value < 0 || value.value > 127) {
+      throw createError('E121', `CC value ${value.value} out of range 0..127`, position, this.filePath);
+    }
+
+    const event: CCEvent = {
+      type: 'cc',
+      tick: track.cursor,
+      controller: controller.value,
+      value: value.value,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinExpression(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'expression() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const value = this.evaluate(args[0]);
+    if (value.type !== 'int') {
+      throw new MFError('TYPE', 'expression() value must be int', position, this.filePath);
+    }
+    if (value.value < 0 || value.value > 127) {
+      throw createError('E121', `expression value ${value.value} out of range 0..127`, position, this.filePath);
+    }
+
+    const event: CCEvent = {
+      type: 'cc',
+      tick: track.cursor,
+      controller: 11, // CC11 = Expression
+      value: value.value,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinModulation(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'modulation() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const value = this.evaluate(args[0]);
+    if (value.type !== 'int') {
+      throw new MFError('TYPE', 'modulation() value must be int', position, this.filePath);
+    }
+    if (value.value < 0 || value.value > 127) {
+      throw createError('E121', `modulation value ${value.value} out of range 0..127`, position, this.filePath);
+    }
+
+    const event: CCEvent = {
+      type: 'cc',
+      tick: track.cursor,
+      controller: 1, // CC1 = Modulation
+      value: value.value,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinPan(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'pan() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const value = this.evaluate(args[0]);
+    if (value.type !== 'int') {
+      throw new MFError('TYPE', 'pan() value must be int', position, this.filePath);
+    }
+    if (value.value < 0 || value.value > 127) {
+      throw createError('E121', `pan value ${value.value} out of range 0..127 (64=center)`, position, this.filePath);
+    }
+
+    const event: CCEvent = {
+      type: 'cc',
+      tick: track.cursor,
+      controller: 10, // CC10 = Pan
+      value: value.value,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinVolume(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'volume() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const value = this.evaluate(args[0]);
+    if (value.type !== 'int') {
+      throw new MFError('TYPE', 'volume() value must be int', position, this.filePath);
+    }
+    if (value.value < 0 || value.value > 127) {
+      throw createError('E121', `volume value ${value.value} out of range 0..127`, position, this.filePath);
+    }
+
+    const event: CCEvent = {
+      type: 'cc',
+      tick: track.cursor,
+      controller: 7, // CC7 = Volume
+      value: value.value,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinSustain(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'sustain() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const value = this.evaluate(args[0]);
+    if (value.type !== 'bool') {
+      throw new MFError('TYPE', 'sustain() expects bool (true/false)', position, this.filePath);
+    }
+
+    const event: CCEvent = {
+      type: 'cc',
+      tick: track.cursor,
+      controller: 64, // CC64 = Sustain Pedal
+      value: value.value ? 127 : 0,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinPitchBend(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'pitchBend() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    const value = this.evaluate(args[0]);
+    if (value.type !== 'int') {
+      throw new MFError('TYPE', 'pitchBend() value must be int', position, this.filePath);
+    }
+    if (value.value < -8192 || value.value > 8191) {
+      throw createError('E122', `pitchBend value ${value.value} out of range -8192..8191`, position, this.filePath);
+    }
+
+    const event: PitchBendEvent = {
+      type: 'pitchBend',
+      tick: track.cursor,
+      value: value.value,
+    };
+    track.events.push(event);
+    return makeNull();
+  }
+
+  private builtinTempoCurve(args: Expression[], position: any): RuntimeValue {
+    this.checkGlobalPhase(position);
+
+    const startTime = this.evaluate(args[0]);
+    const endTime = this.evaluate(args[1]);
+    const startBpm = this.evaluate(args[2]);
+    const endBpm = this.evaluate(args[3]);
+    const steps = args.length >= 5 ? this.evaluate(args[4]) : makeInt(16);
+
+    if (startTime.type !== 'time') {
+      throw new MFError('TYPE', 'tempoCurve() startTime must be Time', position, this.filePath);
+    }
+    if (endTime.type !== 'time') {
+      throw new MFError('TYPE', 'tempoCurve() endTime must be Time', position, this.filePath);
+    }
+    if (steps.type !== 'int') {
+      throw new MFError('TYPE', 'tempoCurve() steps must be int', position, this.filePath);
+    }
+
+    const startTick = this.timeToTick(startTime, position);
+    const endTick = this.timeToTick(endTime, position);
+    const startBpmVal = toNumber(startBpm);
+    const endBpmVal = toNumber(endBpm);
+    const numSteps = steps.value;
+
+    if (numSteps < 2) {
+      throw createError('E123', 'tempoCurve() steps must be at least 2', position, this.filePath);
+    }
+
+    // Generate tempo points with linear interpolation
+    const tickStep = (endTick - startTick) / (numSteps - 1);
+    const bpmStep = (endBpmVal - startBpmVal) / (numSteps - 1);
+
+    for (let i = 0; i < numSteps; i++) {
+      const tick = Math.round(startTick + tickStep * i);
+      const bpm = startBpmVal + bpmStep * i;
+      this.ir.tempos.push({ tick, bpm });
+    }
+
+    return makeNull();
+  }
+
+  private builtinArticulatedNote(args: Expression[], position: any, articulation: Articulation): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pitch = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', `${articulation}() pitch must be Pitch`, position, this.filePath);
+    }
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', `${articulation}() duration must be Dur`, position, this.filePath);
+    }
+
+    // Validate pitch range
+    if (pitch.midi < 0 || pitch.midi > 127) {
+      throw createError('E110', `Pitch ${pitch.midi} out of range 0..127`, position, this.filePath);
+    }
+
+    const baseDurTicks = this.durToTicks(dur, position);
+    const tick = track.cursor;
+
+    // Apply articulation adjustments
+    let actualDurTicks = baseDurTicks;
+    let velAdjust = 0;
+
+    switch (articulation) {
+      case 'staccato':
+        actualDurTicks = Math.max(1, Math.floor(baseDurTicks * 0.5)); // 50% of duration
+        break;
+      case 'legato':
+        actualDurTicks = baseDurTicks + Math.floor(baseDurTicks * 0.1); // Slight overlap
+        break;
+      case 'accent':
+        velAdjust = 20; // Louder
+        break;
+      case 'tenuto':
+        actualDurTicks = baseDurTicks; // Full duration (held)
+        break;
+      case 'marcato':
+        actualDurTicks = Math.floor(baseDurTicks * 0.75); // Slightly shorter
+        velAdjust = 25; // And louder
+        break;
+    }
+
+    if (track.kind === 'vocal') {
+      // Vocal needs lyric
+      if (args.length < 3) {
+        throw createError('E210', `Vocal ${articulation}() requires lyric`, position, this.filePath);
+      }
+      const lyric = this.evaluate(args[2]);
+      if (lyric.type !== 'string' || lyric.value === '') {
+        throw createError('E210', 'Vocal lyric must be non-empty string', position, this.filePath);
+      }
+
+      // Check for overlap
+      this.checkVocalOverlap(track, tick, actualDurTicks, position);
+
+      const event: NoteEvent = {
+        type: 'note',
+        tick,
+        dur: actualDurTicks,
+        key: pitch.midi,
+        lyric: lyric.value,
+        articulation,
+      };
+      track.events.push(event);
+    } else {
+      // MIDI track
+      const baseVel = args.length >= 3
+        ? toNumber(this.evaluate(args[2]))
+        : track.defaultVel ?? 96;
+      const vel = Math.min(127, Math.max(1, baseVel + velAdjust));
+
+      const event: NoteEvent = {
+        type: 'note',
+        tick,
+        dur: actualDurTicks,
+        key: pitch.midi,
+        vel,
+        articulation,
+      };
+      track.events.push(event);
+    }
+
+    track.cursor += baseDurTicks; // Always advance by the original duration
     return makeNull();
   }
 
