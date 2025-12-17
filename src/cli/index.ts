@@ -9,6 +9,8 @@ import { buildCommand } from './commands/build.js';
 import { renderCommand } from './commands/render.js';
 import { playCommand } from './commands/play.js';
 import { doctorCommand } from './commands/doctor.js';
+import { importCommand } from './commands/import.js';
+import { recordCommand } from './commands/record.js';
 import { ExitCodes } from '../errors.js';
 
 const HELP = `
@@ -23,6 +25,8 @@ Commands:
   build [-p profile|all]  Build IR and profile-specific outputs
   render -p <profile|all>  Render audio using external tools
   play [file.mf]    Live preview using FluidSynth
+  import <file>     Import MusicXML/MIDI to MFS
+  record            Record MIDI input from keyboard
   doctor [-p profile]  Check external dependencies
 
 Options:
@@ -74,6 +78,12 @@ async function main(): Promise<number> {
 
       case 'play':
         return await playCommand(commandArgs);
+
+      case 'import':
+        return await importCommand(commandArgs);
+
+      case 'record':
+        return await recordCommand(commandArgs);
 
       case 'doctor':
         return await doctorCommand(commandArgs);

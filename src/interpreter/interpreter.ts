@@ -38,6 +38,20 @@ import type {
   RepeatEvent,
   OttavaEvent,
   NoteEventFull,
+  GrandStaffInfo,
+  TablatureInfo,
+  TabNoteEvent,
+  TabTechnique,
+  ChordSymbolEvent,
+  ChordQuality,
+  FiguredBassEvent,
+  MarkerEvent,
+  CuePointEvent,
+  Pattern,
+  PatternInstance,
+  AudioClipEvent,
+  AudioEffect,
+  EffectType,
 } from '../types/ir.js';
 import {
   RuntimeValue,
@@ -90,6 +104,15 @@ interface TrackState {
   repeats?: RepeatEvent[];
   fermatas?: FermataEvent[];
   ottavas?: OttavaEvent[];
+  // Extended features
+  grandStaff?: GrandStaffInfo;
+  tablature?: TablatureInfo;
+  chordSymbols?: ChordSymbolEvent[];
+  figuredBass?: FiguredBassEvent[];
+  markers?: MarkerEvent[];
+  patterns?: PatternInstance[];
+  audioClips?: AudioClipEvent[];
+  effects?: AudioEffect[];
 }
 
 export class Interpreter {
@@ -648,6 +671,39 @@ export class Interpreter {
         return this.builtinGrowl(args, position);
       case 'xsynth':
         return this.builtinXSynth(args, position);
+      // Extended notation functions
+      case 'grandStaff':
+        return this.builtinGrandStaff(args, position);
+      case 'tablature':
+        return this.builtinTablature(args, position);
+      case 'tabNote':
+        return this.builtinTabNote(args, position);
+      case 'chordSymbol':
+        return this.builtinChordSymbol(args, position);
+      case 'figuredBass':
+        return this.builtinFiguredBass(args, position);
+      // Markers and patterns
+      case 'marker':
+        return this.builtinMarker(args, position);
+      case 'cuePoint':
+        return this.builtinCuePoint(args, position);
+      case 'pattern':
+        return this.builtinPattern(args, position);
+      case 'usePattern':
+        return this.builtinUsePattern(args, position);
+      // Audio functions
+      case 'audioClip':
+        return this.builtinAudioClip(args, position);
+      case 'effect':
+        return this.builtinEffect(args, position);
+      case 'reverb':
+        return this.builtinReverb(args, position);
+      case 'delay':
+        return this.builtinDelay(args, position);
+      case 'eq':
+        return this.builtinEQ(args, position);
+      case 'compressor':
+        return this.builtinCompressor(args, position);
     }
 
     // User-defined proc
@@ -2493,6 +2549,383 @@ export class Interpreter {
     track.meta.xsynth_voice1 = voice1.value;
     track.meta.xsynth_voice2 = voice2.value;
     track.meta.xsynth_balance = balance;
+
+    return makeNull();
+  }
+
+  // Extended notation functions
+  private builtinGrandStaff(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const upperClef = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'treble' };
+    const lowerClef = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'bass' };
+    const splitPoint = args.length > 2 ? toNumber(this.evaluate(args[2])) : 60; // Middle C
+
+    track.grandStaff = {
+      upperClef: (upperClef.type === 'string' ? upperClef.value : 'treble') as 'treble' | 'alto' | 'tenor' | 'bass',
+      lowerClef: (lowerClef.type === 'string' ? lowerClef.value : 'bass') as 'treble' | 'alto' | 'tenor' | 'bass',
+      splitPoint,
+    };
+
+    return makeNull();
+  }
+
+  private builtinTablature(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const instrument = this.evaluate(args[0]);
+    if (instrument.type !== 'string') {
+      throw new MFError('TYPE', 'tablature() instrument must be string', position, this.filePath);
+    }
+
+    // Standard tunings
+    const tunings: Record<string, number[]> = {
+      'guitar': [40, 45, 50, 55, 59, 64],      // E A D G B E
+      'bass': [28, 33, 38, 43],                 // E A D G
+      'ukulele': [67, 60, 64, 69],             // G C E A
+    };
+
+    const tuning = tunings[instrument.value] || tunings['guitar'];
+
+    track.tablature = {
+      strings: tuning.length,
+      tuning,
+      instrument: instrument.value as 'guitar' | 'bass' | 'ukulele' | 'custom',
+    };
+
+    return makeNull();
+  }
+
+  private builtinTabNote(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (!track.tablature) {
+      throw new MFError('STATE', 'tablature() must be called before tabNote()', position, this.filePath);
+    }
+
+    const stringNum = toNumber(this.evaluate(args[0]));
+    const fret = toNumber(this.evaluate(args[1]));
+    const dur = this.evaluate(args[2]);
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'tabNote() duration must be Dur', position, this.filePath);
+    }
+
+    if (stringNum < 1 || stringNum > track.tablature.strings) {
+      throw new MFError('RANGE', `tabNote() string must be 1-${track.tablature.strings}`, position, this.filePath);
+    }
+
+    // Calculate MIDI note from string and fret
+    const stringIndex = stringNum - 1;
+    const midiNote = track.tablature.tuning[stringIndex] + fret;
+
+    const durTicks = this.durToTicks(dur, position);
+    const technique = args.length > 3 ? this.evaluate(args[3]) : undefined;
+
+    const event: TabNoteEvent = {
+      type: 'note',
+      tick: track.cursor,
+      dur: durTicks,
+      key: midiNote,
+      vel: track.defaultVel ?? 96,
+      string: stringNum,
+      fret,
+      technique: technique?.type === 'string' ? technique.value as TabTechnique : undefined,
+    };
+
+    track.events.push(event);
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinChordSymbol(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const root = this.evaluate(args[0]);
+    const quality = this.evaluate(args[1]);
+
+    if (root.type !== 'string' || quality.type !== 'string') {
+      throw new MFError('TYPE', 'chordSymbol() root and quality must be strings', position, this.filePath);
+    }
+
+    const bass = args.length > 2 ? this.evaluate(args[2]) : undefined;
+
+    if (!track.chordSymbols) {
+      track.chordSymbols = [];
+    }
+
+    const event: ChordSymbolEvent = {
+      type: 'chordSymbol',
+      tick: track.cursor,
+      root: root.value,
+      quality: quality.value as ChordQuality,
+      bass: bass?.type === 'string' ? bass.value : undefined,
+    };
+
+    track.chordSymbols.push(event);
+    return makeNull();
+  }
+
+  private builtinFiguredBass(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const figuresArg = this.evaluate(args[0]);
+    if (figuresArg.type !== 'array') {
+      throw new MFError('TYPE', 'figuredBass() expects array of figures', position, this.filePath);
+    }
+
+    const figures: string[] = [];
+    for (const elem of figuresArg.elements) {
+      if (elem.type === 'string') {
+        figures.push(elem.value);
+      } else if (elem.type === 'int') {
+        figures.push(String(elem.value));
+      }
+    }
+
+    if (!track.figuredBass) {
+      track.figuredBass = [];
+    }
+
+    const event: FiguredBassEvent = {
+      type: 'figuredBass',
+      tick: track.cursor,
+      figures,
+    };
+
+    track.figuredBass.push(event);
+    return makeNull();
+  }
+
+  // Markers and patterns
+  private builtinMarker(args: Expression[], position: any): RuntimeValue {
+    const name = this.evaluate(args[0]);
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'marker() name must be string', position, this.filePath);
+    }
+
+    const color = args.length > 1 ? this.evaluate(args[1]) : undefined;
+
+    const event: MarkerEvent = {
+      type: 'marker',
+      tick: this.currentTrack?.cursor ?? 0,
+      name: name.value,
+      color: color?.type === 'string' ? color.value : undefined,
+    };
+
+    if (this.currentTrack) {
+      if (!this.currentTrack.markers) {
+        this.currentTrack.markers = [];
+      }
+      this.currentTrack.markers.push(event);
+    }
+
+    return makeNull();
+  }
+
+  private builtinCuePoint(args: Expression[], position: any): RuntimeValue {
+    const name = this.evaluate(args[0]);
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'cuePoint() name must be string', position, this.filePath);
+    }
+
+    const action = args.length > 1 ? this.evaluate(args[1]) : undefined;
+
+    // Store cue point - would need song-level storage
+    return makeNull();
+  }
+
+  private builtinPattern(args: Expression[], position: any): RuntimeValue {
+    // Pattern definition - would need to capture block contents
+    const name = this.evaluate(args[0]);
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'pattern() name must be string', position, this.filePath);
+    }
+
+    // Patterns would be stored at interpreter level
+    return makeNull();
+  }
+
+  private builtinUsePattern(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const patternId = this.evaluate(args[0]);
+    if (patternId.type !== 'string') {
+      throw new MFError('TYPE', 'usePattern() id must be string', position, this.filePath);
+    }
+
+    const repetitions = args.length > 1 ? toNumber(this.evaluate(args[1])) : 1;
+
+    if (!track.patterns) {
+      track.patterns = [];
+    }
+
+    track.patterns.push({
+      patternId: patternId.value,
+      tick: track.cursor,
+      repetitions,
+    });
+
+    return makeNull();
+  }
+
+  // Audio functions
+  private builtinAudioClip(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const filePath = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+
+    if (filePath.type !== 'string') {
+      throw new MFError('TYPE', 'audioClip() path must be string', position, this.filePath);
+    }
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'audioClip() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+    const gain = args.length > 2 ? toNumber(this.evaluate(args[2])) / 127 : 1.0;
+    const pan = args.length > 3 ? (toNumber(this.evaluate(args[3])) - 64) / 64 : 0;
+
+    if (!track.audioClips) {
+      track.audioClips = [];
+    }
+
+    const event: AudioClipEvent = {
+      type: 'audioClip',
+      tick: track.cursor,
+      filePath: filePath.value,
+      duration: durTicks,
+      gain,
+      pan,
+    };
+
+    track.audioClips.push(event);
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinEffect(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const effectType = this.evaluate(args[0]);
+    if (effectType.type !== 'string') {
+      throw new MFError('TYPE', 'effect() type must be string', position, this.filePath);
+    }
+
+    const params: Record<string, number> = {};
+    // Parse key-value pairs from remaining arguments
+    for (let i = 1; i < args.length - 1; i += 2) {
+      const key = this.evaluate(args[i]);
+      const value = this.evaluate(args[i + 1]);
+      if (key.type === 'string') {
+        params[key.value] = toNumber(value);
+      }
+    }
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    const effect: AudioEffect = {
+      type: 'effect',
+      effectType: effectType.value as EffectType,
+      params,
+    };
+
+    track.effects.push(effect);
+    return makeNull();
+  }
+
+  private builtinReverb(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const roomSize = args.length > 0 ? toNumber(this.evaluate(args[0])) / 127 : 0.5;
+    const damping = args.length > 1 ? toNumber(this.evaluate(args[1])) / 127 : 0.5;
+    const wetDry = args.length > 2 ? toNumber(this.evaluate(args[2])) / 127 : 0.3;
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    track.effects.push({
+      type: 'effect',
+      effectType: 'reverb',
+      params: { roomSize, damping, wetDry },
+    });
+
+    return makeNull();
+  }
+
+  private builtinDelay(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const time = args.length > 0 ? toNumber(this.evaluate(args[0])) : 250; // ms
+    const feedback = args.length > 1 ? toNumber(this.evaluate(args[1])) / 127 : 0.4;
+    const wetDry = args.length > 2 ? toNumber(this.evaluate(args[2])) / 127 : 0.3;
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    track.effects.push({
+      type: 'effect',
+      effectType: 'delay',
+      params: { time, feedback, wetDry },
+    });
+
+    return makeNull();
+  }
+
+  private builtinEQ(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const lowGain = args.length > 0 ? toNumber(this.evaluate(args[0])) - 64 : 0;
+    const midGain = args.length > 1 ? toNumber(this.evaluate(args[1])) - 64 : 0;
+    const highGain = args.length > 2 ? toNumber(this.evaluate(args[2])) - 64 : 0;
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    track.effects.push({
+      type: 'effect',
+      effectType: 'eq',
+      params: { lowGain, midGain, highGain },
+    });
+
+    return makeNull();
+  }
+
+  private builtinCompressor(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const threshold = args.length > 0 ? toNumber(this.evaluate(args[0])) : -20; // dB
+    const ratio = args.length > 1 ? toNumber(this.evaluate(args[1])) : 4;
+    const attack = args.length > 2 ? toNumber(this.evaluate(args[2])) : 10; // ms
+    const release = args.length > 3 ? toNumber(this.evaluate(args[3])) : 100; // ms
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    track.effects.push({
+      type: 'effect',
+      effectType: 'compressor',
+      params: { threshold, ratio, attack, release },
+    });
 
     return makeNull();
   }
