@@ -14,7 +14,7 @@ import { recordCommand } from './commands/record.js';
 import { ExitCodes } from '../errors.js';
 
 const HELP = `
-TakoMusic v1.0.0-alpha - Music composition with MFS language
+TakoMusic v1.2.0 - Music composition with MFS language
 
 Usage: mf <command> [options]
 
@@ -52,7 +52,7 @@ async function main(): Promise<number> {
   }
 
   if (args[0] === '-v' || args[0] === '--version') {
-    console.log('TakoMusic v1.0.0-alpha');
+    console.log('TakoMusic v1.2.0');
     return ExitCodes.SUCCESS;
   }
 

@@ -52,6 +52,140 @@ import type {
   AudioClipEvent,
   AudioEffect,
   EffectType,
+  TuningSystem,
+  TuningEvent,
+  EuclideanRhythm,
+  GenerativePattern,
+  ConstraintRule,
+  MultiVerseLyricEvent,
+  LyricVerse,
+  OssiaEvent,
+  CueNoteEvent,
+  InstrumentChangeEvent,
+  PercussionNotehead,
+  StringTechniqueEvent,
+  BowingMark,
+  WindTechniqueEvent,
+  WindTechnique,
+  GuitarBendEvent,
+  HarpPedalEvent,
+  SidechainEvent,
+  MIDIMapping,
+  Scene,
+  SceneClip,
+  PageBreakEvent,
+  SystemBreakEvent,
+  StaffSpacingEvent,
+  TextAnnotation,
+  RehearsalMark,
+  DirectionText,
+  // New types
+  TimeStretchEvent,
+  PitchShiftEvent,
+  SampleSlicerEvent,
+  SampleSlice,
+  GranularSynthEvent,
+  AutomationCurveType,
+  AutomationPoint,
+  AutomationLane,
+  LFOModulation,
+  EnvelopeFollower,
+  ModulationMatrixEntry,
+  ModulationMatrix,
+  BusTrack,
+  SendEffect,
+  StereoWidthEvent,
+  SpatialFormat,
+  SpatialAudioEvent,
+  SurroundPanEvent,
+  MPEZone,
+  MPENoteEvent,
+  MPEConfig,
+  ArpeggiatorPattern,
+  ChordMemory,
+  ChordTrigger,
+  AdditiveTimeSig,
+  PolymetricSection,
+  ProportionalNotation,
+  GraphicNotationEvent,
+  AleatoricBox,
+  CutawayScore,
+  TransposingInstrument,
+  MultiSampleInstrument,
+  SampleZone,
+  RoundRobinGroup,
+  VelocityLayer,
+  KeySwitch,
+  SamplerInstrument,
+  SpectrumAnalyzerConfig,
+  LoudnessMeter,
+  PhaseCorrelationMeter,
+  AnalyzerSnapshot,
+  // New types
+  SpectralEdit,
+  StepSequencer,
+  StepSequencerStep,
+  FollowAction,
+  ScaleLock,
+  ScaleType,
+  ChordLock,
+  Divisi,
+  ExpressionMap,
+  ExpressionMapEntry,
+  OSCConfig,
+  OSCMapping,
+  NetworkMIDIConfig,
+  MIDIClockConfig,
+  TimecodeConfig,
+  DitheringConfig,
+  LoudnessMatching,
+  ReferenceTrack,
+  ID3Metadata,
+  ISRCCode,
+  SongStructureMarker,
+  // Audio editing & restoration
+  FreezeTrack,
+  AudioWarp,
+  WarpMarker,
+  BeatSlice,
+  SpectralRepair,
+  AudioRestoration,
+  VocalAlignment,
+  // Dynamics processing
+  MidSideProcessing,
+  DynamicEQ,
+  DynamicEQBand,
+  LinearPhaseEQ,
+  EQBand,
+  ParallelProcessing,
+  // Recording
+  TakeLane,
+  Take,
+  CompRegion,
+  PunchPoint,
+  LoopRecording,
+  AutomationRecording,
+  // Groove & humanize
+  GrooveTemplate,
+  HumanizeSettings,
+  Randomization,
+  // Controller & macro
+  MIDILearnMapping,
+  MacroControl,
+  MacroMapping,
+  // Export & batch
+  StemExport,
+  BatchProcessing,
+  BatchOperation,
+  ExportPreset,
+  // Atmos/spatial
+  AtmosObject,
+  AtmosAutomationPoint,
+  HeadphoneVirtualization,
+  SurroundAutomation,
+  // Collaboration
+  ProjectNote,
+  Collaborator,
 } from '../types/ir.js';
 import {
   RuntimeValue,
@@ -113,6 +247,127 @@ interface TrackState {
   patterns?: PatternInstance[];
   audioClips?: AudioClipEvent[];
   effects?: AudioEffect[];
+  // Microtonality
+  tuning?: TuningEvent;
+  centsDeviation?: number;
+  // Algorithmic composition
+  generativePatterns?: GenerativePattern[];
+  constraints?: ConstraintRule[];
+  randomSeed?: number;
+  // Advanced notation
+  multiVerseLyrics?: MultiVerseLyricEvent[];
+  ossias?: OssiaEvent[];
+  cueNotes?: CueNoteEvent[];
+  stringTechniques?: StringTechniqueEvent[];
+  windTechniques?: WindTechniqueEvent[];
+  guitarBends?: GuitarBendEvent[];
+  harpPedals?: HarpPedalEvent[];
+  percussionNoteheads?: Map<number, PercussionNotehead>;
+  // Live performance
+  scenes?: Scene[];
+  midiMappings?: MIDIMapping[];
+  // Score layout
+  layoutEvents?: (PageBreakEvent | SystemBreakEvent | StaffSpacingEvent)[];
+  textAnnotations?: TextAnnotation[];
+  rehearsalMarks?: RehearsalMark[];
+  directionTexts?: DirectionText[];
+  // Audio manipulation
+  timeStretchEvents?: TimeStretchEvent[];
+  pitchShiftEvents?: PitchShiftEvent[];
+  sampleSlicers?: SampleSlicerEvent[];
+  granularSynths?: GranularSynthEvent[];
+  // Advanced automation
+  automationLanes?: AutomationLane[];
+  lfoModulations?: LFOModulation[];
+  envelopeFollowers?: EnvelopeFollower[];
+  modulationMatrix?: ModulationMatrix;
+  // Mixing/Mastering
+  buses?: BusTrack[];
+  sends?: SendEffect[];
+  stereoWidthEvents?: StereoWidthEvent[];
+  spatialEvents?: SpatialAudioEvent[];
+  surroundPans?: SurroundPanEvent[];
+  // MIDI extensions
+  mpeConfig?: MPEConfig;
+  arpeggiators?: ArpeggiatorPattern[];
+  chordMemories?: ChordMemory[];
+  chordTriggers?: ChordTrigger[];
+  // Advanced notation
+  additiveTimeSigs?: AdditiveTimeSig[];
+  polymetricSections?: PolymetricSection[];
+  proportionalNotation?: ProportionalNotation[];
+  graphicNotation?: GraphicNotationEvent[];
+  aleatoricBoxes?: AleatoricBox[];
+  cutawayScores?: CutawayScore[];
+  transposingInstrument?: TransposingInstrument;
+  // Sampling
+  samplerInstruments?: SamplerInstrument[];
+  multiSampleInstruments?: MultiSampleInstrument[];
+  // Analysis
+  spectrumAnalyzer?: SpectrumAnalyzerConfig;
+  loudnessMeter?: LoudnessMeter;
+  phaseCorrelationMeter?: PhaseCorrelationMeter;
+  analyzerSnapshots?: AnalyzerSnapshot[];
+  // Advanced audio processing
+  spectralEdits?: SpectralEdit[];
+  // Sequencing extensions
+  stepSequencers?: StepSequencer[];
+  followActions?: FollowAction[];
+  scaleLocks?: ScaleLock[];
+  chordLocks?: ChordLock[];
+  divisiSections?: Divisi[];
+  expressionMaps?: ExpressionMap[];
+  // Sync & communication
+  oscConfig?: OSCConfig;
+  oscMappings?: OSCMapping[];
+  networkMidiConfig?: NetworkMIDIConfig;
+  midiClockConfig?: MIDIClockConfig;
+  timecodeConfig?: TimecodeConfig;
+  // Mastering
+  ditheringConfig?: DitheringConfig;
+  loudnessMatchingConfig?: LoudnessMatching;
+  referenceTracks?: ReferenceTrack[];
+  // Metadata
+  id3Metadata?: ID3Metadata;
+  isrcCodes?: ISRCCode[];
+  songStructureMarkers?: SongStructureMarker[];
+  // Audio editing & restoration
+  freezeTracks?: FreezeTrack[];
+  audioWarps?: AudioWarp[];
+  warpMarkers?: WarpMarker[];
+  beatSlices?: BeatSlice[];
+  spectralRepairs?: SpectralRepair[];
+  audioRestorations?: AudioRestoration[];
+  vocalAlignments?: VocalAlignment[];
+  // Dynamics processing
+  midSideProcessing?: MidSideProcessing[];
+  dynamicEQs?: DynamicEQ[];
+  linearPhaseEQs?: LinearPhaseEQ[];
+  parallelProcessing?: ParallelProcessing[];
+  // Recording
+  takeLanes?: TakeLane[];
+  compRegions?: CompRegion[];
+  punchPoints?: PunchPoint[];
+  loopRecordings?: LoopRecording[];
+  automationRecordings?: AutomationRecording[];
+  // Groove & humanize
+  grooveTemplates?: GrooveTemplate[];
+  humanizeSettings?: HumanizeSettings[];
+  randomizations?: Randomization[];
+  // Controller & macro
+  midiLearnMappings?: MIDILearnMapping[];
+  macroControls?: MacroControl[];
+  // Export & batch
+  stemExports?: StemExport[];
+  batchProcessings?: BatchProcessing[];
+  exportPresets?: ExportPreset[];
+  // Atmos/spatial
+  atmosObjects?: AtmosObject[];
+  headphoneVirtualization?: HeadphoneVirtualization;
+  surroundAutomation?: SurroundAutomation[];
+  // Collaboration
+  projectNotes?: ProjectNote[];
+  collaborators?: Collaborator[];
 }
 
 export class Interpreter {
@@ -704,6 +959,375 @@ export class Interpreter {
         return this.builtinEQ(args, position);
       case 'compressor':
         return this.builtinCompressor(args, position);
+
+      // Microtonality & Tuning
+      case 'tuning':
+        return this.builtinTuning(args, position);
+      case 'cents':
+        return this.builtinCents(args, position);
+      case 'quarterTone':
+        return this.builtinQuarterTone(args, position);
+      case 'pitchCorrection':
+        return this.builtinPitchCorrection(args, position);
+
+      // Algorithmic Composition
+      case 'euclidean':
+        return this.builtinEuclidean(args, position);
+      case 'probability':
+        return this.builtinProbability(args, position);
+      case 'markov':
+        return this.builtinMarkov(args, position);
+      case 'randomSeed':
+        return this.builtinRandomSeed(args, position);
+      case 'randomNote':
+        return this.builtinRandomNote(args, position);
+      case 'randomRhythm':
+        return this.builtinRandomRhythm(args, position);
+      case 'constraint':
+        return this.builtinConstraint(args, position);
+      case 'cellular':
+        return this.builtinCellular(args, position);
+      case 'lsystem':
+        return this.builtinLSystem(args, position);
+
+      // Advanced Notation - Lyrics
+      case 'verse':
+        return this.builtinVerse(args, position);
+      case 'ossia':
+        return this.builtinOssia(args, position);
+      case 'cueNote':
+        return this.builtinCueNote(args, position);
+      case 'instrumentChange':
+        return this.builtinInstrumentChange(args, position);
+
+      // Percussion notation
+      case 'notehead':
+        return this.builtinNotehead(args, position);
+
+      // String techniques
+      case 'bowUp':
+      case 'bowDown':
+      case 'pizz':
+      case 'arco':
+      case 'colLegno':
+      case 'sulPont':
+      case 'sulTasto':
+      case 'snapPizz':
+      case 'harmonics':
+        return this.builtinStringTechnique(callee, args, position);
+
+      // Wind techniques
+      case 'breath':
+      case 'mute':
+      case 'open':
+      case 'stopped':
+      case 'flutter':
+      case 'doubleTongue':
+      case 'tripleTongue':
+        return this.builtinWindTechnique(callee, args, position);
+
+      // Guitar techniques
+      case 'bend':
+        return this.builtinGuitarBend(args, position);
+      case 'hammerOn':
+      case 'pullOff':
+      case 'slide':
+      case 'tap':
+      case 'naturalHarmonic':
+      case 'artificialHarmonic':
+      case 'palmMute':
+      case 'letRing':
+        return this.builtinGuitarTechnique(callee, args, position);
+
+      // Harp
+      case 'harpPedal':
+        return this.builtinHarpPedal(args, position);
+
+      // Additional Effects
+      case 'phaser':
+        return this.builtinPhaser(args, position);
+      case 'flanger':
+        return this.builtinFlanger(args, position);
+      case 'chorus':
+        return this.builtinChorus(args, position);
+      case 'distortion':
+        return this.builtinDistortion(args, position);
+      case 'filter':
+        return this.builtinFilter(args, position);
+      case 'sidechain':
+        return this.builtinSidechain(args, position);
+
+      // Live Performance
+      case 'midiMap':
+        return this.builtinMidiMap(args, position);
+      case 'scene':
+        return this.builtinScene(args, position);
+      case 'launchScene':
+        return this.builtinLaunchScene(args, position);
+      case 'liveLoop':
+        return this.builtinLiveLoop(args, position);
+
+      // Score Layout
+      case 'pageBreak':
+        return this.builtinPageBreak(args, position);
+      case 'systemBreak':
+        return this.builtinSystemBreak(args, position);
+      case 'staffSpacing':
+        return this.builtinStaffSpacing(args, position);
+      case 'text':
+        return this.builtinText(args, position);
+      case 'rehearsalMark':
+        return this.builtinRehearsalMark(args, position);
+      case 'direction':
+        return this.builtinDirection(args, position);
+
+      // Audio manipulation
+      case 'timeStretch':
+        return this.builtinTimeStretch(args, position);
+      case 'pitchShift':
+        return this.builtinPitchShift(args, position);
+      case 'sampleSlicer':
+        return this.builtinSampleSlicer(args, position);
+      case 'granular':
+        return this.builtinGranular(args, position);
+
+      // Advanced automation
+      case 'automationLane':
+        return this.builtinAutomationLane(args, position);
+      case 'automationPoint':
+        return this.builtinAutomationPoint(args, position);
+      case 'lfo':
+        return this.builtinLFO(args, position);
+      case 'envelopeFollower':
+        return this.builtinEnvelopeFollower(args, position);
+      case 'modMatrix':
+        return this.builtinModMatrix(args, position);
+
+      // Mixing/Mastering
+      case 'bus':
+        return this.builtinBus(args, position);
+      case 'send':
+        return this.builtinSend(args, position);
+      case 'stereoWidth':
+        return this.builtinStereoWidth(args, position);
+      case 'limiter':
+        return this.builtinLimiter(args, position);
+      case 'maximizer':
+        return this.builtinMaximizer(args, position);
+      case 'multibandComp':
+        return this.builtinMultibandComp(args, position);
+      case 'spatial':
+        return this.builtinSpatial(args, position);
+      case 'surroundPan':
+        return this.builtinSurroundPan(args, position);
+
+      // MIDI extensions
+      case 'mpe':
+        return this.builtinMPE(args, position);
+      case 'mpeNote':
+        return this.builtinMPENote(args, position);
+      case 'arpeggiator':
+        return this.builtinArpeggiator(args, position);
+      case 'chordMemory':
+        return this.builtinChordMemory(args, position);
+      case 'chordTrigger':
+        return this.builtinChordTrigger(args, position);
+
+      // Advanced notation
+      case 'additiveTimeSig':
+        return this.builtinAdditiveTimeSig(args, position);
+      case 'polymetric':
+        return this.builtinPolymetric(args, position);
+      case 'proportional':
+        return this.builtinProportional(args, position);
+      case 'graphic':
+        return this.builtinGraphic(args, position);
+      case 'aleatoric':
+        return this.builtinAleatoric(args, position);
+      case 'cutaway':
+        return this.builtinCutaway(args, position);
+      case 'transposing':
+        return this.builtinTransposing(args, position);
+
+      // Sampling
+      case 'sampler':
+        return this.builtinSampler(args, position);
+      case 'sampleZone':
+        return this.builtinSampleZone(args, position);
+      case 'roundRobin':
+        return this.builtinRoundRobin(args, position);
+      case 'velocityLayer':
+        return this.builtinVelocityLayer(args, position);
+      case 'keySwitch':
+        return this.builtinKeySwitch(args, position);
+
+      // Analysis
+      case 'spectrumAnalyzer':
+        return this.builtinSpectrumAnalyzer(args, position);
+      case 'loudnessMeter':
+        return this.builtinLoudnessMeter(args, position);
+      case 'phaseMeter':
+        return this.builtinPhaseMeter(args, position);
+      case 'analyzerSnapshot':
+        return this.builtinAnalyzerSnapshot(args, position);
+
+      // Advanced audio processing
+      case 'vocoder':
+        return this.builtinVocoder(args, position);
+      case 'convolutionReverb':
+        return this.builtinConvolutionReverb(args, position);
+      case 'ampSim':
+        return this.builtinAmpSim(args, position);
+      case 'cabinetSim':
+        return this.builtinCabinetSim(args, position);
+      case 'tapeSaturation':
+        return this.builtinTapeSaturation(args, position);
+      case 'transientShaper':
+        return this.builtinTransientShaper(args, position);
+      case 'deEsser':
+        return this.builtinDeEsser(args, position);
+      case 'exciter':
+        return this.builtinExciter(args, position);
+      case 'noiseReduction':
+        return this.builtinNoiseReduction(args, position);
+      case 'spectralEdit':
+        return this.builtinSpectralEdit(args, position);
+
+      // Sequencing extensions
+      case 'stepSequencer':
+        return this.builtinStepSequencer(args, position);
+      case 'step':
+        return this.builtinStep(args, position);
+      case 'followAction':
+        return this.builtinFollowAction(args, position);
+      case 'scaleLock':
+        return this.builtinScaleLock(args, position);
+      case 'chordLock':
+        return this.builtinChordLock(args, position);
+      case 'divisi':
+        return this.builtinDivisi(args, position);
+      case 'expressionMap':
+        return this.builtinExpressionMap(args, position);
+      case 'articulation':
+        return this.builtinArticulationMapping(args, position);
+
+      // Sync & communication
+      case 'osc':
+        return this.builtinOSC(args, position);
+      case 'oscMap':
+        return this.builtinOSCMap(args, position);
+      case 'networkMidi':
+        return this.builtinNetworkMIDI(args, position);
+      case 'midiClock':
+        return this.builtinMIDIClock(args, position);
+      case 'timecode':
+        return this.builtinTimecode(args, position);
+
+      // Mastering
+      case 'dithering':
+        return this.builtinDithering(args, position);
+      case 'loudnessMatch':
+        return this.builtinLoudnessMatch(args, position);
+      case 'referenceTrack':
+        return this.builtinReferenceTrack(args, position);
+
+      // Metadata
+      case 'id3':
+        return this.builtinID3(args, position);
+      case 'isrc':
+        return this.builtinISRC(args, position);
+      case 'songStructure':
+        return this.builtinSongStructure(args, position);
+
+      // Audio editing & restoration
+      case 'freeze':
+        return this.builtinFreeze(args, position);
+      case 'audioWarp':
+        return this.builtinAudioWarp(args, position);
+      case 'warpMarker':
+        return this.builtinWarpMarker(args, position);
+      case 'beatSlice':
+        return this.builtinBeatSlice(args, position);
+      case 'spectralRepair':
+        return this.builtinSpectralRepair(args, position);
+      case 'audioRestore':
+        return this.builtinAudioRestore(args, position);
+      case 'vocalAlign':
+        return this.builtinVocalAlign(args, position);
+
+      // Dynamics processing
+      case 'midSide':
+        return this.builtinMidSide(args, position);
+      case 'dynamicEQ':
+        return this.builtinDynamicEQ(args, position);
+      case 'dynamicEQBand':
+        return this.builtinDynamicEQBand(args, position);
+      case 'linearPhaseEQ':
+        return this.builtinLinearPhaseEQ(args, position);
+      case 'eqBand':
+        return this.builtinEQBand(args, position);
+      case 'parallel':
+        return this.builtinParallel(args, position);
+
+      // Recording
+      case 'takeLane':
+        return this.builtinTakeLane(args, position);
+      case 'take':
+        return this.builtinTake(args, position);
+      case 'comp':
+        return this.builtinComp(args, position);
+      case 'punchIn':
+        return this.builtinPunchIn(args, position);
+      case 'punchOut':
+        return this.builtinPunchOut(args, position);
+      case 'loopRecord':
+        return this.builtinLoopRecord(args, position);
+      case 'automationRecord':
+        return this.builtinAutomationRecord(args, position);
+
+      // Groove & humanize
+      case 'groove':
+        return this.builtinGroove(args, position);
+      case 'applyGroove':
+        return this.builtinApplyGroove(args, position);
+      case 'humanizeRegion':
+        return this.builtinHumanizeRegion(args, position);
+      case 'randomize':
+        return this.builtinRandomize(args, position);
+
+      // Controller & macro
+      case 'midiLearn':
+        return this.builtinMIDILearn(args, position);
+      case 'macro':
+        return this.builtinMacro(args, position);
+      case 'macroMap':
+        return this.builtinMacroMap(args, position);
+
+      // Export & batch
+      case 'stemExport':
+        return this.builtinStemExport(args, position);
+      case 'batch':
+        return this.builtinBatch(args, position);
+      case 'batchOp':
+        return this.builtinBatchOp(args, position);
+      case 'exportPreset':
+        return this.builtinExportPreset(args, position);
+
+      // Atmos/spatial
+      case 'atmosObject':
+        return this.builtinAtmosObject(args, position);
+      case 'atmosMove':
+        return this.builtinAtmosMove(args, position);
+      case 'headphoneVirtual':
+        return this.builtinHeadphoneVirtual(args, position);
+      case 'surroundAuto':
+        return this.builtinSurroundAuto(args, position);
+
+      // Collaboration
+      case 'note':
+        return this.builtinProjectNote(args, position);
+      case 'collaborator':
+        return this.builtinCollaborator(args, position);
     }
 
     // User-defined proc
@@ -2925,6 +3549,3675 @@ export class Interpreter {
       type: 'effect',
       effectType: 'compressor',
       params: { threshold, ratio, attack, release },
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Microtonality & Tuning
+  // ============================================
+
+  private builtinTuning(args: Expression[], position: any): RuntimeValue {
+    const system = this.evaluate(args[0]);
+    if (system.type !== 'string') {
+      throw new MFError('TYPE', 'tuning() expects string', position, this.filePath);
+    }
+
+    const baseFreq = args.length > 1 ? toNumber(this.evaluate(args[1])) : 440;
+
+    const tuning: TuningEvent = {
+      type: 'tuning',
+      tick: this.currentTrack?.cursor ?? 0,
+      system: system.value as TuningSystem,
+      baseFreq,
+    };
+
+    if (this.currentTrack) {
+      this.currentTrack.tuning = tuning;
+    }
+
+    return makeNull();
+  }
+
+  private builtinCents(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const cents = toNumber(this.evaluate(args[0]));
+    if (cents < -100 || cents > 100) {
+      throw new MFError('RANGE', 'cents() value must be between -100 and 100', position, this.filePath);
+    }
+    this.currentTrack!.centsDeviation = cents;
+    return makeNull();
+  }
+
+  private builtinQuarterTone(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const direction = this.evaluate(args[0]);
+    if (direction.type !== 'string' || (direction.value !== 'sharp' && direction.value !== 'flat')) {
+      throw new MFError('TYPE', 'quarterTone() expects "sharp" or "flat"', position, this.filePath);
+    }
+    // Set cents deviation for quarter tone
+    this.currentTrack!.centsDeviation = direction.value === 'sharp' ? 50 : -50;
+    return makeNull();
+  }
+
+  private builtinPitchCorrection(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const amount = toNumber(this.evaluate(args[0]));
+    const dur = this.evaluate(args[1]);
+    const speed = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'pitchCorrection() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+    // Store as a special event in track events
+    return makeNull();
+  }
+
+  // ============================================
+  // Algorithmic Composition
+  // ============================================
+
+  private builtinEuclidean(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const steps = Math.floor(toNumber(this.evaluate(args[0])));
+    const pulses = Math.floor(toNumber(this.evaluate(args[1])));
+    const dur = this.evaluate(args[2]);
+    const pitch = args.length > 3 ? this.evaluate(args[3]) : null;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'euclidean() duration must be Dur', position, this.filePath);
+    }
+
+    const stepTicks = this.durToTicks(dur, position);
+    const pattern = this.generateEuclidean(steps, pulses);
+
+    for (let i = 0; i < pattern.length; i++) {
+      if (pattern[i]) {
+        if (pitch && pitch.type === 'pitch') {
+          const noteEvent: NoteEvent = {
+            type: 'note',
+            tick: track.cursor,
+            dur: stepTicks,
+            key: pitch.midi,
+            vel: track.defaultVel,
+          };
+          track.events.push(noteEvent);
+        } else if (track.kind === 'midi' && track.channel === 10) {
+          // Drum track - use kick
+          const noteEvent: NoteEvent = {
+            type: 'note',
+            tick: track.cursor,
+            dur: stepTicks,
+            key: 36,
+            vel: track.defaultVel ?? 100,
+          };
+          track.events.push(noteEvent);
+        }
+      }
+      track.cursor += stepTicks;
+    }
+
+    return makeNull();
+  }
+
+  private generateEuclidean(steps: number, pulses: number): boolean[] {
+    if (pulses > steps) pulses = steps;
+    if (pulses === 0) return new Array(steps).fill(false);
+    if (pulses === steps) return new Array(steps).fill(true);
+
+    const pattern: boolean[] = [];
+    let bucket = 0;
+
+    for (let i = 0; i < steps; i++) {
+      bucket += pulses;
+      if (bucket >= steps) {
+        bucket -= steps;
+        pattern.push(true);
+      } else {
+        pattern.push(false);
+      }
+    }
+
+    return pattern;
+  }
+
+  private builtinProbability(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pitch = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+    const prob = args.length > 2 ? toNumber(this.evaluate(args[2])) / 100 : 0.5;
+
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'probability() pitch must be Pitch', position, this.filePath);
+    }
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'probability() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+    const random = this.seededRandom(track.randomSeed);
+
+    if (random < prob) {
+      const noteEvent: NoteEvent = {
+        type: 'note',
+        tick: track.cursor,
+        dur: durTicks,
+        key: pitch.midi,
+        vel: track.defaultVel,
+      };
+      track.events.push(noteEvent);
+    }
+
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private seededRandom(seed?: number): number {
+    if (seed === undefined) {
+      return Math.random();
+    }
+    // Simple seeded random using a linear congruential generator
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+
+  private builtinMarkov(args: Expression[], position: any): RuntimeValue {
+    // Markov chain generation - simplified implementation
+    this.checkTrackPhase(position);
+    return makeNull();
+  }
+
+  private builtinRandomSeed(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const seed = Math.floor(toNumber(this.evaluate(args[0])));
+    this.currentTrack!.randomSeed = seed;
+    return makeNull();
+  }
+
+  private builtinRandomNote(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const minPitch = toNumber(this.evaluate(args[0]));
+    const maxPitch = toNumber(this.evaluate(args[1]));
+    const dur = this.evaluate(args[2]);
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'randomNote() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+    const random = this.seededRandom(track.randomSeed);
+    const pitch = Math.floor(minPitch + random * (maxPitch - minPitch + 1));
+
+    const noteEvent: NoteEvent = {
+      type: 'note',
+      tick: track.cursor,
+      dur: durTicks,
+      key: pitch,
+      vel: track.defaultVel,
+    };
+    track.events.push(noteEvent);
+    track.cursor += durTicks;
+
+    // Update seed for next random
+    if (track.randomSeed !== undefined) {
+      track.randomSeed = track.randomSeed + 1;
+    }
+
+    return makeNull();
+  }
+
+  private builtinRandomRhythm(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pitch = this.evaluate(args[0]);
+    const durations = this.evaluate(args[1]);
+    const count = Math.floor(toNumber(this.evaluate(args[2])));
+
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'randomRhythm() pitch must be Pitch', position, this.filePath);
+    }
+    if (durations.type !== 'array') {
+      throw new MFError('TYPE', 'randomRhythm() durations must be array', position, this.filePath);
+    }
+
+    for (let i = 0; i < count; i++) {
+      const random = this.seededRandom(track.randomSeed);
+      const durIndex = Math.floor(random * durations.elements.length);
+      const dur = durations.elements[durIndex];
+
+      if (dur.type === 'dur') {
+        const durTicks = this.durToTicks(dur, position);
+        const noteEvent: NoteEvent = {
+          type: 'note',
+          tick: track.cursor,
+          dur: durTicks,
+          key: pitch.midi,
+          vel: track.defaultVel,
+        };
+        track.events.push(noteEvent);
+        track.cursor += durTicks;
+      }
+
+      if (track.randomSeed !== undefined) {
+        track.randomSeed = track.randomSeed + 1;
+      }
+    }
+
+    return makeNull();
+  }
+
+  private builtinConstraint(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const rule = this.evaluate(args[0]);
+    if (rule.type !== 'string') {
+      throw new MFError('TYPE', 'constraint() rule must be string', position, this.filePath);
+    }
+
+    if (!track.constraints) {
+      track.constraints = [];
+    }
+
+    track.constraints.push({
+      type: 'constraint',
+      rule: rule.value as any,
+    });
+
+    return makeNull();
+  }
+
+  private builtinCellular(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const ruleNum = Math.floor(toNumber(this.evaluate(args[0])));
+    const steps = Math.floor(toNumber(this.evaluate(args[1])));
+    const dur = this.evaluate(args[2]);
+    const pitch = this.evaluate(args[3]);
+
+    if (dur.type !== 'dur' || pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'cellular() requires dur and pitch', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+    const pattern = this.generateCellular(ruleNum, steps);
+
+    for (let i = 0; i < pattern.length; i++) {
+      if (pattern[i]) {
+        const noteEvent: NoteEvent = {
+          type: 'note',
+          tick: track.cursor,
+          dur: durTicks,
+          key: pitch.midi,
+          vel: track.defaultVel,
+        };
+        track.events.push(noteEvent);
+      }
+      track.cursor += durTicks;
+    }
+
+    return makeNull();
+  }
+
+  private generateCellular(rule: number, steps: number): boolean[] {
+    // 1D cellular automaton
+    let current = new Array(steps).fill(false);
+    current[Math.floor(steps / 2)] = true; // Start with single cell in middle
+
+    const result: boolean[] = [];
+
+    for (let i = 0; i < steps; i++) {
+      result.push(current[i]);
+    }
+
+    for (let gen = 0; gen < steps - 1; gen++) {
+      const next = new Array(steps).fill(false);
+      for (let i = 1; i < steps - 1; i++) {
+        const left = current[i - 1] ? 4 : 0;
+        const center = current[i] ? 2 : 0;
+        const right = current[i + 1] ? 1 : 0;
+        const index = left + center + right;
+        next[i] = ((rule >> index) & 1) === 1;
+      }
+      current = next;
+    }
+
+    return result;
+  }
+
+  private builtinLSystem(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    // L-System placeholder
+    return makeNull();
+  }
+
+  // ============================================
+  // Advanced Notation
+  // ============================================
+
+  private builtinVerse(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const verseNum = Math.floor(toNumber(this.evaluate(args[0])));
+    const text = this.evaluate(args[1]);
+
+    if (text.type !== 'string') {
+      throw new MFError('TYPE', 'verse() text must be string', position, this.filePath);
+    }
+
+    if (!track.multiVerseLyrics) {
+      track.multiVerseLyrics = [];
+    }
+
+    // Find existing event at this tick or create new one
+    let event = track.multiVerseLyrics.find(e => e.tick === track.cursor);
+    if (!event) {
+      event = {
+        type: 'multiVerseLyric',
+        tick: track.cursor,
+        verses: [],
+      };
+      track.multiVerseLyrics.push(event);
+    }
+
+    event.verses.push({ verse: verseNum, text: text.value });
+    return makeNull();
+  }
+
+  private builtinOssia(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const startTick = track.cursor;
+    // Execute callback to collect notes
+    const oldEvents = track.events;
+    track.events = [];
+
+    if (args.length > 0) {
+      const callback = args[0];
+      if (callback.kind === 'CallExpression') {
+        this.evaluateCall(callback.callee, callback.arguments, position);
+      }
+    }
+
+    const ossiaEvents = track.events.filter(e => e.type === 'note') as NoteEvent[];
+    track.events = oldEvents;
+
+    const endTick = track.cursor;
+
+    if (!track.ossias) {
+      track.ossias = [];
+    }
+
+    track.ossias.push({
+      type: 'ossia',
+      tick: startTick,
+      endTick,
+      notes: ossiaEvents,
+    });
+
+    return makeNull();
+  }
+
+  private builtinCueNote(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pitch = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+    const instrument = args.length > 2 ? this.evaluate(args[2]) : null;
+
+    if (pitch.type !== 'pitch' || dur.type !== 'dur') {
+      throw new MFError('TYPE', 'cueNote() requires pitch and dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.cueNotes) {
+      track.cueNotes = [];
+    }
+
+    track.cueNotes.push({
+      type: 'cueNote',
+      tick: track.cursor,
+      dur: durTicks,
+      key: pitch.midi,
+      instrument: instrument?.type === 'string' ? instrument.value : undefined,
+    });
+
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinInstrumentChange(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const instrument = this.evaluate(args[0]);
+    const program = args.length > 1 ? Math.floor(toNumber(this.evaluate(args[1]))) : undefined;
+
+    if (instrument.type !== 'string') {
+      throw new MFError('TYPE', 'instrumentChange() instrument must be string', position, this.filePath);
+    }
+
+    // Change program if specified
+    if (program !== undefined) {
+      track.program = program;
+    }
+
+    return makeNull();
+  }
+
+  private builtinNotehead(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteheadType = this.evaluate(args[0]);
+    const pitch = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    if (noteheadType.type !== 'string') {
+      throw new MFError('TYPE', 'notehead() type must be string', position, this.filePath);
+    }
+
+    if (!track.percussionNoteheads) {
+      track.percussionNoteheads = new Map();
+    }
+
+    if (pitch && pitch.type === 'pitch') {
+      track.percussionNoteheads.set(pitch.midi, noteheadType.value as PercussionNotehead);
+    }
+
+    return makeNull();
+  }
+
+  private builtinStringTechnique(callee: string, args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const techniqueMap: Record<string, string> = {
+      'bowUp': 'up',
+      'bowDown': 'down',
+      'pizz': 'pizz',
+      'arco': 'arco',
+      'colLegno': 'col-legno',
+      'sulPont': 'sul-pont',
+      'sulTasto': 'sul-tasto',
+      'snapPizz': 'snap-pizz',
+      'harmonics': 'harmonics',
+    };
+
+    if (!track.stringTechniques) {
+      track.stringTechniques = [];
+    }
+
+    track.stringTechniques.push({
+      type: 'stringTechnique',
+      tick: track.cursor,
+      technique: techniqueMap[callee] as any,
+    });
+
+    return makeNull();
+  }
+
+  private builtinWindTechnique(callee: string, args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const techniqueMap: Record<string, string> = {
+      'breath': 'breath',
+      'mute': 'mute',
+      'open': 'open',
+      'stopped': 'stopped',
+      'flutter': 'flutter',
+      'doubleTongue': 'double-tongue',
+      'tripleTongue': 'triple-tongue',
+    };
+
+    if (!track.windTechniques) {
+      track.windTechniques = [];
+    }
+
+    track.windTechniques.push({
+      type: 'windTechnique',
+      tick: track.cursor,
+      technique: techniqueMap[callee] as WindTechnique,
+    });
+
+    return makeNull();
+  }
+
+  private builtinGuitarBend(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const amount = toNumber(this.evaluate(args[0])); // Semitones
+    const release = args.length > 1 ? isTruthy(this.evaluate(args[1])) : false;
+
+    if (!track.guitarBends) {
+      track.guitarBends = [];
+    }
+
+    track.guitarBends.push({
+      type: 'guitarBend',
+      tick: track.cursor,
+      bendAmount: amount,
+      release,
+    });
+
+    return makeNull();
+  }
+
+  private builtinGuitarTechnique(callee: string, args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    // Guitar techniques are stored as part of tab events
+    return makeNull();
+  }
+
+  private builtinHarpPedal(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    // 7 pedals: D C B E F G A
+    const pedals: [number, number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0, 0];
+
+    for (let i = 0; i < Math.min(args.length, 7); i++) {
+      pedals[i] = Math.floor(toNumber(this.evaluate(args[i])));
+      if (pedals[i] < -1) pedals[i] = -1;
+      if (pedals[i] > 1) pedals[i] = 1;
+    }
+
+    if (!track.harpPedals) {
+      track.harpPedals = [];
+    }
+
+    track.harpPedals.push({
+      type: 'harpPedal',
+      tick: track.cursor,
+      pedals,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Additional Effects
+  // ============================================
+
+  private builtinPhaser(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const rate = args.length > 0 ? toNumber(this.evaluate(args[0])) : 0.5;
+    const depth = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const feedback = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+    const stages = args.length > 3 ? Math.floor(toNumber(this.evaluate(args[3]))) : 4;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      effectType: 'phaser',
+      params: { rate, depth, feedback, stages },
+    });
+
+    return makeNull();
+  }
+
+  private builtinFlanger(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const rate = args.length > 0 ? toNumber(this.evaluate(args[0])) : 0.25;
+    const depth = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const feedback = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+    const mix = args.length > 3 ? toNumber(this.evaluate(args[3])) : 50;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      effectType: 'flanger',
+      params: { rate, depth, feedback, mix },
+    });
+
+    return makeNull();
+  }
+
+  private builtinChorus(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const rate = args.length > 0 ? toNumber(this.evaluate(args[0])) : 1.0;
+    const depth = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const voices = args.length > 2 ? Math.floor(toNumber(this.evaluate(args[2]))) : 3;
+    const mix = args.length > 3 ? toNumber(this.evaluate(args[3])) : 50;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      effectType: 'chorus',
+      params: { rate, depth, voices, mix },
+    });
+
+    return makeNull();
+  }
+
+  private builtinDistortion(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const drive = args.length > 0 ? toNumber(this.evaluate(args[0])) : 50;
+    const tone = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const mix = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      effectType: 'distortion',
+      params: { drive, tone, mix },
+    });
+
+    return makeNull();
+  }
+
+  private builtinFilter(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const filterType = this.evaluate(args[0]);
+    const cutoff = args.length > 1 ? toNumber(this.evaluate(args[1])) : 1000;
+    const resonance = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+
+    if (filterType.type !== 'string') {
+      throw new MFError('TYPE', 'filter() type must be string', position, this.filePath);
+    }
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      effectType: 'filter',
+      params: { filterType: filterType.value as any, cutoff, resonance },
+    });
+
+    return makeNull();
+  }
+
+  private builtinSidechain(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const sourceTrack = this.evaluate(args[0]);
+    const threshold = args.length > 1 ? toNumber(this.evaluate(args[1])) : -20;
+    const ratio = args.length > 2 ? toNumber(this.evaluate(args[2])) : 4;
+    const attack = args.length > 3 ? toNumber(this.evaluate(args[3])) : 10;
+    const release = args.length > 4 ? toNumber(this.evaluate(args[4])) : 100;
+
+    if (sourceTrack.type !== 'string') {
+      throw new MFError('TYPE', 'sidechain() source must be string', position, this.filePath);
+    }
+
+    // Store as effect with sidechain params
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      effectType: 'compressor',
+      params: { threshold, ratio, attack, release, sidechain: sourceTrack.value as any },
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Live Performance
+  // ============================================
+
+  private builtinMidiMap(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const ccNumber = Math.floor(toNumber(this.evaluate(args[0])));
+    const target = this.evaluate(args[1]);
+    const min = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+    const max = args.length > 3 ? toNumber(this.evaluate(args[3])) : 127;
+
+    if (target.type !== 'string') {
+      throw new MFError('TYPE', 'midiMap() target must be string', position, this.filePath);
+    }
+
+    if (!track.midiMappings) {
+      track.midiMappings = [];
+    }
+
+    track.midiMappings.push({
+      type: 'midiMapping',
+      ccNumber,
+      target: target.value,
+      min,
+      max,
+    });
+
+    return makeNull();
+  }
+
+  private builtinScene(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const sceneId = this.evaluate(args[0]);
+    const sceneName = args.length > 1 ? this.evaluate(args[1]) : sceneId;
+
+    if (sceneId.type !== 'string') {
+      throw new MFError('TYPE', 'scene() id must be string', position, this.filePath);
+    }
+
+    if (!track.scenes) {
+      track.scenes = [];
+    }
+
+    track.scenes.push({
+      id: sceneId.value,
+      name: sceneName.type === 'string' ? sceneName.value : sceneId.value,
+      clips: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinLaunchScene(args: Expression[], position: any): RuntimeValue {
+    // Scene launching is a runtime/playback feature
+    return makeNull();
+  }
+
+  private builtinLiveLoop(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const loopId = this.evaluate(args[0]);
+    const length = this.evaluate(args[1]);
+
+    if (loopId.type !== 'string' || length.type !== 'dur') {
+      throw new MFError('TYPE', 'liveLoop() requires string id and dur length', position, this.filePath);
+    }
+
+    const lengthTicks = this.durToTicks(length, position);
+    // Live loop is a runtime feature
+    return makeNull();
+  }
+
+  // ============================================
+  // Score Layout
+  // ============================================
+
+  private builtinPageBreak(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (!track.layoutEvents) {
+      track.layoutEvents = [];
+    }
+
+    track.layoutEvents.push({
+      type: 'pageBreak',
+      tick: track.cursor,
+    });
+
+    return makeNull();
+  }
+
+  private builtinSystemBreak(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (!track.layoutEvents) {
+      track.layoutEvents = [];
+    }
+
+    track.layoutEvents.push({
+      type: 'systemBreak',
+      tick: track.cursor,
+    });
+
+    return makeNull();
+  }
+
+  private builtinStaffSpacing(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const above = args.length > 0 ? toNumber(this.evaluate(args[0])) : undefined;
+    const below = args.length > 1 ? toNumber(this.evaluate(args[1])) : undefined;
+
+    if (!track.layoutEvents) {
+      track.layoutEvents = [];
+    }
+
+    track.layoutEvents.push({
+      type: 'staffSpacing',
+      tick: track.cursor,
+      above,
+      below,
+    });
+
+    return makeNull();
+  }
+
+  private builtinText(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const text = this.evaluate(args[0]);
+    const placement = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'above' };
+    const style = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'normal' };
+
+    if (text.type !== 'string') {
+      throw new MFError('TYPE', 'text() must be string', position, this.filePath);
+    }
+
+    if (!track.textAnnotations) {
+      track.textAnnotations = [];
+    }
+
+    track.textAnnotations.push({
+      type: 'textAnnotation',
+      tick: track.cursor,
+      text: text.value,
+      placement: (placement as any).value || 'above',
+      style: (style as any).value || 'normal',
+    });
+
+    return makeNull();
+  }
+
+  private builtinRehearsalMark(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const label = this.evaluate(args[0]);
+    const enclosure = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'rectangle' };
+
+    if (label.type !== 'string') {
+      throw new MFError('TYPE', 'rehearsalMark() label must be string', position, this.filePath);
+    }
+
+    if (!track.rehearsalMarks) {
+      track.rehearsalMarks = [];
+    }
+
+    track.rehearsalMarks.push({
+      type: 'rehearsalMark',
+      tick: track.cursor,
+      label: label.value,
+      enclosure: (enclosure as any).value || 'rectangle',
+    });
+
+    return makeNull();
+  }
+
+  private builtinDirection(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const text = this.evaluate(args[0]);
+
+    if (text.type !== 'string') {
+      throw new MFError('TYPE', 'direction() text must be string', position, this.filePath);
+    }
+
+    if (!track.directionTexts) {
+      track.directionTexts = [];
+    }
+
+    track.directionTexts.push({
+      type: 'directionText',
+      tick: track.cursor,
+      text: text.value,
+    });
+
+    return makeNull();
+  }
+
+  private executeCallback(callback: Expression, position: any): void {
+    if (callback.kind === 'CallExpression') {
+      this.evaluateCall(callback.callee, callback.arguments, position);
+    }
+  }
+
+  // ============================================
+  // Audio Manipulation
+  // ============================================
+
+  private builtinTimeStretch(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const ratio = this.evaluate(args[1]);
+    const preservePitch = args.length > 2 ? isTruthy(this.evaluate(args[2])) : true;
+    const algorithm = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'elastique' };
+
+    if (clipId.type !== 'string') {
+      throw new MFError('TYPE', 'timeStretch() clipId must be string', position, this.filePath);
+    }
+
+    if (!track.timeStretchEvents) {
+      track.timeStretchEvents = [];
+    }
+
+    track.timeStretchEvents.push({
+      type: 'timeStretch',
+      tick: track.cursor,
+      clipId: clipId.value,
+      ratio: toNumber(ratio),
+      preservePitch,
+      algorithm: (algorithm as any).value || 'elastique',
+    });
+
+    return makeNull();
+  }
+
+  private builtinPitchShift(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const semitones = this.evaluate(args[1]);
+    const cents = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+    const preserveFormants = args.length > 3 ? isTruthy(this.evaluate(args[3])) : true;
+
+    if (clipId.type !== 'string') {
+      throw new MFError('TYPE', 'pitchShift() clipId must be string', position, this.filePath);
+    }
+
+    if (!track.pitchShiftEvents) {
+      track.pitchShiftEvents = [];
+    }
+
+    track.pitchShiftEvents.push({
+      type: 'pitchShift',
+      tick: track.cursor,
+      clipId: clipId.value,
+      semitones: toNumber(semitones),
+      cents,
+      preserveFormants,
+    });
+
+    return makeNull();
+  }
+
+  private builtinSampleSlicer(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const mode = this.evaluate(args[1]);
+    const sensitivity = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+
+    if (clipId.type !== 'string' || mode.type !== 'string') {
+      throw new MFError('TYPE', 'sampleSlicer() requires string arguments', position, this.filePath);
+    }
+
+    if (!track.sampleSlicers) {
+      track.sampleSlicers = [];
+    }
+
+    track.sampleSlicers.push({
+      type: 'sampleSlicer',
+      tick: track.cursor,
+      clipId: clipId.value,
+      slices: [],
+      mode: mode.value as 'transient' | 'grid' | 'manual',
+      sensitivity,
+    });
+
+    return makeNull();
+  }
+
+  private builtinGranular(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const grainSize = toNumber(this.evaluate(args[1]));
+    const grainDensity = toNumber(this.evaluate(args[2]));
+    const pos = args.length > 3 ? toNumber(this.evaluate(args[3])) : 0.5;
+
+    if (clipId.type !== 'string') {
+      throw new MFError('TYPE', 'granular() clipId must be string', position, this.filePath);
+    }
+
+    if (!track.granularSynths) {
+      track.granularSynths = [];
+    }
+
+    track.granularSynths.push({
+      type: 'granular',
+      tick: track.cursor,
+      clipId: clipId.value,
+      grainSize,
+      grainDensity,
+      position: pos,
+      positionRandom: 0,
+      pitchRandom: 0,
+      pan: 0,
+      panRandom: 0,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Advanced Automation
+  // ============================================
+
+  private builtinAutomationLane(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const parameter = this.evaluate(args[0]);
+
+    if (parameter.type !== 'string') {
+      throw new MFError('TYPE', 'automationLane() parameter must be string', position, this.filePath);
+    }
+
+    if (!track.automationLanes) {
+      track.automationLanes = [];
+    }
+
+    track.automationLanes.push({
+      type: 'automationLane',
+      parameter: parameter.value,
+      points: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinAutomationPoint(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const parameter = this.evaluate(args[0]);
+    const value = toNumber(this.evaluate(args[1]));
+    const curve = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'linear' };
+
+    if (parameter.type !== 'string') {
+      throw new MFError('TYPE', 'automationPoint() parameter must be string', position, this.filePath);
+    }
+
+    if (!track.automationLanes) {
+      track.automationLanes = [];
+    }
+
+    let lane = track.automationLanes.find(l => l.parameter === parameter.value);
+    if (!lane) {
+      lane = { type: 'automationLane', parameter: parameter.value, points: [] };
+      track.automationLanes.push(lane);
+    }
+
+    lane.points.push({
+      tick: track.cursor,
+      value,
+      curve: (curve as any).value as AutomationCurveType || 'linear',
+    });
+
+    return makeNull();
+  }
+
+  private builtinLFO(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const target = this.evaluate(args[0]);
+    const waveform = this.evaluate(args[1]);
+    const rate = toNumber(this.evaluate(args[2]));
+    const depth = toNumber(this.evaluate(args[3]));
+
+    if (target.type !== 'string' || waveform.type !== 'string') {
+      throw new MFError('TYPE', 'lfo() target and waveform must be strings', position, this.filePath);
+    }
+
+    if (!track.lfoModulations) {
+      track.lfoModulations = [];
+    }
+
+    track.lfoModulations.push({
+      type: 'lfoModulation',
+      tick: track.cursor,
+      target: target.value,
+      waveform: waveform.value as any,
+      rate,
+      depth,
+      phase: 0,
+      offset: 0,
+    });
+
+    return makeNull();
+  }
+
+  private builtinEnvelopeFollower(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const sourceTrack = this.evaluate(args[0]);
+    const target = this.evaluate(args[1]);
+    const attack = toNumber(this.evaluate(args[2]));
+    const release = toNumber(this.evaluate(args[3]));
+
+    if (sourceTrack.type !== 'string' || target.type !== 'string') {
+      throw new MFError('TYPE', 'envelopeFollower() requires string arguments', position, this.filePath);
+    }
+
+    if (!track.envelopeFollowers) {
+      track.envelopeFollowers = [];
+    }
+
+    track.envelopeFollowers.push({
+      type: 'envelopeFollower',
+      tick: track.cursor,
+      sourceTrack: sourceTrack.value,
+      target: target.value,
+      attack,
+      release,
+      gain: 1,
+      min: 0,
+      max: 1,
+    });
+
+    return makeNull();
+  }
+
+  private builtinModMatrix(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const source = this.evaluate(args[0]);
+    const destination = this.evaluate(args[1]);
+    const amount = toNumber(this.evaluate(args[2]));
+
+    if (source.type !== 'string' || destination.type !== 'string') {
+      throw new MFError('TYPE', 'modMatrix() requires string arguments', position, this.filePath);
+    }
+
+    if (!track.modulationMatrix) {
+      track.modulationMatrix = { type: 'modulationMatrix', entries: [] };
+    }
+
+    track.modulationMatrix.entries.push({
+      source: source.value,
+      destination: destination.value,
+      amount,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Mixing/Mastering
+  // ============================================
+
+  private builtinBus(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const name = this.evaluate(args[0]);
+    const busType = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'bus' };
+
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'bus() name must be string', position, this.filePath);
+    }
+
+    if (!track.buses) {
+      track.buses = [];
+    }
+
+    track.buses.push({
+      id: name.value,
+      name: name.value,
+      type: (busType as any).value || 'bus',
+      inputTracks: [],
+      effects: [],
+      volume: 1,
+      pan: 0,
+    });
+
+    return makeNull();
+  }
+
+  private builtinSend(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const toBus = this.evaluate(args[0]);
+    const amount = toNumber(this.evaluate(args[1]));
+    const preFader = args.length > 2 ? isTruthy(this.evaluate(args[2])) : false;
+
+    if (toBus.type !== 'string') {
+      throw new MFError('TYPE', 'send() toBus must be string', position, this.filePath);
+    }
+
+    if (!track.sends) {
+      track.sends = [];
+    }
+
+    track.sends.push({
+      type: 'send',
+      tick: track.cursor,
+      fromTrack: track.id,
+      toBus: toBus.value,
+      amount,
+      preFader,
+    });
+
+    return makeNull();
+  }
+
+  private builtinStereoWidth(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const width = toNumber(this.evaluate(args[0]));
+
+    if (!track.stereoWidthEvents) {
+      track.stereoWidthEvents = [];
+    }
+
+    track.stereoWidthEvents.push({
+      type: 'stereoWidth',
+      tick: track.cursor,
+      width,
+    });
+
+    return makeNull();
+  }
+
+  private builtinLimiter(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const threshold = toNumber(this.evaluate(args[0]));
+    const ceiling = toNumber(this.evaluate(args[1]));
+    const release = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    track.effects.push({
+      type: 'effect',
+      effectType: 'limiter',
+      params: { threshold, ceiling, release },
+    });
+
+    return makeNull();
+  }
+
+  private builtinMaximizer(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const threshold = toNumber(this.evaluate(args[0]));
+    const ceiling = toNumber(this.evaluate(args[1]));
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    track.effects.push({
+      type: 'effect',
+      effectType: 'limiter',
+      params: { threshold, ceiling, release: 50, isMaximizer: 1 },
+    });
+
+    return makeNull();
+  }
+
+  private builtinMultibandComp(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const lowFreq = toNumber(this.evaluate(args[0]));
+    const highFreq = toNumber(this.evaluate(args[1]));
+    const threshold = toNumber(this.evaluate(args[2]));
+    const ratio = toNumber(this.evaluate(args[3]));
+
+    if (!track.effects) {
+      track.effects = [];
+    }
+
+    track.effects.push({
+      type: 'effect',
+      effectType: 'compressor',
+      params: { lowFreq, highFreq, threshold, ratio, multiband: 1 },
+    });
+
+    return makeNull();
+  }
+
+  private builtinSpatial(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const format = this.evaluate(args[0]);
+    const x = args.length > 1 ? toNumber(this.evaluate(args[1])) : 0;
+    const y = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+    const z = args.length > 3 ? toNumber(this.evaluate(args[3])) : 0;
+
+    if (format.type !== 'string') {
+      throw new MFError('TYPE', 'spatial() format must be string', position, this.filePath);
+    }
+
+    if (!track.spatialEvents) {
+      track.spatialEvents = [];
+    }
+
+    track.spatialEvents.push({
+      type: 'spatial',
+      tick: track.cursor,
+      format: format.value as SpatialFormat,
+      position: { x, y, z },
+    });
+
+    return makeNull();
+  }
+
+  private builtinSurroundPan(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const L = toNumber(this.evaluate(args[0]));
+    const R = toNumber(this.evaluate(args[1]));
+    const C = toNumber(this.evaluate(args[2]));
+    const LFE = toNumber(this.evaluate(args[3]));
+    const Ls = toNumber(this.evaluate(args[4]));
+    const Rs = toNumber(this.evaluate(args[5]));
+
+    if (!track.surroundPans) {
+      track.surroundPans = [];
+    }
+
+    track.surroundPans.push({
+      type: 'surroundPan',
+      tick: track.cursor,
+      trackId: track.id,
+      channels: { L, R, C, LFE, Ls, Rs },
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // MIDI Extensions
+  // ============================================
+
+  private builtinMPE(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const masterChannel = toNumber(this.evaluate(args[0]));
+    const memberChannels = toNumber(this.evaluate(args[1]));
+    const pitchBendRange = args.length > 2 ? toNumber(this.evaluate(args[2])) : 48;
+
+    track.mpeConfig = {
+      type: 'mpeConfig',
+      zones: [{ masterChannel, memberChannels, pitchBendRange }],
+      enabled: true,
+    };
+
+    return makeNull();
+  }
+
+  private builtinMPENote(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pitch = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+    const slide = args.length > 2 ? toNumber(this.evaluate(args[2])) : undefined;
+    const pressure = args.length > 3 ? toNumber(this.evaluate(args[3])) : undefined;
+
+    if (pitch.type !== 'pitch' || dur.type !== 'dur') {
+      throw new MFError('TYPE', 'mpeNote() requires pitch and duration', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    track.events.push({
+      type: 'note',
+      tick: track.cursor,
+      dur: durTicks,
+      key: pitch.midi,
+      vel: track.defaultVel || 100,
+    } as NoteEvent);
+
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinArpeggiator(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const mode = this.evaluate(args[0]);
+    const rate = this.evaluate(args[1]);
+    const octaves = args.length > 2 ? toNumber(this.evaluate(args[2])) : 1;
+    const gate = args.length > 3 ? toNumber(this.evaluate(args[3])) : 75;
+
+    if (mode.type !== 'string' || rate.type !== 'string') {
+      throw new MFError('TYPE', 'arpeggiator() mode and rate must be strings', position, this.filePath);
+    }
+
+    if (!track.arpeggiators) {
+      track.arpeggiators = [];
+    }
+
+    track.arpeggiators.push({
+      type: 'arpeggiator',
+      tick: track.cursor,
+      mode: mode.value as any,
+      rate: rate.value,
+      octaves,
+      gate,
+    });
+
+    return makeNull();
+  }
+
+  private builtinChordMemory(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const triggerNote = this.evaluate(args[0]);
+    const chordArg = this.evaluate(args[1]);
+
+    if (triggerNote.type !== 'pitch') {
+      throw new MFError('TYPE', 'chordMemory() trigger must be pitch', position, this.filePath);
+    }
+
+    const chord = chordArg.type === 'array'
+      ? chordArg.elements.map((e: RuntimeValue) => e.type === 'pitch' ? e.midi : toNumber(e))
+      : [];
+
+    if (!track.chordMemories) {
+      track.chordMemories = [];
+    }
+
+    track.chordMemories.push({
+      type: 'chordMemory',
+      tick: track.cursor,
+      triggerNote: triggerNote.midi,
+      chord,
+    });
+
+    return makeNull();
+  }
+
+  private builtinChordTrigger(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const root = this.evaluate(args[0]);
+    const chordType = this.evaluate(args[1]);
+    const voicing = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'close' };
+
+    if (root.type !== 'pitch' || chordType.type !== 'string') {
+      throw new MFError('TYPE', 'chordTrigger() requires pitch and string', position, this.filePath);
+    }
+
+    if (!track.chordTriggers) {
+      track.chordTriggers = [];
+    }
+
+    track.chordTriggers.push({
+      type: 'chordTrigger',
+      tick: track.cursor,
+      root: root.midi,
+      chordType: chordType.value,
+      voicing: (voicing as any).value || 'close',
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Advanced Notation
+  // ============================================
+
+  private builtinAdditiveTimeSig(args: Expression[], position: any): RuntimeValue {
+    this.checkGlobalPhase(position);
+
+    const groupsArg = this.evaluate(args[0]);
+    const denominator = toNumber(this.evaluate(args[1]));
+
+    const groups = groupsArg.type === 'array'
+      ? groupsArg.elements.map((e: RuntimeValue) => toNumber(e))
+      : [toNumber(groupsArg)];
+
+    // Store as standard time sig with combined numerator
+    const numerator = groups.reduce((a, b) => a + b, 0);
+    this.ir.timeSigs.push({
+      tick: 0,
+      numerator,
+      denominator,
+    });
+
+    return makeNull();
+  }
+
+  private builtinPolymetric(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const dur = this.evaluate(args[0]);
+    const timeSigArg = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'polymetric() requires duration', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.polymetricSections) {
+      track.polymetricSections = [];
+    }
+
+    track.polymetricSections.push({
+      type: 'polymetric',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      trackTimeSigs: {},
+    });
+
+    return makeNull();
+  }
+
+  private builtinProportional(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const dur = this.evaluate(args[0]);
+    const spacePerBeat = args.length > 1 ? toNumber(this.evaluate(args[1])) : 10;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'proportional() requires duration', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.proportionalNotation) {
+      track.proportionalNotation = [];
+    }
+
+    track.proportionalNotation.push({
+      type: 'proportionalNotation',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      spacePerBeat,
+    });
+
+    return makeNull();
+  }
+
+  private builtinGraphic(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const shape = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+    const description = args.length > 2 ? this.evaluate(args[2]) : null;
+
+    if (shape.type !== 'string' || dur.type !== 'dur') {
+      throw new MFError('TYPE', 'graphic() requires shape string and duration', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.graphicNotation) {
+      track.graphicNotation = [];
+    }
+
+    track.graphicNotation.push({
+      type: 'graphicNotation',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      shape: shape.value as any,
+      description: description?.type === 'string' ? description.value : undefined,
+    });
+
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinAleatoric(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const dur = this.evaluate(args[0]);
+    const instructions = args.length > 1 ? this.evaluate(args[1]) : null;
+    const durationType = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'free' };
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'aleatoric() requires duration', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.aleatoricBoxes) {
+      track.aleatoricBoxes = [];
+    }
+
+    track.aleatoricBoxes.push({
+      type: 'aleatoricBox',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      contents: [],
+      instructions: instructions?.type === 'string' ? instructions.value : undefined,
+      duration: (durationType as any).value || 'free',
+    });
+
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinCutaway(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const targetTrackId = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+    const showWhenPlaying = args.length > 2 ? isTruthy(this.evaluate(args[2])) : true;
+
+    if (targetTrackId.type !== 'string' || dur.type !== 'dur') {
+      throw new MFError('TYPE', 'cutaway() requires track ID and duration', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.cutawayScores) {
+      track.cutawayScores = [];
+    }
+
+    track.cutawayScores.push({
+      type: 'cutaway',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      trackId: targetTrackId.value,
+      showWhenPlaying,
+    });
+
+    return makeNull();
+  }
+
+  private builtinTransposing(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const transposition = toNumber(this.evaluate(args[0]));
+    const writtenPitch = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'transposed' };
+
+    track.transposingInstrument = {
+      type: 'transposingInstrument',
+      trackId: track.id,
+      writtenPitch: (writtenPitch as any).value || 'transposed',
+      transposition,
+    };
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Sampling
+  // ============================================
+
+  private builtinSampler(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const name = this.evaluate(args[0]);
+
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'sampler() name must be string', position, this.filePath);
+    }
+
+    if (!track.samplerInstruments) {
+      track.samplerInstruments = [];
+    }
+
+    track.samplerInstruments.push({
+      type: 'sampler',
+      id: name.value,
+      name: name.value,
+      zones: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinSampleZone(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const filePath = this.evaluate(args[0]);
+    const rootNote = this.evaluate(args[1]);
+    const lowNote = args.length > 2 ? this.evaluate(args[2]) : rootNote;
+    const highNote = args.length > 3 ? this.evaluate(args[3]) : rootNote;
+
+    if (filePath.type !== 'string') {
+      throw new MFError('TYPE', 'sampleZone() filePath must be string', position, this.filePath);
+    }
+
+    const zone: SampleZone = {
+      filePath: filePath.value,
+      rootNote: rootNote.type === 'pitch' ? rootNote.midi : toNumber(rootNote),
+      lowNote: lowNote.type === 'pitch' ? lowNote.midi : toNumber(lowNote),
+      highNote: highNote.type === 'pitch' ? highNote.midi : toNumber(highNote),
+      lowVelocity: 1,
+      highVelocity: 127,
+    };
+
+    if (track.samplerInstruments && track.samplerInstruments.length > 0) {
+      track.samplerInstruments[track.samplerInstruments.length - 1].zones.push(zone);
+    }
+
+    return makeNull();
+  }
+
+  private builtinRoundRobin(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const mode = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'cycle' };
+
+    if (track.samplerInstruments && track.samplerInstruments.length > 0) {
+      const sampler = track.samplerInstruments[track.samplerInstruments.length - 1];
+      if (!sampler.roundRobins) {
+        sampler.roundRobins = [];
+      }
+      sampler.roundRobins.push({
+        type: 'roundRobin',
+        zones: [],
+        mode: (mode as any).value || 'cycle',
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinVelocityLayer(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const lowVelocity = toNumber(this.evaluate(args[0]));
+    const highVelocity = toNumber(this.evaluate(args[1]));
+    const crossfade = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+
+    if (track.samplerInstruments && track.samplerInstruments.length > 0) {
+      const sampler = track.samplerInstruments[track.samplerInstruments.length - 1];
+      if (!sampler.velocityLayers) {
+        sampler.velocityLayers = [];
+      }
+      sampler.velocityLayers.push({
+        type: 'velocityLayer',
+        lowVelocity,
+        highVelocity,
+        zones: [],
+        crossfade,
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinKeySwitch(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const triggerNote = this.evaluate(args[0]);
+    const articulation = this.evaluate(args[1]);
+    const latching = args.length > 2 ? isTruthy(this.evaluate(args[2])) : true;
+
+    if (triggerNote.type !== 'pitch' || articulation.type !== 'string') {
+      throw new MFError('TYPE', 'keySwitch() requires pitch and string', position, this.filePath);
+    }
+
+    if (track.samplerInstruments && track.samplerInstruments.length > 0) {
+      const sampler = track.samplerInstruments[track.samplerInstruments.length - 1];
+      if (!sampler.keySwitches) {
+        sampler.keySwitches = [];
+      }
+      sampler.keySwitches.push({
+        type: 'keySwitch',
+        triggerNote: triggerNote.midi,
+        articulation: articulation.value,
+        samples: [],
+        latching,
+      });
+    }
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Analysis
+  // ============================================
+
+  private builtinSpectrumAnalyzer(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const fftSize = args.length > 0 ? toNumber(this.evaluate(args[0])) : 2048;
+    const scale = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'logarithmic' };
+
+    track.spectrumAnalyzer = {
+      type: 'spectrumAnalyzer',
+      fftSize: fftSize as 512 | 1024 | 2048 | 4096 | 8192 | 16384,
+      windowType: 'hanning',
+      overlap: 0.5,
+      minFreq: 20,
+      maxFreq: 20000,
+      minDb: -90,
+      maxDb: 0,
+      scale: (scale as any).value || 'logarithmic',
+      smoothing: 0.8,
+    };
+
+    return makeNull();
+  }
+
+  private builtinLoudnessMeter(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const standard = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'EBU-R128' };
+    const targetLUFS = args.length > 1 ? toNumber(this.evaluate(args[1])) : -14;
+
+    track.loudnessMeter = {
+      type: 'loudnessMeter',
+      standard: (standard as any).value || 'EBU-R128',
+      targetLUFS,
+      truePeak: true,
+    };
+
+    return makeNull();
+  }
+
+  private builtinPhaseMeter(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const displayMode = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'goniometer' };
+
+    track.phaseCorrelationMeter = {
+      type: 'phaseCorrelation',
+      windowSize: 50,
+      displayMode: (displayMode as any).value || 'goniometer',
+    };
+
+    return makeNull();
+  }
+
+  private builtinAnalyzerSnapshot(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (!track.analyzerSnapshots) {
+      track.analyzerSnapshots = [];
+    }
+
+    track.analyzerSnapshots.push({
+      type: 'analyzerSnapshot',
+      tick: track.cursor,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Advanced Audio Processing
+  // ============================================
+
+  private builtinVocoder(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const carrierType = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'synth' };
+    const bands = args.length > 1 ? toNumber(this.evaluate(args[1])) : 16;
+    const formantShift = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'vocoder',
+      carrierType: (carrierType as any).value || 'synth',
+      bands,
+      formantShift,
+      attack: 5,
+      release: 50,
+      highFreqEmphasis: 50,
+      params: { mix: 100, bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinConvolutionReverb(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const irFile = this.evaluate(args[0]);
+    const predelay = args.length > 1 ? toNumber(this.evaluate(args[1])) : 0;
+    const decay = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+    const mix = args.length > 3 ? toNumber(this.evaluate(args[3])) : 30;
+
+    if (irFile.type !== 'string') {
+      throw new MFError('TYPE', 'convolutionReverb() IR file must be string', position, this.filePath);
+    }
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'convolutionReverb',
+      irFile: irFile.value,
+      predelay,
+      decay,
+      lowCut: 20,
+      highCut: 20000,
+      mix,
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinAmpSim(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const ampType = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'clean' };
+    const gain = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const master = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'ampSimulator',
+      ampType: (ampType as any).value || 'clean',
+      gain,
+      tone: { bass: 0, mid: 0, treble: 0, presence: 0 },
+      master,
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinCabinetSim(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const cabType = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: '4x12' };
+    const micType = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'dynamic' };
+    const micPosition = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'on-axis' };
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'cabinetSimulator',
+      cabType: (cabType as any).value || '4x12',
+      micType: (micType as any).value || 'dynamic',
+      micPosition: (micPosition as any).value || 'on-axis',
+      distance: 50,
+      roomMix: 20,
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinTapeSaturation(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const tapeType = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: '15ips' };
+    const saturation = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const inputGain = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'tapeSaturation',
+      tapeType: (tapeType as any).value || '15ips',
+      inputGain,
+      saturation,
+      bias: 50,
+      flutter: 20,
+      wowRate: 0.5,
+      hiss: 10,
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinTransientShaper(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const attack = args.length > 0 ? toNumber(this.evaluate(args[0])) : 0;
+    const sustain = args.length > 1 ? toNumber(this.evaluate(args[1])) : 0;
+    const outputGain = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'transientShaper',
+      attack,
+      sustain,
+      outputGain,
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinDeEsser(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const frequency = args.length > 0 ? toNumber(this.evaluate(args[0])) : 6000;
+    const threshold = args.length > 1 ? toNumber(this.evaluate(args[1])) : -20;
+    const ratio = args.length > 2 ? toNumber(this.evaluate(args[2])) : 4;
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'deEsser',
+      frequency,
+      threshold,
+      ratio,
+      range: 12,
+      mode: 'split',
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinExciter(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const frequency = args.length > 0 ? toNumber(this.evaluate(args[0])) : 3000;
+    const harmonics = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const mix = args.length > 2 ? toNumber(this.evaluate(args[2])) : 30;
+    const mode = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'tube' };
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'exciter',
+      frequency,
+      harmonics,
+      mix,
+      mode: (mode as any).value || 'tube',
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinNoiseReduction(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const threshold = args.length > 0 ? toNumber(this.evaluate(args[0])) : -40;
+    const reduction = args.length > 1 ? toNumber(this.evaluate(args[1])) : 20;
+    const mode = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'broadband' };
+
+    if (!track.effects) track.effects = [];
+    track.effects.push({
+      type: 'effect',
+      tick: track.cursor,
+      effectType: 'noiseReduction',
+      threshold,
+      reduction,
+      attack: 5,
+      release: 100,
+      mode: (mode as any).value || 'broadband',
+      params: { bypass: false },
+    } as any);
+
+    return makeNull();
+  }
+
+  private builtinSpectralEdit(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const lowFreq = toNumber(this.evaluate(args[0]));
+    const highFreq = toNumber(this.evaluate(args[1]));
+    const dur = this.evaluate(args[2]);
+    const operation = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'cut' };
+    const gain = args.length > 4 ? toNumber(this.evaluate(args[4])) : -12;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'spectralEdit() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.spectralEdits) {
+      track.spectralEdits = [];
+    }
+
+    track.spectralEdits.push({
+      type: 'spectralEdit',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      lowFreq,
+      highFreq,
+      operation: (operation as any).value || 'cut',
+      gain,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Sequencing Extensions
+  // ============================================
+
+  private builtinStepSequencer(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const id = this.evaluate(args[0]);
+    const steps = args.length > 1 ? toNumber(this.evaluate(args[1])) : 16;
+    const rate = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: '16n' };
+    const direction = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'forward' };
+
+    if (id.type !== 'string') {
+      throw new MFError('TYPE', 'stepSequencer() id must be string', position, this.filePath);
+    }
+
+    if (!track.stepSequencers) {
+      track.stepSequencers = [];
+    }
+
+    track.stepSequencers.push({
+      type: 'stepSequencer',
+      id: id.value,
+      steps,
+      rate: (rate as any).value || '16n',
+      pattern: [],
+      direction: (direction as any).value || 'forward',
+    });
+
+    return makeNull();
+  }
+
+  private builtinStep(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const stepNum = Math.floor(toNumber(this.evaluate(args[0])));
+    const note = args.length > 1 ? this.evaluate(args[1]) : null;
+    const velocity = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+    const gate = args.length > 3 ? toNumber(this.evaluate(args[3])) : 80;
+    const probability = args.length > 4 ? toNumber(this.evaluate(args[4])) : 100;
+
+    if (track.stepSequencers && track.stepSequencers.length > 0) {
+      const sequencer = track.stepSequencers[track.stepSequencers.length - 1];
+      sequencer.pattern.push({
+        active: true,
+        note: note?.type === 'pitch' ? note.midi : undefined,
+        velocity,
+        gate,
+        probability,
+        offset: 0,
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinFollowAction(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const action = this.evaluate(args[1]);
+    const probability = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+    const time = args.length > 3 ? toNumber(this.evaluate(args[3])) : 0;
+
+    if (clipId.type !== 'string' || action.type !== 'string') {
+      throw new MFError('TYPE', 'followAction() clipId and action must be strings', position, this.filePath);
+    }
+
+    if (!track.followActions) {
+      track.followActions = [];
+    }
+
+    track.followActions.push({
+      type: 'followAction',
+      clipId: clipId.value,
+      action: action.value as any,
+      probability,
+      time,
+    });
+
+    return makeNull();
+  }
+
+  private builtinScaleLock(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const root = toNumber(this.evaluate(args[0]));
+    const scale = this.evaluate(args[1]);
+    const mode = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'nearest' };
+
+    if (scale.type !== 'string') {
+      throw new MFError('TYPE', 'scaleLock() scale must be string', position, this.filePath);
+    }
+
+    if (!track.scaleLocks) {
+      track.scaleLocks = [];
+    }
+
+    track.scaleLocks.push({
+      type: 'scaleLock',
+      tick: track.cursor,
+      root: root % 12,
+      scale: scale.value as any,
+      mode: (mode as any).value || 'nearest',
+    });
+
+    return makeNull();
+  }
+
+  private builtinChordLock(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const root = toNumber(this.evaluate(args[0]));
+    const chordType = this.evaluate(args[1]);
+    const voicing = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'close' };
+
+    if (chordType.type !== 'string') {
+      throw new MFError('TYPE', 'chordLock() chordType must be string', position, this.filePath);
+    }
+
+    if (!track.chordLocks) {
+      track.chordLocks = [];
+    }
+
+    track.chordLocks.push({
+      type: 'chordLock',
+      tick: track.cursor,
+      root: root % 12,
+      chordType: chordType.value,
+      voicing: (voicing as any).value || 'close',
+    });
+
+    return makeNull();
+  }
+
+  private builtinDivisi(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const parts = Math.floor(toNumber(this.evaluate(args[0])));
+    const dur = this.evaluate(args[1]);
+    const method = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'top-down' };
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'divisi() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.divisiSections) {
+      track.divisiSections = [];
+    }
+
+    track.divisiSections.push({
+      type: 'divisi',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      trackId: track.id,
+      parts: Math.max(2, Math.min(8, parts)),
+      method: (method as any).value || 'top-down',
+    });
+
+    return makeNull();
+  }
+
+  private builtinExpressionMap(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const id = this.evaluate(args[0]);
+    const name = args.length > 1 ? this.evaluate(args[1]) : id;
+
+    if (id.type !== 'string') {
+      throw new MFError('TYPE', 'expressionMap() id must be string', position, this.filePath);
+    }
+
+    if (!track.expressionMaps) {
+      track.expressionMaps = [];
+    }
+
+    track.expressionMaps.push({
+      type: 'expressionMap',
+      id: id.value,
+      name: name.type === 'string' ? name.value : id.value,
+      entries: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinArticulationMapping(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const articulation = this.evaluate(args[0]);
+    const keyswitch = args.length > 1 ? this.evaluate(args[1]) : null;
+    const programChange = args.length > 2 ? toNumber(this.evaluate(args[2])) : undefined;
+
+    if (articulation.type !== 'string') {
+      throw new MFError('TYPE', 'articulation() name must be string', position, this.filePath);
+    }
+
+    if (track.expressionMaps && track.expressionMaps.length > 0) {
+      const expMap = track.expressionMaps[track.expressionMaps.length - 1];
+      expMap.entries.push({
+        articulation: articulation.value,
+        keyswitch: keyswitch?.type === 'pitch' ? keyswitch.midi : undefined,
+        programChange,
+      });
+    }
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Sync & Communication
+  // ============================================
+
+  private builtinOSC(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const sendPort = args.length > 0 ? toNumber(this.evaluate(args[0])) : 8000;
+    const receivePort = args.length > 1 ? toNumber(this.evaluate(args[1])) : 9000;
+    const sendHost = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: '127.0.0.1' };
+
+    track.oscConfig = {
+      type: 'oscConfig',
+      enabled: true,
+      sendPort,
+      receivePort,
+      sendHost: (sendHost as any).value || '127.0.0.1',
+    };
+
+    return makeNull();
+  }
+
+  private builtinOSCMap(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const address = this.evaluate(args[0]);
+    const target = this.evaluate(args[1]);
+    const min = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+    const max = args.length > 3 ? toNumber(this.evaluate(args[3])) : 127;
+
+    if (address.type !== 'string' || target.type !== 'string') {
+      throw new MFError('TYPE', 'oscMap() address and target must be strings', position, this.filePath);
+    }
+
+    if (!track.oscMappings) {
+      track.oscMappings = [];
+    }
+
+    track.oscMappings.push({
+      type: 'oscMapping',
+      address: address.value,
+      target: target.value,
+      min,
+      max,
+    });
+
+    return makeNull();
+  }
+
+  private builtinNetworkMIDI(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const sessionName = this.evaluate(args[0]);
+    const port = args.length > 1 ? toNumber(this.evaluate(args[1])) : 5004;
+    const protocol = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'rtp-midi' };
+
+    if (sessionName.type !== 'string') {
+      throw new MFError('TYPE', 'networkMidi() sessionName must be string', position, this.filePath);
+    }
+
+    track.networkMidiConfig = {
+      type: 'networkMidi',
+      enabled: true,
+      sessionName: sessionName.value,
+      port,
+      protocol: (protocol as any).value || 'rtp-midi',
+    };
+
+    return makeNull();
+  }
+
+  private builtinMIDIClock(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const mode = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'master' };
+    const outputPort = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    track.midiClockConfig = {
+      type: 'midiClock',
+      mode: (mode as any).value || 'master',
+      sendStart: true,
+      sendContinue: true,
+      sendStop: true,
+      outputPort: outputPort?.type === 'string' ? outputPort.value : undefined,
+    };
+
+    return makeNull();
+  }
+
+  private builtinTimecode(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const format = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'mtc' };
+    const frameRate = args.length > 1 ? toNumber(this.evaluate(args[1])) : 30;
+    const mode = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'generate' };
+    const offset = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: '00:00:00:00' };
+
+    track.timecodeConfig = {
+      type: 'timecode',
+      format: (format as any).value || 'mtc',
+      frameRate: frameRate as 24 | 25 | 29.97 | 30,
+      dropFrame: false,
+      offset: (offset as any).value || '00:00:00:00',
+      mode: (mode as any).value || 'generate',
+    };
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Mastering
+  // ============================================
+
+  private builtinDithering(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const targetBitDepth = args.length > 0 ? toNumber(this.evaluate(args[0])) : 16;
+    const noiseShaping = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'pow-r' };
+    const ditherType = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'triangular' };
+
+    track.ditheringConfig = {
+      type: 'dithering',
+      targetBitDepth: (targetBitDepth === 24 ? 24 : 16) as 16 | 24,
+      noiseShaping: (noiseShaping as any).value || 'pow-r',
+      ditherType: (ditherType as any).value || 'triangular',
+      autoblack: true,
+    };
+
+    return makeNull();
+  }
+
+  private builtinLoudnessMatch(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const targetLUFS = args.length > 0 ? toNumber(this.evaluate(args[0])) : -14;
+    const maxTruePeak = args.length > 1 ? toNumber(this.evaluate(args[1])) : -1;
+    const algorithm = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'lufs' };
+
+    track.loudnessMatchingConfig = {
+      type: 'loudnessMatching',
+      targetLUFS,
+      maxTruePeak,
+      tolerance: 0.5,
+      algorithm: (algorithm as any).value || 'lufs',
+    };
+
+    return makeNull();
+  }
+
+  private builtinReferenceTrack(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const filePath = this.evaluate(args[0]);
+    const gain = args.length > 1 ? toNumber(this.evaluate(args[1])) : 0;
+
+    if (filePath.type !== 'string') {
+      throw new MFError('TYPE', 'referenceTrack() filePath must be string', position, this.filePath);
+    }
+
+    if (!track.referenceTracks) {
+      track.referenceTracks = [];
+    }
+
+    track.referenceTracks.push({
+      type: 'referenceTrack',
+      filePath: filePath.value,
+      gain,
+      active: true,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Metadata
+  // ============================================
+
+  private builtinID3(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const field = this.evaluate(args[0]);
+    const value = this.evaluate(args[1]);
+
+    if (field.type !== 'string') {
+      throw new MFError('TYPE', 'id3() field must be string', position, this.filePath);
+    }
+
+    if (!track.id3Metadata) {
+      track.id3Metadata = { type: 'id3' };
+    }
+
+    const fieldName = field.value as keyof typeof track.id3Metadata;
+    if (value.type === 'string') {
+      (track.id3Metadata as any)[fieldName] = value.value;
+    } else if (value.type === 'int' || value.type === 'float') {
+      (track.id3Metadata as any)[fieldName] = value.value;
+    }
+
+    return makeNull();
+  }
+
+  private builtinISRC(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const code = this.evaluate(args[0]);
+    const trackId = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    if (code.type !== 'string') {
+      throw new MFError('TYPE', 'isrc() code must be string', position, this.filePath);
+    }
+
+    if (!track.isrcCodes) {
+      track.isrcCodes = [];
+    }
+
+    track.isrcCodes.push({
+      type: 'isrc',
+      code: code.value,
+      trackId: trackId?.type === 'string' ? trackId.value : undefined,
+    });
+
+    return makeNull();
+  }
+
+  private builtinSongStructure(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const section = this.evaluate(args[0]);
+    const label = args.length > 1 ? this.evaluate(args[1]) : null;
+    const color = args.length > 2 ? this.evaluate(args[2]) : null;
+
+    if (section.type !== 'string') {
+      throw new MFError('TYPE', 'songStructure() section must be string', position, this.filePath);
+    }
+
+    if (!track.songStructureMarkers) {
+      track.songStructureMarkers = [];
+    }
+
+    track.songStructureMarkers.push({
+      type: 'songStructure',
+      tick: track.cursor,
+      section: section.value as any,
+      label: label?.type === 'string' ? label.value : undefined,
+      color: color?.type === 'string' ? color.value : undefined,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Audio Editing & Restoration
+  // ============================================
+
+  private builtinFreeze(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const startTick = track.cursor;
+    const dur = this.evaluate(args[0]);
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'freeze() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.freezeTracks) {
+      track.freezeTracks = [];
+    }
+
+    track.freezeTracks.push({
+      type: 'freeze',
+      trackId: track.id,
+      startTick,
+      endTick: startTick + durTicks,
+    });
+
+    return makeNull();
+  }
+
+  private builtinAudioWarp(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const mode = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'beats' };
+    const quantizeStrength = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+
+    if (clipId.type !== 'string') {
+      throw new MFError('TYPE', 'audioWarp() clipId must be string', position, this.filePath);
+    }
+
+    if (!track.audioWarps) {
+      track.audioWarps = [];
+    }
+
+    track.audioWarps.push({
+      type: 'audioWarp',
+      audioClipId: clipId.value,
+      mode: (mode as any).value || 'beats',
+      quantizeStrength,
+      preserveTransients: true,
+    });
+
+    return makeNull();
+  }
+
+  private builtinWarpMarker(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const originalPos = toNumber(this.evaluate(args[1]));
+    const warpedPos = toNumber(this.evaluate(args[2]));
+
+    if (clipId.type !== 'string') {
+      throw new MFError('TYPE', 'warpMarker() clipId must be string', position, this.filePath);
+    }
+
+    if (!track.warpMarkers) {
+      track.warpMarkers = [];
+    }
+
+    track.warpMarkers.push({
+      type: 'warpMarker',
+      audioClipId: clipId.value,
+      originalPosition: originalPos,
+      warpedPosition: warpedPos,
+    });
+
+    return makeNull();
+  }
+
+  private builtinBeatSlice(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clipId = this.evaluate(args[0]);
+    const sensitivity = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const minLength = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+
+    if (clipId.type !== 'string') {
+      throw new MFError('TYPE', 'beatSlice() clipId must be string', position, this.filePath);
+    }
+
+    if (!track.beatSlices) {
+      track.beatSlices = [];
+    }
+
+    track.beatSlices.push({
+      type: 'beatSlice',
+      audioClipId: clipId.value,
+      slicePoints: [],
+      sensitivity,
+      minSliceLength: minLength,
+    });
+
+    return makeNull();
+  }
+
+  private builtinSpectralRepair(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const lowFreq = toNumber(this.evaluate(args[0]));
+    const highFreq = toNumber(this.evaluate(args[1]));
+    const dur = this.evaluate(args[2]);
+    const repairType = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'attenuate' };
+    const strength = args.length > 4 ? toNumber(this.evaluate(args[4])) : 50;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'spectralRepair() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.spectralRepairs) {
+      track.spectralRepairs = [];
+    }
+
+    track.spectralRepairs.push({
+      type: 'spectralRepair',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      lowFreq,
+      highFreq,
+      repairType: (repairType as any).value || 'attenuate',
+      strength,
+    });
+
+    return makeNull();
+  }
+
+  private builtinAudioRestore(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const mode = this.evaluate(args[0]);
+    const threshold = args.length > 1 ? toNumber(this.evaluate(args[1])) : -20;
+    const strength = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+    const frequency = args.length > 3 ? toNumber(this.evaluate(args[3])) : 50;
+
+    if (mode.type !== 'string') {
+      throw new MFError('TYPE', 'audioRestore() mode must be string', position, this.filePath);
+    }
+
+    if (!track.audioRestorations) {
+      track.audioRestorations = [];
+    }
+
+    track.audioRestorations.push({
+      type: 'audioRestoration',
+      mode: mode.value as any,
+      threshold,
+      strength,
+      frequency,
+    });
+
+    return makeNull();
+  }
+
+  private builtinVocalAlign(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const refTrackId = this.evaluate(args[0]);
+    const alignTrackId = this.evaluate(args[1]);
+    const tightness = args.length > 2 ? toNumber(this.evaluate(args[2])) : 80;
+    const alignPitch = args.length > 3 ? isTruthy(this.evaluate(args[3])) : true;
+    const alignTiming = args.length > 4 ? isTruthy(this.evaluate(args[4])) : true;
+
+    if (refTrackId.type !== 'string' || alignTrackId.type !== 'string') {
+      throw new MFError('TYPE', 'vocalAlign() track IDs must be strings', position, this.filePath);
+    }
+
+    if (!track.vocalAlignments) {
+      track.vocalAlignments = [];
+    }
+
+    track.vocalAlignments.push({
+      type: 'vocalAlignment',
+      referenceTrackId: refTrackId.value,
+      alignTrackId: alignTrackId.value,
+      tightness,
+      alignPitch,
+      alignTiming,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Dynamics Processing
+  // ============================================
+
+  private builtinMidSide(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const mode = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'process' };
+    const midGain = args.length > 1 ? toNumber(this.evaluate(args[1])) : 0;
+    const sideGain = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+    const midWidth = args.length > 3 ? toNumber(this.evaluate(args[3])) : 100;
+
+    if (!track.midSideProcessing) {
+      track.midSideProcessing = [];
+    }
+
+    track.midSideProcessing.push({
+      type: 'midSide',
+      tick: track.cursor,
+      mode: (mode as any).value || 'process',
+      midGain,
+      sideGain,
+      midWidth,
+    });
+
+    return makeNull();
+  }
+
+  private builtinDynamicEQ(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (!track.dynamicEQs) {
+      track.dynamicEQs = [];
+    }
+
+    track.dynamicEQs.push({
+      type: 'dynamicEQ',
+      tick: track.cursor,
+      bands: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinDynamicEQBand(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const freq = toNumber(this.evaluate(args[0]));
+    const gain = toNumber(this.evaluate(args[1]));
+    const q = args.length > 2 ? toNumber(this.evaluate(args[2])) : 1;
+    const threshold = args.length > 3 ? toNumber(this.evaluate(args[3])) : -20;
+    const ratio = args.length > 4 ? toNumber(this.evaluate(args[4])) : 2;
+    const dynamicGain = args.length > 5 ? toNumber(this.evaluate(args[5])) : 6;
+    const mode = args.length > 6 ? this.evaluate(args[6]) : { type: 'string', value: 'compress' };
+
+    if (track.dynamicEQs && track.dynamicEQs.length > 0) {
+      const eq = track.dynamicEQs[track.dynamicEQs.length - 1];
+      eq.bands.push({
+        frequency: freq,
+        gain,
+        q,
+        threshold,
+        ratio,
+        attack: 10,
+        release: 100,
+        dynamicGain,
+        mode: (mode as any).value || 'compress',
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinLinearPhaseEQ(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const latency = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'medium' };
+
+    if (!track.linearPhaseEQs) {
+      track.linearPhaseEQs = [];
+    }
+
+    track.linearPhaseEQs.push({
+      type: 'linearPhaseEQ',
+      tick: track.cursor,
+      latency: (latency as any).value || 'medium',
+      bands: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinEQBand(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const freq = toNumber(this.evaluate(args[0]));
+    const gain = toNumber(this.evaluate(args[1]));
+    const q = args.length > 2 ? toNumber(this.evaluate(args[2])) : 1;
+    const bandType = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'peak' };
+
+    if (track.linearPhaseEQs && track.linearPhaseEQs.length > 0) {
+      const eq = track.linearPhaseEQs[track.linearPhaseEQs.length - 1];
+      eq.bands.push({
+        frequency: freq,
+        gain,
+        q,
+        type: (bandType as any).value || 'peak',
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinParallel(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const dryLevel = args.length > 0 ? toNumber(this.evaluate(args[0])) : 50;
+    const wetLevel = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const phase = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'normal' };
+
+    if (!track.parallelProcessing) {
+      track.parallelProcessing = [];
+    }
+
+    track.parallelProcessing.push({
+      type: 'parallel',
+      tick: track.cursor,
+      effectChain: [],
+      dryLevel,
+      wetLevel,
+      phase: (phase as any).value || 'normal',
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Recording
+  // ============================================
+
+  private builtinTakeLane(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (!track.takeLanes) {
+      track.takeLanes = [];
+    }
+
+    track.takeLanes.push({
+      type: 'takeLane',
+      trackId: track.id,
+      takes: [],
+      activeTakeIndex: 0,
+    });
+
+    return makeNull();
+  }
+
+  private builtinTake(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const name = this.evaluate(args[0]);
+    const rating = args.length > 1 ? toNumber(this.evaluate(args[1])) : undefined;
+
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'take() name must be string', position, this.filePath);
+    }
+
+    if (track.takeLanes && track.takeLanes.length > 0) {
+      const lane = track.takeLanes[track.takeLanes.length - 1];
+      lane.takes.push({
+        id: `take_${lane.takes.length + 1}`,
+        name: name.value,
+        startTick: track.cursor,
+        endTick: track.cursor,
+        events: [],
+        muted: false,
+        rating,
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinComp(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const takeId = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+    const crossfadeIn = args.length > 2 ? toNumber(this.evaluate(args[2])) : 48;
+    const crossfadeOut = args.length > 3 ? toNumber(this.evaluate(args[3])) : 48;
+
+    if (takeId.type !== 'string' || dur.type !== 'dur') {
+      throw new MFError('TYPE', 'comp() requires takeId string and duration', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.compRegions) {
+      track.compRegions = [];
+    }
+
+    track.compRegions.push({
+      type: 'comp',
+      trackId: track.id,
+      startTick: track.cursor,
+      endTick: track.cursor + durTicks,
+      sourceTakeId: takeId.value,
+      crossfadeIn,
+      crossfadeOut,
+    });
+
+    return makeNull();
+  }
+
+  private builtinPunchIn(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const preroll = args.length > 0 ? toNumber(this.evaluate(args[0])) : 1;
+
+    if (!track.punchPoints) {
+      track.punchPoints = [];
+    }
+
+    track.punchPoints.push({
+      type: 'punch',
+      mode: 'in',
+      tick: track.cursor,
+      preroll,
+      postroll: 0,
+    });
+
+    return makeNull();
+  }
+
+  private builtinPunchOut(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const postroll = args.length > 0 ? toNumber(this.evaluate(args[0])) : 1;
+
+    if (!track.punchPoints) {
+      track.punchPoints = [];
+    }
+
+    track.punchPoints.push({
+      type: 'punch',
+      mode: 'out',
+      tick: track.cursor,
+      preroll: 0,
+      postroll,
+    });
+
+    return makeNull();
+  }
+
+  private builtinLoopRecord(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const dur = this.evaluate(args[0]);
+    const mode = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'takes' };
+    const countIn = args.length > 2 ? toNumber(this.evaluate(args[2])) : 1;
+    const maxTakes = args.length > 3 ? toNumber(this.evaluate(args[3])) : undefined;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'loopRecord() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.loopRecordings) {
+      track.loopRecordings = [];
+    }
+
+    track.loopRecordings.push({
+      type: 'loopRecording',
+      startTick: track.cursor,
+      endTick: track.cursor + durTicks,
+      mode: (mode as any).value || 'takes',
+      countIn,
+      maxTakes,
+    });
+
+    return makeNull();
+  }
+
+  private builtinAutomationRecord(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const param = this.evaluate(args[0]);
+    const mode = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'touch' };
+    const reduction = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+
+    if (param.type !== 'string') {
+      throw new MFError('TYPE', 'automationRecord() parameter must be string', position, this.filePath);
+    }
+
+    if (!track.automationRecordings) {
+      track.automationRecordings = [];
+    }
+
+    track.automationRecordings.push({
+      type: 'automationRecording',
+      parameter: param.value,
+      mode: (mode as any).value || 'touch',
+      reduction,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Groove & Humanize
+  // ============================================
+
+  private builtinGroove(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const id = this.evaluate(args[0]);
+    const name = args.length > 1 ? this.evaluate(args[1]) : id;
+    const quantize = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+
+    if (id.type !== 'string') {
+      throw new MFError('TYPE', 'groove() id must be string', position, this.filePath);
+    }
+
+    if (!track.grooveTemplates) {
+      track.grooveTemplates = [];
+    }
+
+    track.grooveTemplates.push({
+      type: 'groove',
+      id: id.value,
+      name: name.type === 'string' ? name.value : id.value,
+      timingOffsets: [],
+      velocityOffsets: [],
+      quantizeAmount: quantize,
+    });
+
+    return makeNull();
+  }
+
+  private builtinApplyGroove(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    // Apply an existing groove template to the track
+    return makeNull();
+  }
+
+  private builtinHumanizeRegion(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const dur = this.evaluate(args[0]);
+    const timingRange = args.length > 1 ? toNumber(this.evaluate(args[1])) : 10;
+    const velocityRange = args.length > 2 ? toNumber(this.evaluate(args[2])) : 10;
+    const durationRange = args.length > 3 ? toNumber(this.evaluate(args[3])) : 5;
+    const seed = args.length > 4 ? toNumber(this.evaluate(args[4])) : undefined;
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'humanizeRegion() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+
+    if (!track.humanizeSettings) {
+      track.humanizeSettings = [];
+    }
+
+    track.humanizeSettings.push({
+      type: 'humanize',
+      tick: track.cursor,
+      endTick: track.cursor + durTicks,
+      timingRange,
+      velocityRange,
+      durationRange,
+      seed,
+    });
+
+    return makeNull();
+  }
+
+  private builtinRandomize(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const param = this.evaluate(args[0]);
+    const min = toNumber(this.evaluate(args[1]));
+    const max = toNumber(this.evaluate(args[2]));
+    const distribution = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'uniform' };
+    const probability = args.length > 4 ? toNumber(this.evaluate(args[4])) : 100;
+
+    if (param.type !== 'string') {
+      throw new MFError('TYPE', 'randomize() parameter must be string', position, this.filePath);
+    }
+
+    if (!track.randomizations) {
+      track.randomizations = [];
+    }
+
+    track.randomizations.push({
+      type: 'randomize',
+      parameter: param.value as any,
+      min,
+      max,
+      distribution: (distribution as any).value || 'uniform',
+      probability,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Controller & Macro
+  // ============================================
+
+  private builtinMIDILearn(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const id = this.evaluate(args[0]);
+    const controlType = this.evaluate(args[1]);
+    const targetParam = this.evaluate(args[2]);
+    const channel = args.length > 3 ? toNumber(this.evaluate(args[3])) : 1;
+    const controlNumber = args.length > 4 ? toNumber(this.evaluate(args[4])) : undefined;
+
+    if (id.type !== 'string' || controlType.type !== 'string' || targetParam.type !== 'string') {
+      throw new MFError('TYPE', 'midiLearn() requires string arguments', position, this.filePath);
+    }
+
+    if (!track.midiLearnMappings) {
+      track.midiLearnMappings = [];
+    }
+
+    track.midiLearnMappings.push({
+      type: 'midiLearn',
+      id: id.value,
+      channel,
+      controlType: controlType.value as any,
+      controlNumber,
+      targetParameter: targetParam.value,
+      min: 0,
+      max: 127,
+      curve: 'linear',
+    });
+
+    return makeNull();
+  }
+
+  private builtinMacro(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const id = this.evaluate(args[0]);
+    const name = args.length > 1 ? this.evaluate(args[1]) : id;
+    const value = args.length > 2 ? toNumber(this.evaluate(args[2])) : 64;
+
+    if (id.type !== 'string') {
+      throw new MFError('TYPE', 'macro() id must be string', position, this.filePath);
+    }
+
+    if (!track.macroControls) {
+      track.macroControls = [];
+    }
+
+    track.macroControls.push({
+      type: 'macro',
+      id: id.value,
+      name: name.type === 'string' ? name.value : id.value,
+      value,
+      mappings: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinMacroMap(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const targetParam = this.evaluate(args[0]);
+    const min = toNumber(this.evaluate(args[1]));
+    const max = toNumber(this.evaluate(args[2]));
+    const curve = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: 'linear' };
+
+    if (targetParam.type !== 'string') {
+      throw new MFError('TYPE', 'macroMap() targetParameter must be string', position, this.filePath);
+    }
+
+    if (track.macroControls && track.macroControls.length > 0) {
+      const macro = track.macroControls[track.macroControls.length - 1];
+      macro.mappings.push({
+        targetParameter: targetParam.value,
+        min,
+        max,
+        curve: (curve as any).value || 'linear',
+      });
+    }
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Export & Batch Processing
+  // ============================================
+
+  private builtinStemExport(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const name = this.evaluate(args[0]);
+    const trackIds = args.length > 1 ? this.evaluate(args[1]) : { type: 'array', elements: [] };
+    const format = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'wav' };
+    const bitDepth = args.length > 3 ? toNumber(this.evaluate(args[3])) : 24;
+    const sampleRate = args.length > 4 ? toNumber(this.evaluate(args[4])) : 48000;
+
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'stemExport() name must be string', position, this.filePath);
+    }
+
+    const ids: string[] = [];
+    if (trackIds.type === 'array') {
+      for (const elem of trackIds.elements) {
+        if (elem.type === 'string') {
+          ids.push(elem.value);
+        }
+      }
+    }
+
+    if (!track.stemExports) {
+      track.stemExports = [];
+    }
+
+    track.stemExports.push({
+      type: 'stemExport',
+      name: name.value,
+      trackIds: ids,
+      format: (format as any).value || 'wav',
+      bitDepth: (bitDepth === 16 ? 16 : bitDepth === 32 ? 32 : 24) as 16 | 24 | 32,
+      sampleRate: sampleRate as 44100 | 48000 | 88200 | 96000,
+      normalize: false,
+      tailLength: 0,
+    });
+
+    return makeNull();
+  }
+
+  private builtinBatch(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const inputPattern = this.evaluate(args[0]);
+    const outputPattern = this.evaluate(args[1]);
+
+    if (inputPattern.type !== 'string' || outputPattern.type !== 'string') {
+      throw new MFError('TYPE', 'batch() patterns must be strings', position, this.filePath);
+    }
+
+    if (!track.batchProcessings) {
+      track.batchProcessings = [];
+    }
+
+    track.batchProcessings.push({
+      type: 'batch',
+      inputPattern: inputPattern.value,
+      outputPattern: outputPattern.value,
+      operations: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinBatchOp(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const opType = this.evaluate(args[0]);
+
+    if (opType.type !== 'string') {
+      throw new MFError('TYPE', 'batchOp() type must be string', position, this.filePath);
+    }
+
+    if (track.batchProcessings && track.batchProcessings.length > 0) {
+      const batch = track.batchProcessings[track.batchProcessings.length - 1];
+      batch.operations.push({
+        type: opType.value as any,
+        params: {},
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinExportPreset(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const id = this.evaluate(args[0]);
+    const name = args.length > 1 ? this.evaluate(args[1]) : id;
+    const format = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'wav' };
+    const sampleRate = args.length > 3 ? toNumber(this.evaluate(args[3])) : 48000;
+    const channels = args.length > 4 ? this.evaluate(args[4]) : { type: 'string', value: 'stereo' };
+
+    if (id.type !== 'string') {
+      throw new MFError('TYPE', 'exportPreset() id must be string', position, this.filePath);
+    }
+
+    if (!track.exportPresets) {
+      track.exportPresets = [];
+    }
+
+    track.exportPresets.push({
+      type: 'exportPreset',
+      id: id.value,
+      name: name.type === 'string' ? name.value : id.value,
+      format: (format as any).value || 'wav',
+      sampleRate,
+      channels: (channels as any).value || 'stereo',
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Atmos/Spatial Extensions
+  // ============================================
+
+  private builtinAtmosObject(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const id = this.evaluate(args[0]);
+    const name = args.length > 1 ? this.evaluate(args[1]) : id;
+    const x = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+    const y = args.length > 3 ? toNumber(this.evaluate(args[3])) : 0;
+    const z = args.length > 4 ? toNumber(this.evaluate(args[4])) : 0;
+
+    if (id.type !== 'string') {
+      throw new MFError('TYPE', 'atmosObject() id must be string', position, this.filePath);
+    }
+
+    if (!track.atmosObjects) {
+      track.atmosObjects = [];
+    }
+
+    track.atmosObjects.push({
+      type: 'atmosObject',
+      id: id.value,
+      name: name.type === 'string' ? name.value : id.value,
+      trackId: track.id,
+      isStatic: false,
+      position: { x, y, z },
+      size: 50,
+      automation: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinAtmosMove(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const x = toNumber(this.evaluate(args[0]));
+    const y = toNumber(this.evaluate(args[1]));
+    const z = args.length > 2 ? toNumber(this.evaluate(args[2])) : 0;
+    const size = args.length > 3 ? toNumber(this.evaluate(args[3])) : undefined;
+
+    if (track.atmosObjects && track.atmosObjects.length > 0) {
+      const obj = track.atmosObjects[track.atmosObjects.length - 1];
+      obj.automation.push({
+        tick: track.cursor,
+        x,
+        y,
+        z,
+        size,
+      });
+    }
+
+    return makeNull();
+  }
+
+  private builtinHeadphoneVirtual(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const hrtfProfile = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'generic' };
+    const roomSize = args.length > 1 ? toNumber(this.evaluate(args[1])) : 50;
+    const distance = args.length > 2 ? toNumber(this.evaluate(args[2])) : 50;
+    const angle = args.length > 3 ? toNumber(this.evaluate(args[3])) : 0;
+
+    track.headphoneVirtualization = {
+      type: 'headphoneVirtualization',
+      enabled: true,
+      hrtfProfile: (hrtfProfile as any).value || 'generic',
+      roomSize,
+      distance,
+      angle,
+    };
+
+    return makeNull();
+  }
+
+  private builtinSurroundAuto(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pattern = args.length > 0 ? this.evaluate(args[0]) : { type: 'string', value: 'circle' };
+    const speed = args.length > 1 ? toNumber(this.evaluate(args[1])) : 0.5;
+    const width = args.length > 2 ? toNumber(this.evaluate(args[2])) : 100;
+    const centerBias = args.length > 3 ? toNumber(this.evaluate(args[3])) : 0;
+
+    if (!track.surroundAutomation) {
+      track.surroundAutomation = [];
+    }
+
+    track.surroundAutomation.push({
+      type: 'surroundAutomation',
+      tick: track.cursor,
+      pattern: (pattern as any).value || 'circle',
+      speed,
+      width,
+      centerBias,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Collaboration
+  // ============================================
+
+  private builtinProjectNote(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const text = this.evaluate(args[0]);
+    const author = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'Anonymous' };
+
+    if (text.type !== 'string') {
+      throw new MFError('TYPE', 'note() text must be string', position, this.filePath);
+    }
+
+    if (!track.projectNotes) {
+      track.projectNotes = [];
+    }
+
+    track.projectNotes.push({
+      type: 'projectNote',
+      id: `note_${track.projectNotes.length + 1}`,
+      author: author.type === 'string' ? author.value : 'Anonymous',
+      timestamp: Date.now(),
+      tick: track.cursor,
+      trackId: track.id,
+      text: text.value,
+      resolved: false,
+    });
+
+    return makeNull();
+  }
+
+  private builtinCollaborator(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const name = this.evaluate(args[0]);
+    const role = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'editor' };
+    const email = args.length > 2 ? this.evaluate(args[2]) : null;
+    const color = args.length > 3 ? this.evaluate(args[3]) : { type: 'string', value: '#FF0000' };
+
+    if (name.type !== 'string') {
+      throw new MFError('TYPE', 'collaborator() name must be string', position, this.filePath);
+    }
+
+    if (!track.collaborators) {
+      track.collaborators = [];
+    }
+
+    track.collaborators.push({
+      type: 'collaborator',
+      id: `collab_${track.collaborators.length + 1}`,
+      name: name.value,
+      email: email?.type === 'string' ? email.value : undefined,
+      role: (role as any).value || 'editor',
+      color: (color as any).value || '#FF0000',
     });
 
     return makeNull();
