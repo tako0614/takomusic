@@ -39,8 +39,16 @@ export class Checker {
       this.checkStatement(stmt);
     }
 
-    // Check for main procedure
-    if (!this.procs.has('main')) {
+    // Check for main procedure only if file appears to be an entry point (not a module)
+    // A module typically only has declarations (proc, const, import, export) without main
+    const hasTopLevelExecution = program.statements.some(
+      stmt => stmt.kind === 'TrackBlock' || stmt.kind === 'ExpressionStatement'
+    );
+    const isLikelyModule = !hasTopLevelExecution && program.statements.some(
+      stmt => stmt.kind === 'ExportStatement' || stmt.kind === 'ImportStatement'
+    );
+
+    if (!this.procs.has('main') && !isLikelyModule) {
       this.addError('E400', 'No main() procedure found', undefined, 'Add "export proc main() { ... }" to define the entry point');
     }
 

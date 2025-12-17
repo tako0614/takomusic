@@ -35,6 +35,8 @@ export interface VocalTrack extends BaseTrack {
     engine?: string;
     voice?: string;
   };
+  // Vocaloid expression parameters
+  vocaloidParams?: VocaloidParamEvent[];
 }
 
 export interface MidiTrack extends BaseTrack {
@@ -44,7 +46,7 @@ export interface MidiTrack extends BaseTrack {
   defaultVel: number;
 }
 
-export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent;
+export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent | AftertouchEvent | PolyAftertouchEvent | NRPNEvent | SysExEvent;
 
 export interface NoteEvent {
   type: 'note';
@@ -77,3 +79,60 @@ export interface PitchBendEvent {
 
 // Articulation types
 export type Articulation = 'staccato' | 'legato' | 'accent' | 'tenuto' | 'marcato';
+
+// Vocaloid parameter types
+export type VocaloidParamType = 'PIT' | 'DYN' | 'BRE' | 'BRI' | 'CLE' | 'GEN' | 'POR' | 'OPE';
+
+export interface VocaloidParamEvent {
+  type: 'vocaloidParam';
+  param: VocaloidParamType;
+  tick: number;
+  value: number;
+}
+
+export interface VocaloidVibratoEvent {
+  type: 'vibrato';
+  tick: number;
+  dur: number;
+  depth: number;    // 0-127
+  rate: number;     // 0-127
+  delay: number;    // 0-100 (% of note duration before vibrato starts)
+}
+
+// Notation types for MusicXML
+export type DynamicMark = 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff' | 'sfz' | 'fp';
+
+export interface DynamicEvent {
+  type: 'dynamic';
+  tick: number;
+  mark: DynamicMark;
+}
+
+export interface SlurEvent {
+  type: 'slur';
+  tick: number;
+  endTick: number;
+  number?: number; // for nested slurs
+}
+
+export interface CrescendoEvent {
+  type: 'crescendo' | 'decrescendo';
+  tick: number;
+  endTick: number;
+}
+
+// Extended note event with notation
+export interface NoteEventExtended extends NoteEvent {
+  slurStart?: boolean;
+  slurEnd?: boolean;
+  tieStart?: boolean;
+  tieEnd?: boolean;
+  dynamic?: DynamicMark;
+}
+
+// Notation events container
+export interface NotationEvents {
+  dynamics: DynamicEvent[];
+  slurs: SlurEvent[];
+  crescendos: CrescendoEvent[];
+}
