@@ -29,7 +29,8 @@
       "Bash(code --install-extension:*)",
       "Bash(npm run compile:*)",
       "Bash(code --uninstall-extension:*)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(wc:*)"
     ]
   }
 }
