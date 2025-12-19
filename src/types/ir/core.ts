@@ -46,7 +46,7 @@ export interface MidiTrack extends BaseTrack {
   defaultVel: number;
 }
 
-export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent | AftertouchEvent | PolyAftertouchEvent | NRPNEvent | SysExEvent;
+export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent | AftertouchEvent | PolyAftertouchEvent | NRPNEvent | SysExEvent | PhonemeEvent | BreathEvent | ConsonantOffsetEvent | CrossStaffEvent | PortamentoShapeEvent;
 
 export interface NoteEvent {
   type: 'note';
@@ -126,4 +126,68 @@ export interface VocaloidVibratoEvent {
   depth: number;    // 0-127
   rate: number;     // 0-127
   delay: number;    // 0-100 (% of note duration before vibrato starts)
+}
+
+// Phoneme-level control for vocal tracks
+export interface PhonemeEvent {
+  type: 'phoneme';
+  tick: number;
+  dur: number;
+  key: number;
+  phonemes: PhonemeUnit[];
+}
+
+export interface PhonemeUnit {
+  symbol: string;           // IPA or engine-specific phoneme symbol
+  duration: number;         // Relative duration (percentage of total note duration)
+  velocity?: number;        // Phoneme velocity/intensity
+}
+
+// Consonant timing adjustment
+export interface ConsonantOffsetEvent {
+  type: 'consonantOffset';
+  tick: number;
+  offset: number;           // Ticks to shift consonant (negative = earlier, positive = later)
+}
+
+// Breath event for vocal tracks
+export interface BreathEvent {
+  type: 'breath';
+  tick: number;
+  dur: number;              // Breath duration in ticks
+  intensity?: number;       // 0-127 breath intensity
+}
+
+// Auto-breath settings
+export interface AutoBreathSettings {
+  enabled: boolean;
+  minRestDuration: number;  // Minimum rest duration to insert breath (ticks)
+  breathDuration: number;   // Default breath duration (ticks)
+  intensity: number;        // Default breath intensity
+}
+
+// Nested tuplet support
+export interface NestedTupletInfo {
+  actual: number;           // Actual number of notes
+  normal: number;           // Normal number of notes
+  type?: string;            // Note type
+  nested?: NestedTupletInfo; // Nested tuplet inside this tuplet
+}
+
+// Cross-staff notation
+export interface CrossStaffEvent {
+  type: 'crossStaff';
+  tick: number;
+  noteKey: number;          // Note to move
+  targetStaff: 'upper' | 'lower';  // Target staff
+}
+
+// Portamento shape control
+export type PortamentoShape = 'linear' | 'exponential' | 'logarithmic' | 's-curve' | 'early' | 'late';
+
+export interface PortamentoShapeEvent {
+  type: 'portamentoShape';
+  tick: number;
+  shape: PortamentoShape;
+  intensity?: number;       // 0-127, how pronounced the shape is
 }

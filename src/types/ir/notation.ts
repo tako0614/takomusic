@@ -390,3 +390,803 @@ export interface TransposingInstrument {
   transposition: number;      // Semitones from concert pitch (e.g., -2 for Bb clarinet)
   clefOctave?: number;        // For instruments like piccolo (+8) or bass (-8)
 }
+
+// Clef change event
+export type ClefType = 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion' | 'tab' | 'treble8va' | 'treble8vb' | 'bass8va' | 'bass8vb';
+
+export interface ClefChangeEvent {
+  type: 'clefChange';
+  tick: number;
+  clef: ClefType;
+}
+
+// Key signature
+export type KeyMode = 'major' | 'minor';
+
+export interface KeySignatureEvent {
+  type: 'keySignature';
+  tick: number;
+  fifths: number;             // -7 to 7 (negative = flats, positive = sharps)
+  mode: KeyMode;
+  root?: string;              // Optional: C, D, E, F, G, A, B
+}
+
+// Fingering
+export interface FingeringEvent {
+  type: 'fingering';
+  tick: number;
+  noteKey: number;            // MIDI note this fingering applies to
+  finger: number | string;    // 1-5 for standard, or string for custom (e.g., "T" for thumb)
+  hand?: 'left' | 'right';
+  position?: 'above' | 'below';
+}
+
+// Multi-measure rest
+export interface MultiRestEvent {
+  type: 'multiRest';
+  tick: number;
+  measures: number;           // Number of measures to rest
+}
+
+// Slash notation (rhythm slashes)
+export interface SlashNotationEvent {
+  type: 'slashNotation';
+  tick: number;
+  endTick: number;
+  slashType: 'rhythmic' | 'beat';  // rhythmic = show rhythm, beat = just slashes
+}
+
+// Barline types
+export type BarlineType = 'single' | 'double' | 'final' | 'repeat-start' | 'repeat-end' | 'repeat-both' | 'dashed' | 'tick' | 'short' | 'none';
+
+export interface BarlineEvent {
+  type: 'barline';
+  tick: number;
+  style: BarlineType;
+}
+
+// Tempo text (expressive tempo markings)
+export type TempoMarkingType =
+  | 'grave' | 'largo' | 'lento' | 'adagio' | 'andante' | 'andantino'
+  | 'moderato' | 'allegretto' | 'allegro' | 'vivace' | 'presto' | 'prestissimo'
+  | 'accelerando' | 'ritardando' | 'rallentando' | 'a-tempo' | 'rubato'
+  | 'custom';
+
+export interface TempoTextEvent {
+  type: 'tempoText';
+  tick: number;
+  marking: TempoMarkingType;
+  customText?: string;        // For custom tempo text
+  bpm?: number;               // Optional associated BPM
+}
+
+// Hide empty staves setting
+export interface HideEmptyStavesEvent {
+  type: 'hideEmptyStaves';
+  tick: number;
+  enabled: boolean;
+  firstSystemExempt?: boolean;  // Show all staves on first system
+}
+
+// Vocal style for synthesis
+export type VocalStyleType = 'soft' | 'normal' | 'power' | 'falsetto' | 'whisper' | 'breathy' | 'belt' | 'head' | 'chest';
+
+export interface VocalStyleEvent {
+  type: 'vocalStyle';
+  tick: number;
+  style: VocalStyleType;
+  intensity?: number;         // 0-127
+}
+
+// Note envelope (attack/release)
+export interface NoteEnvelopeEvent {
+  type: 'noteEnvelope';
+  tick: number;
+  noteKey?: number;           // Optional: specific note, or applies to all
+  attack?: number;            // Attack time in ms (0-500)
+  decay?: number;             // Decay time in ms
+  sustain?: number;           // Sustain level (0-127)
+  release?: number;           // Release time in ms (0-500)
+}
+
+// Tension/power for vocals
+export interface VocalTensionEvent {
+  type: 'vocalTension';
+  tick: number;
+  tension: number;            // 0-127 (0 = relaxed, 127 = tense)
+}
+
+// Melisma (syllable extension across multiple notes)
+export interface MelismaEvent {
+  type: 'melisma';
+  tick: number;
+  endTick: number;
+  lyric: string;              // The syllable being extended
+}
+
+// Stacked articulations
+export type ArticulationType = 'staccato' | 'legato' | 'accent' | 'tenuto' | 'marcato' | 'staccatissimo' | 'fermata' | 'breath' | 'caesura';
+
+export interface StackedArticulationEvent {
+  type: 'stackedArticulation';
+  tick: number;
+  noteKey: number;
+  articulations: ArticulationType[];
+}
+
+// Ornaments
+export interface TrillEvent {
+  type: 'trill';
+  tick: number;
+  dur: number;
+  mainNote: number;           // Main note MIDI number
+  auxNote?: number;           // Auxiliary note (default: whole step above)
+  speed?: number;             // Trill speed (notes per beat)
+}
+
+export type MordentType = 'upper' | 'lower' | 'inverted';
+
+export interface MordentEvent {
+  type: 'mordent';
+  tick: number;
+  noteKey: number;
+  mordentType: MordentType;
+}
+
+export interface TurnEvent {
+  type: 'turn';
+  tick: number;
+  noteKey: number;
+  inverted?: boolean;         // Inverted turn
+  delayed?: boolean;          // Turn after the note
+}
+
+export type ArpeggioDirection = 'up' | 'down' | 'upDown' | 'downUp';
+
+export interface ArpeggioEvent {
+  type: 'arpeggio';
+  tick: number;
+  notes: number[];            // MIDI note numbers
+  direction: ArpeggioDirection;
+  dur: number;                // Total duration in ticks
+}
+
+export interface GlissandoEvent {
+  type: 'glissando';
+  tick: number;
+  startNote: number;
+  endNote: number;
+  dur: number;
+  style?: 'line' | 'wavy';    // Visual style
+  chromatic?: boolean;        // Play all chromatic notes
+}
+
+export type TremoloType = 'measured' | 'unmeasured';
+
+export interface TremoloEvent {
+  type: 'tremolo';
+  tick: number;
+  noteKey: number;
+  dur: number;
+  strokes: number;            // Number of tremolo strokes (1, 2, 3 = 8th, 16th, 32nd)
+  tremoloType: TremoloType;
+  secondNote?: number;        // For two-note tremolo
+}
+
+export type HarmonicType = 'natural' | 'artificial' | 'pinch' | 'tap';
+
+export interface HarmonicEvent {
+  type: 'harmonic';
+  tick: number;
+  noteKey: number;            // Sounding pitch
+  touchedNote?: number;       // For artificial: the touched note
+  harmonicType: HarmonicType;
+}
+
+// Piano pedals
+export type PedalType = 'sustain' | 'sostenuto' | 'unaCorda';
+export type PedalAction = 'start' | 'end' | 'change' | 'half';
+
+export interface PedalEvent {
+  type: 'pedal';
+  tick: number;
+  pedalType: PedalType;
+  action: PedalAction;
+  level?: number;             // For half-pedaling (0-127)
+}
+
+// Rhythm/Timing
+export interface SwingEvent {
+  type: 'swing';
+  tick: number;
+  ratio: number;              // 0.5 = straight, 0.67 = triplet feel
+}
+
+export interface ProbabilityEvent {
+  type: 'probability';
+  tick: number;
+  noteKey?: number;           // Optional: specific note
+  probability: number;        // 0.0 to 1.0
+}
+
+export type FeatheredBeamDirection = 'accel' | 'rit';
+
+export interface FeatheredBeamEvent {
+  type: 'featheredBeam';
+  tick: number;
+  endTick: number;
+  direction: FeatheredBeamDirection;
+}
+
+// Microtonal/Modern notation
+export type QuarterToneAccidental = 'quarterSharp' | 'quarterFlat' | 'threeQuarterSharp' | 'threeQuarterFlat';
+
+export interface QuarterToneEvent {
+  type: 'quarterTone';
+  tick: number;
+  noteKey: number;
+  cents: number;              // Deviation in cents (-50, +50, etc.)
+  accidental?: QuarterToneAccidental;
+}
+
+export interface ClusterEvent {
+  type: 'cluster';
+  tick: number;
+  lowNote: number;
+  highNote: number;
+  dur: number;
+  style?: 'chromatic' | 'diatonic' | 'black' | 'white';
+}
+
+export interface SprechstimmeEvent {
+  type: 'sprechstimme';
+  tick: number;
+  dur: number;
+  noteKey: number;            // Approximate pitch
+  text: string;
+}
+
+export type NoteheadType = 'normal' | 'x' | 'diamond' | 'triangle' | 'slash' | 'square' | 'circle' | 'circleX' | 'do' | 're' | 'mi' | 'fa' | 'sol' | 'la' | 'ti';
+
+export interface CustomNoteheadEvent {
+  type: 'customNotehead';
+  tick: number;
+  noteKey: number;
+  notehead: NoteheadType;
+}
+
+// Score display
+export type BracketType = 'bracket' | 'brace' | 'line' | 'square';
+
+export interface BracketGroupEvent {
+  type: 'bracketGroup';
+  trackIds: string[];
+  bracketType: BracketType;
+  name?: string;              // Group name (e.g., "Strings")
+}
+
+export interface CueStaffEvent {
+  type: 'cueStaff';
+  tick: number;
+  endTick: number;
+  sourceTrackId: string;      // Track to cue from
+  size?: number;              // Size ratio (default 0.6)
+}
+
+export interface NoteColorEvent {
+  type: 'noteColor';
+  tick: number;
+  noteKey?: number;           // Optional: specific note, or all notes at tick
+  color: string;              // Hex color (#RRGGBB)
+}
+
+// Volta brackets (1st/2nd endings)
+export interface VoltaEvent {
+  type: 'volta';
+  tick: number;
+  endTick: number;
+  endings: number[];          // e.g., [1] for 1st ending, [1, 2] for both
+}
+
+// Cadenza (free tempo section)
+export interface CadenzaEvent {
+  type: 'cadenza';
+  tick: number;
+  endTick?: number;
+  enabled: boolean;
+}
+
+// Unison/Divisi markings
+export type DivisiType = 'div.' | 'unis.' | 'a 2' | 'a 3' | 'solo' | 'tutti';
+
+export interface DivisiMarkEvent {
+  type: 'divisiMark';
+  tick: number;
+  marking: DivisiType | string;
+}
+
+// Metric modulation
+export interface MetricModulationEvent {
+  type: 'metricModulation';
+  tick: number;
+  fromNote: { numerator: number; denominator: number };
+  toNote: { numerator: number; denominator: number };
+}
+
+// Conductor cue
+export interface ConductorCueEvent {
+  type: 'conductorCue';
+  tick: number;
+  text: string;
+  instrument?: string;
+}
+
+// Editorial markings
+export type EditorialType = 'bracket' | 'parenthesis' | 'dashed' | 'small';
+
+export interface EditorialEvent {
+  type: 'editorial';
+  tick: number;
+  noteKey: number;
+  editorialType: EditorialType;
+}
+
+// Brass mutes
+export type BrassMuteType = 'straight' | 'cup' | 'harmon' | 'plunger' | 'bucket' | 'wah' | 'open';
+
+export interface BrassMuteEvent {
+  type: 'brassMute';
+  tick: number;
+  muteType: BrassMuteType;
+}
+
+// String position notation
+export interface StringPositionEvent {
+  type: 'stringPosition';
+  tick: number;
+  noteKey: number;
+  position: number;           // Position number (1-12)
+  string?: string;            // String name (I, II, III, IV, etc.)
+}
+
+// Woodwind multiphonics
+export interface MultiphonicEvent {
+  type: 'multiphonic';
+  tick: number;
+  dur: number;
+  notes: number[];            // Resulting pitches
+  fingering?: string;         // Fingering chart reference
+}
+
+// Electronics cue
+export interface ElectronicsCueEvent {
+  type: 'electronicsCue';
+  tick: number;
+  cue: string;                // e.g., "tape: start", "playback: 2:35"
+  action?: 'start' | 'stop' | 'fade';
+}
+
+// Bend curve (guitar)
+export type BendCurveShape = 'immediate' | 'gradual' | 'prebend' | 'release';
+
+export interface BendCurveEvent {
+  type: 'bendCurve';
+  tick: number;
+  noteKey: number;
+  bendAmount: number;         // In semitones
+  shape: BendCurveShape;
+  dur?: number;
+}
+
+// Slide types
+export type SlideType = 'legato' | 'shift' | 'gliss' | 'scoop' | 'fall';
+
+export interface SlideEvent {
+  type: 'slide';
+  tick: number;
+  startNote: number;
+  endNote: number;
+  slideType: SlideType;
+  dur: number;
+}
+
+// Tapping (guitar)
+export type TapHand = 'left' | 'right' | 'both';
+
+export interface TapEvent {
+  type: 'tap';
+  tick: number;
+  noteKey: number;
+  hand: TapHand;
+  dur: number;
+}
+
+// Arranger section
+export interface ArrangerSection {
+  type: 'arrangerSection';
+  tick: number;
+  name: string;
+  measures: number;
+  color?: string;
+}
+
+// Chord track entry
+export interface ChordTrackEntry {
+  tick: number;
+  chord: string;              // e.g., "Cmaj7", "Am", "G7"
+  duration?: number;
+}
+
+export interface ChordTrackEvent {
+  type: 'chordTrack';
+  entries: ChordTrackEntry[];
+}
+
+// Scale lock
+export type ScaleMode = 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian' | 'pentatonic' | 'blues' | 'chromatic';
+
+export interface ScaleLockEvent {
+  type: 'scaleLockEvent';
+  tick: number;
+  root: string;               // C, D, E, etc.
+  mode: ScaleMode;
+  enabled: boolean;
+}
+
+// Step input mode
+export interface StepInputEvent {
+  type: 'stepInput';
+  tick: number;
+  enabled: boolean;
+  stepSize: { numerator: number; denominator: number };
+}
+
+// Measure comment
+export interface MeasureCommentEvent {
+  type: 'measureComment';
+  tick: number;
+  measure: number;
+  comment: string;
+  author?: string;
+}
+
+// Version checkpoint
+export interface VersionCheckpointEvent {
+  type: 'versionCheckpoint';
+  tick: number;
+  name: string;
+  timestamp?: number;
+}
+
+// ============================================
+// Fifth batch: Additional features
+// ============================================
+
+// Chord diagram (guitar/ukulele)
+export interface ChordDiagramEvent {
+  type: 'chordDiagram';
+  tick: number;
+  name: string;                    // e.g., "Am7", "G"
+  strings: number;                 // Number of strings (4-8)
+  frets: (number | 'x' | 'o')[];  // Fret positions per string (-1=muted, 0=open, 1+=fret)
+  barres?: { fret: number; fromString: number; toString: number }[];
+  fingering?: (number | null)[];  // Finger numbers (1-4, null for open/muted)
+  baseFret?: number;              // Starting fret for diagram
+}
+
+// Scale diagram (fretboard)
+export interface ScaleDiagramEvent {
+  type: 'scaleDiagram';
+  tick: number;
+  root: string;                   // Root note (C, D, E, etc.)
+  scaleType: string;              // major, minor, pentatonic, etc.
+  strings: number;
+  startFret: number;
+  endFret: number;
+  notes: { string: number; fret: number; degree: number }[];
+}
+
+// Harp pedal diagram display
+export interface HarpPedalDiagramEvent {
+  type: 'harpPedalDiagram';
+  tick: number;
+  pedals: [number, number, number, number, number, number, number]; // D C B | E F G A
+  displayStyle: 'standard' | 'compact' | 'full';
+}
+
+// Part extraction settings
+export interface PartExtractionConfig {
+  type: 'partExtraction';
+  trackId: string;
+  partName: string;
+  showMeasureNumbers: boolean;
+  showRehearsalMarks: boolean;
+  showTempoMarkings: boolean;
+  showDynamics: boolean;
+  multiRestThreshold: number;     // Minimum measures for multi-rest
+  cueNotes: boolean;              // Include cue notes from other parts
+  transposition?: number;         // Semitones to transpose
+}
+
+// Transposition display options
+export interface TranspositionDisplayEvent {
+  type: 'transpositionDisplay';
+  tick: number;
+  trackId: string;
+  displayMode: 'concert' | 'transposed';
+  writtenKey?: string;
+  soundingKey?: string;
+}
+
+// Measure number options
+export interface MeasureNumberConfig {
+  type: 'measureNumberConfig';
+  showNumbers: boolean;
+  frequency: 'every' | 'system' | 'custom';
+  customInterval?: number;
+  startNumber?: number;
+  enclosure?: 'none' | 'box' | 'circle';
+  position?: 'above' | 'below';
+  excludeRanges?: { start: number; end: number }[];
+}
+
+// ============================================
+// Synthesis types
+// ============================================
+
+// Wavetable synthesizer
+export interface WavetableSynthEvent {
+  type: 'wavetableSynth';
+  tick: number;
+  wavetable: string;              // Wavetable name or path
+  position: number;               // 0-1 position in wavetable
+  morphSpeed?: number;            // Morph speed for animation
+  unison?: number;                // Number of voices
+  detune?: number;                // Detune amount in cents
+}
+
+// FM synthesis
+export interface FMSynthEvent {
+  type: 'fmSynth';
+  tick: number;
+  algorithm: number;              // FM algorithm (1-32)
+  operators: FMOperator[];
+  feedback?: number;
+}
+
+export interface FMOperator {
+  ratio: number;                  // Frequency ratio
+  level: number;                  // Output level (0-127)
+  envelope: { attack: number; decay: number; sustain: number; release: number };
+  waveform?: 'sine' | 'triangle' | 'square' | 'saw';
+}
+
+// Additive synthesis
+export interface AdditiveSynthEvent {
+  type: 'additiveSynth';
+  tick: number;
+  partials: AdditivePartial[];
+  resynthesis?: boolean;          // Based on audio analysis
+}
+
+export interface AdditivePartial {
+  harmonic: number;               // Harmonic number (1 = fundamental)
+  amplitude: number;              // 0-1
+  phase?: number;                 // 0-360 degrees
+  envelope?: { attack: number; decay: number; sustain: number; release: number };
+}
+
+// Subtractive synthesis
+export interface SubtractiveSynthEvent {
+  type: 'subtractiveSynth';
+  tick: number;
+  oscillators: SubtractiveOsc[];
+  filter: FilterConfig;
+  envelope: { attack: number; decay: number; sustain: number; release: number };
+}
+
+export interface SubtractiveOsc {
+  waveform: 'sine' | 'triangle' | 'square' | 'saw' | 'noise';
+  octave: number;
+  detune: number;                 // Cents
+  pulseWidth?: number;            // For square wave
+  level: number;
+}
+
+export interface FilterConfig {
+  type: 'lowpass' | 'highpass' | 'bandpass' | 'notch';
+  cutoff: number;                 // Hz
+  resonance: number;              // Q factor
+  envelopeAmount?: number;
+  keyTracking?: number;           // 0-1
+}
+
+// Physical modeling
+export interface PhysicalModelEvent {
+  type: 'physicalModel';
+  tick: number;
+  modelType: 'string' | 'wind' | 'percussion' | 'modal';
+  exciter: ExciterConfig;
+  resonator: ResonatorConfig;
+  damping?: number;
+  brightness?: number;
+}
+
+export interface ExciterConfig {
+  type: 'pluck' | 'bow' | 'strike' | 'blow';
+  position: number;               // 0-1 position on string/tube
+  force: number;                  // Excitation strength
+  noise?: number;                 // Noise component
+}
+
+export interface ResonatorConfig {
+  type: 'string' | 'tube' | 'membrane' | 'plate';
+  size: number;                   // Relative size
+  material: 'steel' | 'nylon' | 'gut' | 'brass' | 'wood';
+  modes?: number;                 // Number of resonant modes
+}
+
+// ============================================
+// Audio processing types
+// ============================================
+
+// Vocoder
+export interface VocoderEvent {
+  type: 'vocoder';
+  tick: number;
+  carrierSource: string;          // Track ID or 'internal'
+  modulatorSource: string;        // Track ID (usually vocal)
+  bands: number;                  // Number of filter bands
+  bandWidth?: number;
+  attack?: number;
+  release?: number;
+  formantShift?: number;          // Semitones
+}
+
+// Note: PitchCorrectionEvent is defined in algorithmic.ts
+
+// Formant shifting
+export interface FormantShiftEvent {
+  type: 'formantShift';
+  tick: number;
+  shift: number;                  // Semitones (-12 to +12)
+  preservePitch: boolean;
+}
+
+// Convolution reverb
+export interface ConvolutionReverbEvent {
+  type: 'convolutionReverb';
+  tick: number;
+  impulseResponse: string;        // IR file path or preset name
+  wetDry: number;                 // 0-1 mix
+  predelay?: number;              // ms
+  decay?: number;                 // Multiplier for IR length
+  lowCut?: number;                // Hz
+  highCut?: number;               // Hz
+}
+
+// Amp simulation
+export interface AmpSimEvent {
+  type: 'ampSim';
+  tick: number;
+  ampModel: string;               // Amp model name
+  gain: number;                   // 0-10
+  bass: number;                   // 0-10
+  mid: number;                    // 0-10
+  treble: number;                 // 0-10
+  presence?: number;              // 0-10
+  master?: number;                // 0-10
+}
+
+// Cabinet simulation
+export interface CabinetSimEvent {
+  type: 'cabinetSim';
+  tick: number;
+  cabinetModel: string;           // Cabinet model name
+  micType: 'dynamic' | 'condenser' | 'ribbon';
+  micPosition: 'center' | 'edge' | 'off-axis' | 'room';
+  distance?: number;              // Distance from speaker
+}
+
+// ============================================
+// Video sync types
+// ============================================
+
+// Video synchronization
+export interface VideoSyncEvent {
+  type: 'videoSync';
+  tick: number;
+  videoPath: string;
+  startFrame: number;
+  frameRate: number;              // fps
+  offset?: number;                // ms offset from tick
+}
+
+// Hit point (for film scoring)
+export interface HitPointEvent {
+  type: 'hitPoint';
+  tick: number;
+  timecode: string;               // SMPTE timecode
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  targetBeat?: number;            // Beat to align to
+}
+
+// Timecode display settings
+export interface TimecodeDisplayConfig {
+  type: 'timecodeDisplay';
+  format: 'smpte' | 'frames' | 'seconds' | 'samples';
+  frameRate: 24 | 25 | 29.97 | 30 | 48 | 60;
+  dropFrame: boolean;
+  offset?: string;                // Starting timecode
+}
+
+// ============================================
+// Workflow types
+// ============================================
+
+// Project template
+export interface ProjectTemplate {
+  type: 'projectTemplate';
+  name: string;
+  description?: string;
+  tracks: TrackTemplateConfig[];
+  globalSettings: {
+    ppq: number;
+    tempo: number;
+    timeSig: { numerator: number; denominator: number };
+  };
+  markers?: { tick: number; name: string }[];
+}
+
+export interface TrackTemplateConfig {
+  name: string;
+  kind: 'vocal' | 'midi';
+  channel?: number;
+  program?: number;
+  effects?: string[];             // Effect preset names
+}
+
+// Track folder (grouping)
+export interface TrackFolderEvent {
+  type: 'trackFolder';
+  id: string;
+  name: string;
+  trackIds: string[];
+  collapsed?: boolean;
+  color?: string;
+  soloExclusive?: boolean;        // Solo mutes other folders
+}
+
+// Real-time collaboration
+export interface CollaboratorSession {
+  type: 'collaboratorSession';
+  sessionId: string;
+  collaborators: CollaboratorInfo[];
+  syncMode: 'realtime' | 'async';
+  conflictResolution: 'last-write' | 'merge' | 'manual';
+}
+
+export interface CollaboratorInfo {
+  userId: string;
+  name: string;
+  color: string;                  // Cursor/selection color
+  currentPosition?: number;       // Current tick position
+  editingTrack?: string;          // Currently editing track
+}
+
+// Version diff/comparison
+export interface VersionDiffEvent {
+  type: 'versionDiff';
+  baseVersion: string;
+  compareVersion: string;
+  changes: DiffChange[];
+}
+
+export interface DiffChange {
+  type: 'added' | 'removed' | 'modified';
+  trackId?: string;
+  tick?: number;
+  description: string;
+  data?: any;
+}

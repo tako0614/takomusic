@@ -113,6 +113,84 @@ import type {
   SurroundAutomation,
   ProjectNote,
   Collaborator,
+  // New notation types
+  ClefChangeEvent,
+  KeySignatureEvent,
+  FingeringEvent,
+  MultiRestEvent,
+  SlashNotationEvent,
+  BarlineEvent,
+  TempoTextEvent,
+  HideEmptyStavesEvent,
+  VocalStyleEvent,
+  NoteEnvelopeEvent,
+  VocalTensionEvent,
+  MelismaEvent,
+  StackedArticulationEvent,
+  // Ornaments and extended notation
+  TrillEvent,
+  MordentEvent,
+  TurnEvent,
+  ArpeggioEvent,
+  GlissandoEvent,
+  TremoloEvent,
+  HarmonicEvent,
+  PedalEvent,
+  SwingEvent,
+  ProbabilityEvent,
+  FeatheredBeamEvent,
+  QuarterToneEvent,
+  ClusterEvent,
+  SprechstimmeEvent,
+  CustomNoteheadEvent,
+  BracketGroupEvent,
+  CueStaffEvent,
+  NoteColorEvent,
+  // Fourth batch notation types
+  VoltaEvent,
+  CadenzaEvent,
+  DivisiMarkEvent,
+  MetricModulationEvent,
+  ConductorCueEvent,
+  EditorialEvent,
+  BrassMuteEvent,
+  StringPositionEvent,
+  MultiphonicEvent,
+  ElectronicsCueEvent,
+  BendCurveEvent,
+  SlideEvent,
+  TapEvent,
+  ArrangerSection,
+  ChordTrackEvent,
+  ScaleLockEvent,
+  StepInputEvent,
+  MeasureCommentEvent,
+  VersionCheckpointEvent,
+  // Fifth batch types
+  ChordDiagramEvent,
+  ScaleDiagramEvent,
+  HarpPedalDiagramEvent,
+  PartExtractionConfig,
+  TranspositionDisplayEvent,
+  MeasureNumberConfig,
+  WavetableSynthEvent,
+  FMSynthEvent,
+  AdditiveSynthEvent,
+  SubtractiveSynthEvent,
+  PhysicalModelEvent,
+  VocoderEvent,
+  PitchCorrectionEvent,
+  FormantShiftEvent,
+  ConvolutionReverbEvent,
+  AmpSimEvent,
+  CabinetSimEvent,
+  VideoSyncEvent,
+  HitPointEvent,
+  TimecodeDisplayConfig,
+  ProjectTemplate,
+  TrackFolderEvent,
+  CollaboratorSession,
+  VersionDiffEvent,
 } from '../types/ir.js';
 
 export interface TrackState {
@@ -132,6 +210,7 @@ export interface TrackState {
   currentSlurStart?: number;
   // Extended notation state
   currentTuplet?: TupletInfo;
+  tupletStack?: TupletInfo[];  // Stack for nested tuplets
   currentVoice?: number;
   currentOttava?: { startTick: number; shift: number };
   graceNotes?: GraceNoteEvent[];
@@ -268,6 +347,96 @@ export interface TrackState {
   // Collaboration
   projectNotes?: ProjectNote[];
   collaborators?: Collaborator[];
+  // New notation features
+  clefChanges?: ClefChangeEvent[];
+  keySignatures?: KeySignatureEvent[];
+  fingerings?: FingeringEvent[];
+  multiRests?: MultiRestEvent[];
+  slashNotations?: SlashNotationEvent[];
+  barlines?: BarlineEvent[];
+  tempoTexts?: TempoTextEvent[];
+  hideEmptyStaves?: HideEmptyStavesEvent;
+  vocalStyles?: VocalStyleEvent[];
+  noteEnvelopes?: NoteEnvelopeEvent[];
+  vocalTensions?: VocalTensionEvent[];
+  melismas?: MelismaEvent[];
+  stackedArticulations?: StackedArticulationEvent[];
+  // Ornaments
+  trills?: TrillEvent[];
+  mordents?: MordentEvent[];
+  turns?: TurnEvent[];
+  arpeggios?: ArpeggioEvent[];
+  glissandos?: GlissandoEvent[];
+  tremolos?: TremoloEvent[];
+  harmonics?: HarmonicEvent[];
+  // Piano pedals
+  pedals?: PedalEvent[];
+  // Rhythm/timing
+  swingSettings?: SwingEvent[];
+  probabilities?: ProbabilityEvent[];
+  featheredBeams?: FeatheredBeamEvent[];
+  // Modern notation
+  quarterTones?: QuarterToneEvent[];
+  clusters?: ClusterEvent[];
+  sprechstimmes?: SprechstimmeEvent[];
+  customNoteheads?: CustomNoteheadEvent[];
+  // Score display
+  bracketGroups?: BracketGroupEvent[];
+  cueStaffs?: CueStaffEvent[];
+  noteColors?: NoteColorEvent[];
+  // Fourth batch: Score structure
+  voltas?: VoltaEvent[];
+  cadenzas?: CadenzaEvent[];
+  divisiMarks?: DivisiMarkEvent[];
+  metricModulations?: MetricModulationEvent[];
+  conductorCues?: ConductorCueEvent[];
+  editorials?: EditorialEvent[];
+  // Fourth batch: Instrument techniques
+  brassMutes?: BrassMuteEvent[];
+  stringPositions?: StringPositionEvent[];
+  multiphonics?: MultiphonicEvent[];
+  electronicsCues?: ElectronicsCueEvent[];
+  // Fourth batch: Guitar techniques
+  bendCurves?: BendCurveEvent[];
+  slides?: SlideEvent[];
+  taps?: TapEvent[];
+  // Fourth batch: DAW features
+  arrangerSections?: ArrangerSection[];
+  chordTrack?: ChordTrackEvent;
+  scaleLockSettings?: ScaleLockEvent[];
+  stepInputSettings?: StepInputEvent[];
+  // Fourth batch: Collaboration
+  measureComments?: MeasureCommentEvent[];
+  versionCheckpoints?: VersionCheckpointEvent[];
+  // Fifth batch: Notation/diagrams
+  chordDiagrams?: ChordDiagramEvent[];
+  scaleDiagrams?: ScaleDiagramEvent[];
+  harpPedalDiagrams?: HarpPedalDiagramEvent[];
+  partExtractions?: PartExtractionConfig[];
+  transpositionDisplay?: TranspositionDisplayEvent;
+  measureNumberConfig?: MeasureNumberConfig;
+  // Fifth batch: Synthesis
+  wavetableSynths?: WavetableSynthEvent[];
+  fmSynths?: FMSynthEvent[];
+  additiveSynths?: AdditiveSynthEvent[];
+  subtractiveSynths?: SubtractiveSynthEvent[];
+  physicalModels?: PhysicalModelEvent[];
+  // Fifth batch: Audio processing
+  vocoders?: VocoderEvent[];
+  pitchCorrections?: PitchCorrectionEvent[];
+  formantShifts?: FormantShiftEvent[];
+  convolutionReverbs?: ConvolutionReverbEvent[];
+  ampSims?: AmpSimEvent[];
+  cabinetSims?: CabinetSimEvent[];
+  // Fifth batch: Video
+  videoSyncs?: VideoSyncEvent[];
+  hitPoints?: HitPointEvent[];
+  timecodeDisplay?: TimecodeDisplayConfig;
+  // Fifth batch: Workflow
+  projectTemplate?: ProjectTemplate;
+  trackFolders?: TrackFolderEvent[];
+  collaboratorSession?: CollaboratorSession;
+  versionDiffs?: VersionDiffEvent[];
 }
 
 // Drum name to MIDI note mapping

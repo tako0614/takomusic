@@ -186,6 +186,122 @@ import type {
   // Collaboration
   ProjectNote,
   Collaborator,
+  // Advanced vocal control
+  PhonemeEvent,
+  PhonemeUnit,
+  BreathEvent,
+  ConsonantOffsetEvent,
+  CrossStaffEvent,
+  PortamentoShape,
+  PortamentoShapeEvent,
+  // New notation types
+  ClefChangeEvent,
+  ClefType,
+  KeySignatureEvent,
+  KeyMode,
+  FingeringEvent,
+  MultiRestEvent,
+  SlashNotationEvent,
+  BarlineEvent,
+  BarlineType,
+  TempoTextEvent,
+  TempoMarkingType,
+  HideEmptyStavesEvent,
+  VocalStyleEvent,
+  VocalStyleType,
+  NoteEnvelopeEvent,
+  VocalTensionEvent,
+  MelismaEvent,
+  StackedArticulationEvent,
+  ArticulationType,
+  // Ornaments and extended notation
+  TrillEvent,
+  MordentEvent,
+  MordentType,
+  TurnEvent,
+  ArpeggioEvent,
+  ArpeggioDirection,
+  GlissandoEvent,
+  TremoloEvent,
+  TremoloType,
+  HarmonicEvent,
+  HarmonicType,
+  PedalEvent,
+  PedalType,
+  PedalAction,
+  SwingEvent,
+  ProbabilityEvent,
+  FeatheredBeamEvent,
+  FeatheredBeamDirection,
+  QuarterToneEvent,
+  QuarterToneAccidental,
+  ClusterEvent,
+  SprechstimmeEvent,
+  CustomNoteheadEvent,
+  NoteheadType,
+  BracketGroupEvent,
+  BracketType,
+  CueStaffEvent,
+  NoteColorEvent,
+  // Fourth batch types
+  VoltaEvent,
+  CadenzaEvent,
+  DivisiMarkEvent,
+  DivisiType,
+  MetricModulationEvent,
+  ConductorCueEvent,
+  EditorialEvent,
+  EditorialType,
+  BrassMuteEvent,
+  BrassMuteType,
+  StringPositionEvent,
+  MultiphonicEvent,
+  ElectronicsCueEvent,
+  BendCurveEvent,
+  BendCurveShape,
+  SlideEvent,
+  SlideType,
+  TapEvent,
+  TapHand,
+  ArrangerSection,
+  ChordTrackEvent,
+  ChordTrackEntry,
+  ScaleLockEvent,
+  StepInputEvent,
+  MeasureCommentEvent,
+  VersionCheckpointEvent,
+  // Fifth batch types
+  ChordDiagramEvent,
+  ScaleDiagramEvent,
+  HarpPedalDiagramEvent,
+  PartExtractionConfig,
+  TranspositionDisplayEvent,
+  MeasureNumberConfig,
+  WavetableSynthEvent,
+  FMSynthEvent,
+  FMOperator,
+  AdditiveSynthEvent,
+  AdditivePartial,
+  SubtractiveSynthEvent,
+  SubtractiveOsc,
+  FilterConfig,
+  PhysicalModelEvent,
+  ExciterConfig,
+  ResonatorConfig,
+  VocoderEvent,
+  FormantShiftEvent,
+  ConvolutionReverbEvent,
+  AmpSimEvent,
+  CabinetSimEvent,
+  VideoSyncEvent,
+  HitPointEvent,
+  TimecodeDisplayConfig,
+  ProjectTemplate,
+  TrackTemplateConfig,
+  TrackFolderEvent,
+  CollaboratorSession,
+  CollaboratorInfo,
+  VersionDiffEvent,
 } from '../types/ir.js';
 import {
   RuntimeValue,
@@ -206,6 +322,54 @@ import { createError, MFError } from '../errors.js';
 import { TrackState, DRUM_MAP } from './trackState.js';
 import * as coreBuiltins from './builtins/core.js';
 import * as midiBuiltins from './builtins/midi.js';
+
+// Curve interpolation helper functions
+type CurveType = 'linear' | 'exponential' | 'logarithmic' | 's-curve' | 'step' | 'bezier';
+
+/**
+ * Calculate interpolated value based on curve type
+ * @param t - Progress (0 to 1)
+ * @param curveType - Type of curve
+ * @returns Interpolated progress (0 to 1)
+ */
+function applyCurve(t: number, curveType: CurveType): number {
+  switch (curveType) {
+    case 'linear':
+      return t;
+    case 'exponential':
+      // Starts slow, ends fast
+      return t * t;
+    case 'logarithmic':
+      // Starts fast, ends slow
+      return Math.sqrt(t);
+    case 's-curve':
+      // Smooth S-curve (ease-in-out)
+      return t < 0.5
+        ? 2 * t * t
+        : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    case 'step':
+      // Step function (no interpolation)
+      return t < 1 ? 0 : 1;
+    case 'bezier':
+      // Cubic bezier approximation (ease-in-out)
+      return t * t * (3 - 2 * t);
+    default:
+      return t;
+  }
+}
+
+/**
+ * Interpolate between two values using a curve
+ * @param startVal - Start value
+ * @param endVal - End value
+ * @param t - Progress (0 to 1)
+ * @param curveType - Type of curve
+ * @returns Interpolated value
+ */
+function interpolateWithCurve(startVal: number, endVal: number, t: number, curveType: CurveType): number {
+  const curvedT = applyCurve(t, curveType);
+  return startVal + (endVal - startVal) * curvedT;
+}
 
 export class Interpreter {
   private ir: SongIR;
@@ -1166,6 +1330,192 @@ export class Interpreter {
         return this.builtinProjectNote(args, position);
       case 'collaborator':
         return this.builtinCollaborator(args, position);
+
+      // Advanced vocal control
+      case 'phoneme':
+        return this.builtinPhoneme(args, position);
+      case 'consonantOffset':
+        return this.builtinConsonantOffset(args, position);
+      case 'breath':
+        return this.builtinBreath(args, position);
+      case 'autoBreath':
+        return this.builtinAutoBreath(args, position);
+      case 'portamentoShape':
+        return this.builtinPortamentoShape(args, position);
+
+      // Cross-staff notation
+      case 'crossStaff':
+        return this.builtinCrossStaff(args, position);
+
+      // New notation features
+      case 'clef':
+        return this.builtinClef(args, position);
+      case 'key':
+        return this.builtinKey(args, position);
+      case 'fingering':
+        return this.builtinFingering(args, position);
+      case 'articulations':
+        return this.builtinStackedArticulations(args, position);
+      case 'multiRest':
+        return this.builtinMultiRest(args, position);
+      case 'slashNotation':
+        return this.builtinSlashNotation(args, position);
+      case 'barline':
+        return this.builtinBarline(args, position);
+      case 'tempoText':
+        return this.builtinTempoText(args, position);
+      case 'hideEmptyStaves':
+        return this.builtinHideEmptyStaves(args, position);
+
+      // Advanced vocal features
+      case 'vocalStyle':
+        return this.builtinVocalStyle(args, position);
+      case 'noteEnvelope':
+        return this.builtinNoteEnvelope(args, position);
+      case 'tension':
+        return this.builtinVocalTension(args, position);
+      case 'melisma':
+        return this.builtinMelisma(args, position);
+
+      // Ornaments
+      case 'trill':
+        return this.builtinTrill(args, position);
+      case 'mordent':
+        return this.builtinMordent(args, position);
+      case 'turn':
+        return this.builtinTurn(args, position);
+      case 'arpeggio':
+        return this.builtinArpeggio(args, position);
+      case 'glissando':
+        return this.builtinGlissando(args, position);
+      case 'tremolo':
+        return this.builtinTremolo(args, position);
+      case 'harmonic':
+        return this.builtinHarmonic(args, position);
+
+      // Piano pedals
+      case 'pedal':
+        return this.builtinPedal(args, position);
+
+      // Rhythm/timing
+      case 'swing':
+        return this.builtinSwing(args, position);
+      case 'probability':
+        return this.builtinProbability(args, position);
+      case 'featheredBeam':
+        return this.builtinFeatheredBeam(args, position);
+
+      // Modern notation
+      case 'quarterTone':
+        return this.builtinQuarterTone(args, position);
+      case 'cluster':
+        return this.builtinCluster(args, position);
+      case 'sprechstimme':
+        return this.builtinSprechstimme(args, position);
+      case 'notehead':
+        return this.builtinNotehead(args, position);
+
+      // Score display
+      case 'bracketGroup':
+        return this.builtinBracketGroup(args, position);
+      case 'cueStaff':
+        return this.builtinCueStaff(args, position);
+      case 'noteColor':
+        return this.builtinNoteColor(args, position);
+      // Fourth batch: Score structure
+      case 'volta':
+        return this.builtinVolta(args, position);
+      case 'cadenza':
+        return this.builtinCadenza(args, position);
+      case 'divisiMark':
+        return this.builtinDivisiMark(args, position);
+      case 'metricMod':
+        return this.builtinMetricMod(args, position);
+      case 'conductorCue':
+        return this.builtinConductorCue(args, position);
+      case 'editorial':
+        return this.builtinEditorial(args, position);
+      // Fourth batch: Instrument techniques
+      case 'brassMute':
+        return this.builtinBrassMute(args, position);
+      case 'stringPosition':
+        return this.builtinStringPosition(args, position);
+      case 'multiphonic':
+        return this.builtinMultiphonic(args, position);
+      case 'electronicsCue':
+        return this.builtinElectronicsCue(args, position);
+      // Fourth batch: Guitar techniques
+      case 'bendCurve':
+        return this.builtinBendCurve(args, position);
+      case 'slide':
+        return this.builtinSlide(args, position);
+      case 'tap':
+        return this.builtinTap(args, position);
+      // Fourth batch: DAW features
+      case 'section':
+        return this.builtinSection(args, position);
+      case 'chordTrack':
+        return this.builtinChordTrack(args, position);
+      case 'stepInput':
+        return this.builtinStepInput(args, position);
+      // Fourth batch: Collaboration
+      case 'measureComment':
+        return this.builtinMeasureComment(args, position);
+      case 'checkpoint':
+        return this.builtinCheckpoint(args, position);
+      // Fifth batch: Notation/diagrams
+      case 'chordDiagram':
+        return this.builtinChordDiagram(args, position);
+      case 'scaleDiagram':
+        return this.builtinScaleDiagram(args, position);
+      case 'harpPedalDiagram':
+        return this.builtinHarpPedalDiagram(args, position);
+      case 'partExtraction':
+        return this.builtinPartExtraction(args, position);
+      case 'transpositionDisplay':
+        return this.builtinTranspositionDisplay(args, position);
+      case 'measureNumbers':
+        return this.builtinMeasureNumbers(args, position);
+      // Fifth batch: Synthesis
+      case 'wavetable':
+        return this.builtinWavetable(args, position);
+      case 'fmSynth':
+        return this.builtinFMSynth(args, position);
+      case 'additiveSynth':
+        return this.builtinAdditiveSynth(args, position);
+      case 'subtractiveSynth':
+        return this.builtinSubtractiveSynth(args, position);
+      case 'physicalModel':
+        return this.builtinPhysicalModel(args, position);
+      // Fifth batch: Audio processing
+      case 'vocoder':
+        return this.builtinVocoder(args, position);
+      case 'pitchCorrection':
+        return this.builtinPitchCorrection(args, position);
+      case 'formantShift':
+        return this.builtinFormantShift(args, position);
+      case 'convolutionReverb':
+        return this.builtinConvolutionReverb(args, position);
+      case 'ampSim':
+        return this.builtinAmpSim(args, position);
+      case 'cabinetSim':
+        return this.builtinCabinetSim(args, position);
+      // Fifth batch: Video
+      case 'videoSync':
+        return this.builtinVideoSync(args, position);
+      case 'hitPoint':
+        return this.builtinHitPoint(args, position);
+      case 'timecodeDisplay':
+        return this.builtinTimecodeDisplay(args, position);
+      // Fifth batch: Workflow
+      case 'projectTemplate':
+        return this.builtinProjectTemplate(args, position);
+      case 'trackFolder':
+        return this.builtinTrackFolder(args, position);
+      case 'collaboratorSession':
+        return this.builtinCollaboratorSession(args, position);
+      case 'versionDiff':
+        return this.builtinVersionDiff(args, position);
     }
 
     // User-defined proc
@@ -1301,6 +1651,7 @@ export class Interpreter {
     const endVal = this.evaluate(args[2]);
     const dur = this.evaluate(args[3]);
     const steps = args.length >= 5 ? this.evaluate(args[4]) : makeInt(16);
+    const curveTypeArg = args.length >= 6 ? this.evaluate(args[5]) : null;
 
     if (controller.type !== 'int') {
       throw new MFError('TYPE', 'ccCurve() controller must be int', position, this.filePath);
@@ -1315,15 +1666,26 @@ export class Interpreter {
       throw new MFError('TYPE', 'ccCurve() steps must be int', position, this.filePath);
     }
 
+    // Parse curve type
+    let curveType: CurveType = 'linear';
+    if (curveTypeArg && curveTypeArg.type === 'string') {
+      const validCurves: CurveType[] = ['linear', 'exponential', 'logarithmic', 's-curve', 'step', 'bezier'];
+      if (validCurves.includes(curveTypeArg.value as CurveType)) {
+        curveType = curveTypeArg.value as CurveType;
+      } else {
+        throw new MFError('TYPE', `ccCurve() curve type must be one of: ${validCurves.join(', ')}`, position, this.filePath);
+      }
+    }
+
     const durTicks = this.durToTicks(dur, position);
     const startTick = track.cursor;
     const numSteps = Math.max(2, steps.value);
     const tickStep = durTicks / (numSteps - 1);
-    const valStep = (endVal.value - startVal.value) / (numSteps - 1);
 
     for (let i = 0; i < numSteps; i++) {
       const tick = Math.round(startTick + tickStep * i);
-      const value = Math.round(Math.min(127, Math.max(0, startVal.value + valStep * i)));
+      const t = i / (numSteps - 1);
+      const value = Math.round(Math.min(127, Math.max(0, interpolateWithCurve(startVal.value, endVal.value, t, curveType))));
       const event: CCEvent = {
         type: 'cc',
         tick,
@@ -1349,6 +1711,7 @@ export class Interpreter {
     const endVal = this.evaluate(args[1]);
     const dur = this.evaluate(args[2]);
     const steps = args.length >= 4 ? this.evaluate(args[3]) : makeInt(16);
+    const curveTypeArg = args.length >= 5 ? this.evaluate(args[4]) : null;
 
     if (startVal.type !== 'int' || endVal.type !== 'int') {
       throw new MFError('TYPE', 'expressionCurve() values must be int', position, this.filePath);
@@ -1357,15 +1720,24 @@ export class Interpreter {
       throw new MFError('TYPE', 'expressionCurve() duration must be Dur', position, this.filePath);
     }
 
+    // Parse curve type
+    let curveType: CurveType = 'linear';
+    if (curveTypeArg && curveTypeArg.type === 'string') {
+      const validCurves: CurveType[] = ['linear', 'exponential', 'logarithmic', 's-curve', 'step', 'bezier'];
+      if (validCurves.includes(curveTypeArg.value as CurveType)) {
+        curveType = curveTypeArg.value as CurveType;
+      }
+    }
+
     const durTicks = this.durToTicks(dur, position);
     const startTick = track.cursor;
     const numSteps = Math.max(2, (steps as any).value || 16);
     const tickStep = durTicks / (numSteps - 1);
-    const valStep = (endVal.value - startVal.value) / (numSteps - 1);
 
     for (let i = 0; i < numSteps; i++) {
       const tick = Math.round(startTick + tickStep * i);
-      const value = Math.round(Math.min(127, Math.max(0, startVal.value + valStep * i)));
+      const t = i / (numSteps - 1);
+      const value = Math.round(Math.min(127, Math.max(0, interpolateWithCurve(startVal.value, endVal.value, t, curveType))));
       const event: CCEvent = {
         type: 'cc',
         tick,
@@ -1391,6 +1763,7 @@ export class Interpreter {
     const endVal = this.evaluate(args[1]);
     const dur = this.evaluate(args[2]);
     const steps = args.length >= 4 ? this.evaluate(args[3]) : makeInt(16);
+    const curveTypeArg = args.length >= 5 ? this.evaluate(args[4]) : null;
 
     if (startVal.type !== 'int' || endVal.type !== 'int') {
       throw new MFError('TYPE', 'pitchBendCurve() values must be int', position, this.filePath);
@@ -1399,15 +1772,24 @@ export class Interpreter {
       throw new MFError('TYPE', 'pitchBendCurve() duration must be Dur', position, this.filePath);
     }
 
+    // Parse curve type
+    let curveType: CurveType = 'linear';
+    if (curveTypeArg && curveTypeArg.type === 'string') {
+      const validCurves: CurveType[] = ['linear', 'exponential', 'logarithmic', 's-curve', 'step', 'bezier'];
+      if (validCurves.includes(curveTypeArg.value as CurveType)) {
+        curveType = curveTypeArg.value as CurveType;
+      }
+    }
+
     const durTicks = this.durToTicks(dur, position);
     const startTick = track.cursor;
     const numSteps = Math.max(2, (steps as any).value || 16);
     const tickStep = durTicks / (numSteps - 1);
-    const valStep = (endVal.value - startVal.value) / (numSteps - 1);
 
     for (let i = 0; i < numSteps; i++) {
       const tick = Math.round(startTick + tickStep * i);
-      const value = Math.round(Math.min(8191, Math.max(-8192, startVal.value + valStep * i)));
+      const t = i / (numSteps - 1);
+      const value = Math.round(Math.min(8191, Math.max(-8192, interpolateWithCurve(startVal.value, endVal.value, t, curveType))));
       const event: PitchBendEvent = {
         type: 'pitchBend',
         tick,
@@ -2051,14 +2433,34 @@ export class Interpreter {
       throw new MFError('RANGE', 'tuplet() actual must be >= 2 and normal >= 1', position, this.filePath);
     }
 
-    track.currentTuplet = { actual, normal };
+    // Initialize stack if not exists
+    if (!track.tupletStack) {
+      track.tupletStack = [];
+    }
+
+    // Push new tuplet onto stack (supports nesting)
+    const newTuplet: TupletInfo = { actual, normal };
+    track.tupletStack.push(newTuplet);
+    track.currentTuplet = newTuplet;
+
     return makeNull();
   }
 
   private builtinTupletEnd(args: Expression[], position: any): RuntimeValue {
     this.checkTrackPhase(position);
     const track = this.currentTrack!;
-    track.currentTuplet = undefined;
+
+    // Pop from stack (supports nesting)
+    if (track.tupletStack && track.tupletStack.length > 0) {
+      track.tupletStack.pop();
+      // Set currentTuplet to the next one in stack, or undefined if empty
+      track.currentTuplet = track.tupletStack.length > 0
+        ? track.tupletStack[track.tupletStack.length - 1]
+        : undefined;
+    } else {
+      track.currentTuplet = undefined;
+    }
+
     return makeNull();
   }
 
@@ -2066,8 +2468,15 @@ export class Interpreter {
     this.checkTrackPhase(position);
     const track = this.currentTrack!;
 
-    // triplet creates a 3:2 tuplet context for the callback
-    track.currentTuplet = { actual: 3, normal: 2 };
+    // Initialize stack if not exists
+    if (!track.tupletStack) {
+      track.tupletStack = [];
+    }
+
+    // triplet creates a 3:2 tuplet context
+    const tripletTuplet: TupletInfo = { actual: 3, normal: 2 };
+    track.tupletStack.push(tripletTuplet);
+    track.currentTuplet = tripletTuplet;
 
     // If there's a callback argument (proc), execute it
     if (args.length > 0) {
@@ -2075,7 +2484,11 @@ export class Interpreter {
       if (callback.kind === 'CallExpression') {
         this.evaluateCall(callback.callee, callback.arguments, position);
       }
-      track.currentTuplet = undefined;
+      // Pop after callback
+      track.tupletStack.pop();
+      track.currentTuplet = track.tupletStack.length > 0
+        ? track.tupletStack[track.tupletStack.length - 1]
+        : undefined;
     }
 
     return makeNull();
@@ -6388,6 +6801,1971 @@ export class Interpreter {
     return makeNull();
   }
 
+  // Advanced vocal control functions
+  private builtinPhoneme(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'phoneme() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const pitch = this.evaluate(args[0]);
+    const dur = this.evaluate(args[1]);
+    const phonemeArr = this.evaluate(args[2]);
+
+    if (pitch.type !== 'pitch') {
+      throw new MFError('TYPE', 'phoneme() pitch must be Pitch', position, this.filePath);
+    }
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'phoneme() duration must be Dur', position, this.filePath);
+    }
+    if (phonemeArr.type !== 'array') {
+      throw new MFError('TYPE', 'phoneme() phonemes must be array', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+    const tick = track.cursor;
+
+    // Parse phoneme units from array (strings only for now)
+    const phonemes: PhonemeUnit[] = [];
+    const defaultDuration = 100 / phonemeArr.elements.length;
+    for (const elem of phonemeArr.elements) {
+      if (elem.type === 'string') {
+        // Simple string phoneme with equal duration
+        phonemes.push({
+          symbol: elem.value,
+          duration: defaultDuration,
+        });
+      } else if (elem.type === 'array' && elem.elements.length >= 2) {
+        // Array format: [symbol, duration] or [symbol, duration, velocity]
+        const symbol = elem.elements[0];
+        const duration = elem.elements[1];
+        const velocity = elem.elements.length > 2 ? elem.elements[2] : null;
+        phonemes.push({
+          symbol: symbol.type === 'string' ? symbol.value : '',
+          duration: duration.type === 'int' || duration.type === 'float' ? toNumber(duration) : defaultDuration,
+          velocity: velocity && (velocity.type === 'int' || velocity.type === 'float') ? toNumber(velocity) : undefined,
+        });
+      }
+    }
+
+    const event: PhonemeEvent = {
+      type: 'phoneme',
+      tick,
+      dur: durTicks,
+      key: pitch.midi,
+      phonemes,
+    };
+    track.events.push(event);
+
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinConsonantOffset(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'consonantOffset() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const offset = this.evaluate(args[0]);
+    if (offset.type !== 'int') {
+      throw new MFError('TYPE', 'consonantOffset() offset must be int (ticks)', position, this.filePath);
+    }
+
+    const event: ConsonantOffsetEvent = {
+      type: 'consonantOffset',
+      tick: track.cursor,
+      offset: offset.value,
+    };
+    track.events.push(event);
+
+    return makeNull();
+  }
+
+  private builtinBreath(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'breath() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const dur = this.evaluate(args[0]);
+    const intensity = args.length > 1 ? this.evaluate(args[1]) : makeInt(80);
+
+    if (dur.type !== 'dur') {
+      throw new MFError('TYPE', 'breath() duration must be Dur', position, this.filePath);
+    }
+
+    const durTicks = this.durToTicks(dur, position);
+    const tick = track.cursor;
+
+    const event: BreathEvent = {
+      type: 'breath',
+      tick,
+      dur: durTicks,
+      intensity: intensity.type === 'int' ? intensity.value : 80,
+    };
+    track.events.push(event);
+
+    track.cursor += durTicks;
+    return makeNull();
+  }
+
+  private builtinAutoBreath(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'autoBreath() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const enabled = args.length > 0 ? this.evaluate(args[0]) : makeBool(true);
+    const minRestDur = args.length > 1 ? this.evaluate(args[1]) : null;
+    const breathDur = args.length > 2 ? this.evaluate(args[2]) : null;
+    const intensity = args.length > 3 ? this.evaluate(args[3]) : makeInt(80);
+
+    // Store auto-breath settings in track meta (use 1/0 for boolean)
+    track.meta.autoBreathEnabled = enabled.type === 'bool' ? (enabled.value ? 1 : 0) : 1;
+    if (minRestDur && minRestDur.type === 'dur') {
+      track.meta.autoBreathMinRest = this.durToTicks(minRestDur, position);
+    }
+    if (breathDur && breathDur.type === 'dur') {
+      track.meta.autoBreathDuration = this.durToTicks(breathDur, position);
+    }
+    track.meta.autoBreathIntensity = intensity.type === 'int' ? intensity.value : 80;
+
+    return makeNull();
+  }
+
+  private builtinPortamentoShape(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'portamentoShape() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const shape = this.evaluate(args[0]);
+    const intensity = args.length > 1 ? this.evaluate(args[1]) : makeInt(64);
+
+    if (shape.type !== 'string') {
+      throw new MFError('TYPE', 'portamentoShape() shape must be string', position, this.filePath);
+    }
+
+    const validShapes: PortamentoShape[] = ['linear', 'exponential', 'logarithmic', 's-curve', 'early', 'late'];
+    if (!validShapes.includes(shape.value as PortamentoShape)) {
+      throw new MFError('TYPE', `portamentoShape() shape must be one of: ${validShapes.join(', ')}`, position, this.filePath);
+    }
+
+    const event: PortamentoShapeEvent = {
+      type: 'portamentoShape',
+      tick: track.cursor,
+      shape: shape.value as PortamentoShape,
+      intensity: intensity.type === 'int' ? intensity.value : 64,
+    };
+    track.events.push(event);
+
+    return makeNull();
+  }
+
+  // Cross-staff notation
+  private builtinCrossStaff(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'midi') {
+      throw new MFError('TYPE', 'crossStaff() only valid in MIDI tracks', position, this.filePath);
+    }
+
+    if (!track.grandStaff) {
+      throw new MFError('TYPE', 'crossStaff() requires grandStaff() to be set first', position, this.filePath);
+    }
+
+    const noteKey = this.evaluate(args[0]);
+    const targetStaff = this.evaluate(args[1]);
+
+    if (noteKey.type !== 'pitch' && noteKey.type !== 'int') {
+      throw new MFError('TYPE', 'crossStaff() noteKey must be Pitch or int', position, this.filePath);
+    }
+    if (targetStaff.type !== 'string' || !['upper', 'lower'].includes(targetStaff.value)) {
+      throw new MFError('TYPE', 'crossStaff() targetStaff must be "upper" or "lower"', position, this.filePath);
+    }
+
+    const keyValue = noteKey.type === 'pitch' ? noteKey.midi : noteKey.value;
+
+    const event: CrossStaffEvent = {
+      type: 'crossStaff',
+      tick: track.cursor,
+      noteKey: keyValue,
+      targetStaff: targetStaff.value as 'upper' | 'lower',
+    };
+    track.events.push(event);
+
+    return makeNull();
+  }
+
+  // Clef change
+  private builtinClef(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const clefArg = this.evaluate(args[0]);
+    if (clefArg.type !== 'string') {
+      throw new MFError('TYPE', 'clef() argument must be string', position, this.filePath);
+    }
+
+    const validClefs: ClefType[] = ['treble', 'bass', 'alto', 'tenor', 'percussion', 'tab', 'treble8va', 'treble8vb', 'bass8va', 'bass8vb'];
+    if (!validClefs.includes(clefArg.value as ClefType)) {
+      throw createError('E130', `Invalid clef type '${clefArg.value}'. Valid: ${validClefs.join(', ')}`, position, this.filePath);
+    }
+
+    if (!track.clefChanges) track.clefChanges = [];
+    const event: ClefChangeEvent = {
+      type: 'clefChange',
+      tick: track.cursor,
+      clef: clefArg.value as ClefType,
+    };
+    track.clefChanges.push(event);
+
+    return makeNull();
+  }
+
+  // Key signature
+  private builtinKey(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const fifthsArg = this.evaluate(args[0]);
+    const modeArg = args.length >= 2 ? this.evaluate(args[1]) : makeString('major');
+
+    if (fifthsArg.type !== 'int') {
+      throw new MFError('TYPE', 'key() fifths must be int (-7 to 7)', position, this.filePath);
+    }
+    if (fifthsArg.value < -7 || fifthsArg.value > 7) {
+      throw createError('E131', `Key fifths ${fifthsArg.value} out of range -7..7`, position, this.filePath);
+    }
+    if (modeArg.type !== 'string' || !['major', 'minor'].includes(modeArg.value)) {
+      throw new MFError('TYPE', 'key() mode must be "major" or "minor"', position, this.filePath);
+    }
+
+    if (!track.keySignatures) track.keySignatures = [];
+    const event: KeySignatureEvent = {
+      type: 'keySignature',
+      tick: track.cursor,
+      fifths: fifthsArg.value,
+      mode: modeArg.value as KeyMode,
+    };
+    track.keySignatures.push(event);
+
+    return makeNull();
+  }
+
+  // Fingering
+  private builtinFingering(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const fingerArg = this.evaluate(args[1]);
+    const handArg = args.length >= 3 ? this.evaluate(args[2]) : null;
+
+    if (noteKeyArg.type !== 'pitch' && noteKeyArg.type !== 'int') {
+      throw new MFError('TYPE', 'fingering() noteKey must be Pitch or int', position, this.filePath);
+    }
+    if (fingerArg.type !== 'int' && fingerArg.type !== 'string') {
+      throw new MFError('TYPE', 'fingering() finger must be int (1-5) or string', position, this.filePath);
+    }
+
+    const keyValue = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : noteKeyArg.value;
+
+    if (!track.fingerings) track.fingerings = [];
+    const event: FingeringEvent = {
+      type: 'fingering',
+      tick: track.cursor,
+      noteKey: keyValue,
+      finger: fingerArg.type === 'int' ? fingerArg.value : fingerArg.value,
+    };
+    if (handArg && handArg.type === 'string' && ['left', 'right'].includes(handArg.value)) {
+      event.hand = handArg.value as 'left' | 'right';
+    }
+    track.fingerings.push(event);
+
+    return makeNull();
+  }
+
+  // Stacked articulations
+  private builtinStackedArticulations(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const articulationsArg = this.evaluate(args[1]);
+
+    if (noteKeyArg.type !== 'pitch' && noteKeyArg.type !== 'int') {
+      throw new MFError('TYPE', 'articulations() noteKey must be Pitch or int', position, this.filePath);
+    }
+    if (articulationsArg.type !== 'array') {
+      throw new MFError('TYPE', 'articulations() must receive an array of articulation strings', position, this.filePath);
+    }
+
+    const validArticulations: ArticulationType[] = ['staccato', 'legato', 'accent', 'tenuto', 'marcato', 'staccatissimo', 'fermata', 'breath', 'caesura'];
+    const articulations: ArticulationType[] = [];
+    for (const elem of articulationsArg.elements) {
+      if (elem.type !== 'string' || !validArticulations.includes(elem.value as ArticulationType)) {
+        throw createError('E132', `Invalid articulation '${elem.type === 'string' ? elem.value : elem.type}'. Valid: ${validArticulations.join(', ')}`, position, this.filePath);
+      }
+      articulations.push(elem.value as ArticulationType);
+    }
+
+    const keyValue = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : noteKeyArg.value;
+
+    if (!track.stackedArticulations) track.stackedArticulations = [];
+    const event: StackedArticulationEvent = {
+      type: 'stackedArticulation',
+      tick: track.cursor,
+      noteKey: keyValue,
+      articulations,
+    };
+    track.stackedArticulations.push(event);
+
+    return makeNull();
+  }
+
+  // Multi-measure rest
+  private builtinMultiRest(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const measuresArg = this.evaluate(args[0]);
+    if (measuresArg.type !== 'int' || measuresArg.value < 1) {
+      throw new MFError('TYPE', 'multiRest() measures must be positive int', position, this.filePath);
+    }
+
+    if (!track.multiRests) track.multiRests = [];
+    const event: MultiRestEvent = {
+      type: 'multiRest',
+      tick: track.cursor,
+      measures: measuresArg.value,
+    };
+    track.multiRests.push(event);
+
+    // Advance cursor by the appropriate number of measures
+    // (Would need time signature info; for simplicity, we don't advance here)
+    return makeNull();
+  }
+
+  // Slash notation
+  private builtinSlashNotation(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const durArg = this.evaluate(args[0]);
+    const slashTypeArg = args.length >= 2 ? this.evaluate(args[1]) : makeString('rhythmic');
+
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'slashNotation() duration must be Dur', position, this.filePath);
+    }
+    if (slashTypeArg.type !== 'string' || !['rhythmic', 'beat'].includes(slashTypeArg.value)) {
+      throw new MFError('TYPE', 'slashNotation() type must be "rhythmic" or "beat"', position, this.filePath);
+    }
+
+    const durationTicks = this.durToTicks(durArg, position);
+
+    if (!track.slashNotations) track.slashNotations = [];
+    const event: SlashNotationEvent = {
+      type: 'slashNotation',
+      tick: track.cursor,
+      endTick: track.cursor + durationTicks,
+      slashType: slashTypeArg.value as 'rhythmic' | 'beat',
+    };
+    track.slashNotations.push(event);
+    track.cursor += durationTicks;
+
+    return makeNull();
+  }
+
+  // Barline
+  private builtinBarline(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const styleArg = this.evaluate(args[0]);
+    if (styleArg.type !== 'string') {
+      throw new MFError('TYPE', 'barline() style must be string', position, this.filePath);
+    }
+
+    const validStyles: BarlineType[] = ['single', 'double', 'final', 'repeat-start', 'repeat-end', 'repeat-both', 'dashed', 'tick', 'short', 'none'];
+    if (!validStyles.includes(styleArg.value as BarlineType)) {
+      throw createError('E133', `Invalid barline style '${styleArg.value}'. Valid: ${validStyles.join(', ')}`, position, this.filePath);
+    }
+
+    if (!track.barlines) track.barlines = [];
+    const event: BarlineEvent = {
+      type: 'barline',
+      tick: track.cursor,
+      style: styleArg.value as BarlineType,
+    };
+    track.barlines.push(event);
+
+    return makeNull();
+  }
+
+  // Tempo text
+  private builtinTempoText(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const markingArg = this.evaluate(args[0]);
+    const bpmArg = args.length >= 2 ? this.evaluate(args[1]) : null;
+
+    if (markingArg.type !== 'string') {
+      throw new MFError('TYPE', 'tempoText() marking must be string', position, this.filePath);
+    }
+
+    const validMarkings: TempoMarkingType[] = [
+      'grave', 'largo', 'lento', 'adagio', 'andante', 'andantino',
+      'moderato', 'allegretto', 'allegro', 'vivace', 'presto', 'prestissimo',
+      'accelerando', 'ritardando', 'rallentando', 'a-tempo', 'rubato', 'custom'
+    ];
+
+    if (!track.tempoTexts) track.tempoTexts = [];
+    const event: TempoTextEvent = {
+      type: 'tempoText',
+      tick: track.cursor,
+      marking: validMarkings.includes(markingArg.value as TempoMarkingType)
+        ? markingArg.value as TempoMarkingType
+        : 'custom',
+      customText: !validMarkings.includes(markingArg.value as TempoMarkingType) ? markingArg.value : undefined,
+    };
+    if (bpmArg && (bpmArg.type === 'int' || bpmArg.type === 'float')) {
+      event.bpm = toNumber(bpmArg);
+    }
+    track.tempoTexts.push(event);
+
+    return makeNull();
+  }
+
+  // Hide empty staves
+  private builtinHideEmptyStaves(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const enabledArg = this.evaluate(args[0]);
+    const firstExemptArg = args.length >= 2 ? this.evaluate(args[1]) : null;
+
+    if (enabledArg.type !== 'bool') {
+      throw new MFError('TYPE', 'hideEmptyStaves() enabled must be bool', position, this.filePath);
+    }
+
+    const event: HideEmptyStavesEvent = {
+      type: 'hideEmptyStaves',
+      tick: track.cursor,
+      enabled: enabledArg.value,
+    };
+    if (firstExemptArg && firstExemptArg.type === 'bool') {
+      event.firstSystemExempt = firstExemptArg.value;
+    }
+    track.hideEmptyStaves = event;
+
+    return makeNull();
+  }
+
+  // Vocal style
+  private builtinVocalStyle(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'vocalStyle() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const styleArg = this.evaluate(args[0]);
+    const intensityArg = args.length >= 2 ? this.evaluate(args[1]) : null;
+
+    if (styleArg.type !== 'string') {
+      throw new MFError('TYPE', 'vocalStyle() style must be string', position, this.filePath);
+    }
+
+    const validStyles: VocalStyleType[] = ['soft', 'normal', 'power', 'falsetto', 'whisper', 'breathy', 'belt', 'head', 'chest'];
+    if (!validStyles.includes(styleArg.value as VocalStyleType)) {
+      throw createError('E134', `Invalid vocal style '${styleArg.value}'. Valid: ${validStyles.join(', ')}`, position, this.filePath);
+    }
+
+    if (!track.vocalStyles) track.vocalStyles = [];
+    const event: VocalStyleEvent = {
+      type: 'vocalStyle',
+      tick: track.cursor,
+      style: styleArg.value as VocalStyleType,
+    };
+    if (intensityArg && intensityArg.type === 'int') {
+      if (intensityArg.value < 0 || intensityArg.value > 127) {
+        throw createError('E121', `vocalStyle intensity ${intensityArg.value} out of range 0..127`, position, this.filePath);
+      }
+      event.intensity = intensityArg.value;
+    }
+    track.vocalStyles.push(event);
+
+    return makeNull();
+  }
+
+  // Note envelope (ADSR)
+  private builtinNoteEnvelope(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    // Args: attack, decay, sustain, release (all optional, defaults to null)
+    const attackArg = args.length >= 1 ? this.evaluate(args[0]) : null;
+    const decayArg = args.length >= 2 ? this.evaluate(args[1]) : null;
+    const sustainArg = args.length >= 3 ? this.evaluate(args[2]) : null;
+    const releaseArg = args.length >= 4 ? this.evaluate(args[3]) : null;
+
+    if (!track.noteEnvelopes) track.noteEnvelopes = [];
+    const event: NoteEnvelopeEvent = {
+      type: 'noteEnvelope',
+      tick: track.cursor,
+    };
+
+    if (attackArg && (attackArg.type === 'int' || attackArg.type === 'float')) {
+      event.attack = toNumber(attackArg);
+    }
+    if (decayArg && (decayArg.type === 'int' || decayArg.type === 'float')) {
+      event.decay = toNumber(decayArg);
+    }
+    if (sustainArg && sustainArg.type === 'int') {
+      if (sustainArg.value < 0 || sustainArg.value > 127) {
+        throw createError('E121', `noteEnvelope sustain ${sustainArg.value} out of range 0..127`, position, this.filePath);
+      }
+      event.sustain = sustainArg.value;
+    }
+    if (releaseArg && (releaseArg.type === 'int' || releaseArg.type === 'float')) {
+      event.release = toNumber(releaseArg);
+    }
+
+    track.noteEnvelopes.push(event);
+
+    return makeNull();
+  }
+
+  // Vocal tension
+  private builtinVocalTension(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'tension() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const tensionArg = this.evaluate(args[0]);
+    if (tensionArg.type !== 'int') {
+      throw new MFError('TYPE', 'tension() value must be int (0-127)', position, this.filePath);
+    }
+    if (tensionArg.value < 0 || tensionArg.value > 127) {
+      throw createError('E121', `tension value ${tensionArg.value} out of range 0..127`, position, this.filePath);
+    }
+
+    if (!track.vocalTensions) track.vocalTensions = [];
+    const event: VocalTensionEvent = {
+      type: 'vocalTension',
+      tick: track.cursor,
+      tension: tensionArg.value,
+    };
+    track.vocalTensions.push(event);
+
+    return makeNull();
+  }
+
+  // Melisma
+  private builtinMelisma(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    if (track.kind !== 'vocal') {
+      throw new MFError('TYPE', 'melisma() only valid in vocal tracks', position, this.filePath);
+    }
+
+    const lyricArg = this.evaluate(args[0]);
+    const durArg = this.evaluate(args[1]);
+
+    if (lyricArg.type !== 'string') {
+      throw new MFError('TYPE', 'melisma() lyric must be string', position, this.filePath);
+    }
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'melisma() duration must be Dur', position, this.filePath);
+    }
+
+    const durationTicks = this.durToTicks(durArg, position);
+
+    if (!track.melismas) track.melismas = [];
+    const event: MelismaEvent = {
+      type: 'melisma',
+      tick: track.cursor,
+      endTick: track.cursor + durationTicks,
+      lyric: lyricArg.value,
+    };
+    track.melismas.push(event);
+
+    return makeNull();
+  }
+
+  // Turn
+  private builtinTurn(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const invertedArg = args.length >= 2 ? this.evaluate(args[1]) : null;
+    const delayedArg = args.length >= 3 ? this.evaluate(args[2]) : null;
+
+    if (noteKeyArg.type !== 'pitch' && noteKeyArg.type !== 'int') {
+      throw new MFError('TYPE', 'turn() noteKey must be Pitch or int', position, this.filePath);
+    }
+
+    const keyValue = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : noteKeyArg.value;
+
+    if (!track.turns) track.turns = [];
+    const event: TurnEvent = {
+      type: 'turn',
+      tick: track.cursor,
+      noteKey: keyValue,
+    };
+    if (invertedArg && invertedArg.type === 'bool') {
+      event.inverted = invertedArg.value;
+    }
+    if (delayedArg && delayedArg.type === 'bool') {
+      event.delayed = delayedArg.value;
+    }
+    track.turns.push(event);
+
+    return makeNull();
+  }
+
+  // Harmonic
+  private builtinHarmonic(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const typeArg = this.evaluate(args[1]);
+    const touchedArg = args.length >= 3 ? this.evaluate(args[2]) : null;
+
+    if (noteKeyArg.type !== 'pitch' && noteKeyArg.type !== 'int') {
+      throw new MFError('TYPE', 'harmonic() noteKey must be Pitch or int', position, this.filePath);
+    }
+    if (typeArg.type !== 'string') {
+      throw new MFError('TYPE', 'harmonic() type must be string', position, this.filePath);
+    }
+
+    const validTypes: HarmonicType[] = ['natural', 'artificial', 'pinch', 'tap'];
+    if (!validTypes.includes(typeArg.value as HarmonicType)) {
+      throw new MFError('TYPE', `harmonic() type must be one of: ${validTypes.join(', ')}`, position, this.filePath);
+    }
+
+    const keyValue = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : noteKeyArg.value;
+
+    if (!track.harmonics) track.harmonics = [];
+    const event: HarmonicEvent = {
+      type: 'harmonic',
+      tick: track.cursor,
+      noteKey: keyValue,
+      harmonicType: typeArg.value as HarmonicType,
+    };
+    if (touchedArg && (touchedArg.type === 'pitch' || touchedArg.type === 'int')) {
+      event.touchedNote = touchedArg.type === 'pitch' ? touchedArg.midi : touchedArg.value;
+    }
+    track.harmonics.push(event);
+
+    return makeNull();
+  }
+
+  // Pedal
+  private builtinPedal(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pedalTypeArg = this.evaluate(args[0]);
+    const actionArg = this.evaluate(args[1]);
+    const levelArg = args.length >= 3 ? this.evaluate(args[2]) : null;
+
+    if (pedalTypeArg.type !== 'string') {
+      throw new MFError('TYPE', 'pedal() pedalType must be string', position, this.filePath);
+    }
+    if (actionArg.type !== 'string') {
+      throw new MFError('TYPE', 'pedal() action must be string', position, this.filePath);
+    }
+
+    const validPedalTypes: PedalType[] = ['sustain', 'sostenuto', 'unaCorda'];
+    const validActions: PedalAction[] = ['start', 'end', 'change', 'half'];
+
+    if (!validPedalTypes.includes(pedalTypeArg.value as PedalType)) {
+      throw new MFError('TYPE', `pedal() pedalType must be one of: ${validPedalTypes.join(', ')}`, position, this.filePath);
+    }
+    if (!validActions.includes(actionArg.value as PedalAction)) {
+      throw new MFError('TYPE', `pedal() action must be one of: ${validActions.join(', ')}`, position, this.filePath);
+    }
+
+    if (!track.pedals) track.pedals = [];
+    const event: PedalEvent = {
+      type: 'pedal',
+      tick: track.cursor,
+      pedalType: pedalTypeArg.value as PedalType,
+      action: actionArg.value as PedalAction,
+    };
+    if (levelArg && levelArg.type === 'int') {
+      if (levelArg.value < 0 || levelArg.value > 127) {
+        throw createError('E121', `pedal level ${levelArg.value} out of range 0..127`, position, this.filePath);
+      }
+      event.level = levelArg.value;
+    }
+    track.pedals.push(event);
+
+    return makeNull();
+  }
+
+  // Feathered beam
+  private builtinFeatheredBeam(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const directionArg = this.evaluate(args[0]);
+    const durArg = this.evaluate(args[1]);
+
+    if (directionArg.type !== 'string') {
+      throw new MFError('TYPE', 'featheredBeam() direction must be string', position, this.filePath);
+    }
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'featheredBeam() duration must be Dur', position, this.filePath);
+    }
+
+    const validDirections: FeatheredBeamDirection[] = ['accel', 'rit'];
+    if (!validDirections.includes(directionArg.value as FeatheredBeamDirection)) {
+      throw new MFError('TYPE', `featheredBeam() direction must be one of: ${validDirections.join(', ')}`, position, this.filePath);
+    }
+
+    const durationTicks = this.durToTicks(durArg, position);
+
+    if (!track.featheredBeams) track.featheredBeams = [];
+    const event: FeatheredBeamEvent = {
+      type: 'featheredBeam',
+      tick: track.cursor,
+      endTick: track.cursor + durationTicks,
+      direction: directionArg.value as FeatheredBeamDirection,
+    };
+    track.featheredBeams.push(event);
+
+    return makeNull();
+  }
+
+  // Cluster
+  private builtinCluster(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const lowNoteArg = this.evaluate(args[0]);
+    const highNoteArg = this.evaluate(args[1]);
+    const durArg = this.evaluate(args[2]);
+    const styleArg = args.length >= 4 ? this.evaluate(args[3]) : null;
+
+    if (lowNoteArg.type !== 'pitch' && lowNoteArg.type !== 'int') {
+      throw new MFError('TYPE', 'cluster() lowNote must be Pitch or int', position, this.filePath);
+    }
+    if (highNoteArg.type !== 'pitch' && highNoteArg.type !== 'int') {
+      throw new MFError('TYPE', 'cluster() highNote must be Pitch or int', position, this.filePath);
+    }
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'cluster() duration must be Dur', position, this.filePath);
+    }
+
+    const lowNote = lowNoteArg.type === 'pitch' ? lowNoteArg.midi : lowNoteArg.value;
+    const highNote = highNoteArg.type === 'pitch' ? highNoteArg.midi : highNoteArg.value;
+    const durationTicks = this.durToTicks(durArg, position);
+
+    if (!track.clusters) track.clusters = [];
+    const event: ClusterEvent = {
+      type: 'cluster',
+      tick: track.cursor,
+      lowNote,
+      highNote,
+      dur: durationTicks,
+    };
+    if (styleArg && styleArg.type === 'string' && ['chromatic', 'diatonic', 'black', 'white'].includes(styleArg.value)) {
+      event.style = styleArg.value as 'chromatic' | 'diatonic' | 'black' | 'white';
+    }
+    track.clusters.push(event);
+    track.cursor += durationTicks;
+
+    return makeNull();
+  }
+
+  // Sprechstimme
+  private builtinSprechstimme(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const durArg = this.evaluate(args[1]);
+    const textArg = this.evaluate(args[2]);
+
+    if (noteKeyArg.type !== 'pitch' && noteKeyArg.type !== 'int') {
+      throw new MFError('TYPE', 'sprechstimme() noteKey must be Pitch or int', position, this.filePath);
+    }
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'sprechstimme() duration must be Dur', position, this.filePath);
+    }
+    if (textArg.type !== 'string') {
+      throw new MFError('TYPE', 'sprechstimme() text must be string', position, this.filePath);
+    }
+
+    const keyValue = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : noteKeyArg.value;
+    const durationTicks = this.durToTicks(durArg, position);
+
+    if (!track.sprechstimmes) track.sprechstimmes = [];
+    const event: SprechstimmeEvent = {
+      type: 'sprechstimme',
+      tick: track.cursor,
+      dur: durationTicks,
+      noteKey: keyValue,
+      text: textArg.value,
+    };
+    track.sprechstimmes.push(event);
+    track.cursor += durationTicks;
+
+    return makeNull();
+  }
+
+  // Bracket group
+  private builtinBracketGroup(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const trackIdsArg = this.evaluate(args[0]);
+    const typeArg = this.evaluate(args[1]);
+    const nameArg = args.length >= 3 ? this.evaluate(args[2]) : null;
+
+    if (trackIdsArg.type !== 'array') {
+      throw new MFError('TYPE', 'bracketGroup() trackIds must be an array of strings', position, this.filePath);
+    }
+    if (typeArg.type !== 'string') {
+      throw new MFError('TYPE', 'bracketGroup() type must be string', position, this.filePath);
+    }
+
+    const validTypes: BracketType[] = ['bracket', 'brace', 'line', 'square'];
+    if (!validTypes.includes(typeArg.value as BracketType)) {
+      throw new MFError('TYPE', `bracketGroup() type must be one of: ${validTypes.join(', ')}`, position, this.filePath);
+    }
+
+    const trackIds: string[] = [];
+    for (const elem of trackIdsArg.elements) {
+      if (elem.type !== 'string') {
+        throw new MFError('TYPE', 'bracketGroup() trackIds array must contain only strings', position, this.filePath);
+      }
+      trackIds.push(elem.value);
+    }
+
+    if (!track.bracketGroups) track.bracketGroups = [];
+    const event: BracketGroupEvent = {
+      type: 'bracketGroup',
+      trackIds,
+      bracketType: typeArg.value as BracketType,
+    };
+    if (nameArg && nameArg.type === 'string') {
+      event.name = nameArg.value;
+    }
+    track.bracketGroups.push(event);
+
+    return makeNull();
+  }
+
+  // Cue staff
+  private builtinCueStaff(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const sourceTrackArg = this.evaluate(args[0]);
+    const durArg = this.evaluate(args[1]);
+    const sizeArg = args.length >= 3 ? this.evaluate(args[2]) : null;
+
+    if (sourceTrackArg.type !== 'string') {
+      throw new MFError('TYPE', 'cueStaff() sourceTrackId must be string', position, this.filePath);
+    }
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'cueStaff() duration must be Dur', position, this.filePath);
+    }
+
+    const durationTicks = this.durToTicks(durArg, position);
+
+    if (!track.cueStaffs) track.cueStaffs = [];
+    const event: CueStaffEvent = {
+      type: 'cueStaff',
+      tick: track.cursor,
+      endTick: track.cursor + durationTicks,
+      sourceTrackId: sourceTrackArg.value,
+    };
+    if (sizeArg && (sizeArg.type === 'float' || sizeArg.type === 'int')) {
+      event.size = toNumber(sizeArg);
+    }
+    track.cueStaffs.push(event);
+
+    return makeNull();
+  }
+
+  // Note color
+  private builtinNoteColor(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const colorArg = this.evaluate(args[0]);
+    const noteKeyArg = args.length >= 2 ? this.evaluate(args[1]) : null;
+
+    if (colorArg.type !== 'string') {
+      throw new MFError('TYPE', 'noteColor() color must be string (hex color)', position, this.filePath);
+    }
+
+    // Basic hex color validation
+    if (!/^#[0-9A-Fa-f]{6}$/.test(colorArg.value)) {
+      throw new MFError('TYPE', 'noteColor() color must be hex format (#RRGGBB)', position, this.filePath);
+    }
+
+    if (!track.noteColors) track.noteColors = [];
+    const event: NoteColorEvent = {
+      type: 'noteColor',
+      tick: track.cursor,
+      color: colorArg.value,
+    };
+    if (noteKeyArg && (noteKeyArg.type === 'pitch' || noteKeyArg.type === 'int')) {
+      event.noteKey = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : noteKeyArg.value;
+    }
+    track.noteColors.push(event);
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fourth batch: Score structure
+  // ============================================
+
+  private builtinVolta(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const endingsArg = this.evaluate(args[0]);
+    const durArg = this.evaluate(args[1]);
+
+    // Parse endings (e.g., [1], [1, 2], or single number)
+    let endings: number[] = [];
+    if (endingsArg.type === 'int') {
+      endings = [endingsArg.value];
+    } else if (endingsArg.type === 'array') {
+      endings = endingsArg.elements.map((e: RuntimeValue) => toNumber(e));
+    }
+
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'volta() duration must be Dur', position, this.filePath);
+    }
+    const dur = this.durToTicks(durArg, position);
+
+    if (!track.voltas) track.voltas = [];
+    track.voltas.push({
+      type: 'volta',
+      tick: track.cursor,
+      endTick: track.cursor + dur,
+      endings,
+    });
+
+    return makeNull();
+  }
+
+  private builtinCadenza(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const enabled = args.length > 0 ? isTruthy(this.evaluate(args[0])) : true;
+    const durArg = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    if (!track.cadenzas) track.cadenzas = [];
+    const event: CadenzaEvent = {
+      type: 'cadenza',
+      tick: track.cursor,
+      enabled,
+    };
+    if (durArg && durArg.type === 'dur') {
+      event.endTick = track.cursor + this.durToTicks(durArg, position);
+    }
+    track.cadenzas.push(event);
+
+    return makeNull();
+  }
+
+  private builtinDivisiMark(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const markingArg = this.evaluate(args[0]);
+    if (markingArg.type !== 'string') {
+      throw new MFError('TYPE', 'divisiMark() marking must be string', position, this.filePath);
+    }
+
+    const validMarks: DivisiType[] = ['div.', 'unis.', 'a 2', 'a 3', 'solo', 'tutti'];
+    const marking = markingArg.value as DivisiType | string;
+
+    if (!track.divisiMarks) track.divisiMarks = [];
+    track.divisiMarks.push({
+      type: 'divisiMark',
+      tick: track.cursor,
+      marking,
+    });
+
+    return makeNull();
+  }
+
+  private builtinMetricMod(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const fromNoteArg = this.evaluate(args[0]);
+    const toNoteArg = this.evaluate(args[1]);
+
+    // Parse note values as fractions (e.g., 1/4, 1/8) - dur type is used for fractions
+    let fromNote = { numerator: 1, denominator: 4 };
+    let toNote = { numerator: 1, denominator: 4 };
+
+    if (fromNoteArg.type === 'dur') {
+      fromNote = { numerator: fromNoteArg.numerator, denominator: fromNoteArg.denominator };
+    }
+    if (toNoteArg.type === 'dur') {
+      toNote = { numerator: toNoteArg.numerator, denominator: toNoteArg.denominator };
+    }
+
+    if (!track.metricModulations) track.metricModulations = [];
+    track.metricModulations.push({
+      type: 'metricModulation',
+      tick: track.cursor,
+      fromNote,
+      toNote,
+    });
+
+    return makeNull();
+  }
+
+  private builtinConductorCue(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const textArg = this.evaluate(args[0]);
+    const instrumentArg = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    if (textArg.type !== 'string') {
+      throw new MFError('TYPE', 'conductorCue() text must be string', position, this.filePath);
+    }
+
+    if (!track.conductorCues) track.conductorCues = [];
+    const event: ConductorCueEvent = {
+      type: 'conductorCue',
+      tick: track.cursor,
+      text: textArg.value,
+    };
+    if (instrumentArg && instrumentArg.type === 'string') {
+      event.instrument = instrumentArg.value;
+    }
+    track.conductorCues.push(event);
+
+    return makeNull();
+  }
+
+  private builtinEditorial(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const typeArg = this.evaluate(args[1]);
+
+    if (typeArg.type !== 'string') {
+      throw new MFError('TYPE', 'editorial() type must be string', position, this.filePath);
+    }
+
+    const validTypes: EditorialType[] = ['bracket', 'parenthesis', 'dashed', 'small'];
+    if (!validTypes.includes(typeArg.value as EditorialType)) {
+      throw new MFError('TYPE', `editorial() type must be one of: ${validTypes.join(', ')}`, position, this.filePath);
+    }
+
+    const noteKey = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : toNumber(noteKeyArg);
+
+    if (!track.editorials) track.editorials = [];
+    track.editorials.push({
+      type: 'editorial',
+      tick: track.cursor,
+      noteKey,
+      editorialType: typeArg.value as EditorialType,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fourth batch: Instrument techniques
+  // ============================================
+
+  private builtinBrassMute(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const muteTypeArg = this.evaluate(args[0]);
+
+    if (muteTypeArg.type !== 'string') {
+      throw new MFError('TYPE', 'brassMute() type must be string', position, this.filePath);
+    }
+
+    const validTypes: BrassMuteType[] = ['straight', 'cup', 'harmon', 'plunger', 'bucket', 'wah', 'open'];
+    if (!validTypes.includes(muteTypeArg.value as BrassMuteType)) {
+      throw new MFError('TYPE', `brassMute() type must be one of: ${validTypes.join(', ')}`, position, this.filePath);
+    }
+
+    if (!track.brassMutes) track.brassMutes = [];
+    track.brassMutes.push({
+      type: 'brassMute',
+      tick: track.cursor,
+      muteType: muteTypeArg.value as BrassMuteType,
+    });
+
+    return makeNull();
+  }
+
+  private builtinStringPosition(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const positionArg = this.evaluate(args[1]);
+    const stringArg = args.length > 2 ? this.evaluate(args[2]) : null;
+
+    const noteKey = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : toNumber(noteKeyArg);
+    const pos = toNumber(positionArg);
+
+    if (!track.stringPositions) track.stringPositions = [];
+    const event: StringPositionEvent = {
+      type: 'stringPosition',
+      tick: track.cursor,
+      noteKey,
+      position: pos,
+    };
+    if (stringArg && stringArg.type === 'string') {
+      event.string = stringArg.value;
+    }
+    track.stringPositions.push(event);
+
+    return makeNull();
+  }
+
+  private builtinMultiphonic(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const notesArg = this.evaluate(args[0]);
+    const durArg = this.evaluate(args[1]);
+    const fingeringArg = args.length > 2 ? this.evaluate(args[2]) : null;
+
+    // Parse notes array
+    let notes: number[] = [];
+    if (notesArg.type === 'array') {
+      notes = notesArg.elements.map((e: RuntimeValue) => e.type === 'pitch' ? e.midi : toNumber(e));
+    }
+
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'multiphonic() duration must be Dur', position, this.filePath);
+    }
+    const dur = this.durToTicks(durArg, position);
+
+    if (!track.multiphonics) track.multiphonics = [];
+    const event: MultiphonicEvent = {
+      type: 'multiphonic',
+      tick: track.cursor,
+      dur,
+      notes,
+    };
+    if (fingeringArg && fingeringArg.type === 'string') {
+      event.fingering = fingeringArg.value;
+    }
+    track.multiphonics.push(event);
+
+    return makeNull();
+  }
+
+  private builtinElectronicsCue(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const cueArg = this.evaluate(args[0]);
+    const actionArg = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    if (cueArg.type !== 'string') {
+      throw new MFError('TYPE', 'electronicsCue() cue must be string', position, this.filePath);
+    }
+
+    if (!track.electronicsCues) track.electronicsCues = [];
+    const event: ElectronicsCueEvent = {
+      type: 'electronicsCue',
+      tick: track.cursor,
+      cue: cueArg.value,
+    };
+    if (actionArg && actionArg.type === 'string') {
+      event.action = actionArg.value as 'start' | 'stop' | 'fade';
+    }
+    track.electronicsCues.push(event);
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fourth batch: Guitar techniques
+  // ============================================
+
+  private builtinBendCurve(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const bendAmountArg = this.evaluate(args[1]);
+    const shapeArg = this.evaluate(args[2]);
+    const durArg = args.length > 3 ? this.evaluate(args[3]) : null;
+
+    const noteKey = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : toNumber(noteKeyArg);
+    const bendAmount = toNumber(bendAmountArg);
+
+    if (shapeArg.type !== 'string') {
+      throw new MFError('TYPE', 'bendCurve() shape must be string', position, this.filePath);
+    }
+
+    const validShapes: BendCurveShape[] = ['immediate', 'gradual', 'prebend', 'release'];
+    if (!validShapes.includes(shapeArg.value as BendCurveShape)) {
+      throw new MFError('TYPE', `bendCurve() shape must be one of: ${validShapes.join(', ')}`, position, this.filePath);
+    }
+
+    if (!track.bendCurves) track.bendCurves = [];
+    const event: BendCurveEvent = {
+      type: 'bendCurve',
+      tick: track.cursor,
+      noteKey,
+      bendAmount,
+      shape: shapeArg.value as BendCurveShape,
+    };
+    if (durArg && durArg.type === 'dur') {
+      event.dur = this.durToTicks(durArg, position);
+    }
+    track.bendCurves.push(event);
+
+    return makeNull();
+  }
+
+  private builtinSlide(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const startNoteArg = this.evaluate(args[0]);
+    const endNoteArg = this.evaluate(args[1]);
+    const slideTypeArg = this.evaluate(args[2]);
+    const durArg = this.evaluate(args[3]);
+
+    const startNote = startNoteArg.type === 'pitch' ? startNoteArg.midi : toNumber(startNoteArg);
+    const endNote = endNoteArg.type === 'pitch' ? endNoteArg.midi : toNumber(endNoteArg);
+
+    if (slideTypeArg.type !== 'string') {
+      throw new MFError('TYPE', 'slide() type must be string', position, this.filePath);
+    }
+
+    const validTypes: SlideType[] = ['legato', 'shift', 'gliss', 'scoop', 'fall'];
+    if (!validTypes.includes(slideTypeArg.value as SlideType)) {
+      throw new MFError('TYPE', `slide() type must be one of: ${validTypes.join(', ')}`, position, this.filePath);
+    }
+
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'slide() duration must be Dur', position, this.filePath);
+    }
+    const dur = this.durToTicks(durArg, position);
+
+    if (!track.slides) track.slides = [];
+    track.slides.push({
+      type: 'slide',
+      tick: track.cursor,
+      startNote,
+      endNote,
+      slideType: slideTypeArg.value as SlideType,
+      dur,
+    });
+
+    return makeNull();
+  }
+
+  private builtinTap(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const noteKeyArg = this.evaluate(args[0]);
+    const handArg = this.evaluate(args[1]);
+    const durArg = this.evaluate(args[2]);
+
+    const noteKey = noteKeyArg.type === 'pitch' ? noteKeyArg.midi : toNumber(noteKeyArg);
+
+    if (handArg.type !== 'string') {
+      throw new MFError('TYPE', 'tap() hand must be string', position, this.filePath);
+    }
+
+    const validHands: TapHand[] = ['left', 'right', 'both'];
+    if (!validHands.includes(handArg.value as TapHand)) {
+      throw new MFError('TYPE', `tap() hand must be one of: ${validHands.join(', ')}`, position, this.filePath);
+    }
+
+    if (durArg.type !== 'dur') {
+      throw new MFError('TYPE', 'tap() duration must be Dur', position, this.filePath);
+    }
+    const dur = this.durToTicks(durArg, position);
+
+    if (!track.taps) track.taps = [];
+    track.taps.push({
+      type: 'tap',
+      tick: track.cursor,
+      noteKey,
+      hand: handArg.value as TapHand,
+      dur,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fourth batch: DAW features
+  // ============================================
+
+  private builtinSection(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const nameArg = this.evaluate(args[0]);
+    const measuresArg = this.evaluate(args[1]);
+    const colorArg = args.length > 2 ? this.evaluate(args[2]) : null;
+
+    if (nameArg.type !== 'string') {
+      throw new MFError('TYPE', 'section() name must be string', position, this.filePath);
+    }
+
+    const measures = toNumber(measuresArg);
+
+    if (!track.arrangerSections) track.arrangerSections = [];
+    const event: ArrangerSection = {
+      type: 'arrangerSection',
+      tick: track.cursor,
+      name: nameArg.value,
+      measures,
+    };
+    if (colorArg && colorArg.type === 'string') {
+      event.color = colorArg.value;
+    }
+    track.arrangerSections.push(event);
+
+    return makeNull();
+  }
+
+  private builtinChordTrack(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const chordArg = this.evaluate(args[0]);
+    const durArg = args.length > 1 ? this.evaluate(args[1]) : null;
+
+    if (chordArg.type !== 'string') {
+      throw new MFError('TYPE', 'chordTrack() chord must be string', position, this.filePath);
+    }
+
+    if (!track.chordTrack) {
+      track.chordTrack = { type: 'chordTrack', entries: [] };
+    }
+
+    const entry: ChordTrackEntry = {
+      tick: track.cursor,
+      chord: chordArg.value,
+    };
+    if (durArg && durArg.type === 'dur') {
+      entry.duration = this.durToTicks(durArg, position);
+    }
+    track.chordTrack.entries.push(entry);
+
+    return makeNull();
+  }
+
+  private builtinStepInput(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const enabledArg = this.evaluate(args[0]);
+    const stepSizeArg = args.length > 1 ? this.evaluate(args[1]) : { type: 'fraction', numerator: 1, denominator: 4 };
+
+    let stepSize = { numerator: 1, denominator: 4 };
+    if (stepSizeArg.type === 'fraction') {
+      stepSize = { numerator: stepSizeArg.numerator, denominator: stepSizeArg.denominator };
+    }
+
+    if (!track.stepInputSettings) track.stepInputSettings = [];
+    track.stepInputSettings.push({
+      type: 'stepInput',
+      tick: track.cursor,
+      enabled: isTruthy(enabledArg),
+      stepSize,
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fourth batch: Collaboration
+  // ============================================
+
+  private builtinMeasureComment(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const measureArg = this.evaluate(args[0]);
+    const commentArg = this.evaluate(args[1]);
+    const authorArg = args.length > 2 ? this.evaluate(args[2]) : null;
+
+    const measure = toNumber(measureArg);
+
+    if (commentArg.type !== 'string') {
+      throw new MFError('TYPE', 'measureComment() comment must be string', position, this.filePath);
+    }
+
+    if (!track.measureComments) track.measureComments = [];
+    const event: MeasureCommentEvent = {
+      type: 'measureComment',
+      tick: track.cursor,
+      measure,
+      comment: commentArg.value,
+    };
+    if (authorArg && authorArg.type === 'string') {
+      event.author = authorArg.value;
+    }
+    track.measureComments.push(event);
+
+    return makeNull();
+  }
+
+  private builtinCheckpoint(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const nameArg = this.evaluate(args[0]);
+
+    if (nameArg.type !== 'string') {
+      throw new MFError('TYPE', 'checkpoint() name must be string', position, this.filePath);
+    }
+
+    if (!track.versionCheckpoints) track.versionCheckpoints = [];
+    track.versionCheckpoints.push({
+      type: 'versionCheckpoint',
+      tick: track.cursor,
+      name: nameArg.value,
+      timestamp: Date.now(),
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fifth batch: Notation/diagrams
+  // ============================================
+
+  private builtinChordDiagram(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const nameArg = this.evaluate(args[0]);
+    const stringsArg = this.evaluate(args[1]);
+    const fretsArg = this.evaluate(args[2]);
+
+    if (nameArg.type !== 'string') {
+      throw new MFError('TYPE', 'chordDiagram() name must be string', position, this.filePath);
+    }
+
+    const strings = toNumber(stringsArg);
+    let frets: (number | 'x' | 'o')[] = [];
+    if (fretsArg.type === 'array') {
+      frets = fretsArg.elements.map((e: RuntimeValue) => {
+        if (e.type === 'string') return e.value as 'x' | 'o';
+        return toNumber(e);
+      });
+    }
+
+    if (!track.chordDiagrams) track.chordDiagrams = [];
+    track.chordDiagrams.push({
+      type: 'chordDiagram',
+      tick: track.cursor,
+      name: nameArg.value,
+      strings,
+      frets,
+    });
+
+    return makeNull();
+  }
+
+  private builtinScaleDiagram(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const rootArg = this.evaluate(args[0]);
+    const scaleTypeArg = this.evaluate(args[1]);
+    const startFretArg = this.evaluate(args[2]);
+    const endFretArg = this.evaluate(args[3]);
+
+    if (rootArg.type !== 'string' || scaleTypeArg.type !== 'string') {
+      throw new MFError('TYPE', 'scaleDiagram() root and scaleType must be strings', position, this.filePath);
+    }
+
+    if (!track.scaleDiagrams) track.scaleDiagrams = [];
+    track.scaleDiagrams.push({
+      type: 'scaleDiagram',
+      tick: track.cursor,
+      root: rootArg.value,
+      scaleType: scaleTypeArg.value,
+      strings: 6,
+      startFret: toNumber(startFretArg),
+      endFret: toNumber(endFretArg),
+      notes: [],
+    });
+
+    return makeNull();
+  }
+
+  private builtinHarpPedalDiagram(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pedalsArg = this.evaluate(args[0]);
+    const styleArg = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'standard' };
+
+    let pedals: [number, number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0, 0];
+    if (pedalsArg.type === 'array' && pedalsArg.elements.length === 7) {
+      pedals = pedalsArg.elements.map((e: RuntimeValue) => toNumber(e)) as [number, number, number, number, number, number, number];
+    }
+
+    if (!track.harpPedalDiagrams) track.harpPedalDiagrams = [];
+    track.harpPedalDiagrams.push({
+      type: 'harpPedalDiagram',
+      tick: track.cursor,
+      pedals,
+      displayStyle: (styleArg as any).value || 'standard',
+    });
+
+    return makeNull();
+  }
+
+  private builtinPartExtraction(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const partNameArg = this.evaluate(args[0]);
+
+    if (partNameArg.type !== 'string') {
+      throw new MFError('TYPE', 'partExtraction() partName must be string', position, this.filePath);
+    }
+
+    if (!track.partExtractions) track.partExtractions = [];
+    track.partExtractions.push({
+      type: 'partExtraction',
+      trackId: track.id,
+      partName: partNameArg.value,
+      showMeasureNumbers: true,
+      showRehearsalMarks: true,
+      showTempoMarkings: true,
+      showDynamics: true,
+      multiRestThreshold: 4,
+      cueNotes: true,
+    });
+
+    return makeNull();
+  }
+
+  private builtinTranspositionDisplay(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const modeArg = this.evaluate(args[0]);
+
+    if (modeArg.type !== 'string') {
+      throw new MFError('TYPE', 'transpositionDisplay() mode must be string', position, this.filePath);
+    }
+
+    const validModes = ['concert', 'transposed'];
+    if (!validModes.includes(modeArg.value)) {
+      throw new MFError('TYPE', `transpositionDisplay() mode must be one of: ${validModes.join(', ')}`, position, this.filePath);
+    }
+
+    track.transpositionDisplay = {
+      type: 'transpositionDisplay',
+      tick: track.cursor,
+      trackId: track.id,
+      displayMode: modeArg.value as 'concert' | 'transposed',
+    };
+
+    return makeNull();
+  }
+
+  private builtinMeasureNumbers(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const showArg = this.evaluate(args[0]);
+    const frequencyArg = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'every' };
+
+    track.measureNumberConfig = {
+      type: 'measureNumberConfig',
+      showNumbers: isTruthy(showArg),
+      frequency: (frequencyArg as any).value || 'every',
+    };
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fifth batch: Synthesis
+  // ============================================
+
+  private builtinWavetable(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const wavetableArg = this.evaluate(args[0]);
+    const positionArg = this.evaluate(args[1]);
+
+    if (wavetableArg.type !== 'string') {
+      throw new MFError('TYPE', 'wavetable() wavetable must be string', position, this.filePath);
+    }
+
+    if (!track.wavetableSynths) track.wavetableSynths = [];
+    track.wavetableSynths.push({
+      type: 'wavetableSynth',
+      tick: track.cursor,
+      wavetable: wavetableArg.value,
+      position: toNumber(positionArg),
+    });
+
+    return makeNull();
+  }
+
+  private builtinFMSynth(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const algorithmArg = this.evaluate(args[0]);
+    const operatorsArg = this.evaluate(args[1]);
+
+    const algorithm = toNumber(algorithmArg);
+    let operators: FMOperator[] = [];
+
+    if (operatorsArg.type === 'array') {
+      operators = operatorsArg.elements.map((op: any) => ({
+        ratio: 1,
+        level: 100,
+        envelope: { attack: 10, decay: 100, sustain: 80, release: 200 },
+      }));
+    }
+
+    if (!track.fmSynths) track.fmSynths = [];
+    track.fmSynths.push({
+      type: 'fmSynth',
+      tick: track.cursor,
+      algorithm,
+      operators,
+    });
+
+    return makeNull();
+  }
+
+  private builtinAdditiveSynth(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const partialsArg = this.evaluate(args[0]);
+
+    let partials: AdditivePartial[] = [];
+    if (partialsArg.type === 'array') {
+      partials = partialsArg.elements.map((p: any, i: number) => ({
+        harmonic: i + 1,
+        amplitude: toNumber(p),
+      }));
+    }
+
+    if (!track.additiveSynths) track.additiveSynths = [];
+    track.additiveSynths.push({
+      type: 'additiveSynth',
+      tick: track.cursor,
+      partials,
+    });
+
+    return makeNull();
+  }
+
+  private builtinSubtractiveSynth(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const waveformArg = this.evaluate(args[0]);
+    const cutoffArg = this.evaluate(args[1]);
+    const resonanceArg = this.evaluate(args[2]);
+
+    if (waveformArg.type !== 'string') {
+      throw new MFError('TYPE', 'subtractiveSynth() waveform must be string', position, this.filePath);
+    }
+
+    if (!track.subtractiveSynths) track.subtractiveSynths = [];
+    track.subtractiveSynths.push({
+      type: 'subtractiveSynth',
+      tick: track.cursor,
+      oscillators: [{
+        waveform: waveformArg.value as any,
+        octave: 0,
+        detune: 0,
+        level: 1,
+      }],
+      filter: {
+        type: 'lowpass',
+        cutoff: toNumber(cutoffArg),
+        resonance: toNumber(resonanceArg),
+      },
+      envelope: { attack: 10, decay: 100, sustain: 80, release: 200 },
+    });
+
+    return makeNull();
+  }
+
+  private builtinPhysicalModel(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const modelTypeArg = this.evaluate(args[0]);
+    const exciterTypeArg = this.evaluate(args[1]);
+    const resonatorTypeArg = this.evaluate(args[2]);
+
+    if (modelTypeArg.type !== 'string' || exciterTypeArg.type !== 'string' || resonatorTypeArg.type !== 'string') {
+      throw new MFError('TYPE', 'physicalModel() requires string arguments', position, this.filePath);
+    }
+
+    if (!track.physicalModels) track.physicalModels = [];
+    track.physicalModels.push({
+      type: 'physicalModel',
+      tick: track.cursor,
+      modelType: modelTypeArg.value as any,
+      exciter: {
+        type: exciterTypeArg.value as any,
+        position: 0.5,
+        force: 0.8,
+      },
+      resonator: {
+        type: resonatorTypeArg.value as any,
+        size: 1,
+        material: 'steel',
+      },
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fifth batch: Audio processing (formantShift only - others already exist)
+  // ============================================
+
+  private builtinFormantShift(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const shiftArg = this.evaluate(args[0]);
+    const preservePitchArg = args.length > 1 ? this.evaluate(args[1]) : makeBool(true);
+
+    if (!track.formantShifts) track.formantShifts = [];
+    track.formantShifts.push({
+      type: 'formantShift',
+      tick: track.cursor,
+      shift: toNumber(shiftArg),
+      preservePitch: isTruthy(preservePitchArg),
+    });
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fifth batch: Video
+  // ============================================
+
+  private builtinVideoSync(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const pathArg = this.evaluate(args[0]);
+    const frameRateArg = this.evaluate(args[1]);
+
+    if (pathArg.type !== 'string') {
+      throw new MFError('TYPE', 'videoSync() path must be string', position, this.filePath);
+    }
+
+    if (!track.videoSyncs) track.videoSyncs = [];
+    track.videoSyncs.push({
+      type: 'videoSync',
+      tick: track.cursor,
+      videoPath: pathArg.value,
+      startFrame: 0,
+      frameRate: toNumber(frameRateArg),
+    });
+
+    return makeNull();
+  }
+
+  private builtinHitPoint(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const timecodeArg = this.evaluate(args[0]);
+    const descriptionArg = this.evaluate(args[1]);
+    const priorityArg = args.length > 2 ? this.evaluate(args[2]) : { type: 'string', value: 'medium' };
+
+    if (timecodeArg.type !== 'string' || descriptionArg.type !== 'string') {
+      throw new MFError('TYPE', 'hitPoint() timecode and description must be strings', position, this.filePath);
+    }
+
+    if (!track.hitPoints) track.hitPoints = [];
+    track.hitPoints.push({
+      type: 'hitPoint',
+      tick: track.cursor,
+      timecode: timecodeArg.value,
+      description: descriptionArg.value,
+      priority: (priorityArg as any).value || 'medium',
+    });
+
+    return makeNull();
+  }
+
+  private builtinTimecodeDisplay(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const formatArg = this.evaluate(args[0]);
+    const frameRateArg = this.evaluate(args[1]);
+
+    if (formatArg.type !== 'string') {
+      throw new MFError('TYPE', 'timecodeDisplay() format must be string', position, this.filePath);
+    }
+
+    track.timecodeDisplay = {
+      type: 'timecodeDisplay',
+      format: formatArg.value as any,
+      frameRate: toNumber(frameRateArg) as any,
+      dropFrame: false,
+    };
+
+    return makeNull();
+  }
+
+  // ============================================
+  // Fifth batch: Workflow
+  // ============================================
+
+  private builtinProjectTemplate(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const nameArg = this.evaluate(args[0]);
+
+    if (nameArg.type !== 'string') {
+      throw new MFError('TYPE', 'projectTemplate() name must be string', position, this.filePath);
+    }
+
+    track.projectTemplate = {
+      type: 'projectTemplate',
+      name: nameArg.value,
+      tracks: [],
+      globalSettings: {
+        ppq: this.ir.ppq,
+        tempo: 120,
+        timeSig: { numerator: 4, denominator: 4 },
+      },
+    };
+
+    return makeNull();
+  }
+
+  private builtinTrackFolder(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const nameArg = this.evaluate(args[0]);
+    const trackIdsArg = this.evaluate(args[1]);
+
+    if (nameArg.type !== 'string') {
+      throw new MFError('TYPE', 'trackFolder() name must be string', position, this.filePath);
+    }
+
+    let trackIds: string[] = [];
+    if (trackIdsArg.type === 'array') {
+      trackIds = trackIdsArg.elements
+        .filter((e: RuntimeValue) => e.type === 'string')
+        .map((e: RuntimeValue) => (e as any).value);
+    }
+
+    if (!track.trackFolders) track.trackFolders = [];
+    track.trackFolders.push({
+      type: 'trackFolder',
+      id: `folder_${track.trackFolders.length}`,
+      name: nameArg.value,
+      trackIds,
+    });
+
+    return makeNull();
+  }
+
+  private builtinCollaboratorSession(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const sessionIdArg = this.evaluate(args[0]);
+    const syncModeArg = args.length > 1 ? this.evaluate(args[1]) : { type: 'string', value: 'realtime' };
+
+    if (sessionIdArg.type !== 'string') {
+      throw new MFError('TYPE', 'collaboratorSession() sessionId must be string', position, this.filePath);
+    }
+
+    track.collaboratorSession = {
+      type: 'collaboratorSession',
+      sessionId: sessionIdArg.value,
+      collaborators: [],
+      syncMode: (syncModeArg as any).value || 'realtime',
+      conflictResolution: 'last-write',
+    };
+
+    return makeNull();
+  }
+
+  private builtinVersionDiff(args: Expression[], position: any): RuntimeValue {
+    this.checkTrackPhase(position);
+    const track = this.currentTrack!;
+
+    const baseVersionArg = this.evaluate(args[0]);
+    const compareVersionArg = this.evaluate(args[1]);
+
+    if (baseVersionArg.type !== 'string' || compareVersionArg.type !== 'string') {
+      throw new MFError('TYPE', 'versionDiff() versions must be strings', position, this.filePath);
+    }
+
+    if (!track.versionDiffs) track.versionDiffs = [];
+    track.versionDiffs.push({
+      type: 'versionDiff',
+      baseVersion: baseVersionArg.value,
+      compareVersion: compareVersionArg.value,
+      changes: [],
+    });
+
+    return makeNull();
+  }
+
   // Helper methods
   private checkGlobalPhase(position: any): void {
     if (this.trackStarted) {
@@ -6406,9 +8784,20 @@ export class Interpreter {
       throw createError('E001', 'ppq not set', position, this.filePath);
     }
     // ticks = ppq * 4 * n / d
-    const ticks = (this.ir.ppq * 4 * dur.numerator) / dur.denominator;
-    if (!Number.isInteger(ticks)) {
-      throw createError('E101', `Dur ${dur.numerator}/${dur.denominator} does not divide evenly`, position, this.filePath);
+    let ticks = (this.ir.ppq * 4 * dur.numerator) / dur.denominator;
+
+    // Apply nested tuplet ratios (multiply all normal/actual ratios)
+    if (this.currentTrack?.tupletStack && this.currentTrack.tupletStack.length > 0) {
+      for (const tuplet of this.currentTrack.tupletStack) {
+        ticks = (ticks * tuplet.normal) / tuplet.actual;
+      }
+    }
+
+    // Round to nearest integer for nested tuplets
+    ticks = Math.round(ticks);
+
+    if (ticks < 1) {
+      throw createError('E101', `Duration too small after tuplet application`, position, this.filePath);
     }
     return ticks;
   }

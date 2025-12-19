@@ -52,6 +52,13 @@ export const ErrorCodes = {
   E122: 'Pitch bend value out of range -8192..8191',
   E123: 'Tempo curve steps must be at least 2',
 
+  // Notation
+  E130: 'Invalid clef type',
+  E131: 'Key signature fifths out of range -7..7',
+  E132: 'Invalid articulation type',
+  E133: 'Invalid barline style',
+  E134: 'Invalid vocal style',
+
   // Vocal
   E200: 'Vocal note overlap',
   E210: 'Vocal lyric missing or empty',
@@ -119,6 +126,16 @@ function getDefaultSuggestion(code: string, details?: string): string | undefine
       return 'Pitch bend values must be between -8192 (full down) and 8191 (full up). 0 is center.';
     case 'E123':
       return 'tempoCurve() needs at least 2 steps to interpolate between tempos';
+    case 'E130':
+      return 'Valid clefs: treble, bass, alto, tenor, percussion, tab, treble8va, treble8vb, bass8va, bass8vb';
+    case 'E131':
+      return 'Key signature fifths range from -7 (7 flats) to 7 (7 sharps). 0 = C major/A minor';
+    case 'E132':
+      return 'Valid articulations: staccato, legato, accent, tenuto, marcato, staccatissimo, fermata, breath, caesura';
+    case 'E133':
+      return 'Valid barline styles: single, double, final, repeat-start, repeat-end, repeat-both, dashed, tick, short, none';
+    case 'E134':
+      return 'Valid vocal styles: soft, normal, power, falsetto, whisper, breathy, belt, head, chest';
     case 'E200':
       return 'Vocal notes cannot overlap. Use rest() or adjust timing with at()';
     case 'E210':

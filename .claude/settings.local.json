@@ -30,7 +30,9 @@
       "Bash(npm run compile:*)",
       "Bash(code --uninstall-extension:*)",
       "Bash(npx vitest:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(tr:*)"
     ]
   }
 }

@@ -7,7 +7,8 @@ A domain-specific language (DSL) for music composition that generates VSQX, Musi
 - **MFS Language**: Write music using a simple, readable syntax
 - **Multi-format Export**: Generate VSQX (Vocaloid), MusicXML (notation), and MIDI (instruments)
 - **Advanced MIDI**: CC, pitch bend, aftertouch, NRPN, SysEx, MPE support
-- **Extended Notation**: Tuplets, grace notes, articulations, dynamics, ornaments
+- **Extended Notation**: Tuplets, grace notes, articulations, dynamics, ornaments, volta brackets, cadenzas
+- **Score Enhancements**: Chord diagrams, scale diagrams, part extraction, measure numbers
 - **Vocaloid Support**: Full parameter control, vibrato, growl, cross-synthesis
 - **Microtonality**: Custom tuning systems, cents deviation, quarter tones
 - **Algorithmic Composition**: Euclidean rhythms, Markov chains, cellular automata, L-systems
@@ -178,6 +179,7 @@ mf record -l               # List MIDI devices
 | `at(time)` | Set cursor position | `at(1:1)` |
 | `atTick(tick)` | Set cursor by tick | `atTick(1920)` |
 | `advance(dur)` | Move cursor forward | `advance(4n)` |
+| `advanceTick(ticks)` | Move cursor by ticks | `advanceTick(240)` |
 
 ### Note Functions
 
@@ -198,28 +200,38 @@ mf record -l               # List MIDI devices
 | `mp()`, `mf()` | Mezzo piano/forte |
 | `f()`, `ff()`, `fff()` | Forte to fortissimo |
 | `sfz()`, `fp()` | Sforzando, forte-piano |
+| `dynamic(level)` | Set dynamic level | `dynamic("mf")` |
 | `cresc(endTick)` | Crescendo |
+| `crescendo(endTick)` | Crescendo (alias) |
 | `decresc(endTick)` | Decrescendo |
+| `decrescendo(endTick)` | Decrescendo (alias) |
 
 ### Articulations
 
-| Function | Description |
-|----------|-------------|
+| Function | Description | Example |
+|----------|-------------|---------|
 | `staccato()` | Short, detached |
 | `legato()` | Smooth, connected |
 | `accent()` | Emphasized |
 | `tenuto()` | Held full value |
 | `marcato()` | Strongly accented |
+| `articulations(types)` | Stacked articulations | `articulations(["staccato", "accent"])` |
 
 ### MIDI Control
 
 | Function | Description | Example |
 |----------|-------------|---------|
 | `cc(ctrl, val)` | Control Change | `cc(1, 64)` |
+| `expression(val)` | Expression (CC11) | `expression(100)` |
+| `modulation(val)` | Modulation (CC1) | `modulation(64)` |
+| `pan(val)` | Pan (CC10) | `pan(64)` |
+| `volume(val)` | Volume (CC7) | `volume(100)` |
+| `sustain(val)` | Sustain pedal (CC64) | `sustain(127)` |
 | `pitchBend(val)` | Pitch bend | `pitchBend(4096)` |
 | `aftertouch(val)` | Channel pressure | `aftertouch(100)` |
 | `polyAftertouch(key, val)` | Poly pressure | `polyAftertouch(60, 80)` |
 | `nrpn(pMSB, pLSB, vMSB, vLSB)` | NRPN | `nrpn(0, 1, 64, 0)` |
+| `rpn(pMSB, pLSB, vMSB, vLSB)` | RPN | `rpn(0, 0, 12, 0)` |
 | `sysex(bytes...)` | System Exclusive | `sysex(0x41, 0x10)` |
 
 ### Automation
@@ -228,6 +240,11 @@ mf record -l               # List MIDI devices
 |----------|-------------|---------|
 | `automateCC(ctrl, start, end, dur)` | CC automation | `automateCC(11, 0, 127, 1n)` |
 | `automatePB(start, end, dur)` | Pitch bend automation | `automatePB(0, 8191, 2n)` |
+| `ccCurve(ctrl, start, end, dur, curve)` | CC curve with shape | `ccCurve(1, 0, 127, 2n, "exponential")` |
+| `expressionCurve(start, end, dur)` | Expression curve | `expressionCurve(0, 127, 4n)` |
+| `pitchBendCurve(start, end, dur, curve)` | Pitch bend curve | `pitchBendCurve(-8192, 8191, 2n, "s-curve")` |
+
+**Curve Types:** `linear`, `exponential`, `logarithmic`, `s-curve`, `step`, `bezier`
 
 ### Timing
 
@@ -248,6 +265,17 @@ mf record -l               # List MIDI devices
 | `tremolo(speed)` | Tremolo | `tremolo(32n)` |
 | `glissando(target, dur)` | Glissando | `glissando(C5, 8n)` |
 | `arpeggio(dir, speed)` | Arpeggio | `arpeggio("up", 32n)` |
+| `harmonic(pitch, type)` | Harmonic | `harmonic(G4, "natural")` |
+
+### Piano Pedals
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `pedal(type, action)` | Sustain/sostenuto/una corda | `pedal("sustain", "down")` |
+| `pedalLine(type, dur)` | Pedal with duration | `pedalLine("sustain", 2n)` |
+
+**Pedal Types:** `sustain`, `sostenuto`, `una-corda`
+**Pedal Actions:** `down`, `up`, `half`
 
 ### Theory Helpers
 
@@ -258,17 +286,35 @@ mf record -l               # List MIDI devices
 | `retrograde(cb)` | Reverse | `retrograde({ ... })` |
 | `augment(factor, cb)` | Augmentation | `augment(2, { ... })` |
 | `diminish(factor, cb)` | Diminution | `diminish(0.5, { ... })` |
+| `scaleChord(root, scale, degree)` | Chord from scale | `scaleChord("C", "major", 5)` |
+| `chordNotes(root, type)` | Get chord notes | `chordNotes("C", "maj7")` |
 
 ### Notation
 
 | Function | Description | Example |
 |----------|-------------|---------|
 | `tuplet(actual, normal, type, cb)` | Tuplet | `tuplet(3, 2, "8n", {...})` |
+| `tupletEnd()` | End tuplet manually |
 | `triplet(cb)` | Triplet shorthand | `triplet({ n(C4, 8n); ... })` |
 | `grace(pitch, slash)` | Grace note | `grace(D4, true)` |
+| `acciaccatura(pitch)` | Acciaccatura | `acciaccatura(D4)` |
+| `appoggiatura(pitch)` | Appoggiatura | `appoggiatura(D4)` |
 | `fermata(shape)` | Fermata | `fermata("normal")` |
 | `ottava(shift, cb)` | Ottava | `ottava(8, { ... })` |
+| `ottavaEnd()` | End ottava line |
 | `voice(num)` | Voice number | `voice(2)` |
+| `clef(type)` | Clef change | `clef("bass")` |
+| `key(root, mode)` | Key signature | `key("G", "major")` |
+| `fingering(fingers)` | Fingering | `fingering([1, 2, 3])` |
+| `multiRest(measures)` | Multi-measure rest | `multiRest(4)` |
+| `slashNotation(dur)` | Slash notation | `slashNotation(4n)` |
+| `barline(type)` | Custom barline | `barline("double")` |
+| `tempoText(text, bpm)` | Tempo text | `tempoText("Allegro", 120)` |
+| `hideEmptyStaves(enable)` | Hide empty staves | `hideEmptyStaves(true)` |
+| `crossStaff(direction)` | Cross-staff note | `crossStaff("up")` |
+
+**Clef Types:** `treble`, `bass`, `alto`, `tenor`, `percussion`
+**Barline Types:** `single`, `double`, `final`, `repeat-start`, `repeat-end`, `dashed`
 
 ### Repeats & Navigation
 
@@ -282,15 +328,34 @@ mf record -l               # List MIDI devices
 | `coda()` | Coda |
 | `segno()` | Segno |
 | `toCoda()` | To Coda |
+| `volta(number, text)` | Volta bracket | `volta(1, "1.")` |
+| `voltaEnd()` | End volta bracket |
+| `cadenza(callback)` | Cadenza passage | `cadenza({ ... })` |
+
+### Score Structure
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `divisiMark(parts, method)` | Divisi marking | `divisiMark(2, "a2")` |
+| `metricModulation(from, to)` | Metric modulation | `metricModulation("8n", "4n.")` |
+| `metricMod(from, to)` | Alias for metricModulation | `metricMod("8n", "4n.")` |
+| `conductorCue(text, beat)` | Conductor cue | `conductorCue("Strings enter", 3)` |
+| `editorial(text, type)` | Editorial marking | `editorial("sic", "text")` |
+| `measureComment(text)` | Measure comment | `measureComment("Check dynamics")` |
+| `versionCheckpoint(name)` | Version checkpoint | `versionCheckpoint("Draft 1")` |
+| `checkpoint(name)` | Alias for versionCheckpoint | `checkpoint("Draft 1")` |
+
+**Divisi Methods:** `a2`, `divisi`, `solo`, `tutti`, `1.`, `2.`
 
 ### Slurs & Ties
 
-| Function | Description |
-|----------|-------------|
+| Function | Description | Example |
+|----------|-------------|---------|
 | `slurStart()` | Begin slur |
 | `slurEnd()` | End slur |
 | `tieStart()` | Begin tie |
 | `tieEnd()` | End tie |
+| `tie()` | Simple tie to next note | `tie()` |
 
 ### Grand Staff & Tablature
 
@@ -306,6 +371,25 @@ mf record -l               # List MIDI devices
 |----------|-------------|---------|
 | `chordSymbol(root, qual, bass)` | Chord symbol | `chordSymbol("C", "maj7", "E")` |
 | `figuredBass(figures...)` | Figured bass | `figuredBass("6", "4", "3")` |
+
+### Diagrams
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `chordDiagram(name, strings, frets)` | Chord diagram | `chordDiagram("C", 6, [0, 3, 2, 0, 1, 0])` |
+| `scaleDiagram(name, root, intervals)` | Scale diagram | `scaleDiagram("Major", "C", [0, 2, 4, 5, 7, 9, 11])` |
+| `harpPedalDiagram(pedals)` | Harp pedal diagram | `harpPedalDiagram(["D", "C", "B", "E", "F", "G", "A"])` |
+
+### Part Extraction & Display
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `partExtraction(partId, name, transposition)` | Configure part | `partExtraction("clarinet", "Clarinet in Bb", 2)` |
+| `transpositionDisplay(concert, written)` | Display transposition | `transpositionDisplay(true, false)` |
+| `measureNumberConfig(show, interval, style)` | Measure numbers | `measureNumberConfig(true, 5, "boxed")` |
+| `measureNumbers(show, interval, style)` | Alias for measureNumberConfig | `measureNumbers(true, 5, "boxed")` |
+
+**Measure Number Styles:** `plain`, `boxed`, `circled`
 
 ### Markers & Patterns
 
@@ -386,8 +470,8 @@ mf record -l               # List MIDI devices
 
 ### Wind & Brass Techniques
 
-| Function | Description |
-|----------|-------------|
+| Function | Description | Example |
+|----------|-------------|---------|
 | `breath()` | Breath mark |
 | `mute()` | Muted |
 | `open()` | Open (unmuted) |
@@ -395,6 +479,18 @@ mf record -l               # List MIDI devices
 | `flutter()` | Flutter tongue |
 | `doubleTongue()` | Double tongue |
 | `tripleTongue()` | Triple tongue |
+| `brassMute(type)` | Brass mute | `brassMute("straight")` |
+| `multiphonic(pitches)` | Multiphonic | `multiphonic([C4, G4, E5])` |
+
+**Brass Mute Types:** `straight`, `cup`, `harmon`, `bucket`, `plunger`, `practice`
+
+### String Extended Techniques
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `stringPosition(position)` | Playing position | `stringPosition("sul-pont")` |
+
+**String Positions:** `ordinario`, `sul-pont`, `sul-tasto`, `col-legno`, `col-legno-tratto`
 
 ### Guitar Techniques
 
@@ -410,6 +506,11 @@ mf record -l               # List MIDI devices
 | `palmMute()` | Palm mute |
 | `letRing()` | Let ring |
 | `harpPedal(pedals...)` | Harp pedal diagram | `harpPedal("D#", "C", "B")` |
+| `bendCurve(points)` | Custom bend curve | `bendCurve([[0, 0], [50, 100], [100, 50]])` |
+| `slideAdv(target, type)` | Advanced slide | `slideAdv(G4, "legato")` |
+| `tapAdv(pitch, hand)` | Two-hand tap | `tapAdv(C5, "right")` |
+
+**Slide Types:** `shift`, `legato`, `out-down`, `out-up`, `in-from-below`, `in-from-above`
 
 ### Live Performance
 
@@ -439,6 +540,38 @@ mf record -l               # List MIDI devices
 | `pitchShift(clip, semi, cents)` | Pitch shift | `pitchShift("vocal", 12, 0)` |
 | `sampleSlicer(clip, mode)` | Slice samples | `sampleSlicer("drums", "transient")` |
 | `granular(clip, grainSize, density)` | Granular synthesis | `granular("pad", 50, 20)` |
+
+### Synthesis
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `wavetable(wt, position, morph)` | Wavetable synth | `wavetable("saw", 0.5, 0.1)` |
+| `fmSynth(algorithm, operators)` | FM synthesis | `fmSynth(1, [{ratio: 1, level: 1}])` |
+| `additiveSynth(partials)` | Additive synthesis | `additiveSynth([{partial: 1, amp: 1}])` |
+| `subtractiveSynth(osc, filter)` | Subtractive synth | `subtractiveSynth("saw", "lowpass")` |
+| `physicalModel(model, params)` | Physical modeling | `physicalModel("string", {tension: 0.8})` |
+
+**FM Algorithms:** 1-32 (DX7 style)
+**Oscillator Types:** `sine`, `saw`, `square`, `triangle`, `noise`
+**Physical Models:** `string`, `wind`, `brass`, `percussion`, `bar`, `membrane`
+
+### Vocal Processing
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `formantShift(semitones)` | Formant shift | `formantShift(-2)` |
+
+### Video & Film Scoring
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `videoSync(path, startFrame, frameRate)` | Sync to video | `videoSync("movie.mp4", 0, 24)` |
+| `hitPoint(timecode, desc, priority)` | Mark hit point | `hitPoint("01:23:45:12", "Door slam", "high")` |
+| `timecodeDisplay(format, frameRate)` | Show timecode | `timecodeDisplay("smpte", 30)` |
+
+**Timecode Formats:** `smpte`, `frames`, `samples`, `beats`
+**Frame Rates:** `23.976`, `24`, `25`, `29.97`, `30`, `60`
+**Priority Levels:** `high`, `medium`, `low`
 
 ### Advanced Automation
 
@@ -492,6 +625,30 @@ mf record -l               # List MIDI devices
 | `transposing(semitones)` | Transposing instrument | `transposing(-2)` |
 
 **Graphic Shapes:** `line`, `curve`, `cluster`, `box`, `arrow`, `custom`
+
+### Modern Notation
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `featheredBeam(accel)` | Feathered beam | `featheredBeam(true)` |
+| `cluster(low, high, dur)` | Tone cluster | `cluster(C4, E5, 2n)` |
+| `sprechstimme(pitch, dur, lyric)` | Sprechstimme | `sprechstimme(G4, 4n, "text")` |
+| `customNotehead(type, pitch)` | Custom notehead | `customNotehead("x", C4)` |
+| `bracketGroup(tracks, type)` | Score bracket | `bracketGroup(["vln1", "vln2"], "bracket")` |
+| `cueStaff(instrument, dur)` | Cue staff | `cueStaff("flute", 2n)` |
+| `noteColor(color)` | Note color | `noteColor("#FF0000")` |
+
+**Notehead Types:** `normal`, `x`, `diamond`, `triangle`, `slash`, `cross`, `circle-x`, `square`
+**Bracket Types:** `bracket`, `brace`, `line`, `none`
+
+### Rhythm & Probability
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `probabilityNote(pitch, dur, prob)` | Probability note | `probabilityNote(C4, 4n, 0.7)` |
+| `swingEvent(amount, subdivision)` | Swing timing | `swingEvent(0.67, "8n")` |
+
+**Swing Amounts:** 0.5 = straight, 0.67 = triplet feel, 0.75 = heavy swing
 
 ### Sampling
 
@@ -690,8 +847,30 @@ mf record -l               # List MIDI devices
 |----------|-------------|---------|
 | `note(text, author)` | Add project note | `note("Check this section", "Producer")` |
 | `collaborator(name, role, email, color)` | Add collaborator | `collaborator("John", "editor", "john@email.com", "#FF0000")` |
+| `collaboratorSession(sessionId, host, port)` | Live collaboration | `collaboratorSession("session1", "localhost", 8080)` |
+| `versionDiff(fromVersion, toVersion)` | Version comparison | `versionDiff("v1", "v2")` |
 
 **Roles:** `owner`, `editor`, `viewer`
+
+### DAW Workflow
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `arrangerSection(name, color, length)` | Arranger section | `arrangerSection("Verse", "#FF0000", 16)` |
+| `section(name, color, length)` | Alias for arrangerSection | `section("Verse", "#FF0000", 16)` |
+| `chordTrack(chords)` | Global chord track | `chordTrack([{root: "C", type: "maj7"}])` |
+| `scaleLockEvent(root, scale)` | Scale lock | `scaleLockEvent("C", "minor")` |
+| `stepInput(enable)` | Step input mode | `stepInput(true)` |
+| `trackFolder(name, tracks)` | Track folder | `trackFolder("Drums", ["kick", "snare"])` |
+| `projectTemplate(name, settings)` | Save template | `projectTemplate("My Template", {})` |
+
+### Electronics & Cues
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `electronicsCue(cueId, action, channel)` | Electronics cue | `electronicsCue("sfx1", "play", 1)` |
+
+**Cue Actions:** `play`, `stop`, `pause`, `loop`
 
 ### Vocaloid Parameters
 
@@ -701,6 +880,34 @@ mf record -l               # List MIDI devices
 | `vibrato(depth, rate, delay)` | Vibrato | `vibrato(50, 60, 30)` |
 | `growl(dur, intensity)` | Growl | `growl(480, 80)` |
 | `xsynth(v1, v2, balance)` | Cross-synthesis | `xsynth("miku", "rin", 64)` |
+| `portamento(duration, mode)` | Portamento | `portamento(120, "normal")` |
+| `phoneme(phonemes)` | Set phonemes | `phoneme(["a", "i"])` |
+| `consonantOffset(offset)` | Consonant timing | `consonantOffset(-20)` |
+| `breath(position, length)` | Insert breath | `breath(480, 240)` |
+| `autoBreath(enable, threshold)` | Auto breath | `autoBreath(true, 480)` |
+| `portamentoShape(shape)` | Portamento curve | `portamentoShape("s-curve")` |
+| `vocalStyle(style, params)` | Vocal style | `vocalStyle("pop", {vibrato: 50})` |
+| `noteEnvelope(attack, decay)` | Note envelope | `noteEnvelope(10, 20)` |
+| `tension(value)` | Vocal tension | `tension(64)` |
+| `melisma(enable)` | Melisma marking | `melisma(true)` |
+
+**Vocaloid Params:** `DYN`, `BRE`, `BRI`, `CLE`, `GEN`, `POR`, `OPE`, `PIT`
+**Portamento Shapes:** `linear`, `s-curve`, `early`, `late`
+
+### Vocaloid Parameter Shortcuts
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `pit(value)` | Pitch (PIT) | `pit(64)` |
+| `dyn(value)` | Dynamics (DYN) | `dyn(100)` |
+| `bre(value)` | Breathiness (BRE) | `bre(50)` |
+| `bri(value)` | Brightness (BRI) | `bri(64)` |
+| `cle(value)` | Clearness (CLE) | `cle(64)` |
+| `gen(value)` | Gender factor (GEN) | `gen(64)` |
+| `ope(value)` | Opening (OPE) | `ope(127)` |
+| `pitCurve(start, end, dur)` | Pitch curve | `pitCurve(0, 100, 4n)` |
+| `dynCurve(start, end, dur)` | Dynamics curve | `dynCurve(50, 127, 2n)` |
+| `breCurve(start, end, dur)` | Breathiness curve | `breCurve(0, 80, 4n)` |
 
 ### Pitch & Duration Literals
 
