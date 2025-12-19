@@ -1,0 +1,147 @@
+// Rhythm generation functions for TakoMusic
+// Algorithmic rhythm patterns and timing variations
+
+// euclidean - generate Euclidean rhythm pattern
+// Distributes pulses as evenly as possible across steps
+export proc euclidean(steps, pulses, dur, pitch) {
+  let pattern = [];
+  let bucket = 0;
+
+  for (i in 0..steps) {
+    bucket = bucket + pulses;
+    if (bucket >= steps) {
+      bucket = bucket - steps;
+      push(pattern, true);
+    } else {
+      push(pattern, false);
+    }
+  }
+
+  forEach(pattern, (hit) => {
+    if (hit) {
+      note(pitch, dur);
+    } else {
+      rest(dur);
+    }
+  });
+}
+
+// swing - apply swing feel to note sequence
+// amount: 0 = straight, 0.33 = triplet swing, 0.5 = extreme swing
+export proc swing(notes, dur, amount) {
+  forEach(notes, (n, i) => {
+    if (i % 2 == 0) {
+      const swingDur = dur * (1 + amount);
+      note(n, swingDur);
+    } else {
+      const swingDur = dur * (1 - amount);
+      note(n, swingDur);
+    }
+  });
+}
+
+// humanize - add random timing variations
+// Adds slight timing offsets to make rhythm feel more human
+export proc humanize(notes, dur, amount) {
+  forEach(notes, (n) => {
+    const offset = (random() - 0.5) * amount;
+    const offsetTicks = floor(offset * durToTicks(dur));
+    advanceTick(offsetTicks);
+    note(n, dur);
+  });
+}
+
+// shuffle - shuffle rhythm (dotted eighth + sixteenth)
+export proc shuffle(notes, dur) {
+  forEach(notes, (n, i) => {
+    if (i % 2 == 0) {
+      note(n, dur * 3/4);
+    } else {
+      note(n, dur * 1/4);
+    }
+  });
+}
+
+// clave - generate clave rhythm pattern
+export proc clave32(pitch, dur) {
+  note(pitch, dur);
+  rest(dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+
+  rest(dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+  rest(dur);
+  rest(dur);
+}
+
+// clave23 - 2-3 clave (reverse)
+export proc clave23(pitch, dur) {
+  rest(dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+  rest(dur);
+  rest(dur);
+
+  note(pitch, dur);
+  rest(dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+  rest(dur);
+  note(pitch, dur);
+  rest(dur);
+}
+
+// polyrhythm - play two different rhythms simultaneously
+// Returns pattern array for manual track assignment
+export proc polyrhythmPattern(steps1, steps2, totalSteps) {
+  let pattern1 = [];
+  let pattern2 = [];
+
+  for (i in 0..totalSteps) {
+    push(pattern1, i % steps1 == 0);
+    push(pattern2, i % steps2 == 0);
+  }
+
+  return [pattern1, pattern2];
+}
+
+// Generate basic drum patterns
+export proc basicBeat(kickPitch, snarePitch, hatPitch, dur, bars) {
+  const steps = bars * 16;
+
+  for (i in 0..steps) {
+    const beat = i % 16;
+
+    // Kick on 1 and 3 (0, 8)
+    if (beat == 0 || beat == 8) {
+      drum(kickPitch, dur);
+    }
+
+    // Snare on 2 and 4 (4, 12)
+    if (beat == 4 || beat == 12) {
+      drum(snarePitch, dur);
+    }
+
+    // Hi-hat on every eighth note
+    if (beat % 2 == 0) {
+      drum(hatPitch, dur);
+    }
+
+    if (beat % 2 == 1) {
+      rest(dur);
+    }
+  }
+}
