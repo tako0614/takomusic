@@ -1,0 +1,183 @@
+// Curve and interpolation functions for TakoMusic
+// Generate smooth transitions and automation curves
+
+import { lerp, clip } from "./utils.mf";
+
+// Linear curve from start to end
+export proc linearCurve(startVal, endVal, steps) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    push(curve, lerp(startVal, endVal, t));
+  }
+  return curve;
+}
+
+// Quadratic ease-in curve (starts slow, ends fast)
+export proc easeInQuad(startVal, endVal, steps) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    const eased = t * t;
+    push(curve, lerp(startVal, endVal, eased));
+  }
+  return curve;
+}
+
+// Quadratic ease-out curve (starts fast, ends slow)
+export proc easeOutQuad(startVal, endVal, steps) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    const eased = t * (2 - t);
+    push(curve, lerp(startVal, endVal, eased));
+  }
+  return curve;
+}
+
+// Quadratic ease-in-out curve (slow-fast-slow)
+export proc easeInOutQuad(startVal, endVal, steps) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    let eased = 0.0;
+    if (t < 0.5) {
+      eased = 2 * t * t;
+    } else {
+      eased = 1 - 2 * (1 - t) * (1 - t);
+    }
+    push(curve, lerp(startVal, endVal, eased));
+  }
+  return curve;
+}
+
+// Cubic ease-in curve
+export proc easeInCubic(startVal, endVal, steps) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    const eased = t * t * t;
+    push(curve, lerp(startVal, endVal, eased));
+  }
+  return curve;
+}
+
+// Cubic ease-out curve
+export proc easeOutCubic(startVal, endVal, steps) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    const t1 = t - 1;
+    const eased = t1 * t1 * t1 + 1;
+    push(curve, lerp(startVal, endVal, eased));
+  }
+  return curve;
+}
+
+// S-curve (smooth step)
+export proc smoothstep(startVal, endVal, steps) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    const eased = t * t * (3 - 2 * t);
+    push(curve, lerp(startVal, endVal, eased));
+  }
+  return curve;
+}
+
+// Exponential curve approximation (for positive exponents)
+export proc exponentialCurve(startVal, endVal, steps, exponent) {
+  let curve = [];
+  for (i in 0..=steps) {
+    const t = i / steps;
+    let eased = t;
+
+    // Approximate power function for common exponents
+    if (exponent == 2) {
+      eased = t * t;
+    } else {
+      if (exponent == 3) {
+        eased = t * t * t;
+      } else {
+        if (exponent == 4) {
+          eased = t * t * t * t;
+        } else {
+          // For other exponents, use repeated multiplication
+          eased = 1.0;
+          for (j in 0..floor(exponent)) {
+            eased = eased * t;
+          }
+        }
+      }
+    }
+
+    push(curve, lerp(startVal, endVal, eased));
+  }
+  return curve;
+}
+
+// Apply curve to MIDI CC automation
+export proc applyCurveToCC(ccNum, curve, startTick, endTick) {
+  const steps = len(curve);
+  const tickRange = endTick - startTick;
+
+  for (i in 0..steps) {
+    const tick = startTick + floor(tickRange * i / (steps - 1));
+    const value = clip(floor(curve[i]), 0, 127);
+    atTick(tick);
+    cc(ccNum, value);
+  }
+}
+
+// Tempo curve automation
+export proc tempoCurveLinear(startTempo, endTempo, dur) {
+  const ticks = durToTicks(dur);
+  const steps = 32;
+  const curve = linearCurve(startTempo, endTempo, steps);
+
+  for (i in 0..len(curve)) {
+    const tick = floor(ticks * i / (len(curve) - 1));
+    atTick(tick);
+    tempo(floor(curve[i]));
+  }
+}
+
+// Expression (dynamics) curve
+export proc expressionCurveSmooth(startVal, endVal, dur) {
+  const ticks = durToTicks(dur);
+  const steps = 16;
+  const curve = smoothstep(startVal, endVal, steps);
+
+  applyCurveToCC(11, curve, 0, ticks);
+}
+
+// Volume fade
+export proc volumeFade(startVol, endVol, dur) {
+  const ticks = durToTicks(dur);
+  const steps = 16;
+  const curve = linearCurve(startVol, endVol, steps);
+
+  applyCurveToCC(7, curve, 0, ticks);
+}
+
+// Pan sweep
+export proc panSweep(startPan, endPan, dur) {
+  const ticks = durToTicks(dur);
+  const steps = 16;
+  const curve = linearCurve(startPan, endPan, steps);
+
+  applyCurveToCC(10, curve, 0, ticks);
+}
+
+// Pitch bend curve (smooth glissando)
+export proc pitchBendCurveSmooth(startBend, endBend, dur) {
+  const ticks = durToTicks(dur);
+  const steps = 32;
+  const curve = smoothstep(startBend, endBend, steps);
+
+  for (i in 0..len(curve)) {
+    const tick = floor(ticks * i / (len(curve) - 1));
+    atTick(tick);
+    pitchBend(floor(curve[i]));
+  }
+}

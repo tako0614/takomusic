@@ -230,7 +230,16 @@ export class Checker {
           // Check if it's a built-in drum name or intrinsic
           const builtins = ['kick', 'snare', 'hhc', 'hho', 'tom1', 'crash', 'ride',
             'note', 'rest', 'chord', 'drum', 'at', 'atTick', 'advance', 'advanceTick',
-            'track', 'title', 'ppq', 'tempo', 'timeSig'];
+            'track', 'title', 'ppq', 'tempo', 'timeSig',
+            'len', 'push', 'pop', 'concat', 'slice', 'reverse', 'fill', 'copy',
+            'map', 'filter', 'reduce', 'find', 'findIndex', 'some', 'every', 'includes',
+            'flat', 'flatMap', 'forEach', 'sort',
+            'split', 'join', 'substr', 'indexOf', 'replace', 'trim', 'upper', 'lower',
+            'startsWith', 'endsWith', 'contains', 'repeat', 'charAt', 'charCodeAt', 'fromCharCode',
+            'padStart', 'padEnd',
+            'floor', 'ceil', 'abs', 'min', 'max', 'random',
+            'transpose', 'midiPitch', 'pitchMidi', 'durToTicks',
+            'int', 'float', 'string', 'bool', 'range'];
           if (!builtins.includes(expr.name)) {
             // Find similar symbols for suggestion
             const allSymbols = [...this.definedSymbols, ...builtins];

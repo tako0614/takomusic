@@ -1,0 +1,257 @@
+// Advanced pattern generation for TakoMusic
+// Algorithmic composition and generative music
+
+import { choice, shuffle, clip, wrap } from "./utils.mf";
+
+// Random walk melody generator
+export proc randomWalk(startPitch, steps, maxStep) {
+  let melody = [];
+  let current = startPitch;
+
+  for (i in 0..steps) {
+    push(melody, current);
+    const step = random(-maxStep, maxStep + 1);
+    current = transpose(current, step);
+    current = transpose(C0, clip(pitchMidi(current), 0, 127));
+  }
+
+  return melody;
+}
+
+// Pentatonic random walk
+export proc pentatonicWalk(root, steps) {
+  const scale = [0, 2, 4, 7, 9, 12];
+  let melody = [];
+  let idx = 0;
+
+  for (i in 0..steps) {
+    const offset = scale[idx % len(scale)];
+    const octave = floor(idx / len(scale));
+    push(melody, transpose(root, offset + octave * 12));
+
+    const step = random(-2, 3);
+    idx = clip(idx + step, 0, len(scale) * 3 - 1);
+  }
+
+  return melody;
+}
+
+// Cellular automaton rhythm (Rule 110)
+export proc cellularRhythm(seed, generations) {
+  let state = seed;
+  let patterns = [];
+
+  for (gen in 0..generations) {
+    push(patterns, copy(state));
+
+    let newState = [];
+    for (i in 0..len(state)) {
+      const left = state[(i - 1 + len(state)) % len(state)];
+      const center = state[i];
+      const right = state[(i + 1) % len(state)];
+
+      // Rule 110
+      let next = false;
+      if (left && center && right) { next = false; }
+      if (left && center && !right) { next = true; }
+      if (left && !center && right) { next = true; }
+      if (left && !center && !right) { next = false; }
+      if (!left && center && right) { next = true; }
+      if (!left && center && !right) { next = true; }
+      if (!left && !center && right) { next = true; }
+      if (!left && !center && !right) { next = false; }
+
+      push(newState, next);
+    }
+
+    state = newState;
+  }
+
+  return patterns;
+}
+
+// Lindenmayer system (L-system) for melodic patterns
+export proc lsystem(axiom, rules, iterations) {
+  let current = axiom;
+
+  for (iter in 0..iterations) {
+    let next = "";
+    for (i in 0..len(current)) {
+      const char = charAt(current, i);
+      let replacement = char;
+
+      // Simple rule matching (can be extended)
+      if (char == "A") { replacement = rules; }
+
+      next = next + replacement;
+    }
+    current = next;
+  }
+
+  return current;
+}
+
+// Fractal melody generator (simple self-similarity)
+export proc fractalMelody(pattern, depth) {
+  if (depth == 0) {
+    return pattern;
+  }
+
+  let result = [];
+  for (i in 0..len(pattern)) {
+    const pitch = pattern[i];
+    push(result, pitch);
+
+    // Insert transposed version of pattern at smaller scale
+    const subPattern = fractalMelody(pattern, depth - 1);
+    for (j in 0..len(subPattern)) {
+      push(result, transpose(subPattern[j], 7));
+    }
+  }
+
+  return result;
+}
+
+// Probability-based rhythm pattern
+export proc probabilityRhythm(steps, probability) {
+  let pattern = [];
+  for (i in 0..steps) {
+    push(pattern, random() < probability);
+  }
+  return pattern;
+}
+
+// Density-based rhythm (gradually increase/decrease density)
+export proc densityRhythm(steps, startProb, endProb) {
+  let pattern = [];
+  for (i in 0..steps) {
+    const t = i / (steps - 1);
+    const prob = startProb + (endProb - startProb) * t;
+    push(pattern, random() < prob);
+  }
+  return pattern;
+}
+
+// Rhythmic rotation (shift pattern)
+export proc rotateRhythm(pattern, offset) {
+  let result = [];
+  for (i in 0..len(pattern)) {
+    const idx = (i + offset) % len(pattern);
+    push(result, pattern[idx]);
+  }
+  return result;
+}
+
+// Polyrhythmic pattern generator
+export proc polyrhythm(ratio1, ratio2, cycles) {
+  const totalSteps = ratio1 * ratio2;
+  let pattern1 = [];
+  let pattern2 = [];
+
+  for (i in 0..totalSteps * cycles) {
+    push(pattern1, i % ratio1 == 0);
+    push(pattern2, i % ratio2 == 0);
+  }
+
+  return [pattern1, pattern2];
+}
+
+// Phasing pattern (Steve Reich style)
+export proc phasePattern(pattern, phaseShift, repetitions) {
+  let result = [];
+
+  for (rep in 0..repetitions) {
+    const shift = floor(rep * phaseShift) % len(pattern);
+    const rotated = rotateRhythm(pattern, shift);
+    for (i in 0..len(rotated)) {
+      push(result, rotated[i]);
+    }
+  }
+
+  return result;
+}
+
+// Markov chain melody (simple 2-state)
+export proc markovMelody(notes, transitionProb, length, startIdx) {
+  let melody = [];
+  let currentIdx = startIdx;
+
+  for (i in 0..length) {
+    push(melody, notes[currentIdx]);
+
+    // Simple transition: stay or move
+    if (random() < transitionProb) {
+      currentIdx = (currentIdx + 1) % len(notes);
+    }
+  }
+
+  return melody;
+}
+
+// Arpeggiate chord with pattern
+export proc arpeggiate(chord, pattern, dur) {
+  for (i in 0..len(pattern)) {
+    const idx = pattern[i];
+    if (idx >= 0 && idx < len(chord)) {
+      note(chord[idx], dur);
+    } else {
+      rest(dur);
+    }
+  }
+}
+
+// Generate arpeggio pattern (up, down, up-down, random)
+export proc arpeggioPattern(chordSize, style, length) {
+  let pattern = [];
+
+  for (i in 0..length) {
+    let idx = 0;
+
+    if (style == "up") {
+      idx = i % chordSize;
+    } else {
+      if (style == "down") {
+        idx = chordSize - 1 - (i % chordSize);
+      } else {
+        if (style == "updown") {
+          const cycle = chordSize * 2 - 2;
+          const pos = i % cycle;
+          if (pos < chordSize) {
+            idx = pos;
+          } else {
+            idx = chordSize - 2 - (pos - chordSize);
+          }
+        } else {
+          // random
+          idx = random(chordSize);
+        }
+      }
+    }
+
+    push(pattern, idx);
+  }
+
+  return pattern;
+}
+
+// Bounce pattern (like a bouncing ball)
+export proc bouncePattern(steps, initialHeight, decay) {
+  let pattern = [];
+  let height = initialHeight;
+  let velocity = 0.0;
+  const gravity = 0.1;
+
+  for (i in 0..steps) {
+    push(pattern, floor(height));
+
+    velocity = velocity + gravity;
+    height = height - velocity;
+
+    if (height <= 0) {
+      height = 0.0;
+      velocity = velocity * -decay;
+    }
+  }
+
+  return pattern;
+}

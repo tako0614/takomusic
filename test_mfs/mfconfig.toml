@@ -1,8 +1,7 @@
 [project]
-entry = "test_midi_chords.mfs"
-dist  = "dist"
-out   = "out"
-default_profile = "cli"
+name = "lib_test"
+version = "1.0.0"
 
-[profiles.cli]
-backend = "headless"
+[build]
+entry = "lib_test.mf"
+outDir = "out"
