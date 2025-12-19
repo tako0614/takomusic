@@ -98,8 +98,9 @@ export class Compiler {
         const expr = stmt.expression;
         if (expr.kind === 'CallExpression') {
           const forbidden = ['track', 'note', 'rest', 'chord', 'drum', 'at', 'advance', 'title', 'ppq', 'tempo', 'timeSig'];
-          if (forbidden.includes(expr.callee)) {
-            throw createError('E300', `Top-level execution in imported module: ${expr.callee}()`, stmt.position, filePath);
+          const calleeName = expr.callee.kind === 'Identifier' ? expr.callee.name : null;
+          if (calleeName && forbidden.includes(calleeName)) {
+            throw createError('E300', `Top-level execution in imported module: ${calleeName}()`, stmt.position, filePath);
           }
         }
       } else if (stmt.kind === 'TrackBlock') {

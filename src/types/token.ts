@@ -19,7 +19,11 @@ export enum TokenType {
   IF = 'IF',
   ELSE = 'ELSE',
   FOR = 'FOR',
+  WHILE = 'WHILE',
   IN = 'IN',
+  RETURN = 'RETURN',
+  BREAK = 'BREAK',
+  CONTINUE = 'CONTINUE',
   TRUE = 'TRUE',
   FALSE = 'FALSE',
 
@@ -32,6 +36,11 @@ export enum TokenType {
   MINUS = 'MINUS',
   STAR = 'STAR',
   SLASH = 'SLASH',
+  PERCENT = 'PERCENT',
+  PLUSEQ = 'PLUSEQ',
+  MINUSEQ = 'MINUSEQ',
+  STAREQ = 'STAREQ',
+  SLASHEQ = 'SLASHEQ',
   EQ = 'EQ',
   EQEQ = 'EQEQ',
   NEQ = 'NEQ',
@@ -46,6 +55,11 @@ export enum TokenType {
   // Range operators
   DOTDOT = 'DOTDOT',
   DOTDOTEQ = 'DOTDOTEQ',
+
+  // Access and function operators
+  DOT = 'DOT',
+  ARROW = 'ARROW',
+  SPREAD = 'SPREAD',
 
   // Delimiters
   LPAREN = 'LPAREN',
@@ -83,7 +97,11 @@ export const KEYWORDS: Record<string, TokenType> = {
   if: TokenType.IF,
   else: TokenType.ELSE,
   for: TokenType.FOR,
+  while: TokenType.WHILE,
   in: TokenType.IN,
+  return: TokenType.RETURN,
+  break: TokenType.BREAK,
+  continue: TokenType.CONTINUE,
   true: TokenType.TRUE,
   false: TokenType.FALSE,
   vocal: TokenType.VOCAL,

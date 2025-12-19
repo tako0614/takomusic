@@ -1,0 +1,28 @@
+// Test file for MFS-written ornaments
+import { trill, mordent, arpeggio, glissando, tremolo } from "../lib/ornaments.mfs";
+
+proc main() {
+  ppq(480);
+  tempo(120);
+  timeSig(4, 4);
+
+  track(midi, piano, { ch: 1, program: 0, vel: 80 }) {
+    // Test trill: C4 with whole step trill for quarter note
+    trill(C4, 1/4, 2);
+
+    // Test mordent: D4 with upper mordent
+    mordent(D4, 1/4, true);
+
+    // Test mordent: E4 with lower mordent
+    mordent(E4, 1/4, false);
+
+    // Test arpeggio: C major chord
+    arpeggio([C4, E4, G4], 1/2, 60);
+
+    // Test glissando: C4 to G4
+    glissando(C4, G4, 1/2);
+
+    // Test tremolo: A4 tremolo
+    tremolo(A4, 1/2, 32);
+  }
+}

@@ -197,8 +197,9 @@ export class Checker {
         if (s.kind === 'ExpressionStatement') {
           if (s.expression.kind === 'CallExpression') {
             const forbidden = ['track', 'note', 'rest', 'chord', 'drum', 'at', 'advance', 'title', 'ppq', 'tempo', 'timeSig'];
-            if (forbidden.includes(s.expression.callee)) {
-              this.addError('E300', `Top-level execution in imported module: ${s.expression.callee}()`, s.position, importPath);
+            const calleeName = s.expression.callee.kind === 'Identifier' ? s.expression.callee.name : null;
+            if (calleeName && forbidden.includes(calleeName)) {
+              this.addError('E300', `Top-level execution in imported module: ${calleeName}()`, s.position, importPath);
             }
           }
         } else if (s.kind === 'TrackBlock') {
@@ -243,25 +244,35 @@ export class Checker {
         }
         break;
 
-      case 'CallExpression':
+      case 'CallExpression': {
+        // Get callee name if it's an identifier
+        const calleeName = expr.callee.kind === 'Identifier' ? expr.callee.name : null;
+
         // Track call in call graph
-        if (this.currentProc && this.procs.has(expr.callee)) {
-          this.callGraph.get(this.currentProc)?.add(expr.callee);
+        if (this.currentProc && calleeName && this.procs.has(calleeName)) {
+          this.callGraph.get(this.currentProc)?.add(calleeName);
         }
+
+        // Check callee expression
+        this.checkExpression(expr.callee, filePath);
 
         // Check arguments
         for (const arg of expr.arguments) {
-          this.checkExpression(arg, filePath);
+          if (arg.kind === 'SpreadElement') {
+            this.checkExpression(arg.argument, filePath);
+          } else {
+            this.checkExpression(arg, filePath);
+          }
         }
 
         // Count tempo events for W200
-        if (expr.callee === 'tempo') {
+        if (calleeName === 'tempo') {
           this.tempoEventCount++;
         }
 
         // W100: Check for extremely short notes
-        if ((expr.callee === 'note' || expr.callee === 'drum' || expr.callee === 'rest') && expr.arguments.length >= 2) {
-          const durArg = expr.arguments[expr.callee === 'note' ? 1 : (expr.callee === 'drum' ? 1 : 0)];
+        if ((calleeName === 'note' || calleeName === 'drum' || calleeName === 'rest') && expr.arguments.length >= 2) {
+          const durArg = expr.arguments[calleeName === 'note' ? 1 : (calleeName === 'drum' ? 1 : 0)];
           if (durArg.kind === 'DurLiteral') {
             // Check if duration is less than 1/64 (very short)
             // Using 1/64 as threshold since ppq/16 with ppq=480 would be 30 ticks = 1/64
@@ -272,7 +283,7 @@ export class Checker {
         }
 
         // E210: Vocal lyric validation
-        if (expr.callee === 'note' && this.inVocalTrack) {
+        if (calleeName === 'note' && this.inVocalTrack) {
           // Vocal note() requires 3 arguments: pitch, duration, lyric
           if (expr.arguments.length < 3) {
             this.addError('E210', 'Vocal note() requires a lyric (3rd argument)', expr.position, filePath);
@@ -287,23 +298,24 @@ export class Checker {
         }
 
         // E220: drum() should not be used in vocal track
-        if (expr.callee === 'drum' && this.inVocalTrack) {
+        if (calleeName === 'drum' && this.inVocalTrack) {
           this.addError('E220', 'drum() cannot be used in vocal track', expr.position, filePath);
         }
 
         // E221: chord() should not be used in vocal track
-        if (expr.callee === 'chord' && this.inVocalTrack) {
+        if (calleeName === 'chord' && this.inVocalTrack) {
           this.addError('E221', 'chord() cannot be used in vocal track', expr.position, filePath);
         }
 
         // Check if it's a global function called after track
-        if (this.trackStarted) {
+        if (this.trackStarted && calleeName) {
           const globalFuncs = ['title', 'ppq', 'tempo', 'timeSig'];
-          if (globalFuncs.includes(expr.callee)) {
-            this.addError('E050', `${expr.callee}() called after track started`, expr.position, filePath);
+          if (globalFuncs.includes(calleeName)) {
+            this.addError('E050', `${calleeName}() called after track started`, expr.position, filePath);
           }
         }
         break;
+      }
 
       case 'BinaryExpression':
         this.checkExpression(expr.left, filePath);
@@ -316,14 +328,40 @@ export class Checker {
 
       case 'ArrayLiteral':
         for (const elem of expr.elements) {
-          this.checkExpression(elem, filePath);
+          if (elem.kind === 'SpreadElement') {
+            this.checkExpression(elem.argument, filePath);
+          } else {
+            this.checkExpression(elem, filePath);
+          }
         }
         break;
 
       case 'ObjectLiteral':
         for (const prop of expr.properties) {
-          this.checkExpression(prop.value, filePath);
+          if (prop.kind === 'spread') {
+            this.checkExpression(prop.argument, filePath);
+          } else {
+            this.checkExpression(prop.value, filePath);
+          }
         }
+        break;
+
+      case 'MemberExpression':
+        this.checkExpression(expr.object, filePath);
+        break;
+
+      case 'ArrowFunction':
+        if (Array.isArray(expr.body)) {
+          for (const stmt of expr.body) {
+            this.checkStatement(stmt, filePath);
+          }
+        } else {
+          this.checkExpression(expr.body, filePath);
+        }
+        break;
+
+      case 'SpreadElement':
+        this.checkExpression(expr.argument, filePath);
         break;
 
       case 'PitchLiteral':

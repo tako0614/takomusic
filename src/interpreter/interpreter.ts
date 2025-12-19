@@ -305,6 +305,7 @@ import type {
 } from '../types/ir.js';
 import {
   RuntimeValue,
+  FunctionValue,
   makeInt,
   makeFloat,
   makeString,
@@ -313,15 +314,38 @@ import {
   makeDur,
   makeTime,
   makeArray,
+  makeObject,
+  makeFunction,
   makeNull,
   toNumber,
   isTruthy,
+  toString,
 } from './runtime.js';
 import { Scope } from './scope.js';
 import { createError, MFError } from '../errors.js';
 import { TrackState, DRUM_MAP } from './trackState.js';
 import * as coreBuiltins from './builtins/core.js';
 import * as midiBuiltins from './builtins/midi.js';
+import * as notationBuiltins from './builtins/notation.js';
+import * as dynamicsBuiltins from './builtins/dynamics.js';
+import * as ornamentsBuiltins from './builtins/ornaments.js';
+import * as vocaloidBuiltins from './builtins/vocaloid.js';
+import * as effectsBuiltins from './builtins/effects.js';
+import * as techniquesBuiltins from './builtins/techniques.js';
+import * as layoutBuiltins from './builtins/layout.js';
+import * as tuningBuiltins from './builtins/tuning.js';
+import * as algorithmicBuiltins from './builtins/algorithmic.js';
+import * as liveBuiltins from './builtins/live.js';
+import * as audioBuiltins from './builtins/audio.js';
+import * as mixingBuiltins from './builtins/mixing.js';
+
+// Control flow signals
+class ReturnSignal {
+  constructor(public readonly value: RuntimeValue) {}
+}
+
+class BreakSignal {}
+class ContinueSignal {}
 
 // Curve interpolation helper functions
 type CurveType = 'linear' | 'exponential' | 'logarithmic' | 's-curve' | 'step' | 'bezier';
@@ -377,7 +401,7 @@ export class Interpreter {
   private tracks: Map<string, TrackState> = new Map();
   private currentTrack: TrackState | null = null;
   private trackStarted: boolean = false;
-  private callStack: Set<string> = new Set();
+  private callStack: Map<string, number> = new Map();
   private forIterationCount: number = 0;
   private filePath?: string;
 
@@ -493,13 +517,140 @@ export class Interpreter {
           throw createError('E401', 'For loop iteration limit exceeded', stmt.position, this.filePath);
         }
 
-        for (let i = start; i < end; i++) {
+        outerFor: for (let i = start; i < end; i++) {
           this.forIterationCount++;
           const childScope = this.scope.createChild();
           childScope.defineConst(stmt.variable, makeInt(i));
           const oldScope = this.scope;
           this.scope = childScope;
-          this.executeStatements(stmt.body);
+
+          try {
+            this.executeStatements(stmt.body);
+          } catch (e) {
+            if (e instanceof BreakSignal) {
+              this.scope = oldScope;
+              break outerFor;
+            }
+            if (e instanceof ContinueSignal) {
+              this.scope = oldScope;
+              continue outerFor;
+            }
+            throw e;
+          }
+
+          this.scope = oldScope;
+        }
+        break;
+      }
+
+      case 'WhileStatement': {
+        let iterationCount = 0;
+        const maxIterations = 100000;
+
+        outerWhile: while (isTruthy(this.evaluate(stmt.condition))) {
+          if (iterationCount++ > maxIterations) {
+            throw createError('E401', 'While loop iteration limit exceeded', stmt.position, this.filePath);
+          }
+          const childScope = this.scope.createChild();
+          const oldScope = this.scope;
+          this.scope = childScope;
+
+          try {
+            this.executeStatements(stmt.body);
+          } catch (e) {
+            if (e instanceof BreakSignal) {
+              this.scope = oldScope;
+              break outerWhile;
+            }
+            if (e instanceof ContinueSignal) {
+              this.scope = oldScope;
+              continue outerWhile;
+            }
+            throw e;
+          }
+
+          this.scope = oldScope;
+        }
+        break;
+      }
+
+      case 'ReturnStatement': {
+        const value = stmt.value ? this.evaluate(stmt.value) : makeNull();
+        throw new ReturnSignal(value);
+      }
+
+      case 'BreakStatement': {
+        throw new BreakSignal();
+      }
+
+      case 'ContinueStatement': {
+        throw new ContinueSignal();
+      }
+
+      case 'IndexAssignmentStatement': {
+        const obj = this.evaluate(stmt.object);
+        const idx = this.evaluate(stmt.index);
+        const value = this.evaluate(stmt.value);
+
+        if (obj.type !== 'array') {
+          throw createError('E400', `Cannot index assign to type '${obj.type}'`, stmt.position, this.filePath);
+        }
+        if (idx.type !== 'int') {
+          throw createError('E400', 'Array index must be an integer', stmt.position, this.filePath);
+        }
+
+        let index = idx.value;
+        // Support negative indexing
+        if (index < 0) {
+          index = obj.elements.length + index;
+        }
+        if (index < 0 || index >= obj.elements.length) {
+          throw createError('E400', `Array index ${idx.value} out of bounds`, stmt.position, this.filePath);
+        }
+
+        obj.elements[index] = value;
+        break;
+      }
+
+      case 'PropertyAssignmentStatement': {
+        const obj = this.evaluate(stmt.object);
+        const value = this.evaluate(stmt.value);
+
+        if (obj.type !== 'object') {
+          throw createError('E400', `Cannot set property on type '${obj.type}'`, stmt.position, this.filePath);
+        }
+
+        obj.properties.set(stmt.property, value);
+        break;
+      }
+
+      case 'ForEachStatement': {
+        const iterable = this.evaluate(stmt.iterable);
+
+        if (iterable.type !== 'array') {
+          throw createError('E400', 'For-each requires an array', stmt.position, this.filePath);
+        }
+
+        for (const element of iterable.elements) {
+          const childScope = this.scope.createChild();
+          childScope.defineConst(stmt.variable, element);
+          const oldScope = this.scope;
+          this.scope = childScope;
+
+          try {
+            this.executeStatements(stmt.body);
+          } catch (e) {
+            if (e instanceof BreakSignal) {
+              this.scope = oldScope;
+              break;
+            }
+            if (e instanceof ContinueSignal) {
+              this.scope = oldScope;
+              continue;
+            }
+            throw e;
+          }
+
           this.scope = oldScope;
         }
         break;
@@ -550,6 +701,7 @@ export class Interpreter {
       // Parse options
       if (block.options) {
         for (const prop of block.options.properties) {
+          if (prop.kind !== 'property') continue; // Skip spread in track options
           const value = this.evaluate(prop.value);
           if (value.type === 'string') {
             trackState.meta[prop.key] = value.value;
@@ -619,8 +771,21 @@ export class Interpreter {
       case 'TimeLiteral':
         return makeTime(expr.bar, expr.beat, expr.sub);
 
-      case 'ArrayLiteral':
-        return makeArray(expr.elements.map((e) => this.evaluate(e)));
+      case 'ArrayLiteral': {
+        const elements: RuntimeValue[] = [];
+        for (const elem of expr.elements) {
+          if (elem.kind === 'SpreadElement') {
+            const arr = this.evaluate(elem.argument);
+            if (arr.type !== 'array') {
+              throw createError('E400', 'Spread requires array', elem.position, this.filePath);
+            }
+            elements.push(...arr.elements);
+          } else {
+            elements.push(this.evaluate(elem));
+          }
+        }
+        return makeArray(elements);
+      }
 
       case 'Identifier': {
         const value = this.scope.lookup(expr.name);
@@ -639,7 +804,83 @@ export class Interpreter {
       case 'CallExpression':
         return this.evaluateCall(expr.callee, expr.arguments, expr.position);
 
-      case 'ObjectLiteral':
+      case 'IndexExpression': {
+        const obj = this.evaluate(expr.object);
+        const idx = this.evaluate(expr.index);
+
+        if (obj.type === 'array') {
+          if (idx.type !== 'int') {
+            throw createError('E400', 'Array index must be an integer', expr.position, this.filePath);
+          }
+          let index = idx.value;
+          // Support negative indexing
+          if (index < 0) {
+            index = obj.elements.length + index;
+          }
+          if (index < 0 || index >= obj.elements.length) {
+            throw createError('E400', `Array index ${idx.value} out of bounds (length: ${obj.elements.length})`, expr.position, this.filePath);
+          }
+          return obj.elements[index];
+        }
+
+        if (obj.type === 'string') {
+          if (idx.type !== 'int') {
+            throw createError('E400', 'String index must be an integer', expr.position, this.filePath);
+          }
+          let index = idx.value;
+          // Support negative indexing
+          if (index < 0) {
+            index = obj.value.length + index;
+          }
+          if (index < 0 || index >= obj.value.length) {
+            throw createError('E400', `String index ${idx.value} out of bounds (length: ${obj.value.length})`, expr.position, this.filePath);
+          }
+          return makeString(obj.value[index]);
+        }
+
+        throw createError('E400', `Cannot index type '${obj.type}'`, expr.position, this.filePath);
+      }
+
+      case 'ObjectLiteral': {
+        const obj = makeObject();
+        for (const prop of expr.properties) {
+          if (prop.kind === 'spread') {
+            const spreadObj = this.evaluate(prop.argument);
+            if (spreadObj.type !== 'object') {
+              throw createError('E400', 'Spread requires object', expr.position, this.filePath);
+            }
+            for (const [k, v] of spreadObj.properties) {
+              obj.properties.set(k, v);
+            }
+          } else {
+            const value = this.evaluate(prop.value);
+            obj.properties.set(prop.key, value);
+          }
+        }
+        return obj;
+      }
+
+      case 'MemberExpression': {
+        const obj = this.evaluate(expr.object);
+        if (obj.type === 'object') {
+          const value = obj.properties.get(expr.property);
+          return value ?? makeNull();
+        }
+        if (obj.type === 'array' && expr.property === 'length') {
+          return makeInt(obj.elements.length);
+        }
+        if (obj.type === 'string' && expr.property === 'length') {
+          return makeInt(obj.value.length);
+        }
+        throw createError('E400', `Cannot access property '${expr.property}' of type '${obj.type}'`, expr.position, this.filePath);
+      }
+
+      case 'ArrowFunction':
+        return makeFunction(expr.params, expr.body, this.scope);
+
+      case 'SpreadElement':
+        throw createError('E400', 'Spread element not allowed here', expr.position, this.filePath);
+
       case 'RangeExpression':
         throw new Error(`${expr.kind} cannot be evaluated as expression`);
 
@@ -680,6 +921,10 @@ export class Interpreter {
 
     // Arithmetic
     if (op === '+') {
+      // String concatenation
+      if (left.type === 'string' || right.type === 'string') {
+        return makeString(toString(left) + toString(right));
+      }
       // Pitch + Int
       if (left.type === 'pitch' && right.type === 'int') {
         return makePitch(left.midi + right.value);
@@ -730,6 +975,38 @@ export class Interpreter {
       return makeInt(l * r);
     }
 
+    if (op === '/') {
+      // Dur / Int
+      if (left.type === 'dur' && right.type === 'int') {
+        const den = left.denominator * right.value;
+        const gcd = this.gcd(left.numerator, den);
+        return makeDur(left.numerator / gcd, den / gcd);
+      }
+      // Numeric
+      const l = toNumber(left);
+      const r = toNumber(right);
+      if (r === 0) {
+        throw new Error('Division by zero');
+      }
+      // Division always returns float unless both are int and divide evenly
+      if (left.type === 'int' && right.type === 'int' && l % r === 0) {
+        return makeInt(l / r);
+      }
+      return makeFloat(l / r);
+    }
+
+    if (op === '%') {
+      const l = toNumber(left);
+      const r = toNumber(right);
+      if (r === 0) {
+        throw new Error('Modulo by zero');
+      }
+      if (left.type === 'int' && right.type === 'int') {
+        return makeInt(l % r);
+      }
+      return makeFloat(l % r);
+    }
+
     throw new Error(`Unknown binary operator: ${op}`);
   }
 
@@ -749,12 +1026,1012 @@ export class Interpreter {
   }
 
   private evaluateCall(
-    callee: string,
-    args: Expression[],
+    calleeExpr: Expression,
+    args: (Expression | { kind: 'SpreadElement'; argument: Expression; position: any })[],
     position: { line: number; column: number; offset: number }
   ): RuntimeValue {
-    // Built-in functions
-    switch (callee) {
+    // Helper to expand arguments (handle spread)
+    const expandArgs = (): RuntimeValue[] => {
+      const result: RuntimeValue[] = [];
+      for (const arg of args) {
+        if (arg.kind === 'SpreadElement') {
+          const arr = this.evaluate(arg.argument);
+          if (arr.type !== 'array') {
+            throw createError('E400', 'Spread requires array', arg.position, this.filePath);
+          }
+          result.push(...arr.elements);
+        } else {
+          result.push(this.evaluate(arg));
+        }
+      }
+      return result;
+    };
+
+    // If callee is an identifier, check for builtins and procs
+    if (calleeExpr.kind === 'Identifier') {
+      const callee = calleeExpr.name;
+
+      // Check if it's a function value in scope
+      const fnValue = this.scope.lookup(callee);
+      if (fnValue && fnValue.type === 'function') {
+        return this.callFunctionValue(fnValue, expandArgs(), position);
+      }
+
+      // Built-in functions
+      switch (callee) {
+      // Utility builtins
+      case 'len': {
+        if (args.length !== 1) {
+          throw createError('E400', 'len() requires exactly 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        if (val.type === 'array') {
+          return makeInt(val.elements.length);
+        }
+        if (val.type === 'string') {
+          return makeInt(val.value.length);
+        }
+        throw createError('E400', `len() expects array or string, got ${val.type}`, position, this.filePath);
+      }
+
+      case 'cursor': {
+        this.checkTrackPhase(position);
+        return makeInt(this.currentTrack!.cursor);
+      }
+
+      case 'getPpq': {
+        // getPpq() - get the PPQ value
+        return makeInt(this.ir.ppq);
+      }
+
+      case 'durToTicks': {
+        // durToTicks(dur) - convert duration to ticks
+        if (args.length !== 1) {
+          throw createError('E400', 'durToTicks() requires 1 argument', position, this.filePath);
+        }
+        const dur = this.evaluate(args[0]);
+        if (dur.type !== 'dur') {
+          throw createError('E400', 'durToTicks() requires a duration', position, this.filePath);
+        }
+        const ticks = this.durToTicks(dur, position);
+        return makeInt(ticks);
+      }
+
+      case 'getVel': {
+        // getVel() - get default velocity for current track
+        this.checkTrackPhase(position);
+        return makeInt(this.currentTrack!.defaultVel ?? 96);
+      }
+
+      case 'noteAt': {
+        // noteAt(tick, pitch, durTicks, vel?) - add note at specific tick without moving cursor
+        this.checkTrackPhase(position);
+        const track = this.currentTrack!;
+
+        if (args.length < 3) {
+          throw createError('E400', 'noteAt() requires at least 3 arguments (tick, pitch, durTicks)', position, this.filePath);
+        }
+
+        const tick = this.evaluate(args[0]);
+        const pitch = this.evaluate(args[1]);
+        const durTicks = this.evaluate(args[2]);
+        const vel = args.length >= 4 ? this.evaluate(args[3]) : makeInt(track.defaultVel ?? 96);
+
+        if (tick.type !== 'int') {
+          throw createError('E400', 'noteAt() tick must be int', position, this.filePath);
+        }
+        if (pitch.type !== 'pitch') {
+          throw createError('E400', 'noteAt() pitch must be Pitch', position, this.filePath);
+        }
+        if (durTicks.type !== 'int') {
+          throw createError('E400', 'noteAt() durTicks must be int', position, this.filePath);
+        }
+        if (vel.type !== 'int') {
+          throw createError('E400', 'noteAt() velocity must be int', position, this.filePath);
+        }
+
+        if (pitch.midi < 0 || pitch.midi > 127) {
+          throw createError('E110', `Pitch ${pitch.midi} out of range 0..127`, position, this.filePath);
+        }
+
+        const event: NoteEvent = {
+          type: 'note',
+          tick: tick.value,
+          dur: durTicks.value,
+          key: pitch.midi,
+          vel: vel.value,
+        };
+        track.events.push(event);
+        return makeNull();
+      }
+
+      case 'transpose': {
+        // transpose(pitch, semitones) - return new pitch transposed by semitones
+        if (args.length !== 2) {
+          throw createError('E400', 'transpose() requires 2 arguments', position, this.filePath);
+        }
+        const pitch = this.evaluate(args[0]);
+        const semitones = this.evaluate(args[1]);
+        if (pitch.type !== 'pitch') {
+          throw createError('E400', 'transpose() first argument must be Pitch', position, this.filePath);
+        }
+        if (semitones.type !== 'int') {
+          throw createError('E400', 'transpose() second argument must be int', position, this.filePath);
+        }
+        return makePitch(pitch.midi + semitones.value);
+      }
+
+      case 'midiPitch': {
+        // midiPitch(midiNumber) - create pitch from MIDI number
+        if (args.length !== 1) {
+          throw createError('E400', 'midiPitch() requires 1 argument', position, this.filePath);
+        }
+        const midi = this.evaluate(args[0]);
+        if (midi.type !== 'int') {
+          throw createError('E400', 'midiPitch() argument must be int', position, this.filePath);
+        }
+        if (midi.value < 0 || midi.value > 127) {
+          throw createError('E110', `MIDI pitch ${midi.value} out of range 0..127`, position, this.filePath);
+        }
+        return makePitch(midi.value);
+      }
+
+      case 'pitchMidi': {
+        // pitchMidi(pitch) - get MIDI number from pitch
+        if (args.length !== 1) {
+          throw createError('E400', 'pitchMidi() requires 1 argument', position, this.filePath);
+        }
+        const pitch = this.evaluate(args[0]);
+        if (pitch.type !== 'pitch') {
+          throw createError('E400', 'pitchMidi() argument must be Pitch', position, this.filePath);
+        }
+        return makeInt(pitch.midi);
+      }
+
+      case 'floor': {
+        if (args.length !== 1) {
+          throw createError('E400', 'floor() requires exactly 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        return makeInt(Math.floor(toNumber(val)));
+      }
+
+      case 'ceil': {
+        if (args.length !== 1) {
+          throw createError('E400', 'ceil() requires exactly 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        return makeInt(Math.ceil(toNumber(val)));
+      }
+
+      case 'abs': {
+        if (args.length !== 1) {
+          throw createError('E400', 'abs() requires exactly 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        const n = toNumber(val);
+        return val.type === 'float' ? makeFloat(Math.abs(n)) : makeInt(Math.abs(n));
+      }
+
+      case 'min': {
+        if (args.length < 2) {
+          throw createError('E400', 'min() requires at least 2 arguments', position, this.filePath);
+        }
+        let minVal = toNumber(this.evaluate(args[0]));
+        let isFloat = this.evaluate(args[0]).type === 'float';
+        for (let i = 1; i < args.length; i++) {
+          const val = this.evaluate(args[i]);
+          const n = toNumber(val);
+          if (val.type === 'float') isFloat = true;
+          if (n < minVal) minVal = n;
+        }
+        return isFloat ? makeFloat(minVal) : makeInt(minVal);
+      }
+
+      case 'max': {
+        if (args.length < 2) {
+          throw createError('E400', 'max() requires at least 2 arguments', position, this.filePath);
+        }
+        let maxVal = toNumber(this.evaluate(args[0]));
+        let isFloat = this.evaluate(args[0]).type === 'float';
+        for (let i = 1; i < args.length; i++) {
+          const val = this.evaluate(args[i]);
+          const n = toNumber(val);
+          if (val.type === 'float') isFloat = true;
+          if (n > maxVal) maxVal = n;
+        }
+        return isFloat ? makeFloat(maxVal) : makeInt(maxVal);
+      }
+
+      case 'random': {
+        // random() - returns float 0..1
+        // random(max) - returns int 0..max-1
+        // random(min, max) - returns int min..max-1
+        if (args.length === 0) {
+          return makeFloat(Math.random());
+        }
+        if (args.length === 1) {
+          const max = Math.floor(toNumber(this.evaluate(args[0])));
+          return makeInt(Math.floor(Math.random() * max));
+        }
+        const min = Math.floor(toNumber(this.evaluate(args[0])));
+        const max = Math.floor(toNumber(this.evaluate(args[1])));
+        return makeInt(min + Math.floor(Math.random() * (max - min)));
+      }
+
+      // Bitwise operations
+      case 'bitAnd': {
+        if (args.length !== 2) {
+          throw createError('E400', 'bitAnd() requires 2 arguments', position, this.filePath);
+        }
+        const a = Math.floor(toNumber(this.evaluate(args[0])));
+        const b = Math.floor(toNumber(this.evaluate(args[1])));
+        return makeInt(a & b);
+      }
+
+      case 'bitOr': {
+        if (args.length !== 2) {
+          throw createError('E400', 'bitOr() requires 2 arguments', position, this.filePath);
+        }
+        const a = Math.floor(toNumber(this.evaluate(args[0])));
+        const b = Math.floor(toNumber(this.evaluate(args[1])));
+        return makeInt(a | b);
+      }
+
+      case 'bitXor': {
+        if (args.length !== 2) {
+          throw createError('E400', 'bitXor() requires 2 arguments', position, this.filePath);
+        }
+        const a = Math.floor(toNumber(this.evaluate(args[0])));
+        const b = Math.floor(toNumber(this.evaluate(args[1])));
+        return makeInt(a ^ b);
+      }
+
+      case 'bitNot': {
+        if (args.length !== 1) {
+          throw createError('E400', 'bitNot() requires 1 argument', position, this.filePath);
+        }
+        const a = Math.floor(toNumber(this.evaluate(args[0])));
+        return makeInt(~a);
+      }
+
+      case 'bitShiftLeft': {
+        if (args.length !== 2) {
+          throw createError('E400', 'bitShiftLeft() requires 2 arguments', position, this.filePath);
+        }
+        const a = Math.floor(toNumber(this.evaluate(args[0])));
+        const n = Math.floor(toNumber(this.evaluate(args[1])));
+        return makeInt(a << n);
+      }
+
+      case 'bitShiftRight': {
+        if (args.length !== 2) {
+          throw createError('E400', 'bitShiftRight() requires 2 arguments', position, this.filePath);
+        }
+        const a = Math.floor(toNumber(this.evaluate(args[0])));
+        const n = Math.floor(toNumber(this.evaluate(args[1])));
+        return makeInt(a >> n);
+      }
+
+      // Array utilities
+      case 'fill': {
+        // fill(size, value) - create array of size filled with value
+        if (args.length !== 2) {
+          throw createError('E400', 'fill() requires 2 arguments', position, this.filePath);
+        }
+        const size = Math.floor(toNumber(this.evaluate(args[0])));
+        const value = this.evaluate(args[1]);
+        const elements: RuntimeValue[] = [];
+        for (let i = 0; i < size; i++) {
+          // Deep copy for non-primitive values would be needed for objects
+          elements.push(value);
+        }
+        return makeArray(elements);
+      }
+
+      case 'copy': {
+        // copy(arr) - create shallow copy of array
+        if (args.length !== 1) {
+          throw createError('E400', 'copy() requires 1 argument', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'copy() argument must be an array', position, this.filePath);
+        }
+        return makeArray([...arr.elements]);
+      }
+
+      case 'print': {
+        // Debug print function
+        const values = args.map(a => {
+          const v = this.evaluate(a);
+          if (v.type === 'string') return v.value;
+          if (v.type === 'int' || v.type === 'float') return String(v.value);
+          if (v.type === 'bool') return String(v.value);
+          if (v.type === 'pitch') return `Pitch(${v.midi})`;
+          if (v.type === 'dur') return `${v.numerator}/${v.denominator}`;
+          if (v.type === 'array') return `[${v.elements.length} elements]`;
+          return String(v.type);
+        });
+        console.log('[MFS]', ...values);
+        return makeNull();
+      }
+
+      case 'push': {
+        // push(arr, value) - mutates array, returns array
+        if (args.length !== 2) {
+          throw createError('E400', 'push() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const value = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'push() first argument must be an array', position, this.filePath);
+        }
+        arr.elements.push(value);
+        return arr;
+      }
+
+      case 'pop': {
+        // pop(arr) - mutates array, returns removed element
+        if (args.length !== 1) {
+          throw createError('E400', 'pop() requires 1 argument', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'pop() argument must be an array', position, this.filePath);
+        }
+        if (arr.elements.length === 0) {
+          return makeNull();
+        }
+        return arr.elements.pop()!;
+      }
+
+      case 'concat': {
+        // concat(arr1, arr2) - returns new array
+        if (args.length !== 2) {
+          throw createError('E400', 'concat() requires 2 arguments', position, this.filePath);
+        }
+        const arr1 = this.evaluate(args[0]);
+        const arr2 = this.evaluate(args[1]);
+        if (arr1.type !== 'array' || arr2.type !== 'array') {
+          throw createError('E400', 'concat() arguments must be arrays', position, this.filePath);
+        }
+        return makeArray([...arr1.elements, ...arr2.elements]);
+      }
+
+      case 'slice': {
+        // slice(arr, start, end?) - returns new array
+        if (args.length < 2) {
+          throw createError('E400', 'slice() requires at least 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const start = toNumber(this.evaluate(args[1]));
+        const end = args.length > 2 ? toNumber(this.evaluate(args[2])) : undefined;
+        if (arr.type !== 'array') {
+          throw createError('E400', 'slice() first argument must be an array', position, this.filePath);
+        }
+        return makeArray(arr.elements.slice(start, end));
+      }
+
+      case 'reverse': {
+        // reverse(arr) - mutates array, returns array
+        if (args.length !== 1) {
+          throw createError('E400', 'reverse() requires 1 argument', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'reverse() argument must be an array', position, this.filePath);
+        }
+        arr.elements.reverse();
+        return arr;
+      }
+
+      // Higher-order array functions
+      case 'map': {
+        // map(arr, fn) - returns new array with fn applied to each element
+        if (args.length !== 2) {
+          throw createError('E400', 'map() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'map() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'map() second argument must be a function', position, this.filePath);
+        }
+        const result: RuntimeValue[] = [];
+        for (let i = 0; i < arr.elements.length; i++) {
+          const mapped = this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+          result.push(mapped);
+        }
+        return makeArray(result);
+      }
+
+      case 'filter': {
+        // filter(arr, fn) - returns new array with elements where fn returns true
+        if (args.length !== 2) {
+          throw createError('E400', 'filter() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'filter() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'filter() second argument must be a function', position, this.filePath);
+        }
+        const result: RuntimeValue[] = [];
+        for (let i = 0; i < arr.elements.length; i++) {
+          const keep = this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+          if (isTruthy(keep)) {
+            result.push(arr.elements[i]);
+          }
+        }
+        return makeArray(result);
+      }
+
+      case 'reduce': {
+        // reduce(arr, fn, init) - reduces array to single value
+        if (args.length < 2 || args.length > 3) {
+          throw createError('E400', 'reduce() requires 2-3 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'reduce() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'reduce() second argument must be a function', position, this.filePath);
+        }
+        let accumulator: RuntimeValue;
+        let startIndex = 0;
+        if (args.length === 3) {
+          accumulator = this.evaluate(args[2]);
+        } else {
+          if (arr.elements.length === 0) {
+            throw createError('E400', 'reduce() on empty array requires initial value', position, this.filePath);
+          }
+          accumulator = arr.elements[0];
+          startIndex = 1;
+        }
+        for (let i = startIndex; i < arr.elements.length; i++) {
+          accumulator = this.callFunctionValue(fn, [accumulator, arr.elements[i], makeInt(i)], position);
+        }
+        return accumulator;
+      }
+
+      case 'find': {
+        // find(arr, fn) - returns first element where fn returns true, or null
+        if (args.length !== 2) {
+          throw createError('E400', 'find() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'find() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'find() second argument must be a function', position, this.filePath);
+        }
+        for (let i = 0; i < arr.elements.length; i++) {
+          const result = this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+          if (isTruthy(result)) {
+            return arr.elements[i];
+          }
+        }
+        return makeNull();
+      }
+
+      case 'findIndex': {
+        // findIndex(arr, fn) - returns index of first element where fn returns true, or -1
+        if (args.length !== 2) {
+          throw createError('E400', 'findIndex() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'findIndex() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'findIndex() second argument must be a function', position, this.filePath);
+        }
+        for (let i = 0; i < arr.elements.length; i++) {
+          const result = this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+          if (isTruthy(result)) {
+            return makeInt(i);
+          }
+        }
+        return makeInt(-1);
+      }
+
+      case 'some': {
+        // some(arr, fn) - returns true if fn returns true for any element
+        if (args.length !== 2) {
+          throw createError('E400', 'some() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'some() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'some() second argument must be a function', position, this.filePath);
+        }
+        for (let i = 0; i < arr.elements.length; i++) {
+          const result = this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+          if (isTruthy(result)) {
+            return makeBool(true);
+          }
+        }
+        return makeBool(false);
+      }
+
+      case 'every': {
+        // every(arr, fn) - returns true if fn returns true for all elements
+        if (args.length !== 2) {
+          throw createError('E400', 'every() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'every() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'every() second argument must be a function', position, this.filePath);
+        }
+        for (let i = 0; i < arr.elements.length; i++) {
+          const result = this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+          if (!isTruthy(result)) {
+            return makeBool(false);
+          }
+        }
+        return makeBool(true);
+      }
+
+      case 'includes': {
+        // includes(arr, val) - returns true if array contains value
+        if (args.length !== 2) {
+          throw createError('E400', 'includes() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const val = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'includes() first argument must be an array', position, this.filePath);
+        }
+        for (const elem of arr.elements) {
+          if (this.valuesEqual(elem, val)) {
+            return makeBool(true);
+          }
+        }
+        return makeBool(false);
+      }
+
+      case 'flat': {
+        // flat(arr, depth?) - flattens array to specified depth (default 1)
+        if (args.length < 1 || args.length > 2) {
+          throw createError('E400', 'flat() requires 1-2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const depth = args.length === 2 ? toNumber(this.evaluate(args[1])) : 1;
+        if (arr.type !== 'array') {
+          throw createError('E400', 'flat() first argument must be an array', position, this.filePath);
+        }
+        const flattenArray = (arr: RuntimeValue[], d: number): RuntimeValue[] => {
+          const result: RuntimeValue[] = [];
+          for (const elem of arr) {
+            if (elem.type === 'array' && d > 0) {
+              result.push(...flattenArray(elem.elements, d - 1));
+            } else {
+              result.push(elem);
+            }
+          }
+          return result;
+        };
+        return makeArray(flattenArray(arr.elements, depth));
+      }
+
+      case 'flatMap': {
+        // flatMap(arr, fn) - map then flatten by 1 level
+        if (args.length !== 2) {
+          throw createError('E400', 'flatMap() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'flatMap() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'flatMap() second argument must be a function', position, this.filePath);
+        }
+        const result: RuntimeValue[] = [];
+        for (let i = 0; i < arr.elements.length; i++) {
+          const mapped = this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+          if (mapped.type === 'array') {
+            result.push(...mapped.elements);
+          } else {
+            result.push(mapped);
+          }
+        }
+        return makeArray(result);
+      }
+
+      case 'forEach': {
+        // forEach(arr, fn) - calls fn for each element, returns null
+        if (args.length !== 2) {
+          throw createError('E400', 'forEach() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const fn = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'forEach() first argument must be an array', position, this.filePath);
+        }
+        if (fn.type !== 'function') {
+          throw createError('E400', 'forEach() second argument must be a function', position, this.filePath);
+        }
+        for (let i = 0; i < arr.elements.length; i++) {
+          this.callFunctionValue(fn, [arr.elements[i], makeInt(i)], position);
+        }
+        return makeNull();
+      }
+
+      case 'sort': {
+        // sort(arr, compareFn?) - sorts array in place, returns array
+        if (args.length < 1 || args.length > 2) {
+          throw createError('E400', 'sort() requires 1-2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'sort() first argument must be an array', position, this.filePath);
+        }
+        if (args.length === 2) {
+          const fn = this.evaluate(args[1]);
+          if (fn.type !== 'function') {
+            throw createError('E400', 'sort() second argument must be a function', position, this.filePath);
+          }
+          arr.elements.sort((a, b) => {
+            const result = this.callFunctionValue(fn, [a, b], position);
+            return toNumber(result);
+          });
+        } else {
+          // Default sort by number value
+          arr.elements.sort((a, b) => toNumber(a) - toNumber(b));
+        }
+        return arr;
+      }
+
+      // String manipulation functions
+      case 'split': {
+        // split(str, delimiter) - returns array of strings
+        if (args.length !== 2) {
+          throw createError('E400', 'split() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const delimiter = this.evaluate(args[1]);
+        if (str.type !== 'string' || delimiter.type !== 'string') {
+          throw createError('E400', 'split() arguments must be strings', position, this.filePath);
+        }
+        const parts = str.value.split(delimiter.value);
+        return makeArray(parts.map(s => makeString(s)));
+      }
+
+      case 'join': {
+        // join(arr, delimiter) - returns string
+        if (args.length !== 2) {
+          throw createError('E400', 'join() requires 2 arguments', position, this.filePath);
+        }
+        const arr = this.evaluate(args[0]);
+        const delimiter = this.evaluate(args[1]);
+        if (arr.type !== 'array') {
+          throw createError('E400', 'join() first argument must be an array', position, this.filePath);
+        }
+        if (delimiter.type !== 'string') {
+          throw createError('E400', 'join() second argument must be a string', position, this.filePath);
+        }
+        const strs = arr.elements.map(e => toString(e));
+        return makeString(strs.join(delimiter.value));
+      }
+
+      case 'substr': {
+        // substr(str, start, length?) - returns substring
+        if (args.length < 2) {
+          throw createError('E400', 'substr() requires at least 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const start = toNumber(this.evaluate(args[1]));
+        const length = args.length > 2 ? toNumber(this.evaluate(args[2])) : undefined;
+        if (str.type !== 'string') {
+          throw createError('E400', 'substr() first argument must be a string', position, this.filePath);
+        }
+        if (length !== undefined) {
+          return makeString(str.value.substr(start, length));
+        }
+        return makeString(str.value.substr(start));
+      }
+
+      case 'indexOf': {
+        // indexOf(str, search) - returns index or -1
+        if (args.length !== 2) {
+          throw createError('E400', 'indexOf() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const search = this.evaluate(args[1]);
+        if (str.type !== 'string' || search.type !== 'string') {
+          throw createError('E400', 'indexOf() arguments must be strings', position, this.filePath);
+        }
+        return makeInt(str.value.indexOf(search.value));
+      }
+
+      case 'replace': {
+        // replace(str, search, replacement) - returns new string
+        if (args.length !== 3) {
+          throw createError('E400', 'replace() requires 3 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const search = this.evaluate(args[1]);
+        const replacement = this.evaluate(args[2]);
+        if (str.type !== 'string' || search.type !== 'string' || replacement.type !== 'string') {
+          throw createError('E400', 'replace() arguments must be strings', position, this.filePath);
+        }
+        return makeString(str.value.replace(search.value, replacement.value));
+      }
+
+      case 'trim': {
+        // trim(str) - returns trimmed string
+        if (args.length !== 1) {
+          throw createError('E400', 'trim() requires 1 argument', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        if (str.type !== 'string') {
+          throw createError('E400', 'trim() argument must be a string', position, this.filePath);
+        }
+        return makeString(str.value.trim());
+      }
+
+      case 'upper': {
+        // upper(str) - returns uppercase string
+        if (args.length !== 1) {
+          throw createError('E400', 'upper() requires 1 argument', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        if (str.type !== 'string') {
+          throw createError('E400', 'upper() argument must be a string', position, this.filePath);
+        }
+        return makeString(str.value.toUpperCase());
+      }
+
+      case 'lower': {
+        // lower(str) - returns lowercase string
+        if (args.length !== 1) {
+          throw createError('E400', 'lower() requires 1 argument', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        if (str.type !== 'string') {
+          throw createError('E400', 'lower() argument must be a string', position, this.filePath);
+        }
+        return makeString(str.value.toLowerCase());
+      }
+
+      case 'startsWith': {
+        // startsWith(str, prefix) - returns true if str starts with prefix
+        if (args.length !== 2) {
+          throw createError('E400', 'startsWith() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const prefix = this.evaluate(args[1]);
+        if (str.type !== 'string' || prefix.type !== 'string') {
+          throw createError('E400', 'startsWith() arguments must be strings', position, this.filePath);
+        }
+        return makeBool(str.value.startsWith(prefix.value));
+      }
+
+      case 'endsWith': {
+        // endsWith(str, suffix) - returns true if str ends with suffix
+        if (args.length !== 2) {
+          throw createError('E400', 'endsWith() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const suffix = this.evaluate(args[1]);
+        if (str.type !== 'string' || suffix.type !== 'string') {
+          throw createError('E400', 'endsWith() arguments must be strings', position, this.filePath);
+        }
+        return makeBool(str.value.endsWith(suffix.value));
+      }
+
+      case 'contains': {
+        // contains(str, substr) - returns true if str contains substr
+        if (args.length !== 2) {
+          throw createError('E400', 'contains() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const substr = this.evaluate(args[1]);
+        if (str.type !== 'string' || substr.type !== 'string') {
+          throw createError('E400', 'contains() arguments must be strings', position, this.filePath);
+        }
+        return makeBool(str.value.includes(substr.value));
+      }
+
+      case 'repeat': {
+        // repeat(str, count) - returns str repeated count times
+        if (args.length !== 2) {
+          throw createError('E400', 'repeat() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const count = this.evaluate(args[1]);
+        if (str.type !== 'string') {
+          throw createError('E400', 'repeat() first argument must be a string', position, this.filePath);
+        }
+        if (count.type !== 'int' && count.type !== 'float') {
+          throw createError('E400', 'repeat() second argument must be a number', position, this.filePath);
+        }
+        return makeString(str.value.repeat(Math.floor(toNumber(count))));
+      }
+
+      case 'charAt': {
+        // charAt(str, index) - returns character at index
+        if (args.length !== 2) {
+          throw createError('E400', 'charAt() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const index = this.evaluate(args[1]);
+        if (str.type !== 'string') {
+          throw createError('E400', 'charAt() first argument must be a string', position, this.filePath);
+        }
+        const idx = Math.floor(toNumber(index));
+        if (idx < 0 || idx >= str.value.length) {
+          return makeString('');
+        }
+        return makeString(str.value.charAt(idx));
+      }
+
+      case 'charCodeAt': {
+        // charCodeAt(str, index) - returns char code at index
+        if (args.length !== 2) {
+          throw createError('E400', 'charCodeAt() requires 2 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const index = this.evaluate(args[1]);
+        if (str.type !== 'string') {
+          throw createError('E400', 'charCodeAt() first argument must be a string', position, this.filePath);
+        }
+        const idx = Math.floor(toNumber(index));
+        const code = str.value.charCodeAt(idx);
+        return makeInt(isNaN(code) ? -1 : code);
+      }
+
+      case 'fromCharCode': {
+        // fromCharCode(code) - returns string from char code
+        if (args.length !== 1) {
+          throw createError('E400', 'fromCharCode() requires 1 argument', position, this.filePath);
+        }
+        const code = this.evaluate(args[0]);
+        return makeString(String.fromCharCode(Math.floor(toNumber(code))));
+      }
+
+      case 'padStart': {
+        // padStart(str, length, padStr?) - pads start of string
+        if (args.length < 2 || args.length > 3) {
+          throw createError('E400', 'padStart() requires 2-3 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const length = this.evaluate(args[1]);
+        const padStr = args.length === 3 ? this.evaluate(args[2]) : makeString(' ');
+        if (str.type !== 'string') {
+          throw createError('E400', 'padStart() first argument must be a string', position, this.filePath);
+        }
+        if (padStr.type !== 'string') {
+          throw createError('E400', 'padStart() third argument must be a string', position, this.filePath);
+        }
+        return makeString(str.value.padStart(Math.floor(toNumber(length)), padStr.value));
+      }
+
+      case 'padEnd': {
+        // padEnd(str, length, padStr?) - pads end of string
+        if (args.length < 2 || args.length > 3) {
+          throw createError('E400', 'padEnd() requires 2-3 arguments', position, this.filePath);
+        }
+        const str = this.evaluate(args[0]);
+        const length = this.evaluate(args[1]);
+        const padStr = args.length === 3 ? this.evaluate(args[2]) : makeString(' ');
+        if (str.type !== 'string') {
+          throw createError('E400', 'padEnd() first argument must be a string', position, this.filePath);
+        }
+        if (padStr.type !== 'string') {
+          throw createError('E400', 'padEnd() third argument must be a string', position, this.filePath);
+        }
+        return makeString(str.value.padEnd(Math.floor(toNumber(length)), padStr.value));
+      }
+
+      // Type conversion functions
+      case 'int': {
+        // int(value) - convert to integer
+        if (args.length !== 1) {
+          throw createError('E400', 'int() requires 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        if (val.type === 'int') return val;
+        if (val.type === 'float') return makeInt(Math.floor(val.value));
+        if (val.type === 'string') {
+          const parsed = parseInt(val.value, 10);
+          if (isNaN(parsed)) {
+            throw createError('E400', `Cannot convert "${val.value}" to int`, position, this.filePath);
+          }
+          return makeInt(parsed);
+        }
+        if (val.type === 'bool') return makeInt(val.value ? 1 : 0);
+        throw createError('E400', `Cannot convert ${val.type} to int`, position, this.filePath);
+      }
+
+      case 'float': {
+        // float(value) - convert to float
+        if (args.length !== 1) {
+          throw createError('E400', 'float() requires 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        if (val.type === 'float') return val;
+        if (val.type === 'int') return makeFloat(val.value);
+        if (val.type === 'string') {
+          const parsed = parseFloat(val.value);
+          if (isNaN(parsed)) {
+            throw createError('E400', `Cannot convert "${val.value}" to float`, position, this.filePath);
+          }
+          return makeFloat(parsed);
+        }
+        if (val.type === 'bool') return makeFloat(val.value ? 1.0 : 0.0);
+        throw createError('E400', `Cannot convert ${val.type} to float`, position, this.filePath);
+      }
+
+      case 'string': {
+        // string(value) - convert to string
+        if (args.length !== 1) {
+          throw createError('E400', 'string() requires 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        return makeString(toString(val));
+      }
+
+      case 'bool': {
+        // bool(value) - convert to boolean
+        if (args.length !== 1) {
+          throw createError('E400', 'bool() requires 1 argument', position, this.filePath);
+        }
+        const val = this.evaluate(args[0]);
+        return makeBool(isTruthy(val));
+      }
+
+      case 'range': {
+        // range(end) or range(start, end) or range(start, end, step) - returns array
+        if (args.length < 1 || args.length > 3) {
+          throw createError('E400', 'range() requires 1-3 arguments', position, this.filePath);
+        }
+        let start = 0;
+        let end: number;
+        let step = 1;
+        if (args.length === 1) {
+          end = toNumber(this.evaluate(args[0]));
+        } else {
+          start = toNumber(this.evaluate(args[0]));
+          end = toNumber(this.evaluate(args[1]));
+          if (args.length === 3) {
+            step = toNumber(this.evaluate(args[2]));
+          }
+        }
+        if (step === 0) {
+          throw createError('E400', 'range() step cannot be 0', position, this.filePath);
+        }
+        const result: RuntimeValue[] = [];
+        if (step > 0) {
+          for (let i = start; i < end; i += step) {
+            result.push(makeInt(i));
+          }
+        } else {
+          for (let i = start; i > end; i += step) {
+            result.push(makeInt(i));
+          }
+        }
+        return makeArray(result);
+      }
+
       // Core builtins (from builtins/core.ts)
       case 'title':
         return coreBuiltins.builtinTitle.call(this, args, position);
@@ -950,47 +2227,47 @@ export class Interpreter {
         return this.builtinUsePattern(args, position);
       // Audio functions
       case 'audioClip':
-        return this.builtinAudioClip(args, position);
+        return audioBuiltins.builtinAudioClip.call(this, args, position);
       case 'effect':
         return this.builtinEffect(args, position);
       case 'reverb':
-        return this.builtinReverb(args, position);
+        return effectsBuiltins.builtinReverb.call(this, args, position);
       case 'delay':
-        return this.builtinDelay(args, position);
+        return effectsBuiltins.builtinDelay.call(this, args, position);
       case 'eq':
-        return this.builtinEQ(args, position);
+        return effectsBuiltins.builtinEQ.call(this, args, position);
       case 'compressor':
-        return this.builtinCompressor(args, position);
+        return effectsBuiltins.builtinCompressor.call(this, args, position);
 
       // Microtonality & Tuning
       case 'tuning':
-        return this.builtinTuning(args, position);
+        return tuningBuiltins.builtinTuning.call(this, args, position);
       case 'cents':
-        return this.builtinCents(args, position);
+        return tuningBuiltins.builtinCents.call(this, args, position);
       case 'quarterTone':
-        return this.builtinQuarterTone(args, position);
+        return tuningBuiltins.builtinQuarterTone.call(this, args, position);
       case 'pitchCorrection':
-        return this.builtinPitchCorrection(args, position);
+        return tuningBuiltins.builtinPitchCorrection.call(this, args, position);
 
       // Algorithmic Composition
       case 'euclidean':
-        return this.builtinEuclidean(args, position);
+        return algorithmicBuiltins.builtinEuclidean.call(this, args, position);
       case 'probability':
-        return this.builtinProbability(args, position);
+        return algorithmicBuiltins.builtinProbability.call(this, args, position);
       case 'markov':
-        return this.builtinMarkov(args, position);
+        return algorithmicBuiltins.builtinMarkov.call(this, args, position);
       case 'randomSeed':
-        return this.builtinRandomSeed(args, position);
+        return algorithmicBuiltins.builtinRandomSeed.call(this, args, position);
       case 'randomNote':
-        return this.builtinRandomNote(args, position);
+        return algorithmicBuiltins.builtinRandomNote.call(this, args, position);
       case 'randomRhythm':
-        return this.builtinRandomRhythm(args, position);
+        return algorithmicBuiltins.builtinRandomRhythm.call(this, args, position);
       case 'constraint':
-        return this.builtinConstraint(args, position);
+        return algorithmicBuiltins.builtinConstraint.call(this, args, position);
       case 'cellular':
-        return this.builtinCellular(args, position);
+        return algorithmicBuiltins.builtinCellular.call(this, args, position);
       case 'lsystem':
-        return this.builtinLSystem(args, position);
+        return algorithmicBuiltins.builtinLSystem.call(this, args, position);
 
       // Advanced Notation - Lyrics
       case 'verse':
@@ -1047,57 +2324,57 @@ export class Interpreter {
 
       // Additional Effects
       case 'phaser':
-        return this.builtinPhaser(args, position);
+        return effectsBuiltins.builtinPhaser.call(this, args, position);
       case 'flanger':
-        return this.builtinFlanger(args, position);
+        return effectsBuiltins.builtinFlanger.call(this, args, position);
       case 'chorus':
-        return this.builtinChorus(args, position);
+        return effectsBuiltins.builtinChorus.call(this, args, position);
       case 'distortion':
-        return this.builtinDistortion(args, position);
+        return effectsBuiltins.builtinDistortion.call(this, args, position);
       case 'filter':
-        return this.builtinFilter(args, position);
+        return effectsBuiltins.builtinFilter.call(this, args, position);
       case 'sidechain':
-        return this.builtinSidechain(args, position);
+        return effectsBuiltins.builtinSidechain.call(this, args, position);
 
       // Live Performance
       case 'midiMap':
-        return this.builtinMidiMap(args, position);
+        return liveBuiltins.builtinMidiMap.call(this, args, position);
       case 'scene':
-        return this.builtinScene(args, position);
+        return liveBuiltins.builtinScene.call(this, args, position);
       case 'launchScene':
-        return this.builtinLaunchScene(args, position);
+        return liveBuiltins.builtinLaunchScene.call(this, args, position);
       case 'liveLoop':
-        return this.builtinLiveLoop(args, position);
+        return liveBuiltins.builtinLiveLoop.call(this, args, position);
 
       // Score Layout
       case 'pageBreak':
-        return this.builtinPageBreak(args, position);
+        return layoutBuiltins.builtinPageBreak.call(this, args, position);
       case 'systemBreak':
-        return this.builtinSystemBreak(args, position);
+        return layoutBuiltins.builtinSystemBreak.call(this, args, position);
       case 'staffSpacing':
-        return this.builtinStaffSpacing(args, position);
+        return layoutBuiltins.builtinStaffSpacing.call(this, args, position);
       case 'text':
-        return this.builtinText(args, position);
+        return layoutBuiltins.builtinText.call(this, args, position);
       case 'rehearsalMark':
-        return this.builtinRehearsalMark(args, position);
+        return layoutBuiltins.builtinRehearsalMark.call(this, args, position);
       case 'direction':
-        return this.builtinDirection(args, position);
+        return layoutBuiltins.builtinDirection.call(this, args, position);
 
       // Audio manipulation
       case 'timeStretch':
-        return this.builtinTimeStretch(args, position);
+        return audioBuiltins.builtinTimeStretch.call(this, args, position);
       case 'pitchShift':
-        return this.builtinPitchShift(args, position);
+        return audioBuiltins.builtinPitchShift.call(this, args, position);
       case 'sampleSlicer':
-        return this.builtinSampleSlicer(args, position);
+        return audioBuiltins.builtinSampleSlicer.call(this, args, position);
       case 'granular':
-        return this.builtinGranular(args, position);
+        return audioBuiltins.builtinGranular.call(this, args, position);
 
       // Advanced automation
       case 'automationLane':
-        return this.builtinAutomationLane(args, position);
+        return audioBuiltins.builtinAutomationLane.call(this, args, position);
       case 'automationPoint':
-        return this.builtinAutomationPoint(args, position);
+        return audioBuiltins.builtinAutomationPoint.call(this, args, position);
       case 'lfo':
         return this.builtinLFO(args, position);
       case 'envelopeFollower':
@@ -1107,15 +2384,15 @@ export class Interpreter {
 
       // Mixing/Mastering
       case 'bus':
-        return this.builtinBus(args, position);
+        return mixingBuiltins.builtinBus.call(this, args, position);
       case 'send':
-        return this.builtinSend(args, position);
+        return mixingBuiltins.builtinSend.call(this, args, position);
       case 'stereoWidth':
-        return this.builtinStereoWidth(args, position);
+        return mixingBuiltins.builtinStereoWidth.call(this, args, position);
       case 'limiter':
-        return this.builtinLimiter(args, position);
+        return effectsBuiltins.builtinLimiter.call(this, args, position);
       case 'maximizer':
-        return this.builtinMaximizer(args, position);
+        return effectsBuiltins.builtinMaximizer.call(this, args, position);
       case 'multibandComp':
         return this.builtinMultibandComp(args, position);
       case 'spatial':
@@ -1516,35 +2793,111 @@ export class Interpreter {
         return this.builtinCollaboratorSession(args, position);
       case 'versionDiff':
         return this.builtinVersionDiff(args, position);
-    }
-
-    // User-defined proc
-    const proc = this.scope.lookupProc(callee);
-    if (proc) {
-      // Check for recursion
-      if (this.callStack.has(callee)) {
-        throw createError('E310', `Recursion detected in '${callee}'`, position, this.filePath);
       }
 
-      this.callStack.add(callee);
+      // User-defined proc
+      const proc = this.scope.lookupProc(callee);
+      if (proc) {
+        // Track recursion depth
+        const currentDepth = this.callStack.get(callee) || 0;
+        if (currentDepth >= 100) {
+          throw createError('E310', `Maximum recursion depth exceeded in '${callee}'`, position, this.filePath);
+        }
 
-      // Create scope with parameters
-      const childScope = this.scope.createChild();
-      for (let i = 0; i < proc.params.length; i++) {
-        const value = i < args.length ? this.evaluate(args[i]) : makeNull();
-        childScope.defineConst(proc.params[i], value);
+        this.callStack.set(callee, currentDepth + 1);
+
+        // Create scope with parameters
+        const childScope = this.scope.createChild();
+        const evalArgs = expandArgs();
+        for (let i = 0; i < proc.params.length; i++) {
+          const param = proc.params[i];
+          if (param.rest) {
+            // Rest parameter collects remaining args
+            childScope.defineConst(param.name, makeArray(evalArgs.slice(i)));
+            break;
+          }
+          const value = i < evalArgs.length ? evalArgs[i] : makeNull();
+          childScope.defineConst(param.name, value);
+        }
+
+        const oldScope = this.scope;
+        this.scope = childScope;
+
+        let returnValue: RuntimeValue = makeNull();
+        try {
+          this.executeStatements(proc.body);
+        } catch (e) {
+          if (e instanceof ReturnSignal) {
+            returnValue = e.value;
+          } else {
+            throw e;
+          }
+        }
+
+        this.scope = oldScope;
+        this.callStack.set(callee, currentDepth);
+        if (currentDepth === 0) {
+          this.callStack.delete(callee);
+        }
+
+        return returnValue;
       }
 
-      const oldScope = this.scope;
-      this.scope = childScope;
-      this.executeStatements(proc.body);
-      this.scope = oldScope;
-
-      this.callStack.delete(callee);
-      return makeNull();
+      throw createError('E400', `Undefined function '${callee}'`, position, this.filePath);
     }
 
-    throw createError('E400', `Undefined function '${callee}'`, position, this.filePath);
+    // callee is not an Identifier - evaluate as expression (first-class function)
+    const fnValue = this.evaluate(calleeExpr);
+    if (fnValue.type !== 'function') {
+      throw createError('E400', `Expression is not callable (got ${fnValue.type})`, position, this.filePath);
+    }
+    return this.callFunctionValue(fnValue, expandArgs(), position);
+  }
+
+  // Call a FunctionValue (arrow function or first-class function)
+  private callFunctionValue(
+    fn: FunctionValue,
+    evalArgs: RuntimeValue[],
+    position: { line: number; column: number; offset: number }
+  ): RuntimeValue {
+    // Create new scope chained to closure scope (not current scope!)
+    const callScope = fn.closure.createChild();
+
+    // Bind parameters
+    for (let i = 0; i < fn.params.length; i++) {
+      const param = fn.params[i];
+      if (param.rest) {
+        // Rest parameter collects remaining args
+        callScope.defineConst(param.name, makeArray(evalArgs.slice(i)));
+        break;
+      }
+      const value = i < evalArgs.length ? evalArgs[i] : makeNull();
+      callScope.defineConst(param.name, value);
+    }
+
+    const oldScope = this.scope;
+    this.scope = callScope;
+
+    let result: RuntimeValue = makeNull();
+    try {
+      if (Array.isArray(fn.body)) {
+        // Block body
+        this.executeStatements(fn.body);
+      } else {
+        // Expression body - evaluate and return
+        result = this.evaluate(fn.body);
+      }
+    } catch (e) {
+      if (e instanceof ReturnSignal) {
+        result = e.value;
+      } else {
+        this.scope = oldScope;
+        throw e;
+      }
+    }
+
+    this.scope = oldScope;
+    return result;
   }
 
   // Articulation functions

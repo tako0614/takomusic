@@ -11,8 +11,15 @@ import {
   ConstDeclaration,
   LetDeclaration,
   AssignmentStatement,
+  IndexAssignmentStatement,
+  PropertyAssignmentStatement,
   IfStatement,
   ForStatement,
+  ForEachStatement,
+  WhileStatement,
+  ReturnStatement,
+  BreakStatement,
+  ContinueStatement,
   ExpressionStatement,
   TrackBlock,
   IntLiteral,
@@ -26,9 +33,15 @@ import {
   BinaryExpression,
   UnaryExpression,
   CallExpression,
+  IndexExpression,
+  MemberExpression,
   ArrayLiteral,
   ObjectLiteral,
+  ObjectProperty,
+  ArrowFunction,
+  SpreadElement,
   RangeExpression,
+  Parameter,
 } from '../types/ast.js';
 import { MFError } from '../errors.js';
 
@@ -83,6 +96,22 @@ export class Parser {
 
     if (this.check(TokenType.FOR)) {
       return this.parseFor();
+    }
+
+    if (this.check(TokenType.WHILE)) {
+      return this.parseWhile();
+    }
+
+    if (this.check(TokenType.RETURN)) {
+      return this.parseReturn();
+    }
+
+    if (this.check(TokenType.BREAK)) {
+      return this.parseBreak();
+    }
+
+    if (this.check(TokenType.CONTINUE)) {
+      return this.parseContinue();
     }
 
     // track block: track(kind, id, opts?) { ... }
@@ -145,12 +174,19 @@ export class Parser {
     const name = this.expect(TokenType.IDENT, 'Expected proc name').value;
 
     this.expect(TokenType.LPAREN, "Expected '(' after proc name");
-    const params: string[] = [];
+    const params: Parameter[] = [];
 
     if (!this.check(TokenType.RPAREN)) {
       do {
+        // Check for rest parameter
+        if (this.check(TokenType.SPREAD)) {
+          this.advance(); // consume '...'
+          const param = this.expect(TokenType.IDENT, 'Expected rest parameter name');
+          params.push({ name: param.value, rest: true });
+          break; // Rest must be last
+        }
         const param = this.expect(TokenType.IDENT, 'Expected parameter name');
-        params.push(param.value);
+        params.push({ name: param.value });
       } while (this.match(TokenType.COMMA));
     }
 
@@ -224,43 +260,107 @@ export class Parser {
     };
   }
 
-  private parseFor(): ForStatement {
+  private parseFor(): ForStatement | ForEachStatement {
     const pos = this.advance().position; // consume 'for'
     this.expect(TokenType.LPAREN, "Expected '(' after 'for'");
     const variable = this.expect(TokenType.IDENT, 'Expected loop variable').value;
     this.expect(TokenType.IN, "Expected 'in' after loop variable");
 
-    const rangeStart = this.parseAdditive();
+    const firstExpr = this.parseAdditive();
 
-    let inclusive = false;
-    if (this.match(TokenType.DOTDOTEQ)) {
-      inclusive = true;
+    // Check if this is a range (has ..) or array iteration
+    if (this.check(TokenType.DOTDOT) || this.check(TokenType.DOTDOTEQ)) {
+      // Range iteration: for (i in 0..10) or for (i in 0..=10)
+      let inclusive = false;
+      if (this.match(TokenType.DOTDOTEQ)) {
+        inclusive = true;
+      } else {
+        this.advance(); // consume '..'
+      }
+
+      const rangeEnd = this.parseAdditive();
+
+      const range: RangeExpression = {
+        kind: 'RangeExpression',
+        start: firstExpr,
+        end: rangeEnd,
+        inclusive,
+        position: firstExpr.position,
+      };
+
+      this.expect(TokenType.RPAREN, "Expected ')' after range");
+      this.expect(TokenType.LBRACE, "Expected '{' before for body");
+
+      const body = this.parseBlock();
+
+      return {
+        kind: 'ForStatement',
+        variable,
+        range,
+        body,
+        position: pos,
+      };
     } else {
-      this.expect(TokenType.DOTDOT, "Expected '..' or '..=' in range");
+      // Array iteration: for (x in array)
+      this.expect(TokenType.RPAREN, "Expected ')' after iterable");
+      this.expect(TokenType.LBRACE, "Expected '{' before for body");
+
+      const body = this.parseBlock();
+
+      return {
+        kind: 'ForEachStatement',
+        variable,
+        iterable: firstExpr,
+        body,
+        position: pos,
+      };
     }
+  }
 
-    const rangeEnd = this.parseAdditive();
-
-    const range: RangeExpression = {
-      kind: 'RangeExpression',
-      start: rangeStart,
-      end: rangeEnd,
-      inclusive,
-      position: rangeStart.position,
-    };
-
-    this.expect(TokenType.RPAREN, "Expected ')' after range");
-    this.expect(TokenType.LBRACE, "Expected '{' before for body");
+  private parseWhile(): WhileStatement {
+    const pos = this.advance().position; // consume 'while'
+    this.expect(TokenType.LPAREN, "Expected '(' after 'while'");
+    const condition = this.parseExpression();
+    this.expect(TokenType.RPAREN, "Expected ')' after condition");
+    this.expect(TokenType.LBRACE, "Expected '{' before while body");
 
     const body = this.parseBlock();
 
     return {
-      kind: 'ForStatement',
-      variable,
-      range,
+      kind: 'WhileStatement',
+      condition,
       body,
       position: pos,
     };
+  }
+
+  private parseReturn(): ReturnStatement {
+    const pos = this.advance().position; // consume 'return'
+
+    let value: Expression | null = null;
+    if (!this.check(TokenType.SEMICOLON)) {
+      value = this.parseExpression();
+    }
+
+    this.expect(TokenType.SEMICOLON, "Expected ';' after return");
+
+    return {
+      kind: 'ReturnStatement',
+      value,
+      position: pos,
+    };
+  }
+
+  private parseBreak(): BreakStatement {
+    const pos = this.advance().position; // consume 'break'
+    this.expect(TokenType.SEMICOLON, "Expected ';' after break");
+    return { kind: 'BreakStatement', position: pos };
+  }
+
+  private parseContinue(): ContinueStatement {
+    const pos = this.advance().position; // consume 'continue'
+    this.expect(TokenType.SEMICOLON, "Expected ';' after continue");
+    return { kind: 'ContinueStatement', position: pos };
   }
 
   private parseTrackBlock(): TrackBlock {
@@ -315,23 +415,96 @@ export class Parser {
   private parseAssignmentOrExpression(): Statement {
     const pos = this.peek().position;
 
-    // Check for assignment: ident = expr;
-    if (this.check(TokenType.IDENT) && this.checkAhead(1, TokenType.EQ)) {
-      const name = this.advance().value;
+    // Parse the left-hand side expression first
+    const expr = this.parseExpression();
+
+    // Check for assignment operators
+    if (this.check(TokenType.EQ)) {
       this.advance(); // consume '='
       const value = this.parseExpression();
       this.expect(TokenType.SEMICOLON, "Expected ';' after assignment");
 
-      return {
-        kind: 'AssignmentStatement',
-        name,
-        value,
-        position: pos,
-      };
+      // Simple variable assignment
+      if (expr.kind === 'Identifier') {
+        return {
+          kind: 'AssignmentStatement',
+          name: expr.name,
+          value,
+          position: pos,
+        };
+      }
+
+      // Index assignment: arr[i] = value
+      if (expr.kind === 'IndexExpression') {
+        return {
+          kind: 'IndexAssignmentStatement',
+          object: expr.object,
+          index: expr.index,
+          value,
+          position: pos,
+        };
+      }
+
+      // Property assignment: obj.prop = value
+      if (expr.kind === 'MemberExpression') {
+        return {
+          kind: 'PropertyAssignmentStatement',
+          object: expr.object,
+          property: expr.property,
+          value,
+          position: pos,
+        } as PropertyAssignmentStatement;
+      }
+
+      throw this.error('Invalid assignment target');
+    }
+
+    // Compound assignment: +=, -=, *=, /=
+    if (this.checkCompoundAssign()) {
+      const op = this.advance().value; // e.g., '+='
+      const binaryOp = op.charAt(0); // e.g., '+'
+      const rhs = this.parseExpression();
+      this.expect(TokenType.SEMICOLON, "Expected ';' after assignment");
+
+      // Desugar: x += y  ->  x = x + y
+      if (expr.kind === 'Identifier') {
+        const binaryExpr: BinaryExpression = {
+          kind: 'BinaryExpression',
+          operator: binaryOp,
+          left: expr,
+          right: rhs,
+          position: pos,
+        };
+        return {
+          kind: 'AssignmentStatement',
+          name: expr.name,
+          value: binaryExpr,
+          position: pos,
+        };
+      }
+
+      // arr[i] += y  ->  arr[i] = arr[i] + y
+      if (expr.kind === 'IndexExpression') {
+        const binaryExpr: BinaryExpression = {
+          kind: 'BinaryExpression',
+          operator: binaryOp,
+          left: expr,
+          right: rhs,
+          position: pos,
+        };
+        return {
+          kind: 'IndexAssignmentStatement',
+          object: expr.object,
+          index: expr.index,
+          value: binaryExpr,
+          position: pos,
+        };
+      }
+
+      throw this.error('Invalid compound assignment target');
     }
 
     // Expression statement
-    const expr = this.parseExpression();
     this.expect(TokenType.SEMICOLON, "Expected ';' after expression");
 
     return {
@@ -339,6 +512,11 @@ export class Parser {
       expression: expr,
       position: pos,
     };
+  }
+
+  private checkCompoundAssign(): boolean {
+    return this.check(TokenType.PLUSEQ) || this.check(TokenType.MINUSEQ) ||
+           this.check(TokenType.STAREQ) || this.check(TokenType.SLASHEQ);
   }
 
   // Expression parsing with precedence climbing
@@ -442,7 +620,7 @@ export class Parser {
   private parseMultiplicative(): Expression {
     let left = this.parseUnary();
 
-    while (this.check(TokenType.STAR)) {
+    while (this.check(TokenType.STAR) || this.check(TokenType.SLASH) || this.check(TokenType.PERCENT)) {
       const op = this.advance().value;
       const right = this.parseUnary();
       left = {
@@ -473,22 +651,58 @@ export class Parser {
   }
 
   private parseCall(): Expression {
-    const expr = this.parsePrimary();
+    let expr = this.parsePrimary();
 
-    if (expr.kind === 'Identifier' && this.check(TokenType.LPAREN)) {
-      return this.finishCall(expr as Identifier);
+    while (true) {
+      if (this.check(TokenType.LPAREN)) {
+        // Function call: expr(args) - supports first-class functions
+        expr = this.finishCall(expr);
+      } else if (this.check(TokenType.LBRACKET)) {
+        // Index access: expr[index]
+        const pos = this.advance().position; // consume '['
+        const index = this.parseExpression();
+        this.expect(TokenType.RBRACKET, "Expected ']' after index");
+        expr = {
+          kind: 'IndexExpression',
+          object: expr,
+          index,
+          position: pos,
+        } as IndexExpression;
+      } else if (this.check(TokenType.DOT)) {
+        // Member access: expr.property
+        const pos = this.advance().position; // consume '.'
+        const prop = this.expect(TokenType.IDENT, 'Expected property name after "."');
+        expr = {
+          kind: 'MemberExpression',
+          object: expr,
+          property: prop.value,
+          position: pos,
+        } as MemberExpression;
+      } else {
+        break;
+      }
     }
 
     return expr;
   }
 
-  private finishCall(callee: Identifier): CallExpression {
+  private finishCall(callee: Expression): CallExpression {
     const pos = this.advance().position; // consume '('
-    const args: Expression[] = [];
+    const args: (Expression | SpreadElement)[] = [];
 
     if (!this.check(TokenType.RPAREN)) {
       do {
-        args.push(this.parseExpression());
+        // Check for spread argument
+        if (this.check(TokenType.SPREAD)) {
+          const spreadPos = this.advance().position; // consume '...'
+          args.push({
+            kind: 'SpreadElement',
+            argument: this.parseExpression(),
+            position: spreadPos,
+          } as SpreadElement);
+        } else {
+          args.push(this.parseExpression());
+        }
       } while (this.match(TokenType.COMMA));
     }
 
@@ -496,7 +710,7 @@ export class Parser {
 
     return {
       kind: 'CallExpression',
-      callee: callee.name,
+      callee,
       arguments: args,
       position: callee.position,
     };
@@ -592,15 +806,92 @@ export class Parser {
       };
     }
 
-    // Parenthesized expression
+    // Parenthesized expression or arrow function
     if (this.check(TokenType.LPAREN)) {
-      this.advance();
-      const expr = this.parseExpression();
-      this.expect(TokenType.RPAREN, "Expected ')' after expression");
-      return expr;
+      return this.parseParenOrArrow();
     }
 
     throw this.error(`Unexpected token: ${token.value}`);
+  }
+
+  // Parse either a parenthesized expression or an arrow function
+  private parseParenOrArrow(): Expression {
+    const startPos = this.peek().position;
+    this.advance(); // consume '('
+
+    // Empty params: () => ...
+    if (this.check(TokenType.RPAREN)) {
+      this.advance(); // consume ')'
+      if (this.check(TokenType.ARROW)) {
+        return this.finishArrowFunction([], startPos);
+      }
+      throw this.error('Empty parentheses are not allowed except for arrow functions');
+    }
+
+    // Try to parse as parameters for arrow function
+    // We need to look ahead to determine if this is arrow function or just parens
+    const savedPos = this.current;
+
+    // Check if we can parse as parameters (all identifiers/rest, no complex expressions)
+    const params: Parameter[] = [];
+    let isArrow = true;
+
+    try {
+      do {
+        if (this.check(TokenType.SPREAD)) {
+          this.advance();
+          const name = this.expect(TokenType.IDENT, 'Expected parameter name');
+          params.push({ name: name.value, rest: true });
+          break;
+        }
+        if (!this.check(TokenType.IDENT)) {
+          isArrow = false;
+          break;
+        }
+        const name = this.advance().value;
+        params.push({ name });
+      } while (this.match(TokenType.COMMA));
+
+      if (isArrow && this.check(TokenType.RPAREN)) {
+        this.advance(); // consume ')'
+        if (this.check(TokenType.ARROW)) {
+          return this.finishArrowFunction(params, startPos);
+        }
+      }
+    } catch {
+      // Not a valid arrow function parameter list
+    }
+
+    // Backtrack and parse as parenthesized expression
+    this.current = savedPos;
+    const expr = this.parseExpression();
+    this.expect(TokenType.RPAREN, "Expected ')' after expression");
+
+    // Check for arrow after single-param parens: (x) => ...
+    if (this.check(TokenType.ARROW) && expr.kind === 'Identifier') {
+      return this.finishArrowFunction([{ name: expr.name }], startPos);
+    }
+
+    return expr;
+  }
+
+  private finishArrowFunction(params: Parameter[], startPos: { line: number; column: number; offset: number }): ArrowFunction {
+    this.advance(); // consume '=>'
+
+    let body: Expression | Statement[];
+    if (this.check(TokenType.LBRACE)) {
+      this.advance(); // consume '{'
+      body = this.parseBlock();
+    } else {
+      body = this.parseExpression();
+    }
+
+    return {
+      kind: 'ArrowFunction',
+      params,
+      body,
+      position: startPos,
+    };
   }
 
   private parsePitchLiteral(token: Token): PitchLiteral {
@@ -677,11 +968,20 @@ export class Parser {
 
   private parseArrayLiteral(): ArrayLiteral {
     const pos = this.advance().position; // consume '['
-    const elements: Expression[] = [];
+    const elements: (Expression | SpreadElement)[] = [];
 
     if (!this.check(TokenType.RBRACKET)) {
       do {
-        elements.push(this.parseExpression());
+        if (this.check(TokenType.SPREAD)) {
+          const spreadPos = this.advance().position; // consume '...'
+          elements.push({
+            kind: 'SpreadElement',
+            argument: this.parseExpression(),
+            position: spreadPos,
+          } as SpreadElement);
+        } else {
+          elements.push(this.parseExpression());
+        }
       } while (this.match(TokenType.COMMA));
     }
 
@@ -696,14 +996,34 @@ export class Parser {
 
   private parseObjectLiteral(): ObjectLiteral {
     const pos = this.advance().position; // consume '{'
-    const properties: { key: string; value: Expression }[] = [];
+    const properties: ObjectProperty[] = [];
 
     if (!this.check(TokenType.RBRACE)) {
       do {
-        const key = this.expect(TokenType.IDENT, 'Expected property name').value;
-        this.expect(TokenType.COLON, "Expected ':' after property name");
-        const value = this.parseExpression();
-        properties.push({ key, value });
+        // Spread property: { ...obj }
+        if (this.check(TokenType.SPREAD)) {
+          this.advance(); // consume '...'
+          const argument = this.parseExpression();
+          properties.push({ kind: 'spread', argument });
+        } else {
+          const keyToken = this.expect(TokenType.IDENT, 'Expected property name');
+          const key = keyToken.value;
+
+          // Shorthand property: { x } means { x: x }
+          if (this.check(TokenType.COMMA) || this.check(TokenType.RBRACE)) {
+            properties.push({
+              kind: 'property',
+              key,
+              value: { kind: 'Identifier', name: key, position: keyToken.position } as Identifier,
+              shorthand: true,
+            });
+          } else {
+            // Full property: { key: value }
+            this.expect(TokenType.COLON, "Expected ':' after property name");
+            const value = this.parseExpression();
+            properties.push({ kind: 'property', key, value, shorthand: false });
+          }
+        }
       } while (this.match(TokenType.COMMA));
     }
 

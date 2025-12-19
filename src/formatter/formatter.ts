@@ -4,6 +4,7 @@ import type {
   Program,
   Statement,
   Expression,
+  Parameter,
 } from '../types/ast.js';
 
 export class Formatter {
@@ -106,6 +107,46 @@ export class Formatter {
         this.line('}');
         break;
 
+      case 'WhileStatement':
+        this.line(`while (${this.formatExpr(stmt.condition)}) {`);
+        this.indent++;
+        for (const s of stmt.body) {
+          this.formatStatement(s);
+        }
+        this.indent--;
+        this.line('}');
+        break;
+
+      case 'ForEachStatement':
+        this.line(`for (${stmt.variable} in ${this.formatExpr(stmt.iterable)}) {`);
+        this.indent++;
+        for (const s of stmt.body) {
+          this.formatStatement(s);
+        }
+        this.indent--;
+        this.line('}');
+        break;
+
+      case 'ReturnStatement':
+        if (stmt.value) {
+          this.line(`return ${this.formatExpr(stmt.value)};`);
+        } else {
+          this.line('return;');
+        }
+        break;
+
+      case 'BreakStatement':
+        this.line('break;');
+        break;
+
+      case 'ContinueStatement':
+        this.line('continue;');
+        break;
+
+      case 'IndexAssignmentStatement':
+        this.line(`${this.formatExpr(stmt.object)}[${this.formatExpr(stmt.index)}] = ${this.formatExpr(stmt.value)};`);
+        break;
+
       case 'TrackBlock':
         let trackArgs = `${stmt.trackKind}, ${stmt.id}`;
         if (stmt.options) {
@@ -134,9 +175,10 @@ export class Formatter {
     }
   }
 
-  private formatProc(name: string, params: string[], body: Statement[], exported: boolean): void {
+  private formatProc(name: string, params: Parameter[], body: Statement[], exported: boolean): void {
     const prefix = exported ? 'export ' : '';
-    this.line(`${prefix}proc ${name}(${params.join(', ')}) {`);
+    const paramStr = params.map(p => (p.rest ? '...' : '') + p.name).join(', ');
+    this.line(`${prefix}proc ${name}(${paramStr}) {`);
     this.indent++;
     for (const stmt of body) {
       this.formatStatement(stmt);
@@ -181,18 +223,58 @@ export class Formatter {
         return `${expr.operator}${this.formatExpr(expr.operand)}`;
 
       case 'CallExpression':
-        return `${expr.callee}(${expr.arguments.map((a) => this.formatExpr(a)).join(', ')})`;
+        const calleeStr = this.formatExpr(expr.callee);
+        const argsStr = expr.arguments.map((a) => {
+          if (a.kind === 'SpreadElement') {
+            return '...' + this.formatExpr(a.argument);
+          }
+          return this.formatExpr(a);
+        }).join(', ');
+        return `${calleeStr}(${argsStr})`;
+
+      case 'IndexExpression':
+        return `${this.formatExpr(expr.object)}[${this.formatExpr(expr.index)}]`;
+
+      case 'MemberExpression':
+        return `${this.formatExpr(expr.object)}.${expr.property}`;
 
       case 'ArrayLiteral':
-        return `[${expr.elements.map((e) => this.formatExpr(e)).join(', ')}]`;
+        const elemStr = expr.elements.map((e) => {
+          if (e.kind === 'SpreadElement') {
+            return '...' + this.formatExpr(e.argument);
+          }
+          return this.formatExpr(e);
+        }).join(', ');
+        return `[${elemStr}]`;
 
       case 'ObjectLiteral':
-        const props = expr.properties.map((p) => `${p.key}: ${this.formatExpr(p.value)}`);
+        const props = expr.properties.map((p) => {
+          if (p.kind === 'spread') {
+            return '...' + this.formatExpr(p.argument);
+          }
+          if (p.shorthand) {
+            return p.key;
+          }
+          return `${p.key}: ${this.formatExpr(p.value)}`;
+        });
         return `{ ${props.join(', ')} }`;
+
+      case 'ArrowFunction':
+        const paramStr = expr.params.map(p => (p.rest ? '...' : '') + p.name).join(', ');
+        if (Array.isArray(expr.body)) {
+          return `(${paramStr}) => { ... }`;
+        }
+        return `(${paramStr}) => ${this.formatExpr(expr.body)}`;
+
+      case 'SpreadElement':
+        return `...${this.formatExpr(expr.argument)}`;
 
       case 'RangeExpression':
         const op = expr.inclusive ? '..=' : '..';
         return `${this.formatExpr(expr.start)}${op}${this.formatExpr(expr.end)}`;
+
+      default:
+        return `<unknown: ${(expr as Expression).kind}>`;
     }
   }
 

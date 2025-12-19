@@ -1,0 +1,251 @@
+// MFS Standard Library - Algorithmic Composition
+// Functions for generative/algorithmic music composition
+
+// euclidean: Generate Euclidean rhythm pattern
+// steps: total number of steps
+// pulses: number of hits to distribute
+// dur: duration of each step
+// pitch: pitch to play (optional, uses C4 if not provided)
+export proc euclidean(steps, pulses, dur, pitch) {
+  if (pulses > steps) {
+    pulses = steps;
+  }
+
+  let stepTicks = durToTicks(dur);
+  let vel = getVel();
+
+  // Generate euclidean pattern using Bjorklund's algorithm
+  let bucket = 0;
+  for (i in 0..steps) {
+    bucket += pulses;
+    if (bucket >= steps) {
+      bucket -= steps;
+      // Hit - play note
+      noteAt(cursor(), pitch, stepTicks, vel);
+    }
+    advanceTick(stepTicks);
+  }
+}
+
+// probability: Play note with given probability
+// pitch: the pitch to play
+// dur: note duration
+// prob: probability 0-100 (default 50)
+export proc probability(pitch, dur, prob) {
+  let durTicks = durToTicks(dur);
+  let vel = getVel();
+
+  let r = random() * 100.0;
+  if (r < float(prob)) {
+    noteAt(cursor(), pitch, durTicks, vel);
+  }
+  advanceTick(durTicks);
+}
+
+// randomNote: Play random note in pitch range
+// minPitch: minimum pitch (as MIDI number)
+// maxPitch: maximum pitch (as MIDI number)
+// dur: note duration
+export proc randomNote(minPitch, maxPitch, dur) {
+  let durTicks = durToTicks(dur);
+  let vel = getVel();
+
+  let range = maxPitch - minPitch + 1;
+  let midiNote = minPitch + random(range);
+  let p = midiPitch(midiNote);
+
+  noteAt(cursor(), p, durTicks, vel);
+  advanceTick(durTicks);
+}
+
+// randomRhythm: Play random rhythm pattern
+// pitch: the pitch to play
+// durations: array of possible durations
+// count: number of notes to generate
+export proc randomRhythm(pitch, durations, count) {
+  let vel = getVel();
+  let numDurs = len(durations);
+
+  for (i in 0..count) {
+    let durIndex = random(numDurs);
+    let dur = durations[durIndex];
+    let durTicks = durToTicks(dur);
+
+    noteAt(cursor(), pitch, durTicks, vel);
+    advanceTick(durTicks);
+  }
+}
+
+// cellular: Generate pattern using 1D cellular automaton
+// rule: Wolfram rule number (0-255)
+// steps: number of cells/steps
+// dur: duration per step
+// pitch: pitch to play on active cells
+export proc cellular(rule, steps, dur, pitch) {
+  let durTicks = durToTicks(dur);
+  let vel = getVel();
+  let startTick = cursor();
+
+  // Initialize cells - single cell in middle
+  let current = fill(steps, false);
+  let middle = steps / 2;
+  current[middle] = true;
+
+  // First generation - output initial state
+  for (i in 0..steps) {
+    if (current[i]) {
+      noteAt(startTick + i * durTicks, pitch, durTicks, vel);
+    }
+  }
+
+  // Apply rule for subsequent generations
+  for (gen in 0..(steps - 1)) {
+    let next = fill(steps, false);
+    for (i in 1..(steps - 1)) {
+      let left = 0;
+      let center = 0;
+      let right = 0;
+      if (current[i - 1]) {
+        left = 4;
+      }
+      if (current[i]) {
+        center = 2;
+      }
+      if (current[i + 1]) {
+        right = 1;
+      }
+      let index = left + center + right;
+      // Check if bit at position 'index' is set in rule
+      if (bitAnd(bitShiftRight(rule, index), 1) == 1) {
+        next[i] = true;
+      }
+    }
+    current = next;
+  }
+
+  advanceTick(steps * durTicks);
+}
+
+// shuffle: Randomly shuffle an array (Fisher-Yates)
+// arr: array to shuffle (modified in place)
+export proc shuffle(arr) {
+  let n = len(arr);
+  for (i in 0..(n - 1)) {
+    let j = i + random(n - i);
+    // Swap arr[i] and arr[j]
+    let temp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = temp;
+  }
+  return arr;
+}
+
+// rotatePattern: Rotate a pattern array
+// pattern: array to rotate
+// amount: positions to rotate (positive = right)
+export proc rotatePattern(pattern, amount) {
+  let n = len(pattern);
+  if (n == 0) {
+    return pattern;
+  }
+
+  // Normalize amount
+  let shift = amount % n;
+  if (shift < 0) {
+    shift += n;
+  }
+
+  let result = fill(n, false);
+  for (i in 0..n) {
+    let newIndex = (i + shift) % n;
+    result[newIndex] = pattern[i];
+  }
+  return result;
+}
+
+// playPattern: Play a boolean pattern as notes
+// pattern: array of booleans
+// pitch: pitch to play
+// dur: duration per step
+export proc playPattern(pattern, pitch, dur) {
+  let durTicks = durToTicks(dur);
+  let vel = getVel();
+
+  for (hit in pattern) {
+    if (hit) {
+      noteAt(cursor(), pitch, durTicks, vel);
+    }
+    advanceTick(durTicks);
+  }
+}
+
+// scales: Common scale patterns as semitone intervals from root
+// Returns array of semitone intervals
+export proc scaleMajor() {
+  return [0, 2, 4, 5, 7, 9, 11];
+}
+
+export proc scaleMinor() {
+  return [0, 2, 3, 5, 7, 8, 10];
+}
+
+export proc scalePentatonic() {
+  return [0, 2, 4, 7, 9];
+}
+
+export proc scaleBlues() {
+  return [0, 3, 5, 6, 7, 10];
+}
+
+export proc scaleChromatic() {
+  return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+}
+
+// randomScaleNote: Play random note from a scale
+// root: root pitch of scale
+// scale: array of semitone intervals (e.g., SCALE_MAJOR)
+// octaves: number of octaves to span
+// dur: note duration
+export proc randomScaleNote(root, scale, octaves, dur) {
+  let durTicks = durToTicks(dur);
+  let vel = getVel();
+
+  let scaleLen = len(scale);
+  let noteIndex = random(scaleLen * octaves);
+  let octave = floor(noteIndex / scaleLen);
+  let degree = noteIndex % scaleLen;
+
+  let rootMidi = pitchMidi(root);
+  let interval = scale[degree];
+  let midiNote = rootMidi + octave * 12 + interval;
+
+  noteAt(cursor(), midiPitch(midiNote), durTicks, vel);
+  advanceTick(durTicks);
+}
+
+// arpeggiateScale: Play scale notes in sequence
+// root: root pitch
+// scale: scale intervals
+// dur: duration per note
+// ascending: true for up, false for down
+export proc arpeggiateScale(root, scale, dur, ascending) {
+  let durTicks = durToTicks(dur);
+  let vel = getVel();
+  let rootMidi = pitchMidi(root);
+  let n = len(scale);
+
+  if (ascending) {
+    for (i in 0..n) {
+      let midiNote = rootMidi + scale[i];
+      noteAt(cursor(), midiPitch(midiNote), durTicks, vel);
+      advanceTick(durTicks);
+    }
+  } else {
+    for (i in 0..n) {
+      let idx = n - 1 - i;
+      let midiNote = rootMidi + scale[idx];
+      noteAt(cursor(), midiPitch(midiNote), durTicks, vel);
+      advanceTick(durTicks);
+    }
+  }
+}

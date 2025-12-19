@@ -245,10 +245,31 @@ export class Lexer {
     const char = this.advance();
 
     switch (char) {
-      case '+': return { type: TokenType.PLUS, value: '+', position: pos };
-      case '-': return { type: TokenType.MINUS, value: '-', position: pos };
-      case '*': return { type: TokenType.STAR, value: '*', position: pos };
-      case '/': return { type: TokenType.SLASH, value: '/', position: pos };
+      case '+':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.PLUSEQ, value: '+=', position: pos };
+        }
+        return { type: TokenType.PLUS, value: '+', position: pos };
+      case '-':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.MINUSEQ, value: '-=', position: pos };
+        }
+        return { type: TokenType.MINUS, value: '-', position: pos };
+      case '*':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.STAREQ, value: '*=', position: pos };
+        }
+        return { type: TokenType.STAR, value: '*', position: pos };
+      case '/':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.SLASHEQ, value: '/=', position: pos };
+        }
+        return { type: TokenType.SLASH, value: '/', position: pos };
+      case '%': return { type: TokenType.PERCENT, value: '%', position: pos };
       case '(': return { type: TokenType.LPAREN, value: '(', position: pos };
       case ')': return { type: TokenType.RPAREN, value: ')', position: pos };
       case '{': return { type: TokenType.LBRACE, value: '{', position: pos };
@@ -263,6 +284,10 @@ export class Lexer {
         if (this.peek() === '=') {
           this.advance();
           return { type: TokenType.EQEQ, value: '==', position: pos };
+        }
+        if (this.peek() === '>') {
+          this.advance();
+          return { type: TokenType.ARROW, value: '=>', position: pos };
         }
         return { type: TokenType.EQ, value: '=', position: pos };
 
@@ -304,13 +329,17 @@ export class Lexer {
       case '.':
         if (this.peek() === '.') {
           this.advance();
+          if (this.peek() === '.') {
+            this.advance();
+            return { type: TokenType.SPREAD, value: '...', position: pos };
+          }
           if (this.peek() === '=') {
             this.advance();
             return { type: TokenType.DOTDOTEQ, value: '..=', position: pos };
           }
           return { type: TokenType.DOTDOT, value: '..', position: pos };
         }
-        throw new MFError('SYNTAX', `Unexpected character: ${char}`, pos, this.filePath);
+        return { type: TokenType.DOT, value: '.', position: pos };
 
       default:
         throw new MFError('SYNTAX', `Unexpected character: ${char}`, pos, this.filePath);

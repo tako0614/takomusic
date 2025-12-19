@@ -23,8 +23,16 @@ export type Statement =
   | ConstDeclaration
   | LetDeclaration
   | AssignmentStatement
+  | IndexAssignmentStatement
+  | PropertyAssignmentStatement
+  | DestructuringDeclaration
   | IfStatement
   | ForStatement
+  | ForEachStatement
+  | WhileStatement
+  | ReturnStatement
+  | BreakStatement
+  | ContinueStatement
   | ExpressionStatement
   | TrackBlock;
 
@@ -39,10 +47,17 @@ export interface ExportStatement extends BaseNode {
   declaration: ProcDeclaration | ConstDeclaration;
 }
 
+// Parameter definition (supports rest and default values)
+export interface Parameter {
+  name: string;
+  rest?: boolean;
+  defaultValue?: Expression;
+}
+
 export interface ProcDeclaration extends BaseNode {
   kind: 'ProcDeclaration';
   name: string;
-  params: string[];
+  params: Parameter[];
   body: Statement[];
   exported: boolean;
 }
@@ -66,6 +81,42 @@ export interface AssignmentStatement extends BaseNode {
   value: Expression;
 }
 
+export interface IndexAssignmentStatement extends BaseNode {
+  kind: 'IndexAssignmentStatement';
+  object: Expression;
+  index: Expression;
+  value: Expression;
+}
+
+export interface PropertyAssignmentStatement extends BaseNode {
+  kind: 'PropertyAssignmentStatement';
+  object: Expression;
+  property: string;
+  value: Expression;
+}
+
+// Destructuring patterns
+export type DestructuringPattern = ArrayPattern | ObjectPattern;
+
+export interface ArrayPattern extends BaseNode {
+  kind: 'ArrayPattern';
+  elements: (string | DestructuringPattern | null)[]; // null for holes [a, , b]
+  rest?: string;
+}
+
+export interface ObjectPattern extends BaseNode {
+  kind: 'ObjectPattern';
+  properties: { key: string; value: string | DestructuringPattern }[];
+  rest?: string;
+}
+
+export interface DestructuringDeclaration extends BaseNode {
+  kind: 'DestructuringDeclaration';
+  pattern: DestructuringPattern;
+  value: Expression;
+  mutable: boolean; // true for let, false for const
+}
+
 export interface IfStatement extends BaseNode {
   kind: 'IfStatement';
   condition: Expression;
@@ -78,6 +129,32 @@ export interface ForStatement extends BaseNode {
   variable: string;
   range: RangeExpression;
   body: Statement[];
+}
+
+export interface ForEachStatement extends BaseNode {
+  kind: 'ForEachStatement';
+  variable: string;
+  iterable: Expression;
+  body: Statement[];
+}
+
+export interface WhileStatement extends BaseNode {
+  kind: 'WhileStatement';
+  condition: Expression;
+  body: Statement[];
+}
+
+export interface ReturnStatement extends BaseNode {
+  kind: 'ReturnStatement';
+  value: Expression | null;
+}
+
+export interface BreakStatement extends BaseNode {
+  kind: 'BreakStatement';
+}
+
+export interface ContinueStatement extends BaseNode {
+  kind: 'ContinueStatement';
 }
 
 export interface ExpressionStatement extends BaseNode {
@@ -107,8 +184,12 @@ export type Expression =
   | BinaryExpression
   | UnaryExpression
   | CallExpression
+  | IndexExpression
+  | MemberExpression
   | ArrayLiteral
   | ObjectLiteral
+  | ArrowFunction
+  | SpreadElement
   | RangeExpression;
 
 export interface IntLiteral extends BaseNode {
@@ -171,18 +252,48 @@ export interface UnaryExpression extends BaseNode {
 
 export interface CallExpression extends BaseNode {
   kind: 'CallExpression';
-  callee: string;
-  arguments: Expression[];
+  callee: Expression;
+  arguments: (Expression | SpreadElement)[];
+}
+
+export interface IndexExpression extends BaseNode {
+  kind: 'IndexExpression';
+  object: Expression;
+  index: Expression;
+}
+
+export interface MemberExpression extends BaseNode {
+  kind: 'MemberExpression';
+  object: Expression;
+  property: string;
 }
 
 export interface ArrayLiteral extends BaseNode {
   kind: 'ArrayLiteral';
-  elements: Expression[];
+  elements: (Expression | SpreadElement)[];
 }
+
+// Object property types
+export type ObjectProperty =
+  | { kind: 'property'; key: string; value: Expression; shorthand: boolean }
+  | { kind: 'spread'; argument: Expression };
 
 export interface ObjectLiteral extends BaseNode {
   kind: 'ObjectLiteral';
-  properties: { key: string; value: Expression }[];
+  properties: ObjectProperty[];
+}
+
+// Arrow function expression
+export interface ArrowFunction extends BaseNode {
+  kind: 'ArrowFunction';
+  params: Parameter[];
+  body: Expression | Statement[];
+}
+
+// Spread element for arrays and function calls
+export interface SpreadElement extends BaseNode {
+  kind: 'SpreadElement';
+  argument: Expression;
 }
 
 export interface RangeExpression extends BaseNode {
