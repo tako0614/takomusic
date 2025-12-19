@@ -32,7 +32,9 @@
       "Bash(npx vitest:*)",
       "Bash(wc:*)",
       "Bash(grep:*)",
-      "Bash(tr:*)"
+      "Bash(tr:*)",
+      "Bash(find:*)",
+      "Bash(npm run test:run:*)"
     ]
   }
 }

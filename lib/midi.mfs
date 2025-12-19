@@ -1,0 +1,214 @@
+// MFS Standard Library - MIDI Control
+// Convenience functions for common MIDI CC messages
+
+// MIDI CC Numbers
+export const CC_MODULATION = 1;
+export const CC_BREATH = 2;
+export const CC_VOLUME = 7;
+export const CC_PAN = 10;
+export const CC_EXPRESSION = 11;
+export const CC_SUSTAIN = 64;
+export const CC_PORTAMENTO = 65;
+export const CC_SOSTENUTO = 66;
+export const CC_SOFT = 67;
+export const CC_LEGATO = 68;
+export const CC_REVERB = 91;
+export const CC_CHORUS = 93;
+
+// expression: Set expression (CC11)
+// value: 0-127
+export proc expression(value) {
+  cc(11, value);
+}
+
+// modulation: Set modulation wheel (CC1)
+// value: 0-127
+export proc modulation(value) {
+  cc(1, value);
+}
+
+// pan: Set pan position (CC10)
+// value: 0-127 (0=left, 64=center, 127=right)
+export proc pan(value) {
+  cc(10, value);
+}
+
+// volume: Set channel volume (CC7)
+// value: 0-127
+export proc volume(value) {
+  cc(7, value);
+}
+
+// sustain: Set sustain pedal (CC64)
+// on: true for pedal down, false for pedal up
+export proc sustain(on) {
+  if (on) {
+    cc(64, 127);
+  } else {
+    cc(64, 0);
+  }
+}
+
+// sustainOn: Sustain pedal down
+export proc sustainOn() {
+  cc(64, 127);
+}
+
+// sustainOff: Sustain pedal up
+export proc sustainOff() {
+  cc(64, 0);
+}
+
+// portamento: Set portamento on/off (CC65)
+export proc portamento(on) {
+  if (on) {
+    cc(65, 127);
+  } else {
+    cc(65, 0);
+  }
+}
+
+// portamentoTime: Set portamento time (CC5)
+// value: 0-127
+export proc portamentoTime(value) {
+  cc(5, value);
+}
+
+// sostenuto: Set sostenuto pedal (CC66)
+export proc sostenuto(on) {
+  if (on) {
+    cc(66, 127);
+  } else {
+    cc(66, 0);
+  }
+}
+
+// softPedal: Set soft pedal (CC67)
+export proc softPedal(on) {
+  if (on) {
+    cc(67, 127);
+  } else {
+    cc(67, 0);
+  }
+}
+
+// legato: Set legato mode (CC68)
+export proc legato(on) {
+  if (on) {
+    cc(68, 127);
+  } else {
+    cc(68, 0);
+  }
+}
+
+// reverb: Set reverb send level (CC91)
+// value: 0-127
+export proc reverb(value) {
+  cc(91, value);
+}
+
+// chorus: Set chorus send level (CC93)
+// value: 0-127
+export proc chorus(value) {
+  cc(93, value);
+}
+
+// breath: Set breath controller (CC2)
+// value: 0-127
+export proc breath(value) {
+  cc(2, value);
+}
+
+// allNotesOff: Turn off all notes (CC123)
+export proc allNotesOff() {
+  cc(123, 0);
+}
+
+// allSoundOff: Turn off all sound immediately (CC120)
+export proc allSoundOff() {
+  cc(120, 0);
+}
+
+// resetAllControllers: Reset all controllers to default (CC121)
+export proc resetAllControllers() {
+  cc(121, 0);
+}
+
+// Ramp CC value from start to end over duration
+// controller: CC number
+// startVal: starting value (0-127)
+// endVal: ending value (0-127)
+// dur: duration
+// steps: number of steps for the ramp
+export proc ccRamp(controller, startVal, endVal, dur, steps) {
+  let durTicks = durToTicks(dur);
+  let ticksPerStep = floor(durTicks / steps);
+  let startTick = cursor();
+
+  for (i in 0..=steps) {
+    let progress = float(i) / float(steps);
+    let value = floor(float(startVal) + progress * float(endVal - startVal));
+    if (value < 0) {
+      value = 0;
+    }
+    if (value > 127) {
+      value = 127;
+    }
+    atTick(startTick + i * ticksPerStep);
+    cc(controller, value);
+  }
+
+  atTick(startTick + durTicks);
+}
+
+// expressionRamp: Ramp expression from start to end
+export proc expressionRamp(startVal, endVal, dur, steps) {
+  ccRamp(11, startVal, endVal, dur, steps);
+}
+
+// volumeRamp: Ramp volume from start to end
+export proc volumeRamp(startVal, endVal, dur, steps) {
+  ccRamp(7, startVal, endVal, dur, steps);
+}
+
+// fadeIn: Fade in expression over duration
+// dur: duration of fade
+// steps: number of steps
+export proc fadeIn(dur, steps) {
+  let durTicks = durToTicks(dur);
+  let ticksPerStep = floor(durTicks / steps);
+  let startTick = cursor();
+
+  for (i in 0..=steps) {
+    let progress = float(i) / float(steps);
+    let value = floor(progress * 127.0);
+    if (value > 127) {
+      value = 127;
+    }
+    atTick(startTick + i * ticksPerStep);
+    cc(11, value);
+  }
+
+  atTick(startTick + durTicks);
+}
+
+// fadeOut: Fade out expression over duration
+// dur: duration of fade
+// steps: number of steps
+export proc fadeOut(dur, steps) {
+  let durTicks = durToTicks(dur);
+  let ticksPerStep = floor(durTicks / steps);
+  let startTick = cursor();
+
+  for (i in 0..=steps) {
+    let progress = float(i) / float(steps);
+    let value = floor(127.0 - progress * 127.0);
+    if (value < 0) {
+      value = 0;
+    }
+    atTick(startTick + i * ticksPerStep);
+    cc(11, value);
+  }
+
+  atTick(startTick + durTicks);
+}

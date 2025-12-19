@@ -1,5 +1,8 @@
 // Runtime value types for MFS interpreter
 
+import type { Parameter, Expression, Statement } from '../types/ast.js';
+import type { Scope } from './scope.js';
+
 export type RuntimeValue =
   | IntValue
   | FloatValue
@@ -9,6 +12,8 @@ export type RuntimeValue =
   | DurValue
   | TimeValue
   | ArrayValue
+  | ObjectValue
+  | FunctionValue
   | NullValue;
 
 export interface IntValue {
@@ -54,6 +59,18 @@ export interface ArrayValue {
   elements: RuntimeValue[];
 }
 
+export interface ObjectValue {
+  type: 'object';
+  properties: Map<string, RuntimeValue>;
+}
+
+export interface FunctionValue {
+  type: 'function';
+  params: Parameter[];
+  body: Expression | Statement[];
+  closure: Scope;
+}
+
 export interface NullValue {
   type: 'null';
 }
@@ -88,6 +105,18 @@ export function makeTime(bar: number, beat: number, sub: number): TimeValue {
 
 export function makeArray(elements: RuntimeValue[]): ArrayValue {
   return { type: 'array', elements };
+}
+
+export function makeObject(properties?: Map<string, RuntimeValue>): ObjectValue {
+  return { type: 'object', properties: properties ?? new Map() };
+}
+
+export function makeFunction(
+  params: Parameter[],
+  body: Expression | Statement[],
+  closure: Scope
+): FunctionValue {
+  return { type: 'function', params, body, closure };
 }
 
 export function makeNull(): NullValue {
@@ -130,7 +159,18 @@ export function valueToString(val: RuntimeValue): string {
       return `${val.bar}:${val.beat}:${val.sub}`;
     case 'array':
       return `[${val.elements.map(valueToString).join(', ')}]`;
+    case 'object': {
+      const entries = Array.from(val.properties.entries())
+        .map(([k, v]) => `${k}: ${valueToString(v)}`)
+        .join(', ');
+      return `{${entries}}`;
+    }
+    case 'function':
+      return `[Function(${val.params.length} params)]`;
     case 'null':
       return 'null';
   }
 }
+
+// Alias for use in string concatenation
+export const toString = valueToString;

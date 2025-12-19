@@ -1,0 +1,39 @@
+// Test file for MIDI and Chords libraries
+import { expression, pan, sustainOn, sustainOff, fadeIn } from "../lib/midi.mfs";
+import { chordMajor, chordMinor, chordDom7, playChord, strumChord, invert } from "../lib/chords.mfs";
+
+proc main() {
+  ppq(480);
+  tempo(120);
+  timeSig(4, 4);
+
+  track(midi, piano, { ch: 1, program: 0, vel: 80 }) {
+    // Test MIDI CC
+    pan(64);
+    expression(100);
+    sustainOn();
+
+    // Play C major chord
+    playChord(chordMajor(C4), 1/2);
+
+    // Play G7 chord
+    playChord(chordDom7(G3), 1/2);
+
+    // Play Am chord (inverted)
+    let am = chordMinor(A3);
+    playChord(invert(am, 1), 1/2);
+
+    // Strum F major
+    strumChord(chordMajor(F3), 1/2, 30, true);
+
+    sustainOff();
+  }
+
+  track(midi, strings, { ch: 2, program: 48, vel: 70 }) {
+    // Test fade in
+    fadeIn(1/1, 8);
+
+    // Play some chords with expression
+    playChord(chordMajor(C3), 1/1);
+  }
+}

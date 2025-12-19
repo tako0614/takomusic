@@ -1,0 +1,8 @@
+[project]
+entry = "test_midi_chords.mfs"
+dist  = "dist"
+out   = "out"
+default_profile = "cli"
+
+[profiles.cli]
+backend = "headless"

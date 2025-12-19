@@ -59,7 +59,7 @@ describe('Parser', () => {
     expect(ast.statements[0].kind).toBe('ProcDeclaration');
     const proc = ast.statements[0] as any;
     expect(proc.name).toBe('foo');
-    expect(proc.params).toEqual(['a', 'b']);
+    expect(proc.params).toEqual([{ name: 'a' }, { name: 'b' }]);
     expect(proc.body.length).toBe(1);
   });
 
@@ -116,7 +116,8 @@ describe('Parser', () => {
     const ast = parse('note(C4, 1/4, "あ");');
     const stmt = ast.statements[0] as any;
     expect(stmt.expression.kind).toBe('CallExpression');
-    expect(stmt.expression.callee).toBe('note');
+    expect(stmt.expression.callee.kind).toBe('Identifier');
+    expect(stmt.expression.callee.name).toBe('note');
     expect(stmt.expression.arguments.length).toBe(3);
   });
 
