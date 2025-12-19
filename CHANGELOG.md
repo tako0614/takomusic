@@ -2,6 +2,84 @@
 
 All notable changes to TakoMusic will be documented in this file.
 
+## [1.3.0] - 2024-12-20
+
+### Added
+
+- **Third Batch: Ornaments & Extended Notation**
+  - `harmonic(pitch, type)` - Natural/artificial harmonics
+  - `pedal(type, action)` - Piano sustain/sostenuto/una corda pedals
+  - `pedalLine(type, dur)` - Pedal markings with duration
+  - `swingEvent(amount, subdivision)` - Swing timing
+  - `probabilityNote(pitch, dur, prob)` - Probability-based notes
+  - `featheredBeam(accel)` - Feathered beams (accel/decel)
+  - `quarterTone(direction)` - Quarter tone accidentals
+  - `cluster(low, high, dur)` - Tone clusters
+  - `sprechstimme(pitch, dur, lyric)` - Sprechstimme notation
+  - `customNotehead(type, pitch)` - Custom notehead shapes
+  - `bracketGroup(tracks, type)` - Score bracket groupings
+  - `cueStaff(instrument, dur)` - Cue staff notation
+  - `noteColor(color)` - Colored notes for analysis
+
+- **Fourth Batch: Score Structure & Instrument Techniques**
+  - `volta(number, text)`, `voltaEnd()` - Volta brackets
+  - `cadenza(callback)` - Cadenza passages
+  - `divisiMark(parts, method)` - Divisi markings
+  - `metricModulation(from, to)` - Metric modulations
+  - `conductorCue(text, beat)` - Conductor cues
+  - `editorial(text, type)` - Editorial markings
+  - `brassMute(type)` - Brass mute types (straight, cup, harmon, etc.)
+  - `stringPosition(position)` - String playing positions
+  - `multiphonic(pitches)` - Wind multiphonics
+  - `electronicsCue(cueId, action, channel)` - Electronics/tape cues
+  - `bendCurve(points)` - Custom guitar bend curves
+  - `slideAdv(target, type)` - Advanced slide techniques
+  - `tapAdv(pitch, hand)` - Two-hand tapping
+  - `arrangerSection(name, color, length)` - DAW arranger sections
+  - `chordTrack(chords)` - Global chord track
+  - `scaleLockEvent(root, scale)` - Scale locking
+  - `stepInput(enable)` - Step input mode
+  - `measureComment(text)` - Measure comments
+  - `versionCheckpoint(name)` - Version checkpoints
+
+- **Fifth Batch: Diagrams, Synthesis & Video**
+  - `chordDiagram(name, strings, frets)` - Guitar/ukulele chord diagrams
+  - `scaleDiagram(name, root, intervals)` - Scale diagrams
+  - `harpPedalDiagram(pedals)` - Harp pedal diagrams
+  - `partExtraction(partId, name, transposition)` - Part extraction config
+  - `transpositionDisplay(concert, written)` - Transposition display settings
+  - `measureNumberConfig(show, interval, style)` - Measure number configuration
+  - `wavetable(wt, position, morph)` - Wavetable synthesis
+  - `fmSynth(algorithm, operators)` - FM synthesis (DX7-style)
+  - `additiveSynth(partials)` - Additive synthesis
+  - `subtractiveSynth(osc, filter)` - Subtractive synthesis
+  - `physicalModel(model, params)` - Physical modeling synthesis
+  - `formantShift(semitones)` - Formant shifting
+  - `videoSync(path, startFrame, frameRate)` - Video synchronization
+  - `hitPoint(timecode, desc, priority)` - Film scoring hit points
+  - `timecodeDisplay(format, frameRate)` - Timecode display
+  - `trackFolder(name, tracks)` - Track folders/grouping
+  - `projectTemplate(name, settings)` - Project templates
+  - `collaboratorSession(sessionId, host, port)` - Live collaboration sessions
+  - `versionDiff(fromVersion, toVersion)` - Version comparison
+
+### Changed
+
+- README.md updated with comprehensive documentation for all new features
+- Extended notation section expanded with modern notation techniques
+- Added missing documentation for:
+  - MIDI shortcuts: `expression`, `modulation`, `pan`, `volume`, `sustain`, `rpn`
+  - Automation curves: `ccCurve`, `expressionCurve`, `pitchBendCurve`
+  - Vocaloid shortcuts: `pit`, `dyn`, `bre`, `bri`, `cle`, `gen`, `ope`, `pitCurve`, `dynCurve`, `breCurve`
+  - Vocaloid advanced: `phoneme`, `consonantOffset`, `autoBreath`, `portamentoShape`, `vocalStyle`, `noteEnvelope`, `tension`, `melisma`
+  - Notation: `acciaccatura`, `appoggiatura`, `ottavaEnd`, `clef`, `key`, `fingering`, `multiRest`, `slashNotation`, `barline`, `tempoText`, `hideEmptyStaves`, `crossStaff`
+  - Theory: `scaleChord`, `chordNotes`
+  - Track: `advanceTick`
+  - Articulations: `articulations` (stacked)
+  - Slurs: `tie`
+  - Dynamics: `crescendo`, `decrescendo` (aliases)
+  - Vocaloid: `portamento`
+
 ## [1.2.0] - 2024-12-18
 
 ### Added
