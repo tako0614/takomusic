@@ -1,0 +1,30 @@
+// Euclidean Drums Demo
+// Demonstrates Euclidean rhythm patterns
+
+import { euclidean, clave32, basicBeat } from "std:rhythm";
+import { SIXTEENTH } from "std:theory";
+
+title("Euclidean Drums");
+ppq(480);
+tempo(110);
+timeSig(4, 4);
+
+export proc main() {
+  // Drum track with Euclidean patterns
+  track(midi, drums, {}) {
+    // 4 bars of layered Euclidean rhythms
+
+    // Euclidean(16, 5) = classic tresillo pattern
+    euclidean(16, 5, SIXTEENTH, kick);
+
+    // Reset position for next layer
+    at(1:1);
+
+    // Euclidean(16, 7) = common West African pattern
+    euclidean(16, 7, SIXTEENTH, snare);
+
+    // Add hi-hats
+    at(1:1);
+    euclidean(16, 9, SIXTEENTH, hhc);
+  }
+}

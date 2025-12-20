@@ -1,0 +1,348 @@
+// Genre-specific patterns for TakoMusic
+// Common rhythm and accompaniment patterns by genre
+
+// Bossa Nova guitar pattern
+export proc bossaNovaGuitar(chordNotes, dur) {
+  const eighth = dur / 2;
+
+  // Classic bossa pattern: bass on 1, chord on 'and' of 1, etc.
+  note(chordNotes[0], eighth);          // bass
+  chord(slice(chordNotes, 1, len(chordNotes)), eighth);  // chord
+  rest(eighth);
+  chord(chordNotes, eighth);
+  rest(eighth);
+  chord(chordNotes, eighth);
+  note(chordNotes[0], eighth);
+  chord(slice(chordNotes, 1, len(chordNotes)), eighth);
+}
+
+// Bossa Nova drum pattern
+export proc bossaNovaDrums(dur, bars) {
+  const eighth = dur / 2;
+
+  for (bar in 0..bars) {
+    // Rim click pattern
+    for (beat in 0..8) {
+      if (beat == 2 || beat == 5) {
+        drum(snare, eighth);
+      } else {
+        drum(hhc, eighth);
+      }
+    }
+  }
+}
+
+// Funk guitar/keyboard stab
+export proc funkStab(chordNotes, dur) {
+  const sixteenth = dur / 4;
+
+  // Classic funk pattern with ghost notes
+  chord(chordNotes, sixteenth, 100);
+  rest(sixteenth);
+  chord(chordNotes, sixteenth, 60);
+  rest(sixteenth);
+  rest(sixteenth);
+  chord(chordNotes, sixteenth, 100);
+  rest(sixteenth);
+  chord(chordNotes, sixteenth, 70);
+}
+
+// Funk drum pattern
+export proc funkDrums(dur, bars) {
+  const sixteenth = dur / 4;
+
+  for (bar in 0..bars) {
+    for (beat in 0..16) {
+      // Kick pattern
+      if (beat == 0 || beat == 6 || beat == 10) {
+        drum(kick, sixteenth);
+      }
+
+      // Snare on 2 and 4 with ghost notes
+      if (beat == 4 || beat == 12) {
+        drum(snare, sixteenth, 100);
+      }
+      if (beat == 3 || beat == 7 || beat == 11 || beat == 15) {
+        drum(snare, sixteenth, 40);
+      }
+
+      // Hi-hat
+      if (beat % 2 == 0) {
+        drum(hhc, sixteenth);
+      }
+
+      // Fill gaps with rest
+      if (beat == 1 || beat == 2 || beat == 5 || beat == 8 || beat == 9 || beat == 13 || beat == 14) {
+        rest(sixteenth);
+      }
+    }
+  }
+}
+
+// Reggae skank (offbeat chords)
+export proc reggaeSkank(chordNotes, dur, bars) {
+  const eighth = dur / 2;
+
+  for (bar in 0..bars) {
+    for (beat in 0..8) {
+      if (beat % 2 == 1) {
+        chord(chordNotes, eighth, 90);
+      } else {
+        rest(eighth);
+      }
+    }
+  }
+}
+
+// Reggae one drop drum pattern
+export proc reggaeOneDrop(dur, bars) {
+  const eighth = dur / 2;
+
+  for (bar in 0..bars) {
+    for (beat in 0..8) {
+      // Kick and snare together on 3
+      if (beat == 4) {
+        drum(kick, eighth);
+        drum(snare, eighth);
+      }
+
+      // Hi-hat on every eighth
+      drum(hhc, eighth);
+    }
+  }
+}
+
+// EDM four-on-the-floor kick
+export proc fourOnFloor(dur, bars) {
+  for (bar in 0..bars) {
+    for (beat in 0..4) {
+      drum(kick, dur);
+    }
+  }
+}
+
+// EDM offbeat hi-hat
+export proc offbeatHiHat(dur, bars) {
+  const eighth = dur / 2;
+
+  for (bar in 0..bars) {
+    for (beat in 0..8) {
+      if (beat % 2 == 1) {
+        drum(hho, eighth);
+      } else {
+        rest(eighth);
+      }
+    }
+  }
+}
+
+// EDM buildup (increasing hi-hat density)
+export proc edmBuildup(bars) {
+  const sixteenth = 1/16;
+
+  for (bar in 0..bars) {
+    const density = floor(4 + bar * 4);
+    for (i in 0..16) {
+      if (i % floor(16 / density) == 0) {
+        drum(hhc, sixteenth);
+      } else {
+        rest(sixteenth);
+      }
+    }
+  }
+}
+
+// Rock drum beat
+export proc rockBeat(dur, bars) {
+  const eighth = dur / 2;
+
+  for (bar in 0..bars) {
+    for (beat in 0..8) {
+      // Kick on 1 and 3
+      if (beat == 0 || beat == 4) {
+        drum(kick, eighth);
+      }
+
+      // Snare on 2 and 4
+      if (beat == 2 || beat == 6) {
+        drum(snare, eighth);
+      }
+
+      // Constant hi-hat
+      drum(hhc, eighth);
+
+      if (beat == 1 || beat == 3 || beat == 5 || beat == 7) {
+        rest(eighth);
+      }
+    }
+  }
+}
+
+// Rock power chord riff pattern
+export proc powerChordRiff(root, dur) {
+  const eighth = dur / 2;
+  const pwr = [root, transpose(root, 7)];
+
+  chord(pwr, eighth, 100);
+  chord(pwr, eighth, 100);
+  rest(eighth);
+  chord(pwr, eighth, 80);
+  rest(dur);
+  chord(pwr, dur, 100);
+}
+
+// Shuffle/blues pattern
+export proc shuffleBeat(dur, bars) {
+  const triplet = dur / 3;
+
+  for (bar in 0..bars) {
+    for (beat in 0..4) {
+      // Kick on 1 and 3
+      if (beat == 0 || beat == 2) {
+        drum(kick, triplet * 2);
+        drum(hhc, triplet);
+      } else {
+        // Snare on 2 and 4
+        drum(snare, triplet * 2);
+        drum(hhc, triplet);
+      }
+    }
+  }
+}
+
+// Jazz ride pattern
+export proc jazzRide(dur, bars) {
+  const triplet = dur / 3;
+
+  for (bar in 0..bars) {
+    for (beat in 0..4) {
+      drum(ride, triplet * 2);
+      drum(ride, triplet);
+    }
+  }
+}
+
+// Jazz walking bass style
+export proc jazzWalk(scale, dur, bars) {
+  for (bar in 0..bars) {
+    for (beat in 0..4) {
+      const idx = (bar * 4 + beat) % len(scale);
+      note(transpose(scale[idx], -12), dur);
+    }
+  }
+}
+
+// Latin tumbao bass pattern
+export proc tumbaoBass(root, fifth, dur) {
+  const eighth = dur / 2;
+
+  rest(eighth);
+  note(transpose(root, -12), eighth);
+  rest(eighth);
+  note(transpose(fifth, -12), eighth);
+  note(transpose(root, -12), eighth);
+  rest(eighth);
+  rest(eighth);
+  note(transpose(fifth, -12), eighth);
+}
+
+// Salsa clave (son clave 3-2)
+export proc salsaClave(dur, bars) {
+  const eighth = dur / 2;
+
+  for (bar in 0..floor(bars / 2)) {
+    // 3 side
+    drum(hhc, eighth);
+    rest(eighth);
+    rest(eighth);
+    drum(hhc, eighth);
+    rest(eighth);
+    rest(eighth);
+    drum(hhc, eighth);
+    rest(eighth);
+
+    // 2 side
+    rest(eighth);
+    rest(eighth);
+    drum(hhc, eighth);
+    rest(eighth);
+    drum(hhc, eighth);
+    rest(eighth);
+    rest(eighth);
+    rest(eighth);
+  }
+}
+
+// Disco beat
+export proc discoBeat(dur, bars) {
+  const eighth = dur / 2;
+
+  for (bar in 0..bars) {
+    for (beat in 0..8) {
+      // Four on the floor
+      if (beat % 2 == 0) {
+        drum(kick, eighth);
+      }
+
+      // Open hi-hat on offbeats
+      if (beat % 2 == 1) {
+        drum(hho, eighth);
+      }
+
+      // Snare on 2 and 4
+      if (beat == 2 || beat == 6) {
+        drum(snare, eighth);
+      }
+    }
+  }
+}
+
+// Hip-hop boom bap beat
+export proc boomBap(dur, bars) {
+  const sixteenth = dur / 4;
+
+  for (bar in 0..bars) {
+    for (beat in 0..16) {
+      // Kick pattern
+      if (beat == 0 || beat == 5 || beat == 10) {
+        drum(kick, sixteenth);
+      }
+
+      // Snare on 2 and 4
+      if (beat == 4 || beat == 12) {
+        drum(snare, sixteenth);
+      }
+
+      // Hi-hat
+      if (beat % 2 == 0) {
+        drum(hhc, sixteenth);
+      }
+
+      // Rest for gaps
+      if (beat == 1 || beat == 2 || beat == 3 || beat == 6 || beat == 7 || beat == 8 || beat == 9 || beat == 11 || beat == 13 || beat == 14 || beat == 15) {
+        rest(sixteenth);
+      }
+    }
+  }
+}
+
+// Trap hi-hat rolls
+export proc trapHiHats(dur, bars) {
+  const thirtysecond = dur / 8;
+
+  for (bar in 0..bars) {
+    for (beat in 0..4) {
+      // Regular hits with occasional rolls
+      if (beat == 2) {
+        // Roll on beat 3
+        for (i in 0..8) {
+          drum(hhc, thirtysecond);
+        }
+      } else {
+        for (i in 0..4) {
+          drum(hhc, dur / 4);
+        }
+      }
+    }
+  }
+}

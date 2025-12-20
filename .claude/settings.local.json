@@ -34,7 +34,11 @@
       "Bash(grep:*)",
       "Bash(tr:*)",
       "Bash(find:*)",
-      "Bash(npm run test:run:*)"
+      "Bash(npm run test:run:*)",
+      "Bash(for f in lib/*.mf)",
+      "Bash(done)",
+      "Bash(rm:*)",
+      "Bash(npm pack:*)"
     ]
   }
 }

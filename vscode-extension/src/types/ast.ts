@@ -25,6 +25,7 @@ export type Statement =
   | AssignmentStatement
   | IfStatement
   | ForStatement
+  | ReturnStatement
   | ExpressionStatement
   | TrackBlock;
 
@@ -80,6 +81,11 @@ export interface ForStatement extends BaseNode {
   body: Statement[];
 }
 
+export interface ReturnStatement extends BaseNode {
+  kind: 'ReturnStatement';
+  value: Expression | null;
+}
+
 export interface ExpressionStatement extends BaseNode {
   kind: 'ExpressionStatement';
   expression: Expression;
@@ -109,7 +115,9 @@ export type Expression =
   | CallExpression
   | ArrayLiteral
   | ObjectLiteral
-  | RangeExpression;
+  | RangeExpression
+  | ArrowFunction
+  | MemberExpression;
 
 export interface IntLiteral extends BaseNode {
   kind: 'IntLiteral';
@@ -190,4 +198,17 @@ export interface RangeExpression extends BaseNode {
   start: Expression;
   end: Expression;
   inclusive: boolean;
+}
+
+export interface ArrowFunction extends BaseNode {
+  kind: 'ArrowFunction';
+  params: string[];
+  body: Expression;
+}
+
+export interface MemberExpression extends BaseNode {
+  kind: 'MemberExpression';
+  object: Expression;
+  property: Expression;
+  computed: boolean;
 }

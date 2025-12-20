@@ -7,6 +7,10 @@
   "bin": {
     "mf": "dist/cli/index.js"
   },
+  "files": [
+    "dist",
+    "lib"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

@@ -249,6 +249,7 @@ export class Lexer {
       case '-': return { type: TokenType.MINUS, value: '-', position: pos };
       case '*': return { type: TokenType.STAR, value: '*', position: pos };
       case '/': return { type: TokenType.SLASH, value: '/', position: pos };
+      case '%': return { type: TokenType.PERCENT, value: '%', position: pos };
       case '(': return { type: TokenType.LPAREN, value: '(', position: pos };
       case ')': return { type: TokenType.RPAREN, value: ')', position: pos };
       case '{': return { type: TokenType.LBRACE, value: '{', position: pos };
@@ -263,6 +264,10 @@ export class Lexer {
         if (this.peek() === '=') {
           this.advance();
           return { type: TokenType.EQEQ, value: '==', position: pos };
+        }
+        if (this.peek() === '>') {
+          this.advance();
+          return { type: TokenType.ARROW, value: '=>', position: pos };
         }
         return { type: TokenType.EQ, value: '=', position: pos };
 

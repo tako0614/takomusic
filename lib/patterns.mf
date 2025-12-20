@@ -1,7 +1,7 @@
 // Advanced pattern generation for TakoMusic
 // Algorithmic composition and generative music
 
-import { choice, shuffle, clip, wrap } from "./utils.mf";
+import { choice, shuffle, clip, wrap, rotate } from "./utils.mf";
 
 // Random walk melody generator
 export proc randomWalk(startPitch, steps, maxStep) {
@@ -34,61 +34,6 @@ export proc pentatonicWalk(root, steps) {
   }
 
   return melody;
-}
-
-// Cellular automaton rhythm (Rule 110)
-export proc cellularRhythm(seed, generations) {
-  let state = seed;
-  let patterns = [];
-
-  for (gen in 0..generations) {
-    push(patterns, copy(state));
-
-    let newState = [];
-    for (i in 0..len(state)) {
-      const left = state[(i - 1 + len(state)) % len(state)];
-      const center = state[i];
-      const right = state[(i + 1) % len(state)];
-
-      // Rule 110
-      let next = false;
-      if (left && center && right) { next = false; }
-      if (left && center && !right) { next = true; }
-      if (left && !center && right) { next = true; }
-      if (left && !center && !right) { next = false; }
-      if (!left && center && right) { next = true; }
-      if (!left && center && !right) { next = true; }
-      if (!left && !center && right) { next = true; }
-      if (!left && !center && !right) { next = false; }
-
-      push(newState, next);
-    }
-
-    state = newState;
-  }
-
-  return patterns;
-}
-
-// Lindenmayer system (L-system) for melodic patterns
-export proc lsystem(axiom, rules, iterations) {
-  let current = axiom;
-
-  for (iter in 0..iterations) {
-    let next = "";
-    for (i in 0..len(current)) {
-      const char = charAt(current, i);
-      let replacement = char;
-
-      // Simple rule matching (can be extended)
-      if (char == "A") { replacement = rules; }
-
-      next = next + replacement;
-    }
-    current = next;
-  }
-
-  return current;
 }
 
 // Fractal melody generator (simple self-similarity)
@@ -132,16 +77,6 @@ export proc densityRhythm(steps, startProb, endProb) {
   return pattern;
 }
 
-// Rhythmic rotation (shift pattern)
-export proc rotateRhythm(pattern, offset) {
-  let result = [];
-  for (i in 0..len(pattern)) {
-    const idx = (i + offset) % len(pattern);
-    push(result, pattern[idx]);
-  }
-  return result;
-}
-
 // Polyrhythmic pattern generator
 export proc polyrhythm(ratio1, ratio2, cycles) {
   const totalSteps = ratio1 * ratio2;
@@ -162,7 +97,7 @@ export proc phasePattern(pattern, phaseShift, repetitions) {
 
   for (rep in 0..repetitions) {
     const shift = floor(rep * phaseShift) % len(pattern);
-    const rotated = rotateRhythm(pattern, shift);
+    const rotated = rotate(pattern, shift);
     for (i in 0..len(rotated)) {
       push(result, rotated[i]);
     }
@@ -229,28 +164,6 @@ export proc arpeggioPattern(chordSize, style, length) {
     }
 
     push(pattern, idx);
-  }
-
-  return pattern;
-}
-
-// Bounce pattern (like a bouncing ball)
-export proc bouncePattern(steps, initialHeight, decay) {
-  let pattern = [];
-  let height = initialHeight;
-  let velocity = 0.0;
-  const gravity = 0.1;
-
-  for (i in 0..steps) {
-    push(pattern, floor(height));
-
-    velocity = velocity + gravity;
-    height = height - velocity;
-
-    if (height <= 0) {
-      height = 0.0;
-      velocity = velocity * -decay;
-    }
   }
 
   return pattern;

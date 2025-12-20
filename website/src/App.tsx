@@ -2,23 +2,27 @@ import { createSignal, For } from 'solid-js'
 import { useI18n } from './i18n'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 
-const codeExample = `export proc main() {
+const codeExample = `import { majorTriad, dominantSeventh } from "std:theory";
+import { euclidean } from "std:patterns";
+
+export proc main() {
   title("My Song");
-  ppq(480);
-  tempo(128);
+  tempo(120);
   timeSig(4, 4);
 
-  track(vocal, v1, { voice: "miku" }) {
+  track(midi, piano, { ch: 1 }) {
     at(1:1);
-    note(C4, 1/4, "ド");
-    note(D4, 1/4, "レ");
-    note(E4, 1/4, "ミ");
+    chord(majorTriad(C4), 1/2);
+    chord(dominantSeventh(G3), 1/2);
   }
 
   track(midi, drums, { ch: 10 }) {
     at(1:1);
-    drum(kick, 1/4);
-    drum(snare, 1/4);
+    const pattern = euclidean(5, 8);
+    for (i in 0..8) {
+      if (pattern[i]) { drum(kick, 1/8); }
+      else { drum(hhc, 1/8); }
+    }
   }
 }`
 
@@ -44,19 +48,19 @@ function App() {
       icon: '📦',
     },
     {
-      title: () => t.features.moduleSystem.title,
-      description: () => t.features.moduleSystem.description,
-      icon: '🧩',
+      title: () => t.features.stdlib.title,
+      description: () => t.features.stdlib.description,
+      icon: '📚',
+    },
+    {
+      title: () => t.features.vscodeExtension.title,
+      description: () => t.features.vscodeExtension.description,
+      icon: '💻',
     },
     {
       title: () => t.features.staticAnalysis.title,
       description: () => t.features.staticAnalysis.description,
       icon: '🔍',
-    },
-    {
-      title: () => t.features.watchMode.title,
-      description: () => t.features.watchMode.description,
-      icon: '👀',
     },
     {
       title: () => t.features.cliTools.title,
@@ -69,8 +73,17 @@ function App() {
     { cmd: 'mf init myproject', desc: () => t.cli.commands.init },
     { cmd: 'mf build -w', desc: () => t.cli.commands.build },
     { cmd: 'mf check', desc: () => t.cli.commands.check },
+    { cmd: 'mf play', desc: () => t.cli.commands.play },
     { cmd: 'mf render -p cli', desc: () => t.cli.commands.render },
-    { cmd: 'mf doctor', desc: () => t.cli.commands.doctor },
+  ]
+
+  const stdlibModules = [
+    { name: 'theory', desc: () => t.stdlib.modules.theory },
+    { name: 'patterns', desc: () => t.stdlib.modules.patterns },
+    { name: 'rhythm', desc: () => t.stdlib.modules.rhythm },
+    { name: 'dynamics', desc: () => t.stdlib.modules.dynamics },
+    { name: 'expression', desc: () => t.stdlib.modules.expression },
+    { name: 'genres', desc: () => t.stdlib.modules.genres },
   ]
 
   return (
@@ -85,7 +98,7 @@ function App() {
           </div>
           <div class="flex items-center gap-6">
             <a href="#features" class="hover:text-sky-400 transition-colors hidden sm:block">{t.nav.features}</a>
-            <a href="#example" class="hover:text-sky-400 transition-colors hidden sm:block">{t.nav.example}</a>
+            <a href="#stdlib" class="hover:text-sky-400 transition-colors hidden sm:block">{t.nav.docs}</a>
             <a href="https://github.com/tako0614/takomusic" target="_blank" class="hover:text-sky-400 transition-colors hidden sm:block">{t.nav.github}</a>
             <LanguageSwitcher />
           </div>
@@ -199,6 +212,36 @@ function App() {
               </div>
             )}
           </For>
+        </div>
+      </section>
+
+      {/* Standard Library Section */}
+      <section id="stdlib" class="container mx-auto px-6 py-24">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
+          {t.stdlib.title}
+        </h2>
+        <p class="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
+          {t.stdlib.description}
+        </p>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
+          <For each={stdlibModules}>
+            {(mod) => (
+              <div class="bg-slate-800/50 rounded-lg px-4 py-3 border border-slate-700">
+                <code class="text-sky-400 font-mono">std:{mod.name}</code>
+                <p class="text-slate-400 text-sm mt-1">{mod.desc()}</p>
+              </div>
+            )}
+          </For>
+        </div>
+        <div class="text-center">
+          <a
+            href="https://github.com/tako0614/takomusic/blob/main/docs/STDLIB.md"
+            target="_blank"
+            class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-6 py-3 font-semibold transition-colors"
+          >
+            {t.stdlib.viewDocs}
+            <span>→</span>
+          </a>
         </div>
       </section>
 

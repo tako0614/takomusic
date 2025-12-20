@@ -145,3 +145,125 @@ export proc basicBeat(kickPitch, snarePitch, hatPitch, dur, bars) {
     }
   }
 }
+
+// Apply groove template to notes
+// template: array of timing offsets (-1.0 to 1.0)
+export proc groove(notes, dur, template) {
+  for (i in 0..len(notes)) {
+    const templateIdx = i % len(template);
+    const offset = template[templateIdx];
+    const offsetTicks = floor(offset * durToTicks(dur) / 4);
+
+    if (offsetTicks > 0) {
+      advanceTick(offsetTicks);
+    }
+
+    note(notes[i], dur);
+
+    if (offsetTicks < 0) {
+      advanceTick(-offsetTicks);
+    }
+  }
+}
+
+// Common groove templates
+export proc swingGroove() {
+  return [0.0, 0.33, 0.0, 0.33];
+}
+
+export proc laidBackGroove() {
+  return [0.0, 0.1, 0.05, 0.15];
+}
+
+export proc pushGroove() {
+  return [0.0, -0.1, 0.0, -0.1];
+}
+
+// Rubato - expressive timing variation
+export proc rubato(notes, baseDur, variation) {
+  for (i in 0..len(notes)) {
+    const stretch = 1 + (random() - 0.5) * variation;
+    const dur = baseDur * stretch;
+    note(notes[i], dur);
+  }
+}
+
+// Accelerando - gradually speed up
+export proc accelerando(notes, startDur, endDur) {
+  const count = len(notes);
+  for (i in 0..count) {
+    const t = i / (count - 1);
+    const dur = startDur + (endDur - startDur) * t;
+    note(notes[i], dur);
+  }
+}
+
+// Ritardando - gradually slow down
+export proc ritardando(notes, startDur, endDur) {
+  accelerando(notes, startDur, endDur);
+}
+
+// Accelerando with tempo changes
+export proc accelerandoTempo(startBpm, endBpm, dur, steps) {
+  const ticks = durToTicks(dur);
+  const ticksPerStep = floor(ticks / steps);
+
+  for (i in 0..=steps) {
+    const t = i / steps;
+    const bpm = floor(startBpm + (endBpm - startBpm) * t);
+    atTick(i * ticksPerStep);
+    tempo(bpm);
+  }
+}
+
+// Ritardando with tempo changes
+export proc ritardandoTempo(startBpm, endBpm, dur, steps) {
+  accelerandoTempo(startBpm, endBpm, dur, steps);
+}
+
+// Fermata - pause/hold
+export proc fermata(pitch, baseDur, holdMultiplier) {
+  note(pitch, baseDur * holdMultiplier);
+}
+
+// Metric modulation helper
+// Returns the new tempo for metric modulation
+export proc metricModulation(currentBpm, oldSubdivision, newSubdivision) {
+  return floor(currentBpm * oldSubdivision / newSubdivision);
+}
+
+// Tuplet rhythm generator
+export proc tuplet(notes, totalDur, tupletRatio) {
+  const noteDur = totalDur / len(notes);
+  for (i in 0..len(notes)) {
+    note(notes[i], noteDur);
+  }
+}
+
+// Triplet
+export proc triplet(notes, baseDur) {
+  const tripletDur = baseDur * 2 / 3;
+  for (i in 0..len(notes)) {
+    note(notes[i], tripletDur);
+  }
+}
+
+// Syncopation pattern
+export proc syncopate(notes, dur) {
+  for (i in 0..len(notes)) {
+    if (i % 2 == 0) {
+      rest(dur / 2);
+      note(notes[i], dur / 2);
+    } else {
+      note(notes[i], dur);
+    }
+  }
+}
+
+// Hemiola - 3 against 2
+export proc hemiola(notes, dur) {
+  const hemiolaDur = dur * 2 / 3;
+  for (i in 0..len(notes)) {
+    note(notes[i], hemiolaDur);
+  }
+}

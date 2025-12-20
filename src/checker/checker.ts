@@ -7,6 +7,7 @@ import { Lexer } from '../lexer/index.js';
 import { Parser } from '../parser/index.js';
 import type { Position } from '../types/token.js';
 import { findSimilarSymbols } from '../errors.js';
+import { isStdlibImport, resolveStdlibPath } from '../utils/stdlib.js';
 
 export interface Diagnostic {
   code: string;
@@ -178,7 +179,10 @@ export class Checker {
   }
 
   private checkImport(stmt: Statement & { kind: 'ImportStatement' }, filePath: string): void {
-    const importPath = path.resolve(path.dirname(filePath), stmt.path);
+    // Resolve import path (handle std: imports)
+    const importPath = isStdlibImport(stmt.path)
+      ? resolveStdlibPath(stmt.path)
+      : path.resolve(path.dirname(filePath), stmt.path);
 
     if (!fs.existsSync(importPath)) {
       this.addError('E400', `Import not found: ${stmt.path}`, stmt.position, filePath);

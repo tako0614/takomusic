@@ -2,7 +2,7 @@
   "name": "takomusic",
   "displayName": "TakoMusic",
   "description": "Language support for TakoMusic (.mf files) - A DSL for music composition",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "tako0614",
   "icon": "icon.png",
   "engines": {

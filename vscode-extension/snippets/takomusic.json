@@ -132,6 +132,62 @@
     ],
     "description": "Import from module"
   },
+  "Import Theory": {
+    "prefix": "imp-theory",
+    "body": [
+      "import { ${1|major,minor,majorTriad,minorTriad,majorSeventh,minorSeventh,dominantSeventh|} } from \"std:theory\";"
+    ],
+    "description": "Import from theory module"
+  },
+  "Import Patterns": {
+    "prefix": "imp-patterns",
+    "body": [
+      "import { ${1|euclidean,arpeggiate,strum,albertiBass,walkingBass|} } from \"std:patterns\";"
+    ],
+    "description": "Import from patterns module"
+  },
+  "Import Rhythm": {
+    "prefix": "imp-rhythm",
+    "body": [
+      "import { ${1|swing,humanize,triplet,dotted,groove|} } from \"std:rhythm\";"
+    ],
+    "description": "Import from rhythm module"
+  },
+  "Import Dynamics": {
+    "prefix": "imp-dynamics",
+    "body": [
+      "import { ${1|crescendo,decrescendo,sforzando,swell|} } from \"std:dynamics\";"
+    ],
+    "description": "Import from dynamics module"
+  },
+  "Import Expression": {
+    "prefix": "imp-expression",
+    "body": [
+      "import { ${1|vibrato,portamento,bendUp,bendDown|} } from \"std:expression\";"
+    ],
+    "description": "Import from expression module"
+  },
+  "Import Genres": {
+    "prefix": "imp-genres",
+    "body": [
+      "import { ${1|fourOnFloor,funkDrums,bossaNovaGuitar,jazzWalk|} } from \"std:genres\";"
+    ],
+    "description": "Import from genres module"
+  },
+  "Import Composition": {
+    "prefix": "imp-composition",
+    "body": [
+      "import { ${1|sequence,ostinato,canon,retrograde|} } from \"std:composition\";"
+    ],
+    "description": "Import from composition module"
+  },
+  "Import Utils": {
+    "prefix": "imp-utils",
+    "body": [
+      "import { ${1|clip,lerp,mapRange,rotate|} } from \"std:utils\";"
+    ],
+    "description": "Import from utils module"
+  },
   "At Position": {
     "prefix": "at",
     "body": [
@@ -152,6 +208,91 @@
       "drum(hhc, 1/8);"
     ],
     "description": "8-beat drum pattern (1 bar)"
+  },
+  "4-on-the-floor": {
+    "prefix": "beat4floor",
+    "body": [
+      "for (beat in 0..4) {",
+      "\tdrum(kick, 1/4);",
+      "}"
+    ],
+    "description": "4-on-the-floor kick pattern"
+  },
+  "Major Chord": {
+    "prefix": "chord-major",
+    "body": [
+      "chord(majorTriad(${1:C4}), ${2:1/4});"
+    ],
+    "description": "Play major triad chord"
+  },
+  "Minor Chord": {
+    "prefix": "chord-minor",
+    "body": [
+      "chord(minorTriad(${1:A4}), ${2:1/4});"
+    ],
+    "description": "Play minor triad chord"
+  },
+  "Seventh Chord": {
+    "prefix": "chord-7",
+    "body": [
+      "chord(dominantSeventh(${1:G4}), ${2:1/4});"
+    ],
+    "description": "Play dominant seventh chord"
+  },
+  "Arpeggio Up": {
+    "prefix": "arp-up",
+    "body": [
+      "arpeggiateUp(${1:majorTriad(C4)}, ${2:1/8});"
+    ],
+    "description": "Arpeggiate chord upward"
+  },
+  "Euclidean Rhythm": {
+    "prefix": "eucl",
+    "body": [
+      "const pattern = euclidean(${1:5}, ${2:8});",
+      "for (i in 0..len(pattern)) {",
+      "\tif (pattern[i]) {",
+      "\t\tdrum(${3:kick}, ${4:1/8});",
+      "\t} else {",
+      "\t\trest(${4:1/8});",
+      "\t}",
+      "}"
+    ],
+    "description": "Euclidean rhythm pattern"
+  },
+  "Scale Run": {
+    "prefix": "scale-run",
+    "body": [
+      "const notes = scaleNotes(${1:C4}, ${2:major}, ${3:8});",
+      "for (i in 0..len(notes)) {",
+      "\tnote(notes[i], ${4:1/8});",
+      "}"
+    ],
+    "description": "Play scale notes"
+  },
+  "Crescendo": {
+    "prefix": "cresc",
+    "body": [
+      "crescendoUniform([${1:C4, D4, E4, F4}], ${2:1/4}, ${3:40}, ${4:100});"
+    ],
+    "description": "Crescendo passage"
+  },
+  "II-V-I Progression": {
+    "prefix": "prog-251",
+    "body": [
+      "// II-V-I in ${1:C}",
+      "chord(minorSeventh(${2:D4}), ${3:1/2});",
+      "chord(dominantSeventh(${4:G3}), ${3:1/2});",
+      "chord(majorSeventh(${5:C4}), ${6:1/1});"
+    ],
+    "description": "Jazz II-V-I progression"
+  },
+  "Walking Bass": {
+    "prefix": "walk",
+    "body": [
+      "walkingBass(${1:C3}, ${2:major}, ${3:1/4}, ${4:4});"
+    ],
+    "description": "Walking bass line"
   },
   "Basic Song Template": {
     "prefix": "song",
@@ -177,5 +318,61 @@
       "}"
     ],
     "description": "Basic song template with vocal, piano, and drums"
+  },
+  "EDM Template": {
+    "prefix": "song-edm",
+    "body": [
+      "import { fourOnFloor } from \"std:genres\";",
+      "",
+      "export proc main() {",
+      "\ttitle(\"${1:EDM Track}\");",
+      "\tppq(480);",
+      "\ttimeSig(4, 4);",
+      "\ttempo(${2:128});",
+      "",
+      "\ttrack(midi, synth, { ch: 1, program: 81 }) {",
+      "\t\tat(1:1);",
+      "\t\t$0",
+      "\t}",
+      "",
+      "\ttrack(midi, bass, { ch: 2, program: 38 }) {",
+      "\t\tat(1:1);",
+      "\t}",
+      "",
+      "\ttrack(midi, drums, { ch: 10, vel: 110 }) {",
+      "\t\tat(1:1);",
+      "\t\tfourOnFloor(1/4, 8);",
+      "\t}",
+      "}"
+    ],
+    "description": "EDM song template"
+  },
+  "Jazz Template": {
+    "prefix": "song-jazz",
+    "body": [
+      "import { swing } from \"std:rhythm\";",
+      "import { walkingBass, jazzVoicing } from \"std:genres\";",
+      "",
+      "export proc main() {",
+      "\ttitle(\"${1:Jazz Tune}\");",
+      "\tppq(480);",
+      "\ttimeSig(4, 4);",
+      "\ttempo(${2:140});",
+      "",
+      "\ttrack(midi, piano, { ch: 1, program: 0 }) {",
+      "\t\tat(1:1);",
+      "\t\t$0",
+      "\t}",
+      "",
+      "\ttrack(midi, bass, { ch: 2, program: 32 }) {",
+      "\t\tat(1:1);",
+      "\t}",
+      "",
+      "\ttrack(midi, drums, { ch: 10, vel: 80 }) {",
+      "\t\tat(1:1);",
+      "\t}",
+      "}"
+    ],
+    "description": "Jazz song template"
   }
 }

@@ -52,8 +52,7 @@ export class Checker {
       this.addError('E400', 'No main() procedure found', undefined, 'Add "export proc main() { ... }" to define the entry point');
     }
 
-    // Check for recursion
-    this.checkRecursion();
+    // Note: Recursion is allowed in the language, so we don't check for it
 
     // W200: Too many tempo events
     if (this.tempoEventCount > 128) {
@@ -140,11 +139,7 @@ export class Checker {
       case 'ForStatement':
         this.checkExpression(stmt.range.start);
         this.checkExpression(stmt.range.end);
-        // Check if range bounds are compile-time constants
-        if (!this.isConstant(stmt.range.start) || !this.isConstant(stmt.range.end)) {
-          this.addError('E401', 'For range bounds must be compile-time constants', stmt.position,
-            'For loop range bounds must be const values, not let variables');
-        }
+        // Note: Dynamic range bounds are allowed (e.g., from parameters)
         // Add loop variable to scope for body checking
         this.definedSymbols.add(stmt.variable);
         this.constSymbols.add(stmt.variable);

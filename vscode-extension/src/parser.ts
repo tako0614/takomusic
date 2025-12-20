@@ -12,11 +12,14 @@ import {
   LetDeclaration,
   IfStatement,
   ForStatement,
+  ReturnStatement,
   ExpressionStatement,
   TrackBlock,
   Identifier,
   ObjectLiteral,
   RangeExpression,
+  ArrowFunction,
+  MemberExpression,
 } from './types/ast';
 import { MFError } from './errors';
 
@@ -71,6 +74,10 @@ export class Parser {
 
     if (this.check(TokenType.FOR)) {
       return this.parseFor();
+    }
+
+    if (this.check(TokenType.RETURN)) {
+      return this.parseReturn();
     }
 
     // track block: track(kind, id, opts?) { ... }
@@ -247,6 +254,24 @@ export class Parser {
       variable,
       range,
       body,
+      position: pos,
+    };
+  }
+
+  private parseReturn(): ReturnStatement {
+    const pos = this.advance().position; // consume 'return'
+
+    // Check if there's a value (not semicolon or end of block)
+    let value: Expression | null = null;
+    if (!this.check(TokenType.SEMICOLON) && !this.check(TokenType.RBRACE)) {
+      value = this.parseExpression();
+    }
+
+    this.expect(TokenType.SEMICOLON, "Expected ';' after return statement");
+
+    return {
+      kind: 'ReturnStatement',
+      value,
       position: pos,
     };
   }
@@ -436,7 +461,7 @@ export class Parser {
   private parseMultiplicative(): Expression {
     let left = this.parseUnary();
 
-    while (this.check(TokenType.STAR)) {
+    while (this.check(TokenType.STAR) || this.check(TokenType.SLASH) || this.check(TokenType.PERCENT)) {
       const op = this.advance().value;
       const right = this.parseUnary();
       left = {
@@ -467,10 +492,26 @@ export class Parser {
   }
 
   private parseCall(): Expression {
-    const expr = this.parsePrimary();
+    let expr = this.parsePrimary();
 
-    if (expr.kind === 'Identifier' && this.check(TokenType.LPAREN)) {
-      return this.finishCall(expr as Identifier);
+    while (true) {
+      if (expr.kind === 'Identifier' && this.check(TokenType.LPAREN)) {
+        expr = this.finishCall(expr as Identifier);
+      } else if (this.check(TokenType.LBRACKET)) {
+        // Member access: expr[index]
+        const pos = this.advance().position; // consume '['
+        const index = this.parseExpression();
+        this.expect(TokenType.RBRACKET, "Expected ']' after index");
+        expr = {
+          kind: 'MemberExpression',
+          object: expr,
+          property: index,
+          computed: true,
+          position: pos,
+        } as MemberExpression;
+      } else {
+        break;
+      }
     }
 
     return expr;
@@ -586,15 +627,73 @@ export class Parser {
       };
     }
 
-    // Parenthesized expression
+    // Parenthesized expression or arrow function
     if (this.check(TokenType.LPAREN)) {
-      this.advance();
-      const expr = this.parseExpression();
-      this.expect(TokenType.RPAREN, "Expected ')' after expression");
-      return expr;
+      return this.parseParenOrArrow();
     }
 
     throw this.error(`Unexpected token: ${token.value}`);
+  }
+
+  private parseParenOrArrow(): Expression {
+    const pos = this.advance().position; // consume '('
+
+    // Check if this could be an arrow function
+    // Arrow function: (params) => expr
+    if (this.check(TokenType.RPAREN)) {
+      // Empty params: () => expr
+      this.advance(); // consume ')'
+      if (this.check(TokenType.ARROW)) {
+        this.advance(); // consume '=>'
+        const body = this.parseExpression();
+        return {
+          kind: 'ArrowFunction',
+          params: [],
+          body,
+          position: pos,
+        } as ArrowFunction;
+      }
+      // Not an arrow function - this is an error (empty parens without arrow)
+      throw this.error("Expected '=>' or expression");
+    }
+
+    // Try to parse as arrow function params
+    if (this.check(TokenType.IDENT)) {
+      const savedPos = this.current;
+      const params: string[] = [];
+
+      try {
+        // Collect params
+        do {
+          const param = this.expect(TokenType.IDENT, 'Expected parameter name');
+          params.push(param.value);
+        } while (this.match(TokenType.COMMA));
+
+        this.expect(TokenType.RPAREN, "Expected ')' after parameters");
+
+        // Check for arrow
+        if (this.check(TokenType.ARROW)) {
+          this.advance(); // consume '=>'
+          const body = this.parseExpression();
+          return {
+            kind: 'ArrowFunction',
+            params,
+            body,
+            position: pos,
+          } as ArrowFunction;
+        }
+      } catch {
+        // Not an arrow function, backtrack
+      }
+
+      // Backtrack if not arrow function
+      this.current = savedPos;
+    }
+
+    // Regular parenthesized expression
+    const expr = this.parseExpression();
+    this.expect(TokenType.RPAREN, "Expected ')' after expression");
+    return expr;
   }
 
   private parsePitchLiteral(token: Token): Expression {
