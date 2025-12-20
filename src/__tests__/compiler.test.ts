@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Compiler } from '../compiler/compiler.js';
+import { isStdlibImport, resolveStdlibPath, STDLIB_MODULES } from '../utils/stdlib.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -192,6 +193,26 @@ describe('Compiler', () => {
 
     const compiler = new Compiler(tmpDir);
     expect(() => compiler.compile(mainPath)).toThrow(/not exported/);
+  });
+
+  it('should resolve std: imports to stdlib path', () => {
+    // Test isStdlibImport
+    expect(isStdlibImport('std:theory')).toBe(true);
+    expect(isStdlibImport('std:patterns')).toBe(true);
+    expect(isStdlibImport('./local.mf')).toBe(false);
+    expect(isStdlibImport('../lib/utils.mf')).toBe(false);
+
+    // Test resolveStdlibPath
+    const theoryPath = resolveStdlibPath('std:theory');
+    expect(theoryPath).toContain('lib');
+    expect(theoryPath).toContain('theory.mf');
+    expect(fs.existsSync(theoryPath)).toBe(true);
+
+    // Test all stdlib modules exist
+    for (const mod of STDLIB_MODULES) {
+      const modPath = resolveStdlibPath(`std:${mod}`);
+      expect(fs.existsSync(modPath)).toBe(true);
+    }
   });
 
   it('should compile the full sample from PLAN.md', () => {

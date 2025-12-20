@@ -191,32 +191,6 @@ export proc albertiBass(chord, repetitions, dur) {
   }
 }
 
-// Rhythm section (kick, snare, hihat)
-export proc basicDrums(bars, dur) {
-  const beatsPerBar = 16;
-
-  for (bar in 0..bars) {
-    for (beat in 0..beatsPerBar) {
-      // Kick on 1 and 9 (downbeats)
-      if (beat == 0 || beat == 8) {
-        drum(kick, dur);
-      }
-
-      // Snare on 4 and 12 (backbeats)
-      if (beat == 4 || beat == 12) {
-        drum(snare, dur);
-      }
-
-      // Hi-hat on every other beat
-      if (beat % 2 == 0) {
-        drum(hhc, dur);
-      } else {
-        rest(dur);
-      }
-    }
-  }
-}
-
 // Convert note name to pitch
 export proc noteNameToPitch(name, octave) {
   let semitone = 0;
@@ -247,14 +221,4 @@ export proc playTuplet(notes, totalDur, ratio) {
   for (i in 0..len(notes)) {
     note(notes[i], noteDur);
   }
-}
-
-// Quintuplet
-export proc quintuplet(notes, baseDur) {
-  playTuplet(notes, baseDur * 4, 1.0);
-}
-
-// Sextuplet
-export proc sextuplet(notes, baseDur) {
-  playTuplet(notes, baseDur * 4, 1.0);
 }

@@ -9,6 +9,7 @@ import type { Program, ProcDeclaration, ConstDeclaration, Statement } from '../t
 import type { SongIR } from '../types/ir.js';
 import { MFError, createError } from '../errors.js';
 import { makeInt, makeFloat, makeString, makeBool, makePitch, makeDur, makeTime } from '../interpreter/runtime.js';
+import { isStdlibImport, resolveStdlibPath } from '../utils/stdlib.js';
 
 interface Module {
   path: string;
@@ -120,8 +121,10 @@ export class Compiler {
     // Process imports first (depth-first)
     for (const stmt of module.program.statements) {
       if (stmt.kind === 'ImportStatement') {
-        // Resolve import path
-        const importPath = path.resolve(moduleDir, stmt.path);
+        // Resolve import path (handle std: imports)
+        const importPath = isStdlibImport(stmt.path)
+          ? resolveStdlibPath(stmt.path)
+          : path.resolve(moduleDir, stmt.path);
         const importedModule = this.loadModule(importPath);
 
         // Recursively resolve imports

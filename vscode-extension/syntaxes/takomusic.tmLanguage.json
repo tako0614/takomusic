@@ -13,6 +13,7 @@
     { "include": "#time-literals" },
     { "include": "#functions" },
     { "include": "#builtins" },
+    { "include": "#stdlib" },
     { "include": "#drums" },
     { "include": "#operators" },
     { "include": "#numbers" }
@@ -43,6 +44,10 @@
               "match": "\\\\."
             }
           ]
+        },
+        {
+          "name": "string.module.takomusic",
+          "match": "\"std:[a-z]+\""
         }
       ]
     },
@@ -50,7 +55,7 @@
       "patterns": [
         {
           "name": "keyword.control.takomusic",
-          "match": "\\b(if|else|for|in)\\b"
+          "match": "\\b(if|else|for|in|return)\\b"
         },
         {
           "name": "keyword.control.import.takomusic",
@@ -113,8 +118,123 @@
     "builtins": {
       "patterns": [
         {
+          "comment": "Metadata functions",
           "name": "support.function.builtin.takomusic",
-          "match": "\\b(title|ppq|tempo|timeSig|at|atTick|advance|advanceTick|note|rest|chord|drum)\\b"
+          "match": "\\b(title|ppq|tempo|timeSig)\\b"
+        },
+        {
+          "comment": "Music event functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(note|rest|chord|drum)\\b"
+        },
+        {
+          "comment": "Cursor functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(at|atTick|advance|advanceTick|cursor)\\b"
+        },
+        {
+          "comment": "MIDI CC functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(cc|expression|volume|pan|sustain|pitchBend|modulation)\\b"
+        },
+        {
+          "comment": "Array functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(len|push|pop|slice|concat|reverse|copy|fill)\\b"
+        },
+        {
+          "comment": "String functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(split|join|substr|indexOf|replace|trim|upper|lower|startsWith|endsWith|contains|repeat|charAt|charCodeAt|fromCharCode|padStart|padEnd)\\b"
+        },
+        {
+          "comment": "Math functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(floor|ceil|abs|min|max|random)\\b"
+        },
+        {
+          "comment": "Type conversion functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(int|float|string|bool)\\b"
+        },
+        {
+          "comment": "Pitch functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(transpose|midiPitch|pitchMidi|durToTicks|getPpq)\\b"
+        },
+        {
+          "comment": "Higher-order functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(map|filter|reduce|find|findIndex|some|every|includes|flat|flatMap|forEach|sort|range)\\b"
+        },
+        {
+          "comment": "Utility functions",
+          "name": "support.function.builtin.takomusic",
+          "match": "\\b(print|noteAt)\\b"
+        }
+      ]
+    },
+    "stdlib": {
+      "patterns": [
+        {
+          "comment": "Theory module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(major|minor|harmonicMinor|melodicMinor|pentatonic|blues|dorian|phrygian|lydian|mixolydian|locrian|chromatic|wholeTone|diminishedHW|diminishedWH|augmentedScale|bebopDominant|bebopMajor|hungarian|japanese|arabic|scaleNotes|majorTriad|minorTriad|diminished|augmented|majorSeventh|minorSeventh|dominantSeventh|diminishedSeventh|halfDiminished|minorMajorSeventh|augmentedMajorSeventh|sus2|sus4|add9|minorAdd9|ninth|minorNinth|majorNinth|eleventh|thirteenth|sixth|minorSixth|powerChord|powerChordOctave|interval|invert|invertChord|voicingClose|voicingDrop2|voicingDrop3|voicingSpread|romanNumeral|secondaryDominant|tritoneSubstitution|relativeKey|parallelKey|degreeToSemitone)\\b"
+        },
+        {
+          "comment": "Patterns module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(euclidean|markov|arpeggiateUp|arpeggiateDown|arpeggiate|strum|albertiBass|walkingBass|ostinato|hocket|phaseShift)\\b"
+        },
+        {
+          "comment": "Rhythm module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(swing|humanize|quantize|dotted|doubleDotted|tied|fermata|groove|swingGroove|rubato|accelerando|ritardando|tuplet|triplet|syncopate|hemiola|polyrhythm|crossRhythm|clave32|clave23|shuffle|straightEighths|swungEighths|humanizeVelocity|humanizeTiming)\\b"
+        },
+        {
+          "comment": "Dynamics module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(crescendo|decrescendo|crescendoUniform|decrescendoUniform|accentPattern|sforzando|fortePiano|rinforzando|swell|hairpinCresc|hairpinDecresc|subitoForte|subitoPiano|morendo|perdendosi)\\b"
+        },
+        {
+          "comment": "Expression module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(vibrato|portamento|bendUp|bendDown|scoop|fall|doit|plop|shake|slideIn|slideOut|ghostNote)\\b"
+        },
+        {
+          "comment": "Articulation module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(staccato|legato|accent|tenuto|marcato|portato|staccatissimo)\\b"
+        },
+        {
+          "comment": "Ornaments module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(trill|mordent|turn|invertedTurn|appoggiatura|acciaccatura|glissando|slide|tremolo)\\b"
+        },
+        {
+          "comment": "Notation module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(measureRest|grandPause|repeat|firstEnding|secondEnding|dacapo|dalSegno|fine|coda|segno|fermataNote|fermataRest|breath|caesura)\\b"
+        },
+        {
+          "comment": "Genres module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(bossaNovaGuitar|bossaNovaBass|funkDrums|reggaeSkank|fourOnFloor|houseBass|tranceArp|dubstepWobble|trapHiHats|lofiChords|jazzVoicing|jazzWalk|bluesTriad|bluesShuffle|countryTrain|rockPowerChords|metalGallop|latinMontuno|afrobeatBell)\\b"
+        },
+        {
+          "comment": "Composition module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(sequence|realSequence|tonalSequence|callResponse|ostinato|canon|variation|augmentation|diminution|retrograde|inversion|retrogradeInversion|transposition|motivicDevelopment|fragmentation|extension|liquidation|stretto|pedal|drone|countermelody|parallelMotion|contraryMotion|obliqueMotion|voiceLeading)\\b"
+        },
+        {
+          "comment": "Curves module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(linear|easeIn|easeOut|easeInOut|sCurve|exponential|logarithmic|sine|bezier|step|smoothstep|bounce|elastic|automateLinear|automateSmooth|lfo|envelope|adsr|ar)\\b"
+        },
+        {
+          "comment": "Utils module functions",
+          "name": "support.function.stdlib.takomusic",
+          "match": "\\b(clip|clamp|lerp|mapRange|wrap|mirror|normalize|scale|rotate|shuffle|unique|zip|unzip|repeat|times|accumulate|diff|groupBy|partition)\\b"
         }
       ]
     },
@@ -122,7 +242,7 @@
       "patterns": [
         {
           "name": "constant.other.drum.takomusic",
-          "match": "\\b(kick|snare|hhc|hho|tom1|crash|ride)\\b"
+          "match": "\\b(kick|snare|hhc|hho|tom1|tom2|tom3|crash|ride|clap|rim|cowbell|conga|bongo|shaker|tambourine)\\b"
         }
       ]
     },
@@ -130,7 +250,7 @@
       "patterns": [
         {
           "name": "keyword.operator.takomusic",
-          "match": "(\\+|-|\\*|==|!=|<=|>=|<|>|=|\\.\\.=?)"
+          "match": "(\\+|-|\\*|/|%|==|!=|<=|>=|<|>|&&|\\|\\||!|=|\\.\\.=?)"
         }
       ]
     },

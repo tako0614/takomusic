@@ -4,6 +4,7 @@ export const translations = {
     nav: {
       features: '機能',
       example: '例',
+      docs: 'ドキュメント',
       github: 'GitHub',
     },
     // Hero
@@ -12,7 +13,7 @@ export const translations = {
       subtitle: '音楽作成のためのドメイン固有言語',
       subtitleLine2: 'VSQX、MusicXML、MIDIに一度の記述で出力',
       seeExample: '例を見る',
-      version: 'v1.0.0-alpha',
+      version: 'v1.2.0',
       license: 'AGPL-3.0',
       copied: 'コピー済み',
     },
@@ -27,21 +28,21 @@ export const translations = {
         title: 'マルチフォーマット出力',
         description: 'Vocaloid用VSQX、NEUTRINO用MusicXML、楽器用MIDIを生成',
       },
-      moduleSystem: {
-        title: 'モジュールシステム',
-        description: 'インポート・エクスポートでコードを整理。ドラムパターン、コード進行などを再利用',
+      stdlib: {
+        title: '豊富な標準ライブラリ',
+        description: '12モジュール、238以上の関数：音楽理論、パターン、ダイナミクス、ジャンル別機能など',
+      },
+      vscodeExtension: {
+        title: 'VSCode拡張機能',
+        description: 'シンタックスハイライト、スニペット、リアルタイムエラーチェックで快適な開発体験',
       },
       staticAnalysis: {
         title: '静的解析',
         description: 'レンダリング前にエラーを検出：ボーカルの重複、歌詞の欠落、音域外のピッチ',
       },
-      watchMode: {
-        title: 'ウォッチモード',
-        description: 'ファイル変更時に自動リビルド。即座のフィードバックで素早く反復',
-      },
       cliTools: {
         title: 'CLIツール',
-        description: 'init, build, check, fmt, render, doctor - 必要なすべてが1つのツールチェーンに',
+        description: 'init, build, check, fmt, play, render - 必要なすべてが1つのツールチェーンに',
       },
     },
     // Code Example
@@ -50,6 +51,20 @@ export const translations = {
       description: 'コードを書くように音楽を書く。TakoMusicの構文は直感的で表現力豊かに設計されています。',
       output: '出力',
     },
+    // Standard Library
+    stdlib: {
+      title: '標準ライブラリ',
+      description: '12のモジュールで238以上の関数を提供。音楽理論からジャンル特有のパターンまで。',
+      modules: {
+        theory: '音楽理論（スケール、コード、ボイシング）',
+        patterns: 'パターン（ユークリッドリズム、アルペジオ）',
+        rhythm: 'リズム（スウィング、グルーブ、ヒューマナイズ）',
+        dynamics: 'ダイナミクス（クレッシェンド、スフォルツァンド）',
+        expression: '表現（ビブラート、ポルタメント、ベンド）',
+        genres: 'ジャンル（ボサノバ、ファンク、EDM、ジャズ）',
+      },
+      viewDocs: 'ドキュメントを見る',
+    },
     // CLI
     cli: {
       title: 'パワフルなCLI',
@@ -57,8 +72,8 @@ export const translations = {
         init: '新規プロジェクト作成',
         build: 'ウォッチモードでビルド',
         check: '静的解析を実行',
+        play: 'FluidSynthでプレビュー',
         render: 'NEUTRINO + FluidSynthでレンダリング',
-        doctor: '依存関係をチェック',
       },
     },
     // CTA
@@ -79,6 +94,7 @@ export const translations = {
     nav: {
       features: 'Features',
       example: 'Example',
+      docs: 'Docs',
       github: 'GitHub',
     },
     // Hero
@@ -87,7 +103,7 @@ export const translations = {
       subtitle: 'A domain-specific language for music composition.',
       subtitleLine2: 'Write once, export to VSQX, MusicXML, and MIDI.',
       seeExample: 'See Example',
-      version: 'v1.0.0-alpha',
+      version: 'v1.2.0',
       license: 'AGPL-3.0',
       copied: 'Copied',
     },
@@ -102,21 +118,21 @@ export const translations = {
         title: 'Multi-Format Export',
         description: 'Generate VSQX for Vocaloid, MusicXML for NEUTRINO, and MIDI for instruments',
       },
-      moduleSystem: {
-        title: 'Module System',
-        description: 'Organize your music with imports and exports. Reuse drum patterns, chord progressions, and more',
+      stdlib: {
+        title: 'Rich Standard Library',
+        description: '12 modules, 238+ functions: music theory, patterns, dynamics, genre-specific features, and more',
+      },
+      vscodeExtension: {
+        title: 'VSCode Extension',
+        description: 'Syntax highlighting, snippets, and real-time error checking for a smooth dev experience',
       },
       staticAnalysis: {
         title: 'Static Analysis',
         description: 'Catch errors before rendering: overlapping vocals, missing lyrics, out-of-range pitches',
       },
-      watchMode: {
-        title: 'Watch Mode',
-        description: 'Auto-rebuild on file changes. Iterate quickly with instant feedback',
-      },
       cliTools: {
         title: 'CLI Tools',
-        description: 'init, build, check, fmt, render, doctor - everything you need in one toolchain',
+        description: 'init, build, check, fmt, play, render - everything you need in one toolchain',
       },
     },
     // Code Example
@@ -125,6 +141,20 @@ export const translations = {
       description: "Write music like you write code. TakoMusic's syntax is designed to be intuitive and expressive.",
       output: 'Output',
     },
+    // Standard Library
+    stdlib: {
+      title: 'Standard Library',
+      description: '12 modules with 238+ functions. From music theory to genre-specific patterns.',
+      modules: {
+        theory: 'Music Theory (scales, chords, voicings)',
+        patterns: 'Patterns (Euclidean rhythms, arpeggios)',
+        rhythm: 'Rhythm (swing, groove, humanize)',
+        dynamics: 'Dynamics (crescendo, sforzando)',
+        expression: 'Expression (vibrato, portamento, bends)',
+        genres: 'Genres (bossa nova, funk, EDM, jazz)',
+      },
+      viewDocs: 'View Documentation',
+    },
     // CLI
     cli: {
       title: 'Powerful CLI',
@@ -132,8 +162,8 @@ export const translations = {
         init: 'Create a new project',
         build: 'Build with watch mode',
         check: 'Run static analysis',
+        play: 'Preview with FluidSynth',
         render: 'Render using NEUTRINO + FluidSynth',
-        doctor: 'Check dependencies',
       },
     },
     // CTA

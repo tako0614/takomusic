@@ -1,0 +1,121 @@
+// Full Song Demo
+// Comprehensive example using multiple standard modules
+
+import { majorScale, minorScale, majorTriad, minorTriad } from "std:theory";
+import { dominantSeventh, QUARTER, EIGHTH, HALF, WHOLE } from "std:theory";
+import { MAJOR_THIRD, PERFECT_FIFTH } from "std:theory";
+import { staccato, legato, accent, marcato } from "std:articulation";
+import { trill, arpeggio, mordent } from "std:ornaments";
+import { swing, euclidean } from "std:rhythm";
+import { harmonize, bassLine, tripletFeel } from "std:notation";
+import { linearCurve } from "std:curves";
+import { clip, shuffle } from "std:utils";
+
+title("Full Demo Song");
+ppq(480);
+tempo(120);
+timeSig(4, 4);
+
+// Intro section
+proc playIntro() {
+  // Arpeggiated chord intro
+  const cMaj = majorTriad(C4);
+  arpeggio(cMaj, EIGHTH);
+
+  const fMaj = majorTriad(F4);
+  arpeggio(fMaj, EIGHTH);
+
+  const gMaj = majorTriad(G4);
+  arpeggio(gMaj, EIGHTH);
+
+  // Back to C with trill
+  trill(C5, HALF, 2);
+}
+
+// Verse melody
+proc playVerse() {
+  const melody = [C4, E4, G4, E4, D4, F4, A4, G4];
+
+  // Play with swing feel
+  swing(melody, EIGHTH, 0.6);
+
+  // Harmonize the ending
+  harmonize([G4, E4, C4], MAJOR_THIRD, QUARTER);
+}
+
+// Chorus with power
+proc playChorus() {
+  // Accented melody
+  marcato(C5, QUARTER, 110);
+  accent(G4, QUARTER, 100);
+  legato(E4, QUARTER, 90);
+  accent(C5, QUARTER, 100);
+
+  // Big chord
+  const gDom7 = dominantSeventh(G3);
+  chord(gDom7, WHOLE);
+
+  // Resolution
+  const cMaj = majorTriad(C4);
+  chord(cMaj, WHOLE);
+}
+
+// Bass pattern
+proc playBass() {
+  const chords = [
+    majorTriad(C2),
+    majorTriad(F2),
+    majorTriad(G2),
+    majorTriad(C2)
+  ];
+
+  bassLine(chords, HALF);
+}
+
+// Drum pattern
+proc playDrums(bars) {
+  for (bar in 0..bars) {
+    // Kick on 1 and 3
+    drum(kick, QUARTER);
+    drum(hhc, QUARTER);
+    drum(snare, QUARTER);
+    drum(hhc, QUARTER);
+  }
+}
+
+export proc main() {
+  // Piano - main melody
+  track(midi, piano, {}) {
+    playIntro();
+    at(3:1);
+    playVerse();
+    at(7:1);
+    playChorus();
+  }
+
+  // Bass
+  track(midi, bass, {}) {
+    at(3:1);
+    playBass();
+    at(5:1);
+    playBass();
+    at(7:1);
+    playBass();
+  }
+
+  // Drums
+  track(midi, drums, {}) {
+    at(3:1);
+    playDrums(8);
+  }
+
+  // Strings pad
+  track(midi, strings, {}) {
+    at(7:1);
+    expression(80);
+
+    // Smooth pad chords
+    chord(majorTriad(C3), WHOLE * 2);
+    chord(majorTriad(F3), WHOLE * 2);
+  }
+}

@@ -20,6 +20,7 @@ export enum TokenType {
   ELSE = 'ELSE',
   FOR = 'FOR',
   IN = 'IN',
+  RETURN = 'RETURN',
   TRUE = 'TRUE',
   FALSE = 'FALSE',
 
@@ -32,6 +33,7 @@ export enum TokenType {
   MINUS = 'MINUS',
   STAR = 'STAR',
   SLASH = 'SLASH',
+  PERCENT = 'PERCENT',
   EQ = 'EQ',
   EQEQ = 'EQEQ',
   NEQ = 'NEQ',
@@ -46,6 +48,9 @@ export enum TokenType {
   // Range operators
   DOTDOT = 'DOTDOT',
   DOTDOTEQ = 'DOTDOTEQ',
+
+  // Arrow
+  ARROW = 'ARROW',
 
   // Delimiters
   LPAREN = 'LPAREN',
@@ -84,6 +89,7 @@ export const KEYWORDS: Record<string, TokenType> = {
   else: TokenType.ELSE,
   for: TokenType.FOR,
   in: TokenType.IN,
+  return: TokenType.RETURN,
   true: TokenType.TRUE,
   false: TokenType.FALSE,
   vocal: TokenType.VOCAL,

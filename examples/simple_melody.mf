@@ -1,0 +1,35 @@
+// Simple Melody Demo
+// Demonstrates basic use of theory and articulation modules
+
+import { majorScale, majorTriad, minorTriad, QUARTER, EIGHTH, HALF } from "std:theory";
+import { staccato, legato, accent } from "std:articulation";
+
+title("Simple Melody");
+ppq(480);
+tempo(120);
+timeSig(4, 4);
+
+export proc main() {
+  // Piano melody
+  track(midi, piano, {}) {
+    // Play C major scale with staccato
+    const scale = majorScale(C4);
+    for (i in 0..8) {
+      staccato(scale[i], EIGHTH, 80);
+    }
+
+    // Play C major chord
+    const cMaj = majorTriad(C4);
+    chord(cMaj, HALF);
+
+    // Melody with accents
+    accent(G4, QUARTER, 100);
+    legato(E4, QUARTER, 80);
+    legato(C4, QUARTER, 80);
+    accent(D4, QUARTER, 100);
+
+    // End with chord
+    const aMin = minorTriad(A3);
+    chord(aMin, HALF);
+  }
+}

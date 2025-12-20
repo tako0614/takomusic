@@ -1,0 +1,63 @@
+// Generative Music Demo
+// Demonstrates pattern generation and automation curves
+
+import { pentatonicMinor, EIGHTH, SIXTEENTH } from "std:theory";
+import { pentatonicWalk, markovMelody, probabilityRhythm } from "std:patterns";
+import { volumeFade, expressionCurveSmooth } from "std:curves";
+import { humanize } from "std:rhythm";
+
+title("Generative Ambient");
+ppq(480);
+tempo(80);
+timeSig(4, 4);
+
+export proc main() {
+  // Ambient pad with volume swell
+  track(midi, strings, {}) {
+    // Fade in over 4 bars
+    volumeFade(0, 100, 1/1 * 4);
+
+    // Long sustained notes
+    const scale = pentatonicMinor(C3);
+    for (i in 0..len(scale)) {
+      note(scale[i], 1/1);
+    }
+
+    // Expression curve for movement
+    at(1:1);
+    expressionCurveSmooth(80, 120, 1/1 * 5);
+  }
+
+  // Generative melody using pentatonic walk
+  track(midi, piano, {}) {
+    // Generate 16-step melody using pentatonic random walk
+    const melody = pentatonicWalk(C4, 16);
+
+    for (i in 0..len(melody)) {
+      note(melody[i], EIGHTH);
+    }
+  }
+
+  // Markov chain melody
+  track(midi, vibraphone, {}) {
+    const notes = [C4, D4, E4, G4, A4];
+    const melodyMarkov = markovMelody(notes, 0.6, 24, 0);
+
+    for (i in 0..len(melodyMarkov)) {
+      note(melodyMarkov[i], SIXTEENTH);
+    }
+  }
+
+  // Probabilistic rhythm on percussion
+  track(midi, drums, {}) {
+    const pattern = probabilityRhythm(32, 0.3);
+
+    for (i in 0..len(pattern)) {
+      if (pattern[i]) {
+        drum(hhc, SIXTEENTH);
+      } else {
+        rest(SIXTEENTH);
+      }
+    }
+  }
+}

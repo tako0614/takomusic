@@ -39,6 +39,63 @@ export proc diminishedSeventh(root) {
   return [root, transpose(root, 3), transpose(root, 6), transpose(root, 9)];
 }
 
+// Suspended chords
+export proc sus2(root) {
+  return [root, transpose(root, 2), transpose(root, 7)];
+}
+
+export proc sus4(root) {
+  return [root, transpose(root, 5), transpose(root, 7)];
+}
+
+// Add chords
+export proc add9(root) {
+  return [root, transpose(root, 4), transpose(root, 7), transpose(root, 14)];
+}
+
+export proc minorAdd9(root) {
+  return [root, transpose(root, 3), transpose(root, 7), transpose(root, 14)];
+}
+
+// Extended chords
+export proc ninth(root) {
+  return [root, transpose(root, 4), transpose(root, 7), transpose(root, 10), transpose(root, 14)];
+}
+
+export proc minorNinth(root) {
+  return [root, transpose(root, 3), transpose(root, 7), transpose(root, 10), transpose(root, 14)];
+}
+
+export proc majorNinth(root) {
+  return [root, transpose(root, 4), transpose(root, 7), transpose(root, 11), transpose(root, 14)];
+}
+
+export proc eleventh(root) {
+  return [root, transpose(root, 4), transpose(root, 7), transpose(root, 10), transpose(root, 14), transpose(root, 17)];
+}
+
+export proc thirteenth(root) {
+  return [root, transpose(root, 4), transpose(root, 7), transpose(root, 10), transpose(root, 14), transpose(root, 21)];
+}
+
+// Sixth chords
+export proc sixth(root) {
+  return [root, transpose(root, 4), transpose(root, 7), transpose(root, 9)];
+}
+
+export proc minorSixth(root) {
+  return [root, transpose(root, 3), transpose(root, 7), transpose(root, 9)];
+}
+
+// Power chord (no third)
+export proc powerChord(root) {
+  return [root, transpose(root, 7)];
+}
+
+export proc powerChordOctave(root) {
+  return [root, transpose(root, 7), transpose(root, 12)];
+}
+
 // Scale generation - returns array of pitches for one octave
 
 export proc majorScale(root) {
@@ -117,10 +174,6 @@ export proc chromaticScale(root) {
 }
 
 // Chord voicings
-
-export proc rootPosition(chordNotes) {
-  return chordNotes;
-}
 
 export proc firstInversion(chordNotes) {
   const root = chordNotes[0];
