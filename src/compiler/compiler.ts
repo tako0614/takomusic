@@ -5,10 +5,11 @@ import * as path from 'path';
 import { Lexer } from '../lexer/index.js';
 import { Parser } from '../parser/index.js';
 import { Interpreter } from '../interpreter/index.js';
-import type { Program, ProcDeclaration, ConstDeclaration, Statement } from '../types/ast.js';
+import type { Program, ProcDeclaration, ConstDeclaration } from '../types/ast.js';
 import type { SongIR } from '../types/ir.js';
 import { MFError, createError } from '../errors.js';
-import { makeInt, makeFloat, makeString, makeBool, makeNull, makePitch, makeDur, makeTime } from '../interpreter/runtime.js';
+import { makeInt, makeFloat, makeString, makeBool, makeNull, makePitch, makeDur, makeTime, makeObject } from '../interpreter/runtime.js';
+import type { RuntimeValue, FunctionValue } from '../interpreter/runtime.js';
 import { isStdlibImport, resolveStdlibPath, getStdlibDir } from '../utils/stdlib.js';
 
 /**
@@ -88,8 +89,9 @@ export class Compiler {
     const absolutePath = path.resolve(modulePath);
 
     // Check cache
-    if (this.modules.has(absolutePath)) {
-      return this.modules.get(absolutePath)!;
+    const cached = this.modules.get(absolutePath);
+    if (cached !== undefined) {
+      return cached;
     }
 
     // Read file
@@ -179,16 +181,17 @@ export class Compiler {
 
         // Handle namespace import: import * as ns from "path"
         if (stmt.namespace) {
-          const nsProps = new Map<string, any>();
+          const nsProps = new Map<string, RuntimeValue>();
           for (const [name, exported] of importedModule.exports) {
             if (exported.kind === 'ProcDeclaration') {
               // For procedures, create a function value
-              nsProps.set(name, {
+              const fnValue: FunctionValue = {
                 type: 'function',
                 params: exported.params,
                 body: exported.body,
                 closure: interpreter.getGlobalScope(),
-              });
+              };
+              nsProps.set(name, fnValue);
             } else {
               // ConstDeclaration - evaluate and store
               try {
@@ -202,7 +205,7 @@ export class Compiler {
               }
             }
           }
-          interpreter.registerConst(stmt.namespace, { type: 'object', properties: nsProps });
+          interpreter.registerConst(stmt.namespace, makeObject(nsProps));
         } else {
           // Register imported symbols (named imports)
           for (const name of stmt.imports) {
@@ -231,7 +234,8 @@ export class Compiler {
     }
   }
 
-  private evaluateConstExpr(expr: any, module: Module): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private evaluateConstExpr(expr: any, module: Module): RuntimeValue {
     // Simple constant expression evaluation for imports
     switch (expr.kind) {
       case 'IntLiteral':
@@ -252,8 +256,8 @@ export class Compiler {
         return makeTime(expr.bar, expr.beat, expr.sub);
       case 'TemplateLiteral':
         // Only simple template strings (no interpolation) can be constant
-        if (expr.expressions.length === 0) {
-          return makeString(expr.quasis[0] || '');
+        if (expr.expressions && expr.expressions.length === 0) {
+          return makeString(expr.quasis?.[0] || '');
         }
         throw new MFError('E400', 'Template literals with interpolation cannot be constant expressions', expr.position, module.path);
       default:

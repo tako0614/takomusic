@@ -108,6 +108,11 @@ async function main(): Promise<number> {
   }
 }
 
-main().then((code) => {
-  process.exit(code);
-});
+main()
+  .then((code) => {
+    process.exit(code);
+  })
+  .catch((err) => {
+    console.error('Unhandled error:', err instanceof Error ? err.message : String(err));
+    process.exit(ExitCodes.STATIC_ERROR);
+  });

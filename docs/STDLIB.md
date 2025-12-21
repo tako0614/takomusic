@@ -149,6 +149,10 @@ DOTTED_HALF, DOTTED_QUARTER, DOTTED_EIGHTH
 import { staccato, legato, accent } from "std:articulation";
 ```
 
+> **注**: `staccato`, `legato`, `accent`, `tenuto`, `marcato` はビルトイン関数としても提供されています。
+> インポートせずに直接使用可能です。標準モジュール版は異なる実装を持つ場合があります。
+> 詳しくは [ビルトイン関数](./BUILTINS.md#アーティキュレーション) を参照してください。
+
 | 関数 | 説明 | 効果 |
 |------|------|------|
 | `staccato(pitch, dur, vel)` | スタッカート | 短く、やや強く |
@@ -168,6 +172,9 @@ import { staccato, legato, accent } from "std:articulation";
 ```javascript
 import { trill, mordent, arpeggio } from "std:ornaments";
 ```
+
+> **注**: `trill`, `mordent`, `arpeggio`, `tremolo`, `glissando` はビルトイン関数としても提供されています。
+> 詳しくは [ビルトイン関数](./BUILTINS.md#装飾音) を参照してください。
 
 | 関数 | 説明 |
 |------|------|
@@ -258,6 +265,9 @@ import { euclidean, swing, groove } from "std:rhythm";
 ```javascript
 import { crescendo, decrescendo, sforzando } from "std:dynamics";
 ```
+
+> **注**: `crescendo`, `decrescendo`, `dynamic` はビルトイン関数としても提供されています。
+> 詳しくは [ビルトイン関数](./BUILTINS.md#ダイナミクス) を参照してください。
 
 ### 漸強・漸弱
 

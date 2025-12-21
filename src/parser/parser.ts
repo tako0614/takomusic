@@ -1232,34 +1232,44 @@ export class Parser {
   private parsePitchLiteral(token: Token): PitchLiteral {
     // Parse pitch like C4, C#4, Db4, C##4, Cx4, Cbb4
     const value = token.value;
+    if (value.length === 0) {
+      throw new MFError('SYNTAX', 'Empty pitch literal', token.position, this.filePath);
+    }
     let idx = 0;
 
     const noteChar = value[idx++].toUpperCase();
     let accidental = '';
-    if (value[idx] === '#') {
+    // Check if there are more characters for accidentals
+    if (idx < value.length && value[idx] === '#') {
       accidental = '#';
       idx++;
       // Check for double sharp (##)
-      if (value[idx] === '#') {
+      if (idx < value.length && value[idx] === '#') {
         accidental = '##';
         idx++;
       }
-    } else if (value[idx] === 'x') {
+    } else if (idx < value.length && value[idx] === 'x') {
       // 'x' notation for double sharp
       accidental = '##';
       idx++;
-    } else if (value[idx] === 'b') {
+    } else if (idx < value.length && value[idx] === 'b') {
       accidental = 'b';
       idx++;
       // Check for double flat (bb)
-      if (value[idx] === 'b') {
+      if (idx < value.length && value[idx] === 'b') {
         accidental = 'bb';
         idx++;
       }
     }
 
     const octaveStr = value.slice(idx);
+    if (octaveStr === '') {
+      throw new MFError('SYNTAX', `Invalid pitch literal: missing octave in ${token.value}`, token.position, this.filePath);
+    }
     const octave = parseInt(octaveStr, 10);
+    if (isNaN(octave)) {
+      throw new MFError('SYNTAX', `Invalid pitch literal: invalid octave in ${token.value}`, token.position, this.filePath);
+    }
 
     const note = noteChar + accidental;
     const midi = this.noteToMidi(note, octave);
@@ -1333,9 +1343,16 @@ export class Parser {
 
     // Extract fraction part (without dots)
     const fractionPart = value.slice(0, value.length - dots);
+    if (fractionPart === '' || !fractionPart.includes('/')) {
+      throw new MFError('SYNTAX', `Invalid duration literal: ${token.value}`, token.position, this.filePath);
+    }
     const [numStr, denStr] = fractionPart.split('/');
     const numerator = parseInt(numStr, 10);
     const denominator = parseInt(denStr, 10);
+
+    if (isNaN(numerator) || isNaN(denominator) || denominator === 0) {
+      throw new MFError('SYNTAX', `Invalid duration literal: ${token.value}`, token.position, this.filePath);
+    }
 
     return {
       kind: 'DurLiteral',

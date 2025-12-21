@@ -18,6 +18,10 @@ export async function doctorCommand(args: string[]): Promise<number> {
   let profile: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
+      if (i + 1 >= args.length) {
+        console.error('--profile requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       profile = args[i + 1];
       i++;
     }

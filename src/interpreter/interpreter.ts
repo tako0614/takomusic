@@ -755,7 +755,7 @@ export class Interpreter {
         break;
 
       default:
-        throw new Error(`Unknown statement kind: ${(stmt as Statement).kind}`);
+        throw createError('E400', `Unknown statement kind: ${(stmt as Statement).kind}`, stmt.position, this.filePath);
     }
   }
 
@@ -970,7 +970,7 @@ export class Interpreter {
         throw createError('E400', 'Spread element not allowed here', expr.position, this.filePath);
 
       case 'RangeExpression':
-        throw new Error(`${expr.kind} cannot be evaluated as expression`);
+        throw createError('E400', `${expr.kind} cannot be evaluated as expression`, expr.position, this.filePath);
 
       case 'ConditionalExpression':
         // Ternary operator: condition ? consequent : alternate
@@ -997,7 +997,7 @@ export class Interpreter {
       }
 
       default:
-        throw new Error(`Unknown expression kind: ${(expr as Expression).kind}`);
+        throw createError('E400', `Unknown expression kind: ${(expr as Expression).kind}`, (expr as Expression).position, this.filePath);
     }
   }
 
@@ -1427,10 +1427,16 @@ export class Interpreter {
         }
         if (args.length === 1) {
           const max = Math.floor(toNumber(this.evaluate(args[0])));
+          if (max <= 0) {
+            throw createError('E400', `random(max) requires max > 0, got ${max}`, position, this.filePath);
+          }
           return makeInt(Math.floor(Math.random() * max));
         }
         const min = Math.floor(toNumber(this.evaluate(args[0])));
         const max = Math.floor(toNumber(this.evaluate(args[1])));
+        if (max <= min) {
+          throw createError('E400', `random(min, max) requires max > min, got min=${min}, max=${max}`, position, this.filePath);
+        }
         return makeInt(min + Math.floor(Math.random() * (max - min)));
       }
 
@@ -2049,7 +2055,16 @@ export class Interpreter {
         if (count.type !== 'int' && count.type !== 'float') {
           throw createError('E400', 'repeat() second argument must be a number', position, this.filePath);
         }
-        return makeString(str.value.repeat(Math.floor(toNumber(count))));
+        const repeatCount = Math.floor(toNumber(count));
+        if (repeatCount < 0) {
+          throw createError('E400', 'repeat() count cannot be negative', position, this.filePath);
+        }
+        // Limit repeat count to prevent memory exhaustion (max 1MB result)
+        const maxRepeat = Math.floor(1_000_000 / Math.max(1, str.value.length));
+        if (repeatCount > maxRepeat) {
+          throw createError('E400', `repeat() count ${repeatCount} would exceed memory limit`, position, this.filePath);
+        }
+        return makeString(str.value.repeat(repeatCount));
       }
 
       case 'charAt': {
