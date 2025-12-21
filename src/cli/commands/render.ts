@@ -7,7 +7,9 @@ import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 
 // Characters that are dangerous in shell contexts
-const SHELL_DANGEROUS_CHARS = /[;&|`$(){}[\]<>!\\'"*?\n\r]/;
+// Note: backslash is allowed for Windows paths, but we use spawn() with shell: false
+// which prevents shell injection attacks
+const SHELL_DANGEROUS_CHARS = /[;&|`$(){}[\]<>!'"*?\n\r]/;
 
 /**
  * Validate that a command argument is safe for shell execution.
