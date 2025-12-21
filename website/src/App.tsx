@@ -38,52 +38,52 @@ function App() {
 
   const features = [
     {
-      title: () => t.features.simpleSyntax.title,
-      description: () => t.features.simpleSyntax.description,
+      title: () => t().features.simpleSyntax.title,
+      description: () => t().features.simpleSyntax.description,
       icon: '🎵',
     },
     {
-      title: () => t.features.multiFormat.title,
-      description: () => t.features.multiFormat.description,
+      title: () => t().features.multiFormat.title,
+      description: () => t().features.multiFormat.description,
       icon: '📦',
     },
     {
-      title: () => t.features.stdlib.title,
-      description: () => t.features.stdlib.description,
+      title: () => t().features.stdlib.title,
+      description: () => t().features.stdlib.description,
       icon: '📚',
     },
     {
-      title: () => t.features.vscodeExtension.title,
-      description: () => t.features.vscodeExtension.description,
+      title: () => t().features.vscodeExtension.title,
+      description: () => t().features.vscodeExtension.description,
       icon: '💻',
     },
     {
-      title: () => t.features.staticAnalysis.title,
-      description: () => t.features.staticAnalysis.description,
+      title: () => t().features.staticAnalysis.title,
+      description: () => t().features.staticAnalysis.description,
       icon: '🔍',
     },
     {
-      title: () => t.features.cliTools.title,
-      description: () => t.features.cliTools.description,
+      title: () => t().features.cliTools.title,
+      description: () => t().features.cliTools.description,
       icon: '🛠️',
     },
   ]
 
   const cliCommands = [
-    { cmd: 'mf init myproject', desc: () => t.cli.commands.init },
-    { cmd: 'mf build -w', desc: () => t.cli.commands.build },
-    { cmd: 'mf check', desc: () => t.cli.commands.check },
-    { cmd: 'mf play', desc: () => t.cli.commands.play },
-    { cmd: 'mf render -p cli', desc: () => t.cli.commands.render },
+    { cmd: 'mf init myproject', desc: () => t().cli.commands.init },
+    { cmd: 'mf build -w', desc: () => t().cli.commands.build },
+    { cmd: 'mf check', desc: () => t().cli.commands.check },
+    { cmd: 'mf play', desc: () => t().cli.commands.play },
+    { cmd: 'mf render -p cli', desc: () => t().cli.commands.render },
   ]
 
   const stdlibModules = [
-    { name: 'theory', desc: () => t.stdlib.modules.theory },
-    { name: 'patterns', desc: () => t.stdlib.modules.patterns },
-    { name: 'rhythm', desc: () => t.stdlib.modules.rhythm },
-    { name: 'dynamics', desc: () => t.stdlib.modules.dynamics },
-    { name: 'expression', desc: () => t.stdlib.modules.expression },
-    { name: 'genres', desc: () => t.stdlib.modules.genres },
+    { name: 'theory', desc: () => t().stdlib.modules.theory },
+    { name: 'patterns', desc: () => t().stdlib.modules.patterns },
+    { name: 'rhythm', desc: () => t().stdlib.modules.rhythm },
+    { name: 'dynamics', desc: () => t().stdlib.modules.dynamics },
+    { name: 'expression', desc: () => t().stdlib.modules.expression },
+    { name: 'genres', desc: () => t().stdlib.modules.genres },
   ]
 
   return (
@@ -97,21 +97,21 @@ function App() {
             <span class="text-2xl font-bold">TakoMusic</span>
           </div>
           <div class="flex items-center gap-6">
-            <a href="#features" class="hover:text-sky-400 transition-colors hidden sm:block">{t.nav.features}</a>
-            <a href="#stdlib" class="hover:text-sky-400 transition-colors hidden sm:block">{t.nav.docs}</a>
-            <a href="https://github.com/tako0614/takomusic" target="_blank" class="hover:text-sky-400 transition-colors hidden sm:block">{t.nav.github}</a>
+            <a href="#features" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.features}</a>
+            <a href="#stdlib" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.docs}</a>
+            <a href="https://github.com/tako0614/takomusic" target="_blank" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.github}</a>
             <LanguageSwitcher />
           </div>
         </nav>
 
         <div class="relative z-10 container mx-auto px-6 py-24 text-center">
           <h1 class="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-sky-200 to-sky-400 bg-clip-text text-transparent">
-            {t.hero.title}
+            {t().hero.title}
           </h1>
           <p class="text-xl md:text-2xl text-slate-300 mb-8 max-w-2xl mx-auto">
-            {t.hero.subtitle}
+            {t().hero.subtitle}
             <br />
-            {t.hero.subtitleLine2}
+            {t().hero.subtitleLine2}
           </p>
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -129,13 +129,13 @@ function App() {
               href="#example"
               class="bg-sky-600 hover:bg-sky-500 rounded-lg px-6 py-3 font-semibold transition-colors"
             >
-              {t.hero.seeExample}
+              {t().hero.seeExample}
             </a>
           </div>
 
           <div class="flex justify-center gap-8 text-slate-400 text-sm">
-            <span>{t.hero.version}</span>
-            <span>{t.hero.license}</span>
+            <span>{t().hero.version}</span>
+            <span>{t().hero.license}</span>
             <span>TypeScript</span>
           </div>
         </div>
@@ -144,7 +144,7 @@ function App() {
       {/* Features Section */}
       <section id="features" class="container mx-auto px-6 py-24">
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">
-          {t.features.title}
+          {t().features.title}
         </h2>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <For each={features}>
@@ -162,10 +162,10 @@ function App() {
       {/* Code Example Section */}
       <section id="example" class="container mx-auto px-6 py-24">
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
-          {t.example.title}
+          {t().example.title}
         </h2>
         <p class="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
-          {t.example.description}
+          {t().example.description}
         </p>
 
         <div class="max-w-3xl mx-auto">
@@ -184,15 +184,15 @@ function App() {
 
         <div class="flex flex-wrap justify-center gap-4 mt-8">
           <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
-            <span class="text-slate-400">{t.example.output}:</span>
+            <span class="text-slate-400">{t().example.output}:</span>
             <span class="ml-2 text-sky-400">vocal.vsqx</span>
           </div>
           <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
-            <span class="text-slate-400">{t.example.output}:</span>
+            <span class="text-slate-400">{t().example.output}:</span>
             <span class="ml-2 text-sky-400">vocal.musicxml</span>
           </div>
           <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
-            <span class="text-slate-400">{t.example.output}:</span>
+            <span class="text-slate-400">{t().example.output}:</span>
             <span class="ml-2 text-sky-400">band.mid</span>
           </div>
         </div>
@@ -201,7 +201,7 @@ function App() {
       {/* CLI Section */}
       <section class="container mx-auto px-6 py-24">
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">
-          {t.cli.title}
+          {t().cli.title}
         </h2>
         <div class="max-w-2xl mx-auto space-y-4">
           <For each={cliCommands}>
@@ -218,10 +218,10 @@ function App() {
       {/* Standard Library Section */}
       <section id="stdlib" class="container mx-auto px-6 py-24">
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
-          {t.stdlib.title}
+          {t().stdlib.title}
         </h2>
         <p class="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
-          {t.stdlib.description}
+          {t().stdlib.description}
         </p>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
           <For each={stdlibModules}>
@@ -239,7 +239,7 @@ function App() {
             target="_blank"
             class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-6 py-3 font-semibold transition-colors"
           >
-            {t.stdlib.viewDocs}
+            {t().stdlib.viewDocs}
             <span>→</span>
           </a>
         </div>
@@ -248,10 +248,10 @@ function App() {
       {/* CTA Section */}
       <section class="container mx-auto px-6 py-24 text-center">
         <h2 class="text-3xl md:text-4xl font-bold mb-6">
-          {t.cta.title}
+          {t().cta.title}
         </h2>
         <p class="text-slate-400 mb-8 max-w-xl mx-auto">
-          {t.cta.description}
+          {t().cta.description}
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a
@@ -259,14 +259,14 @@ function App() {
             target="_blank"
             class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-8 py-3 font-semibold transition-colors"
           >
-            {t.cta.viewGithub}
+            {t().cta.viewGithub}
           </a>
           <a
             href="https://github.com/tako0614/takomusic#quick-start"
             target="_blank"
             class="bg-sky-600 hover:bg-sky-500 rounded-lg px-8 py-3 font-semibold transition-colors"
           >
-            {t.cta.getStarted}
+            {t().cta.getStarted}
           </a>
         </div>
       </section>
@@ -279,9 +279,9 @@ function App() {
             <span class="text-xl font-bold text-white">TakoMusic</span>
           </div>
           <p class="text-sm">
-            {t.footer.madeWith}
+            {t().footer.madeWith}
             <br />
-            {t.footer.copyright} &copy; {new Date().getFullYear()}
+            {t().footer.copyright} &copy; {new Date().getFullYear()}
           </p>
         </div>
       </footer>

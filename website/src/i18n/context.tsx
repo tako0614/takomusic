@@ -1,5 +1,5 @@
-import { createContext, useContext, createSignal, createEffect } from 'solid-js'
-import type { ParentComponent } from 'solid-js'
+import { createContext, useContext, createSignal, createEffect, createMemo } from 'solid-js'
+import type { ParentComponent, Accessor } from 'solid-js'
 import { translations } from './translations'
 import type { Language } from './translations'
 
@@ -7,8 +7,8 @@ import type { Language } from './translations'
 type Translations = typeof translations[Language]
 
 type I18nContextType = {
-  t: Translations
-  locale: () => Language
+  t: Accessor<Translations>
+  locale: Accessor<Language>
   setLocale: (lang: Language) => void
   languages: { code: Language; name: string }[]
 }
@@ -51,10 +51,11 @@ export const I18nProvider: ParentComponent = (props) => {
     }
   })
 
+  // Create a memo for translations that updates when locale changes
+  const t = createMemo(() => translations[locale()])
+
   const value: I18nContextType = {
-    get t() {
-      return translations[locale()]
-    },
+    t,
     locale,
     setLocale,
     languages: [
