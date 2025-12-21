@@ -72,7 +72,7 @@ describe('Checker', () => {
     expect(diagnostics.some(d => d.code === 'E050')).toBe(true);
   });
 
-  it('should detect E310 (direct recursion)', () => {
+  it('should warn W310 (direct recursion)', () => {
     const source = `
       proc foo() {
         foo();
@@ -86,10 +86,11 @@ describe('Checker', () => {
       }
     `;
     const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E310')).toBe(true);
+    // Changed from E310 error to W310 warning
+    expect(diagnostics.some(d => d.code === 'W310' && d.severity === 'warning')).toBe(true);
   });
 
-  it('should detect E310 (indirect recursion)', () => {
+  it('should warn W310 (indirect recursion)', () => {
     const source = `
       proc foo() {
         bar();
@@ -107,10 +108,11 @@ describe('Checker', () => {
       }
     `;
     const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E310')).toBe(true);
+    // Changed from E310 error to W310 warning
+    expect(diagnostics.some(d => d.code === 'W310' && d.severity === 'warning')).toBe(true);
   });
 
-  it('should detect E401 (for range not constant with let)', () => {
+  it('should warn W401 (for range not constant with let)', () => {
     const source = `
       export proc main() {
         ppq(480);
@@ -123,7 +125,8 @@ describe('Checker', () => {
       }
     `;
     const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E401')).toBe(true);
+    // Changed from E401 error to W401 warning
+    expect(diagnostics.some(d => d.code === 'W401' && d.severity === 'warning')).toBe(true);
   });
 
   it('should allow for range with const', () => {

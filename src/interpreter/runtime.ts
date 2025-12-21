@@ -45,6 +45,7 @@ export interface DurValue {
   type: 'dur';
   numerator: number;
   denominator: number;
+  dots: number; // 0 = none, 1 = dotted (1.5x), 2 = double-dotted (1.75x)
 }
 
 export interface TimeValue {
@@ -92,11 +93,15 @@ export function makeBool(value: boolean): BoolValue {
 }
 
 export function makePitch(midi: number): PitchValue {
+  // Validate MIDI value is in valid range 0-127
+  if (midi < 0 || midi > 127) {
+    throw new Error(`Pitch out of range: MIDI value ${midi} (must be 0-127)`);
+  }
   return { type: 'pitch', midi };
 }
 
-export function makeDur(numerator: number, denominator: number): DurValue {
-  return { type: 'dur', numerator, denominator };
+export function makeDur(numerator: number, denominator: number, dots: number = 0): DurValue {
+  return { type: 'dur', numerator, denominator, dots };
 }
 
 export function makeTime(bar: number, beat: number, sub: number): TimeValue {

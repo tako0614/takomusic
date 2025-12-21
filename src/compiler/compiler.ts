@@ -8,8 +8,24 @@ import { Interpreter } from '../interpreter/index.js';
 import type { Program, ProcDeclaration, ConstDeclaration, Statement } from '../types/ast.js';
 import type { SongIR } from '../types/ir.js';
 import { MFError, createError } from '../errors.js';
-import { makeInt, makeFloat, makeString, makeBool, makePitch, makeDur, makeTime } from '../interpreter/runtime.js';
-import { isStdlibImport, resolveStdlibPath } from '../utils/stdlib.js';
+import { makeInt, makeFloat, makeString, makeBool, makeNull, makePitch, makeDur, makeTime } from '../interpreter/runtime.js';
+import { isStdlibImport, resolveStdlibPath, getStdlibDir } from '../utils/stdlib.js';
+
+/**
+ * Validate that a resolved module path is safe (no path traversal attacks).
+ * Modules must be within the project base directory or the standard library.
+ */
+function isPathSafe(resolvedPath: string, baseDir: string): boolean {
+  const normalizedPath = path.normalize(resolvedPath);
+  const normalizedBase = path.normalize(baseDir);
+  const normalizedStdlib = path.normalize(getStdlibDir());
+
+  // Allow paths within the project directory or stdlib
+  return normalizedPath.startsWith(normalizedBase + path.sep) ||
+         normalizedPath.startsWith(normalizedStdlib + path.sep) ||
+         normalizedPath === normalizedBase ||
+         normalizedPath === normalizedStdlib;
+}
 
 interface Module {
   path: string;
@@ -125,24 +141,51 @@ export class Compiler {
         const importPath = isStdlibImport(stmt.path)
           ? resolveStdlibPath(stmt.path)
           : path.resolve(moduleDir, stmt.path);
+
+        // Security: Validate path to prevent directory traversal attacks
+        if (!isPathSafe(importPath, this.baseDir)) {
+          throw createError('E300', `Import path escapes project directory: ${stmt.path}`, stmt.position, module.path);
+        }
+
         const importedModule = this.loadModule(importPath);
 
         // Recursively resolve imports
         this.resolveAndRegister(importedModule, interpreter, visited);
 
-        // Register imported symbols
-        for (const name of stmt.imports) {
-          const exported = importedModule.exports.get(name);
-          if (!exported) {
-            throw createError('E400', `'${name}' is not exported from '${stmt.path}'`, stmt.position, module.path);
+        // Handle namespace import: import * as ns from "path"
+        if (stmt.namespace) {
+          const nsProps = new Map<string, any>();
+          for (const [name, exported] of importedModule.exports) {
+            if (exported.kind === 'ProcDeclaration') {
+              // For procedures, create a function value
+              nsProps.set(name, {
+                type: 'function',
+                params: exported.params,
+                body: exported.body,
+                closure: interpreter.getGlobalScope(),
+              });
+            } else {
+              // ConstDeclaration - evaluate and store
+              const value = this.evaluateConstExpr(exported.value, importedModule);
+              nsProps.set(name, value);
+            }
           }
+          interpreter.registerConst(stmt.namespace, { type: 'object', properties: nsProps });
+        } else {
+          // Register imported symbols (named imports)
+          for (const name of stmt.imports) {
+            const exported = importedModule.exports.get(name);
+            if (!exported) {
+              throw createError('E400', `'${name}' is not exported from '${stmt.path}'`, stmt.position, module.path);
+            }
 
-          if (exported.kind === 'ProcDeclaration') {
-            interpreter.registerProc(exported);
-          } else {
-            // ConstDeclaration - evaluate and register
-            const value = this.evaluateConstExpr(exported.value, importedModule);
-            interpreter.registerConst(name, value);
+            if (exported.kind === 'ProcDeclaration') {
+              interpreter.registerProc(exported);
+            } else {
+              // ConstDeclaration - evaluate and register
+              const value = this.evaluateConstExpr(exported.value, importedModule);
+              interpreter.registerConst(name, value);
+            }
           }
         }
       }
@@ -160,12 +203,20 @@ export class Compiler {
         return makeString(expr.value);
       case 'BoolLiteral':
         return makeBool(expr.value);
+      case 'NullLiteral':
+        return makeNull();
       case 'PitchLiteral':
         return makePitch(expr.midi);
       case 'DurLiteral':
-        return makeDur(expr.numerator, expr.denominator);
+        return makeDur(expr.numerator, expr.denominator, expr.dots);
       case 'TimeLiteral':
         return makeTime(expr.bar, expr.beat, expr.sub);
+      case 'TemplateLiteral':
+        // Only simple template strings (no interpolation) can be constant
+        if (expr.expressions.length === 0) {
+          return makeString(expr.quasis[0] || '');
+        }
+        throw new MFError('E400', 'Template literals with interpolation cannot be constant expressions', expr.position, module.path);
       default:
         throw new MFError('E400', `Cannot evaluate constant expression of kind: ${expr.kind}`, expr.position, module.path);
     }

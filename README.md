@@ -79,6 +79,8 @@ mf render -p cli      # Render audio
 
 ## Documentation
 
+- **[Language Specification](docs/LANGUAGE.md)** - Complete language syntax, types, and operators
+
 - **[Builtin Functions](docs/BUILTINS.md)** - Low-level runtime functions (IR operations, MIDI control)
 - **[Standard Library](docs/STDLIB.md)** - High-level music functions (theory, patterns, dynamics, etc.)
 
