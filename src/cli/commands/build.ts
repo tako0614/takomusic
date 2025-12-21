@@ -121,12 +121,17 @@ function startWatchMode(
   profile: string
 ): Promise<number> {
   return new Promise((resolve) => {
-    const srcDir = path.join(baseDir, 'src');
+    // Determine watch directory from entry path
+    // If entry is in a subdirectory (e.g., src/main.mf), watch that directory
+    // If entry is at root (e.g., song.mf), watch the base directory
+    const entryDir = path.dirname(entryPath);
+    const srcDir = entryDir === baseDir ? baseDir : entryDir;
     let debounceTimer: NodeJS.Timeout | null = null;
     let isBuilding = false;
     let pendingBuild = false;
 
-    console.log(`\nWatching for changes in ${path.relative(baseDir, srcDir)}...`);
+    const displayDir = srcDir === baseDir ? '.' : path.relative(baseDir, srcDir);
+    console.log(`\nWatching for changes in ${displayDir}...`);
     console.log('Press Ctrl+C to stop.\n');
 
     const closeWatcher = () => {
