@@ -6,10 +6,13 @@ import { spawn, ChildProcess } from 'child_process';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 
-// Characters that are dangerous in shell contexts
-// Note: backslash is allowed for Windows paths, but we use spawn() with shell: false
-// which prevents shell injection attacks
-const SHELL_DANGEROUS_CHARS = /[;&|`$(){}[\]<>!'"*?\n\r]/;
+// Characters that are dangerous even with spawn() shell: false
+// Since we use spawn() with shell: false, most shell metacharacters are safe
+// because they're passed directly to the executable without shell interpretation.
+// We only block characters that could cause issues at the OS/filesystem level:
+// - Newlines: could cause argument splitting issues
+// - Backticks and $: block for extra safety (command substitution patterns)
+const SHELL_DANGEROUS_CHARS = /[`$\n\r]/;
 
 /**
  * Validate that a command argument is safe for shell execution.
