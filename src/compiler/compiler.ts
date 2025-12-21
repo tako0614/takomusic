@@ -191,8 +191,15 @@ export class Compiler {
               });
             } else {
               // ConstDeclaration - evaluate and store
-              const value = this.evaluateConstExpr(exported.value, importedModule);
-              nsProps.set(name, value);
+              try {
+                const value = this.evaluateConstExpr(exported.value, importedModule);
+                nsProps.set(name, value);
+              } catch (e) {
+                if (e instanceof MFError) {
+                  throw e;
+                }
+                throw createError('E400', `Failed to evaluate constant '${name}' from '${stmt.path}': ${(e as Error).message}`, stmt.position, module.path);
+              }
             }
           }
           interpreter.registerConst(stmt.namespace, { type: 'object', properties: nsProps });
@@ -208,8 +215,15 @@ export class Compiler {
               interpreter.registerProc(exported);
             } else {
               // ConstDeclaration - evaluate and register
-              const value = this.evaluateConstExpr(exported.value, importedModule);
-              interpreter.registerConst(name, value);
+              try {
+                const value = this.evaluateConstExpr(exported.value, importedModule);
+                interpreter.registerConst(name, value);
+              } catch (e) {
+                if (e instanceof MFError) {
+                  throw e;
+                }
+                throw createError('E400', `Failed to evaluate constant '${name}' from '${stmt.path}': ${(e as Error).message}`, stmt.position, module.path);
+              }
             }
           }
         }

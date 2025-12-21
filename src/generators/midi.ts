@@ -112,7 +112,7 @@ function buildTempoTrack(ir: SongIR): Buffer {
   return buildTrackChunk(events);
 }
 
-function buildNoteTrack(track: MidiTrack, ir: SongIR): Buffer {
+function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
   const events: Buffer[] = [];
   let lastTick = 0;
 
@@ -233,28 +233,52 @@ function buildNoteTrack(track: MidiTrack, ir: SongIR): Buffer {
 
     switch (event.type) {
       case 'noteOn':
-        events.push(buildNoteOn(delta, track.channel, event.key!, event.vel!));
+        if (event.key === undefined || event.vel === undefined) {
+          throw new Error('noteOn event missing key or velocity');
+        }
+        events.push(buildNoteOn(delta, track.channel, event.key, event.vel));
         break;
       case 'noteOff':
-        events.push(buildNoteOff(delta, track.channel, event.key!));
+        if (event.key === undefined) {
+          throw new Error('noteOff event missing key');
+        }
+        events.push(buildNoteOff(delta, track.channel, event.key));
         break;
       case 'cc':
-        events.push(buildControlChange(delta, track.channel, event.controller!, event.value!));
+        if (event.controller === undefined || event.value === undefined) {
+          throw new Error('CC event missing controller or value');
+        }
+        events.push(buildControlChange(delta, track.channel, event.controller, event.value));
         break;
       case 'pitchBend':
-        events.push(buildPitchBendEvent(delta, track.channel, event.value!));
+        if (event.value === undefined) {
+          throw new Error('pitchBend event missing value');
+        }
+        events.push(buildPitchBendEvent(delta, track.channel, event.value));
         break;
       case 'aftertouch':
-        events.push(buildAftertouch(delta, track.channel, event.value!));
+        if (event.value === undefined) {
+          throw new Error('aftertouch event missing value');
+        }
+        events.push(buildAftertouch(delta, track.channel, event.value));
         break;
       case 'polyAftertouch':
-        events.push(buildPolyAftertouch(delta, track.channel, event.key!, event.value!));
+        if (event.key === undefined || event.value === undefined) {
+          throw new Error('polyAftertouch event missing key or value');
+        }
+        events.push(buildPolyAftertouch(delta, track.channel, event.key, event.value));
         break;
       case 'nrpn':
-        events.push(buildNRPN(delta, track.channel, event.paramMSB!, event.paramLSB!, event.valueMSB!, event.valueLSB));
+        if (event.paramMSB === undefined || event.paramLSB === undefined || event.valueMSB === undefined) {
+          throw new Error('NRPN event missing required parameters');
+        }
+        events.push(buildNRPN(delta, track.channel, event.paramMSB, event.paramLSB, event.valueMSB, event.valueLSB));
         break;
       case 'sysex':
-        events.push(buildSysEx(delta, event.data!));
+        if (event.data === undefined) {
+          throw new Error('SysEx event missing data');
+        }
+        events.push(buildSysEx(delta, event.data));
         break;
     }
   }

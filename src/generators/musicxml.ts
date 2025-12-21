@@ -59,7 +59,10 @@ export function generateMusicXML(ir: SongIR): string {
     measures.push([]);
   }
 
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+  // Use array and join for better performance with large scores
+  const xmlParts: string[] = [];
+
+  xmlParts.push(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="3.1">
   <work>
@@ -76,14 +79,14 @@ export function generateMusicXML(ir: SongIR): string {
     </score-part>
   </part-list>
   <part id="P1">
-`;
+`);
 
   for (let i = 0; i < measures.length; i++) {
-    xml += `    <measure number="${i + 1}">\n`;
+    xmlParts.push(`    <measure number="${i + 1}">\n`);
 
     // First measure: add attributes and direction
     if (i === 0) {
-      xml += `      <attributes>
+      xmlParts.push(`      <attributes>
         <divisions>${divisions}</divisions>
         <key>
           <fifths>0</fifths>
@@ -106,7 +109,7 @@ export function generateMusicXML(ir: SongIR): string {
         </direction-type>
         <sound tempo="${tempo}"/>
       </direction>
-`;
+`);
     }
 
     // Add notes for this measure
@@ -119,11 +122,11 @@ export function generateMusicXML(ir: SongIR): string {
       // Add rest if there's a gap
       if (note.tick > currentTick) {
         const restDur = note.tick - currentTick;
-        xml += generateRest(restDur, divisions);
+        xmlParts.push(generateRest(restDur, divisions));
       }
 
       // Add note
-      xml += generateNote(note, divisions);
+      xmlParts.push(generateNote(note, divisions));
       currentTick = note.tick + note.dur;
     }
 
@@ -131,17 +134,17 @@ export function generateMusicXML(ir: SongIR): string {
     const measureEndTick = (i + 1) * ticksPerMeasure;
     if (currentTick < measureEndTick) {
       const restDur = measureEndTick - currentTick;
-      xml += generateRest(restDur, divisions);
+      xmlParts.push(generateRest(restDur, divisions));
     }
 
-    xml += `    </measure>\n`;
+    xmlParts.push(`    </measure>\n`);
   }
 
-  xml += `  </part>
+  xmlParts.push(`  </part>
 </score-partwise>
-`;
+`);
 
-  return xml;
+  return xmlParts.join('');
 }
 
 /**

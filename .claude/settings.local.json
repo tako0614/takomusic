@@ -40,7 +40,12 @@
       "Bash(rm:*)",
       "Bash(npm pack:*)",
       "Bash(mkdir:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(tree:*)",
+      "Bash(npm publish:*)",
+      "Bash(git push)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)"
     ]
   }
 }

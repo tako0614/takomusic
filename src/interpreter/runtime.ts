@@ -179,3 +179,35 @@ export function valueToString(val: RuntimeValue): string {
 
 // Alias for use in string concatenation
 export const toString = valueToString;
+
+/**
+ * Deep clone a RuntimeValue.
+ * Primitive types (int, float, string, bool, pitch, dur, time, null) are immutable
+ * so they can be returned as-is.
+ * Arrays and objects are cloned recursively.
+ * Functions are not cloned (closures are shared).
+ */
+export function deepClone(val: RuntimeValue): RuntimeValue {
+  switch (val.type) {
+    case 'int':
+    case 'float':
+    case 'string':
+    case 'bool':
+    case 'pitch':
+    case 'dur':
+    case 'time':
+    case 'null':
+    case 'function':
+      // Immutable types or functions (shared closures)
+      return val;
+    case 'array':
+      return makeArray(val.elements.map(deepClone));
+    case 'object': {
+      const clonedProps = new Map<string, RuntimeValue>();
+      for (const [key, value] of val.properties) {
+        clonedProps.set(key, deepClone(value));
+      }
+      return makeObject(clonedProps);
+    }
+  }
+}
