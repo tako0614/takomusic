@@ -1,6 +1,7 @@
 // Builtin function types and context
 
 import type { Expression } from '../../types/ast.js';
+import type { Position } from '../../types/token.js';
 import type {
   SongIR,
   TrackEvent,
@@ -9,14 +10,11 @@ import type {
   VocaloidParamType,
   DynamicMark,
 } from '../../types/ir.js';
-import type { RuntimeValue } from '../runtime.js';
+import type { RuntimeValue, TimeValue, DurValue } from '../runtime.js';
 import type { TrackState } from '../trackState.js';
 
-export interface Position {
-  line: number;
-  column: number;
-  offset: number;
-}
+// Re-export Position for convenience
+export type { Position };
 
 export interface BuiltinContext {
   // Current state

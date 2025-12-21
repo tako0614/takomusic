@@ -20,6 +20,12 @@
 8. [型変換](#型変換)
 9. [ピッチ操作](#ピッチ操作)
 10. [高階関数](#高階関数)
+11. [アーティキュレーション](#アーティキュレーション)
+12. [記譜法](#記譜法)
+13. [反復記号](#反復記号)
+14. [ダイナミクス](#ダイナミクス)
+15. [オートメーション](#オートメーション)
+16. [装飾音](#装飾音)
 
 ---
 
@@ -184,6 +190,49 @@ pitchBend(4096);   // 上方向
 
 ```javascript
 modulation(64);
+```
+
+### `aftertouch(value)`
+チャンネルアフタータッチを設定します。
+
+```javascript
+aftertouch(64);
+```
+
+### `polyAftertouch(pitch, value)`
+ポリフォニックアフタータッチを設定します。
+
+```javascript
+polyAftertouch(C4, 64);
+```
+
+### `nrpn(paramMSB, paramLSB, valueMSB, [valueLSB])`
+NRPNメッセージを送信します。
+
+```javascript
+nrpn(0, 1, 64);      // NRPN parameter 0:1, value MSB = 64
+nrpn(0, 1, 64, 0);   // With value LSB
+```
+
+### `rpn(paramMSB, paramLSB, valueMSB)`
+RPNメッセージを送信します。
+
+```javascript
+rpn(0, 0, 2);  // Pitch bend sensitivity = 2 semitones
+```
+
+### `sysex(bytes)`
+SysExメッセージを送信します。
+
+```javascript
+sysex([0x7E, 0x7F, 0x09, 0x01]);  // GM System On
+```
+
+### `tempoCurve(startBpm, endBpm, duration, [curveType])`
+テンポカーブを設定します。
+
+```javascript
+tempoCurve(120, 80, 4n, "linear");
 ```
 
 ---
@@ -581,6 +630,256 @@ print("Debug:", value);
 
 ```javascript
 noteAt(0, C4, 480, 100);
+```
+
+---
+
+## アーティキュレーション
+
+### `staccato(pitch, dur, [vel])`
+スタッカート（短く切って演奏）。
+
+```javascript
+staccato(C4, 4n, 80);
+```
+
+### `legato(pitch, dur, [vel])`
+レガート（滑らかに繋げる）。
+
+```javascript
+legato(C4, 4n, 80);
+```
+
+### `accent(pitch, dur, [vel])`
+アクセント（強調）。
+
+```javascript
+accent(C4, 4n, 80);
+```
+
+### `tenuto(pitch, dur, [vel])`
+テヌート（十分に保持）。
+
+```javascript
+tenuto(C4, 4n, 80);
+```
+
+### `marcato(pitch, dur, [vel])`
+マルカート（強いアクセント）。
+
+```javascript
+marcato(C4, 4n, 80);
+```
+
+---
+
+## 記譜法
+
+### `tuplet(ratio, totalDur)`
+連符を開始します。
+
+```javascript
+tuplet(3, 4n);  // 3連符
+```
+
+### `tupletEnd()`
+連符を終了します。
+
+```javascript
+tupletEnd();
+```
+
+### `triplet(notes, dur)`
+3連符を作成します。
+
+```javascript
+triplet([C4, D4, E4], 4n);
+```
+
+### `grace(pitch, dur)`
+装飾音（前打音）。
+
+```javascript
+grace(D4, 16n);
+note(C4, 4n);
+```
+
+### `acciaccatura(pitch, dur)`
+アチャッカトゥーラ（短前打音）。
+
+```javascript
+acciaccatura(D4, 16n);
+note(C4, 4n);
+```
+
+### `appoggiatura(pitch, dur)`
+アポジャトゥーラ（長前打音）。
+
+```javascript
+appoggiatura(D4, 8n);
+note(C4, 4n);
+```
+
+### `fermata([multiplier])`
+フェルマータ（延長記号）。
+
+```javascript
+fermata(1.5);  // 1.5倍延長
+```
+
+### `slurStart()`
+スラーを開始します。
+
+```javascript
+slurStart();
+note(C4, 4n);
+note(D4, 4n);
+slurEnd();
+```
+
+### `slurEnd()`
+スラーを終了します。
+
+### `tie(pitch, dur)`
+タイ（同音を繋げる）。
+
+```javascript
+note(C4, 4n);
+tie(C4, 4n);
+```
+
+### `ottava(shift)`
+オッターヴァ記号（8va, 8vb等）。
+
+```javascript
+ottava(1);   // 8va (1オクターブ上)
+ottava(-1);  // 8vb (1オクターブ下)
+```
+
+### `ottavaEnd()`
+オッターヴァを終了します。
+
+### `voice(number)`
+ボイス（声部）を切り替えます。
+
+```javascript
+voice(1);  // 第1声部
+note(C4, 4n);
+voice(2);  // 第2声部
+note(G3, 4n);
+```
+
+---
+
+## 反復記号
+
+### `repeatStart()`
+反復開始記号。
+
+### `repeatEnd([times])`
+反復終了記号。
+
+```javascript
+repeatEnd(2);  // 2回繰り返し
+```
+
+### `dc()` / `ds()` / `fine()` / `coda()` / `segno()` / `toCoda()`
+ダ・カーポ、ダル・セーニョなどの反復記号。
+
+```javascript
+segno();
+// ... music ...
+ds();  // Dal Segno
+```
+
+---
+
+## ダイナミクス
+
+### `dynamic(marking)`
+ダイナミクス記号を設定します。
+
+```javascript
+dynamic("ff");   // フォルティッシモ
+dynamic("pp");   // ピアニッシモ
+```
+
+### `crescendo(startVel, endVel, dur)`
+クレシェンド。
+
+```javascript
+crescendo(60, 100, 2n);
+```
+
+### `decrescendo(startVel, endVel, dur)`
+デクレシェンド。
+
+```javascript
+decrescendo(100, 60, 2n);
+```
+
+---
+
+## オートメーション
+
+### `ccCurve(controller, startVal, endVal, dur, [curveType])`
+CCカーブを作成します。
+
+```javascript
+ccCurve(11, 0, 127, 2n, "linear");
+```
+
+### `expressionCurve(startVal, endVal, dur, [curveType])`
+エクスプレッションカーブを作成します。
+
+```javascript
+expressionCurve(50, 100, 4n);
+```
+
+### `pitchBendCurve(startVal, endVal, dur, [curveType])`
+ピッチベンドカーブを作成します。
+
+```javascript
+pitchBendCurve(0, 4096, 4n, "exponential");
+```
+
+---
+
+## 装飾音
+
+### `trill(pitch, dur, [interval])`
+トリル。
+
+```javascript
+trill(C4, 4n, 2);  // 2半音上とのトリル
+```
+
+### `mordent(pitch, dur, [interval])`
+モルデント。
+
+```javascript
+mordent(C4, 4n);
+```
+
+### `tremolo(pitch, dur, [rate])`
+トレモロ。
+
+```javascript
+tremolo(C4, 2n, 32n);
+```
+
+### `arpeggio(pitches, dur)`
+アルペジオ。
+
+```javascript
+arpeggio([C4, E4, G4], 4n);
+```
+
+### `glissando(startPitch, endPitch, dur)`
+グリッサンド。
+
+```javascript
+glissando(C4, C5, 4n);
 ```
 
 ---

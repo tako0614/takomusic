@@ -5,18 +5,25 @@ import * as path from 'path';
 import { Lexer } from '../../lexer/index.js';
 import { Parser } from '../../parser/index.js';
 import { Checker } from '../../checker/checker.js';
-import { ExitCodes, MFError } from '../../errors.js';
+import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
+import { handleCliError } from '../errorHandler.js';
 
 export async function checkCommand(args: string[]): Promise<number> {
   // Parse arguments
   let profile: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
+      if (i + 1 >= args.length) {
+        console.error('--profile requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       profile = args[i + 1];
       i++;
     }
   }
+  // Suppress unused variable warning
+  void profile;
 
   // Find config
   const configPath = findConfigPath(process.cwd());
@@ -73,11 +80,6 @@ export async function checkCommand(args: string[]): Promise<number> {
 
     return errorCount > 0 ? ExitCodes.STATIC_ERROR : ExitCodes.SUCCESS;
   } catch (err) {
-    if (err instanceof MFError) {
-      console.error(err.toString());
-    } else {
-      console.error(`Error: ${(err as Error).message}`);
-    }
-    return ExitCodes.STATIC_ERROR;
+    return handleCliError(err);
   }
 }

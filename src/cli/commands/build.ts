@@ -3,8 +3,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Compiler } from '../../compiler/index.js';
-import { ExitCodes, MFError } from '../../errors.js';
+import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
+import { handleCliError } from '../errorHandler.js';
+import type { MFConfig } from '../../config/index.js';
 import type { SongIR } from '../../types/ir.js';
 import { generateMusicXML } from '../../generators/musicxml.js';
 import { generateMidi } from '../../generators/midi.js';
@@ -18,6 +20,10 @@ export async function buildCommand(args: string[]): Promise<number> {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
+      if (i + 1 >= args.length) {
+        console.error('--profile requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       profile = args[i + 1];
       i++;
     } else if (args[i] === '-w' || args[i] === '--watch') {
@@ -68,7 +74,7 @@ Options:
 async function runBuild(
   baseDir: string,
   entryPath: string,
-  config: any,
+  config: MFConfig,
   profile: string
 ): Promise<number> {
   const startTime = Date.now();
@@ -105,19 +111,14 @@ async function runBuild(
     console.log(`Build complete. ${fileCount} files generated in ${elapsed}s`);
     return ExitCodes.SUCCESS;
   } catch (err) {
-    if (err instanceof MFError) {
-      console.error(err.toString());
-    } else {
-      console.error(`Error: ${(err as Error).message}`);
-    }
-    return ExitCodes.STATIC_ERROR;
+    return handleCliError(err);
   }
 }
 
 function startWatchMode(
   baseDir: string,
   entryPath: string,
-  config: any,
+  config: MFConfig,
   profile: string
 ): Promise<number> {
   return new Promise((resolve) => {
@@ -178,23 +179,26 @@ function startWatchMode(
       }, 100);
     });
 
+    // Handle Ctrl+C - use named function to allow removal
+    const sigintHandler = () => {
+      console.log('\nStopping watch mode...');
+      process.removeListener('SIGINT', sigintHandler);
+      closeWatcher();
+      resolve(ExitCodes.SUCCESS);
+    };
+    process.on('SIGINT', sigintHandler);
+
     // Handle errors on the watcher
     watcher.on('error', (err) => {
       console.error(`Watcher error: ${err.message}`);
+      process.removeListener('SIGINT', sigintHandler);
       closeWatcher();
       resolve(ExitCodes.IO_ERROR);
-    });
-
-    // Handle Ctrl+C
-    process.on('SIGINT', () => {
-      console.log('\nStopping watch mode...');
-      closeWatcher();
-      resolve(ExitCodes.SUCCESS);
     });
   });
 }
 
-async function buildCliProfile(ir: SongIR, config: any, baseDir: string): Promise<number> {
+async function buildCliProfile(ir: SongIR, config: MFConfig, baseDir: string): Promise<number> {
   const cliConfig = config.profiles.cli;
   if (!cliConfig) {
     return 0;
@@ -221,7 +225,7 @@ async function buildCliProfile(ir: SongIR, config: any, baseDir: string): Promis
   return count;
 }
 
-async function buildMikuProfile(ir: SongIR, config: any, baseDir: string): Promise<number> {
+async function buildMikuProfile(ir: SongIR, config: MFConfig, baseDir: string): Promise<number> {
   const mikuConfig = config.profiles.miku;
   if (!mikuConfig) {
     return 0;

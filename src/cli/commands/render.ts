@@ -5,6 +5,7 @@ import * as path from 'path';
 import { spawn, ChildProcess } from 'child_process';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
+import { handleCliError } from '../errorHandler.js';
 
 // Characters that are dangerous even with spawn() shell: false
 // Since we use spawn() with shell: false, most shell metacharacters are safe
@@ -70,10 +71,23 @@ export async function renderCommand(args: string[]): Promise<number> {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
+      if (i + 1 >= args.length) {
+        console.error('--profile requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       profile = args[i + 1];
       i++;
     } else if (args[i] === '-t' || args[i] === '--timeout') {
-      timeout = parseInt(args[i + 1], 10) * 1000; // Convert seconds to ms
+      if (i + 1 >= args.length) {
+        console.error('--timeout requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
+      const parsed = parseInt(args[i + 1], 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        console.error(`Invalid timeout value: ${args[i + 1]}`);
+        return ExitCodes.STATIC_ERROR;
+      }
+      timeout = parsed * 1000; // Convert seconds to ms
       i++;
     } else if (args[i] === '--dry-run') {
       dryRun = true;
@@ -150,10 +164,9 @@ Options:
   } catch (err) {
     if (cancelled) {
       console.log('Render cancelled by user.');
-    } else {
-      console.error(`Error: ${(err as Error).message}`);
+      return ExitCodes.EXTERNAL_TOOL_ERROR;
     }
-    return ExitCodes.EXTERNAL_TOOL_ERROR;
+    return handleCliError(err);
   }
 }
 

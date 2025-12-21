@@ -1,12 +1,20 @@
 // Core builtin functions: title, ppq, tempo, timeSig, at, advance, note, rest, chord, drum
 
 import type { Expression } from '../../types/ast.js';
+import type { Position } from '../../types/token.js';
 import type { NoteEvent, RestEvent } from '../../types/ir.js';
 import { RuntimeValue, makeNull, toNumber } from '../runtime.js';
 import { MFError, createError } from '../../errors.js';
 import { DRUM_MAP } from '../trackState.js';
+import {
+  validateDenominator,
+  validateNumerator,
+  validatePitch,
+  validatePPQ,
+} from '../validators.js';
 
-// Using 'any' for 'this' to avoid circular dependency and private member issues
+// Using 'any' for 'this' to avoid circular dependency with Interpreter class
+// The BuiltinContext interface in types.ts defines the expected shape
 
 export function builtinTitle(this: any, args: Expression[], position: any): RuntimeValue {
   this.checkGlobalPhase(position);
@@ -18,12 +26,13 @@ export function builtinTitle(this: any, args: Expression[], position: any): Runt
   return makeNull();
 }
 
-export function builtinPpq(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinPpq(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkGlobalPhase(position);
   const val = this.evaluate(args[0]);
   if (val.type !== 'int') {
     throw new MFError('TYPE', 'ppq() expects int', position, this.filePath);
   }
+  validatePPQ(val.value, position, this.filePath);
   this.ir.ppq = val.value;
   return makeNull();
 }
@@ -49,7 +58,7 @@ export function builtinTempo(this: any, args: Expression[], position: any): Runt
   return makeNull();
 }
 
-export function builtinTimeSig(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinTimeSig(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkGlobalPhase(position);
 
   if (args.length === 2) {
@@ -59,6 +68,8 @@ export function builtinTimeSig(this: any, args: Expression[], position: any): Ru
     if (num.type !== 'int' || den.type !== 'int') {
       throw new MFError('TYPE', 'timeSig() expects int, int', position, this.filePath);
     }
+    validateNumerator(num.value, position, this.filePath);
+    validateDenominator(den.value, position, this.filePath);
     this.ir.timeSigs.push({ tick: 0, numerator: num.value, denominator: den.value });
   } else {
     // timeSig(time, num, den)
@@ -76,6 +87,8 @@ export function builtinTimeSig(this: any, args: Expression[], position: any): Ru
     if (num.type !== 'int' || den.type !== 'int') {
       throw new MFError('TYPE', 'timeSig() expects int, int', position, this.filePath);
     }
+    validateNumerator(num.value, position, this.filePath);
+    validateDenominator(den.value, position, this.filePath);
     this.ir.timeSigs.push({ tick, numerator: num.value, denominator: den.value });
   }
   return makeNull();
@@ -123,7 +136,7 @@ export function builtinAdvanceTick(this: any, args: Expression[], position: any)
   return makeNull();
 }
 
-export function builtinNote(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinNote(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -137,10 +150,7 @@ export function builtinNote(this: any, args: Expression[], position: any): Runti
     throw new MFError('TYPE', 'note() duration must be Dur', position, this.filePath);
   }
 
-  // Validate pitch range
-  if (pitch.midi < 0 || pitch.midi > 127) {
-    throw createError('E110', `Pitch ${pitch.midi} out of range 0..127`, position, this.filePath);
-  }
+  validatePitch(pitch.midi, position, this.filePath);
 
   const durTicks = this.durToTicks(dur, position);
   const tick = track.cursor;
@@ -209,7 +219,7 @@ export function builtinRest(this: any, args: Expression[], position: any): Runti
   return makeNull();
 }
 
-export function builtinChord(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinChord(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -234,9 +244,7 @@ export function builtinChord(this: any, args: Expression[], position: any): Runt
     if (p.type !== 'pitch') {
       throw new MFError('TYPE', 'chord() array must contain only Pitch', position, this.filePath);
     }
-    if (p.midi < 0 || p.midi > 127) {
-      throw createError('E110', `Pitch ${p.midi} out of range 0..127`, position, this.filePath);
-    }
+    validatePitch(p.midi, position, this.filePath);
     const event: NoteEvent = {
       type: 'note',
       tick,
