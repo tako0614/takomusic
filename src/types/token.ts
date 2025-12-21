@@ -1,4 +1,4 @@
-// Token types for MFS language
+// Token types for TakoScore v2.0 language
 
 export enum TokenType {
   // Literals
@@ -8,6 +8,7 @@ export enum TokenType {
   PITCH = 'PITCH',
   DUR = 'DUR',
   TIME = 'TIME',
+  MORA = 'MORA',              // Mora token (single Japanese syllable)
 
   // Template literals
   TEMPLATE_HEAD = 'TEMPLATE_HEAD',      // `text${
@@ -39,9 +40,34 @@ export enum TokenType {
   AS = 'AS',
   TYPEOF = 'TYPEOF',
 
-  // Track kinds (contextual keywords)
+  // TakoScore v2.0 keywords
+  SCORE = 'SCORE',
+  BACKEND = 'BACKEND',
+  PART = 'PART',
+  PHRASE = 'PHRASE',
+  NOTES = 'NOTES',
+  LYRICS = 'LYRICS',
+  REST = 'REST',
+  BREATH = 'BREATH',
+  TIE = 'TIE',
+  TEMPO = 'TEMPO',
+  TIME_SIG = 'TIME_SIG',      // 'time' keyword for time signature
+  KEY = 'KEY',
+  PPQ = 'PPQ',
+  SINGER = 'SINGER',
+  LANG = 'LANG',
+
+  // Lyric modes
+  MORA_KW = 'MORA_KW',        // 'mora' keyword
+  PHONEME = 'PHONEME',        // 'phoneme' keyword
+
+  // Part/Track kinds
   VOCAL = 'VOCAL',
   MIDI = 'MIDI',
+
+  // Key/scale modifiers
+  MAJOR = 'MAJOR',
+  MINOR = 'MINOR',
 
   // Operators
   PLUS = 'PLUS',
@@ -53,12 +79,12 @@ export enum TokenType {
   MINUSEQ = 'MINUSEQ',
   STAREQ = 'STAREQ',
   SLASHEQ = 'SLASHEQ',
-  PERCENTEQ = 'PERCENTEQ',  // %=
-  BITANDEQ = 'BITANDEQ',    // &=
-  BITOREQ = 'BITOREQ',      // |=
-  BITXOREQ = 'BITXOREQ',    // ^=
-  SHLEQ = 'SHLEQ',          // <<=
-  SHREQ = 'SHREQ',          // >>=
+  PERCENTEQ = 'PERCENTEQ',    // %=
+  BITANDEQ = 'BITANDEQ',      // &=
+  BITOREQ = 'BITOREQ',        // |=
+  BITXOREQ = 'BITXOREQ',      // ^=
+  SHLEQ = 'SHLEQ',            // <<=
+  SHREQ = 'SHREQ',            // >>=
   EQ = 'EQ',
   EQEQ = 'EQEQ',
   NEQ = 'NEQ',
@@ -74,12 +100,17 @@ export enum TokenType {
   NULLISH = 'NULLISH',        // ?? for nullish coalescing
 
   // Bitwise operators
-  BITAND = 'BITAND',      // &
-  BITOR = 'BITOR',        // |
-  BITXOR = 'BITXOR',      // ^
-  BITNOT = 'BITNOT',      // ~
-  SHL = 'SHL',            // <<
-  SHR = 'SHR',            // >>
+  BITAND = 'BITAND',          // &
+  BITOR = 'BITOR',            // |
+  BITXOR = 'BITXOR',          // ^
+  BITNOT = 'BITNOT',          // ~
+  SHL = 'SHL',                // <<
+  SHR = 'SHR',                // >>
+
+  // TakoScore specific operators
+  TILDE = 'TILDE',            // ~ for tie
+  UNDERSCORE = 'UNDERSCORE',  // _ for melisma
+  PIPE = 'PIPE',              // | for bar lines
 
   // Range operators
   DOTDOT = 'DOTDOT',
@@ -118,6 +149,7 @@ export interface Token {
 }
 
 export const KEYWORDS: Record<string, TokenType> = {
+  // Control flow
   import: TokenType.IMPORT,
   export: TokenType.EXPORT,
   proc: TokenType.PROC,
@@ -139,6 +171,33 @@ export const KEYWORDS: Record<string, TokenType> = {
   default: TokenType.DEFAULT,
   as: TokenType.AS,
   typeof: TokenType.TYPEOF,
+
+  // TakoScore v2.0 structure keywords
+  score: TokenType.SCORE,
+  backend: TokenType.BACKEND,
+  part: TokenType.PART,
+  phrase: TokenType.PHRASE,
+  notes: TokenType.NOTES,
+  lyrics: TokenType.LYRICS,
+  rest: TokenType.REST,
+  breath: TokenType.BREATH,
+  tie: TokenType.TIE,
+  tempo: TokenType.TEMPO,
+  time: TokenType.TIME_SIG,
+  key: TokenType.KEY,
+  ppq: TokenType.PPQ,
+  singer: TokenType.SINGER,
+  lang: TokenType.LANG,
+
+  // Lyric modes
+  mora: TokenType.MORA_KW,
+  phoneme: TokenType.PHONEME,
+
+  // Part/track kinds
   vocal: TokenType.VOCAL,
   midi: TokenType.MIDI,
+
+  // Key/scale modifiers
+  major: TokenType.MAJOR,
+  minor: TokenType.MINOR,
 };

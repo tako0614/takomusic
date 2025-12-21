@@ -1,7 +1,7 @@
 {
   "name": "takomusic",
-  "version": "1.3.14",
-  "description": "TakoMusic - A domain-specific language for music composition that generates VSQX, MusicXML, and MIDI",
+  "version": "2.0.0",
+  "description": "TakoScore - A phrase-first DSL for vocal synthesis composition optimized for NEUTRINO",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

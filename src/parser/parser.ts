@@ -1,8 +1,32 @@
-// Parser for MFS language
+// Parser for TakoScore v2.0 language
 
 import { Token, TokenType } from '../types/token.js';
 import {
-  Program,
+  Score,
+  BackendConfig,
+  BackendOption,
+  GlobalStatement,
+  TempoStatement,
+  TimeSignatureStatement,
+  KeySignatureStatement,
+  PpqStatement,
+  PartDeclaration,
+  PartOption,
+  PartBodyItem,
+  PhraseBlock,
+  NotesSection,
+  NoteBar,
+  NoteItem,
+  LyricsSection,
+  LyricToken,
+  BreathMark,
+  RestStatement,
+  MidiBar,
+  MidiBarItem,
+  MidiNote,
+  MidiChord,
+  MidiDrum,
+  MidiRest,
   Statement,
   Expression,
   ImportStatement,
@@ -23,7 +47,6 @@ import {
   BreakStatement,
   ContinueStatement,
   ExpressionStatement,
-  TrackBlock,
   IntLiteral,
   FloatLiteral,
   StringLiteral,
@@ -60,45 +83,551 @@ export class Parser {
     this.filePath = filePath;
   }
 
-  parse(): Program {
-    const statements: Statement[] = [];
+  // v2.0: Parse a Score (new entry point)
+  parseScore(): Score {
     const pos = this.peek().position;
 
-    while (!this.isAtEnd()) {
-      const stmt = this.parseStatement();
-      if (stmt) {
-        statements.push(stmt);
+    // Expect 'score' keyword
+    this.expect(TokenType.SCORE, "Expected 'score' at start of file");
+
+    // Parse title
+    const titleToken = this.expect(TokenType.STRING, 'Expected score title string');
+    const title = titleToken.value;
+
+    this.expect(TokenType.LBRACE, "Expected '{' after score title");
+
+    // Parse score body
+    let backend: BackendConfig | null = null;
+    const globals: GlobalStatement[] = [];
+    const parts: PartDeclaration[] = [];
+
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      if (this.check(TokenType.BACKEND)) {
+        backend = this.parseBackendConfig();
+      } else if (this.check(TokenType.TEMPO)) {
+        globals.push(this.parseTempoStatement());
+      } else if (this.check(TokenType.TIME_SIG)) {
+        globals.push(this.parseTimeSignatureStatement());
+      } else if (this.check(TokenType.KEY)) {
+        globals.push(this.parseKeySignatureStatement());
+      } else if (this.check(TokenType.PPQ)) {
+        globals.push(this.parsePpqStatement());
+      } else if (this.check(TokenType.PART)) {
+        parts.push(this.parsePartDeclaration());
+      } else if (this.check(TokenType.IMPORT)) {
+        globals.push(this.parseImport() as GlobalStatement);
+      } else if (this.check(TokenType.CONST)) {
+        globals.push(this.parseConst(false) as GlobalStatement);
+      } else if (this.check(TokenType.PROC)) {
+        globals.push(this.parseProc(false) as GlobalStatement);
+      } else if (this.check(TokenType.EXPORT)) {
+        const exportStmt = this.parseExport();
+        if (exportStmt.declaration.kind === 'ProcDeclaration' ||
+            exportStmt.declaration.kind === 'ConstDeclaration') {
+          globals.push(exportStmt.declaration as GlobalStatement);
+        }
+      } else {
+        throw this.error(`Unexpected token in score body: ${this.peek().value}`);
       }
     }
 
-    return { kind: 'Program', statements, position: pos };
+    this.expect(TokenType.RBRACE, "Expected '}' at end of score");
+
+    return {
+      kind: 'Score',
+      title,
+      backend,
+      globals,
+      parts,
+      position: pos,
+    };
   }
 
-  // Parse with error recovery - collects multiple errors instead of stopping at first
-  parseWithErrors(): { program: Program; errors: MFError[] } {
-    this.errors = [];
-    const statements: Statement[] = [];
+  // Parse backend configuration block
+  private parseBackendConfig(): BackendConfig {
+    const pos = this.advance().position; // consume 'backend'
+
+    const nameToken = this.expect(TokenType.IDENT, 'Expected backend name');
+    const name = nameToken.value;
+
+    this.expect(TokenType.LBRACE, "Expected '{' after backend name");
+
+    const options: BackendOption[] = [];
+
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      const optPos = this.peek().position;
+      const key = this.expect(TokenType.IDENT, 'Expected option name').value;
+
+      // Options can be: key value (no colon needed in v2.0 style)
+      const value = this.parseExpression();
+
+      options.push({
+        kind: 'BackendOption',
+        key,
+        value,
+        position: optPos,
+      });
+    }
+
+    this.expect(TokenType.RBRACE, "Expected '}' after backend options");
+
+    return {
+      kind: 'BackendConfig',
+      name,
+      options,
+      position: pos,
+    };
+  }
+
+  // Parse tempo statement
+  private parseTempoStatement(): TempoStatement {
+    const pos = this.advance().position; // consume 'tempo'
+    const bpm = this.parseExpression();
+
+    return {
+      kind: 'TempoStatement',
+      bpm,
+      position: pos,
+    };
+  }
+
+  // Parse time signature statement
+  private parseTimeSignatureStatement(): TimeSignatureStatement {
+    const pos = this.advance().position; // consume 'time'
+
+    // Expect n/d format
+    const numToken = this.expect(TokenType.INT, 'Expected time signature numerator');
+    this.expect(TokenType.SLASH, "Expected '/' in time signature");
+    const denToken = this.expect(TokenType.INT, 'Expected time signature denominator');
+
+    return {
+      kind: 'TimeSignatureStatement',
+      numerator: { kind: 'IntLiteral', value: parseInt(numToken.value), position: numToken.position },
+      denominator: { kind: 'IntLiteral', value: parseInt(denToken.value), position: denToken.position },
+      position: pos,
+    };
+  }
+
+  // Parse key signature statement
+  private parseKeySignatureStatement(): KeySignatureStatement {
+    const pos = this.advance().position; // consume 'key'
+
+    // Expect root (pitch or identifier like 'C', 'D', etc.)
+    let root: Expression;
+    if (this.check(TokenType.PITCH)) {
+      root = this.parsePitchLiteral(this.advance());
+    } else if (this.check(TokenType.IDENT)) {
+      const ident = this.advance();
+      root = { kind: 'Identifier', name: ident.value, position: ident.position };
+    } else {
+      throw this.error('Expected key root (e.g., C, D, E)');
+    }
+
+    // Expect 'major' or 'minor'
+    let mode: 'major' | 'minor' = 'major';
+    if (this.check(TokenType.MAJOR)) {
+      this.advance();
+      mode = 'major';
+    } else if (this.check(TokenType.MINOR)) {
+      this.advance();
+      mode = 'minor';
+    }
+
+    return {
+      kind: 'KeySignatureStatement',
+      root,
+      mode,
+      position: pos,
+    };
+  }
+
+  // Parse ppq statement
+  private parsePpqStatement(): PpqStatement {
+    const pos = this.advance().position; // consume 'ppq'
+    const value = this.parseExpression();
+
+    return {
+      kind: 'PpqStatement',
+      value,
+      position: pos,
+    };
+  }
+
+  // Parse part declaration
+  private parsePartDeclaration(): PartDeclaration {
+    const pos = this.advance().position; // consume 'part'
+
+    const nameToken = this.expect(TokenType.IDENT, 'Expected part name');
+    const name = nameToken.value;
+
+    this.expect(TokenType.LBRACE, "Expected '{' after part name");
+
+    const options: PartOption[] = [];
+    const body: PartBodyItem[] = [];
+    let partKind: 'vocal' | 'midi' | null = null;
+
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      // Check for 'midi' options line: midi ch:1 program:0
+      if (this.check(TokenType.MIDI)) {
+        this.advance();
+        partKind = 'midi';
+        // Parse options like ch:1 program:0
+        while (!this.check(TokenType.PIPE) && !this.check(TokenType.RBRACE) &&
+               !this.check(TokenType.PHRASE) && !this.check(TokenType.REST) && !this.isAtEnd()) {
+          const optPos = this.peek().position;
+          const key = this.expect(TokenType.IDENT, 'Expected option name').value;
+          this.expect(TokenType.COLON, "Expected ':' after option name");
+          const value = this.parseExpression();
+          options.push({ kind: 'PartOption', key, value, position: optPos });
+        }
+      }
+      // Check for phrase block
+      else if (this.check(TokenType.PHRASE)) {
+        partKind = partKind || 'vocal';
+        body.push(this.parsePhraseBlock());
+      }
+      // Check for rest statement
+      else if (this.check(TokenType.REST)) {
+        body.push(this.parseRestStatement());
+      }
+      // Check for MIDI bar: | ... |
+      else if (this.check(TokenType.PIPE)) {
+        partKind = partKind || 'midi';
+        body.push(this.parseMidiBar());
+      }
+      // Other statements (for, if, etc.)
+      else {
+        const stmt = this.parseStatement();
+        if (stmt) body.push(stmt);
+      }
+    }
+
+    this.expect(TokenType.RBRACE, "Expected '}' at end of part");
+
+    return {
+      kind: 'PartDeclaration',
+      name,
+      partKind,
+      options,
+      body,
+      position: pos,
+    };
+  }
+
+  // Parse phrase block
+  private parsePhraseBlock(): PhraseBlock {
+    const pos = this.advance().position; // consume 'phrase'
+
+    this.expect(TokenType.LBRACE, "Expected '{' after 'phrase'");
+
+    let notesSection: NotesSection | null = null;
+    let lyricsSection: LyricsSection | null = null;
+    const breathMarks: BreathMark[] = [];
+
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      // notes: section
+      if (this.check(TokenType.NOTES)) {
+        this.advance();
+        this.expect(TokenType.COLON, "Expected ':' after 'notes'");
+        notesSection = this.parseNotesSection();
+      }
+      // lyrics section
+      else if (this.check(TokenType.LYRICS)) {
+        this.advance();
+        lyricsSection = this.parseLyricsSection();
+      }
+      // breath mark
+      else if (this.check(TokenType.BREATH)) {
+        this.advance();
+        this.expect(TokenType.SEMICOLON, "Expected ';' after 'breath'");
+        breathMarks.push({
+          kind: 'BreathMark',
+          afterBar: notesSection ? notesSection.bars.length - 1 : 0,
+          position: pos,
+        });
+      }
+      else {
+        throw this.error(`Unexpected token in phrase: ${this.peek().value}`);
+      }
+    }
+
+    this.expect(TokenType.RBRACE, "Expected '}' at end of phrase");
+
+    return {
+      kind: 'PhraseBlock',
+      notesSection,
+      lyricsSection,
+      breathMarks,
+      position: pos,
+    };
+  }
+
+  // Parse notes section: | C4 q D4 q | E4 h |;
+  private parseNotesSection(): NotesSection {
+    const pos = this.peek().position;
+    const bars: NoteBar[] = [];
+
+    // Parse bars until semicolon
+    while (this.check(TokenType.PIPE)) {
+      bars.push(this.parseNoteBar());
+    }
+
+    this.expect(TokenType.SEMICOLON, "Expected ';' after notes section");
+
+    return {
+      kind: 'NotesSection',
+      bars,
+      position: pos,
+    };
+  }
+
+  // Parse a single bar: | C4 q D4 q E4 q F4 q |
+  private parseNoteBar(): NoteBar {
+    const pos = this.advance().position; // consume opening |
+    const notes: NoteItem[] = [];
+
+    while (!this.check(TokenType.PIPE) && !this.check(TokenType.SEMICOLON) && !this.isAtEnd()) {
+      notes.push(this.parseNoteItem());
+    }
+
+    if (this.check(TokenType.PIPE)) {
+      this.advance(); // consume closing |
+    }
+
+    return {
+      kind: 'NoteBar',
+      notes,
+      position: pos,
+    };
+  }
+
+  // Parse a single note item: C4 q or C4 h~ (with tie)
+  private parseNoteItem(): NoteItem {
     const pos = this.peek().position;
 
-    while (!this.isAtEnd()) {
-      try {
-        this.panicMode = false;
-        const stmt = this.parseStatement();
-        if (stmt) {
-          statements.push(stmt);
-        }
-      } catch (e) {
-        if (e instanceof MFError) {
-          this.errors.push(e);
-          this.synchronize();
+    // Parse pitch
+    const pitch = this.parseExpression();
+
+    // Parse duration
+    const duration = this.parseExpression();
+
+    // Check for tie marker ~
+    let tieStart = false;
+    if (this.check(TokenType.TILDE)) {
+      this.advance();
+      tieStart = true;
+    }
+
+    return {
+      kind: 'NoteItem',
+      pitch,
+      duration,
+      tieStart,
+      position: pos,
+    };
+  }
+
+  // Parse lyrics section: mora: は じ め ま し て;
+  private parseLyricsSection(): LyricsSection {
+    const pos = this.peek().position;
+
+    // Expect mode (mora or phoneme)
+    let mode: 'mora' | 'phoneme' = 'mora';
+    if (this.check(TokenType.MORA_KW)) {
+      this.advance();
+      mode = 'mora';
+    } else if (this.check(TokenType.PHONEME)) {
+      this.advance();
+      mode = 'phoneme';
+    }
+
+    this.expect(TokenType.COLON, "Expected ':' after lyric mode");
+
+    const tokens: LyricToken[] = [];
+
+    // Parse lyric tokens until semicolon
+    while (!this.check(TokenType.SEMICOLON) && !this.isAtEnd()) {
+      const tokenPos = this.peek().position;
+
+      if (this.check(TokenType.UNDERSCORE)) {
+        this.advance();
+        tokens.push({
+          kind: 'LyricToken',
+          value: '_',
+          isMelisma: true,
+          position: tokenPos,
+        });
+      } else if (this.check(TokenType.IDENT) || this.check(TokenType.STRING)) {
+        const token = this.advance();
+        tokens.push({
+          kind: 'LyricToken',
+          value: token.value,
+          isMelisma: false,
+          position: tokenPos,
+        });
+      } else {
+        // Try to read as a mora token (Japanese characters)
+        const moraToken = this.tryReadMoraToken();
+        if (moraToken) {
+          tokens.push(moraToken);
         } else {
-          throw e;
+          throw this.error(`Unexpected token in lyrics: ${this.peek().value}`);
         }
       }
     }
 
-    const program: Program = { kind: 'Program', statements, position: pos };
-    return { program, errors: this.errors };
+    this.expect(TokenType.SEMICOLON, "Expected ';' after lyrics");
+
+    return {
+      kind: 'LyricsSection',
+      mode,
+      tokens,
+      position: pos,
+    };
+  }
+
+  // Try to read a mora token (Japanese hiragana/katakana)
+  private tryReadMoraToken(): LyricToken | null {
+    const pos = this.peek().position;
+    const token = this.peek();
+
+    // Accept identifiers that could be mora (single characters or short strings)
+    if (token.type === TokenType.IDENT) {
+      this.advance();
+      return {
+        kind: 'LyricToken',
+        value: token.value,
+        isMelisma: false,
+        position: pos,
+      };
+    }
+
+    return null;
+  }
+
+  // Parse rest statement: rest q
+  private parseRestStatement(): RestStatement {
+    const pos = this.advance().position; // consume 'rest'
+    const duration = this.parseExpression();
+
+    return {
+      kind: 'RestStatement',
+      duration,
+      position: pos,
+    };
+  }
+
+  // Parse MIDI bar: | C4 q E4 q G4 q C5 q |
+  private parseMidiBar(): MidiBar {
+    const pos = this.advance().position; // consume opening |
+    const items: MidiBarItem[] = [];
+
+    while (!this.check(TokenType.PIPE) && !this.isAtEnd()) {
+      items.push(this.parseMidiBarItem());
+    }
+
+    if (this.check(TokenType.PIPE)) {
+      this.advance(); // consume closing |
+    }
+
+    return {
+      kind: 'MidiBar',
+      items,
+      position: pos,
+    };
+  }
+
+  // Parse MIDI bar item: note, chord, drum, or rest
+  private parseMidiBarItem(): MidiBarItem {
+    const pos = this.peek().position;
+
+    // Check for chord: [C4 E4 G4] q
+    if (this.check(TokenType.LBRACKET)) {
+      return this.parseMidiChord();
+    }
+
+    // Check for drum name (kick, snare, etc.)
+    if (this.check(TokenType.IDENT) && this.isDrumName(this.peek().value)) {
+      const name = this.advance().value;
+      const duration = this.parseExpression();
+      return {
+        kind: 'MidiDrum',
+        name,
+        duration,
+        position: pos,
+      };
+    }
+
+    // Regular note: C4 q
+    const pitch = this.parseExpression();
+    const duration = this.parseExpression();
+
+    return {
+      kind: 'MidiNote',
+      pitch,
+      duration,
+      position: pos,
+    };
+  }
+
+  // Parse MIDI chord: [C4 E4 G4] q
+  private parseMidiChord(): MidiChord {
+    const pos = this.advance().position; // consume [
+    const pitches: Expression[] = [];
+
+    while (!this.check(TokenType.RBRACKET) && !this.isAtEnd()) {
+      pitches.push(this.parseExpression());
+    }
+
+    this.expect(TokenType.RBRACKET, "Expected ']' after chord pitches");
+    const duration = this.parseExpression();
+
+    return {
+      kind: 'MidiChord',
+      pitches,
+      duration,
+      position: pos,
+    };
+  }
+
+  // Check if identifier is a drum name
+  private isDrumName(name: string): boolean {
+    const drumNames = ['kick', 'snare', 'hhc', 'hho', 'tom1', 'tom2', 'tom3', 'crash', 'ride', 'clap', 'rim'];
+    return drumNames.includes(name.toLowerCase());
+  }
+
+  // Main entry point - parse Score
+  parse(): Score {
+    if (this.check(TokenType.SCORE)) {
+      return this.parseScore();
+    }
+    throw this.error("TakoScore v2.0 requires 'score' block at start of file");
+  }
+
+  // Parse with error recovery
+  parseWithErrors(): { program: Score; errors: MFError[] } {
+    this.errors = [];
+
+    try {
+      const program = this.parse();
+      return { program, errors: this.errors };
+    } catch (e) {
+      if (e instanceof MFError) {
+        this.errors.push(e);
+      }
+      // Return empty score on error
+      return {
+        program: {
+          kind: 'Score',
+          title: 'Error',
+          backend: null,
+          globals: [],
+          parts: [],
+          position: { line: 1, column: 1, offset: 0 },
+        },
+        errors: this.errors,
+      };
+    }
   }
 
   // Synchronize after an error by skipping to the next statement boundary
@@ -126,8 +655,9 @@ export class Parser {
         case TokenType.CONTINUE:
         case TokenType.IMPORT:
         case TokenType.EXPORT:
-        case TokenType.VOCAL:
-        case TokenType.MIDI:
+        case TokenType.PART:
+        case TokenType.PHRASE:
+        case TokenType.SCORE:
           return;
       }
 
@@ -187,11 +717,6 @@ export class Parser {
 
     if (this.check(TokenType.CONTINUE)) {
       return this.parseContinue();
-    }
-
-    // track block: track(kind, id, opts?) { ... }
-    if (this.checkIdent('track')) {
-      return this.parseTrackBlock();
     }
 
     // Assignment or expression statement
@@ -512,41 +1037,6 @@ export class Parser {
     const pos = this.advance().position; // consume 'continue'
     this.expect(TokenType.SEMICOLON, "Expected ';' after continue");
     return { kind: 'ContinueStatement', position: pos };
-  }
-
-  private parseTrackBlock(): TrackBlock {
-    const pos = this.advance().position; // consume 'track'
-    this.expect(TokenType.LPAREN, "Expected '(' after 'track'");
-
-    // Parse track kind (vocal or midi)
-    const kindToken = this.advance();
-    if (kindToken.type !== TokenType.VOCAL && kindToken.type !== TokenType.MIDI) {
-      throw this.error("Expected 'vocal' or 'midi' as track kind");
-    }
-    const trackKind = kindToken.value as 'vocal' | 'midi';
-
-    this.expect(TokenType.COMMA, "Expected ',' after track kind");
-
-    const id = this.expect(TokenType.IDENT, 'Expected track id').value;
-
-    let options: ObjectLiteral | null = null;
-    if (this.match(TokenType.COMMA)) {
-      options = this.parseObjectLiteral();
-    }
-
-    this.expect(TokenType.RPAREN, "Expected ')' after track arguments");
-    this.expect(TokenType.LBRACE, "Expected '{' before track body");
-
-    const body = this.parseBlock();
-
-    return {
-      kind: 'TrackBlock',
-      trackKind,
-      id,
-      options,
-      body,
-      position: pos,
-    };
   }
 
   private parseBlock(): Statement[] {
@@ -1333,12 +1823,24 @@ export class Parser {
     // Parse duration in various formats:
     // - Fraction: 1/4, 3/8, 1/4., 1/4..
     // - Note-based: 1n, 2n, 4n, 8n, 16n, 4n., 8n..
+    // - v2.0 Shorthand: w, h, q, e, s, t, x (with optional dots)
     // - Tick-based: 480t, 240t
     const value = token.value;
 
-    // Check for tick-based duration (ends with 't')
-    if (value.endsWith('t')) {
-      const ticks = parseInt(value.slice(0, -1), 10);
+    // Count trailing dots first
+    let dots = 0;
+    let i = value.length - 1;
+    while (i >= 0 && value[i] === '.') {
+      dots++;
+      i--;
+    }
+
+    // Extract core part (without dots)
+    const corePart = value.slice(0, value.length - dots);
+
+    // Check for tick-based duration (ends with 't' but is a number)
+    if (corePart.endsWith('t') && /^\d+t$/.test(corePart)) {
+      const ticks = parseInt(corePart.slice(0, -1), 10);
       if (isNaN(ticks)) {
         throw new MFError('SYNTAX', `Invalid tick duration: ${token.value}`, token.position, this.filePath);
       }
@@ -1349,16 +1851,28 @@ export class Parser {
       };
     }
 
-    // Count trailing dots
-    let dots = 0;
-    let i = value.length - 1;
-    while (i >= 0 && value[i] === '.') {
-      dots++;
-      i--;
-    }
+    // v2.0: Check for shorthand duration (w, h, q, e, s, t, x)
+    const shorthandMap: Record<string, { noteValue: 'w' | 'h' | 'q' | 'e' | 's' | 't' | 'x', numerator: number, denominator: number }> = {
+      'w': { noteValue: 'w', numerator: 1, denominator: 1 },   // whole
+      'h': { noteValue: 'h', numerator: 1, denominator: 2 },   // half
+      'q': { noteValue: 'q', numerator: 1, denominator: 4 },   // quarter
+      'e': { noteValue: 'e', numerator: 1, denominator: 8 },   // eighth
+      's': { noteValue: 's', numerator: 1, denominator: 16 },  // sixteenth
+      't': { noteValue: 't', numerator: 1, denominator: 32 },  // thirty-second
+      'x': { noteValue: 'x', numerator: 1, denominator: 64 },  // sixty-fourth
+    };
 
-    // Extract core part (without dots)
-    const corePart = value.slice(0, value.length - dots);
+    if (shorthandMap[corePart]) {
+      const { noteValue, numerator, denominator } = shorthandMap[corePart];
+      return {
+        kind: 'DurLiteral',
+        noteValue,
+        numerator,
+        denominator,
+        dots,
+        position: token.position,
+      };
+    }
 
     // Check for note-based duration (ends with 'n')
     if (corePart.endsWith('n')) {

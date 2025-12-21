@@ -1,12 +1,27 @@
-// Core IR types - Basic events and tracks
+// Core IR types for TakoScore v2.0 - Phrase-first model
 
 export interface SongIR {
-  schemaVersion: '0.1';
+  schemaVersion: '2.0';
   title: string | null;
   ppq: number;
   tempos: TempoEvent[];
   timeSigs: TimeSigEvent[];
+  keySignature?: KeySignature;
+  backend?: BackendSettings;
   tracks: Track[];
+}
+
+export interface BackendSettings {
+  name: string;  // 'neutrino', etc.
+  singer?: string;
+  lang?: string;
+  phonemeBudgetPerOnset?: number;
+  maxPhraseSeconds?: number;
+}
+
+export interface KeySignature {
+  root: string;  // 'C', 'D', etc.
+  mode: 'major' | 'minor';
 }
 
 export interface TempoEvent {
@@ -26,8 +41,9 @@ export interface BaseTrack {
   id: string;
   kind: 'vocal' | 'midi';
   name: string;
-  events: TrackEvent[];
 }
+
+// ============ Vocal Track (Phrase-first) ============
 
 export interface VocalTrack extends BaseTrack {
   kind: 'vocal';
@@ -35,16 +51,61 @@ export interface VocalTrack extends BaseTrack {
     engine?: string;
     voice?: string;
   };
+  phrases: Phrase[];
+  // Legacy: flat events for backward compatibility
+  events: TrackEvent[];
   // Vocaloid expression parameters
   vocaloidParams?: VocaloidParamEvent[];
 }
+
+/**
+ * Phrase - NEUTRINO's generation unit
+ * A phrase is bounded by rests or breath marks
+ */
+export interface Phrase {
+  startTick: number;
+  endTick: number;
+  notes: PhraseNote[];
+  breaths: BreathMark[];
+}
+
+/**
+ * PhraseNote - A note with underlay information
+ */
+export interface PhraseNote {
+  tick: number;
+  dur: number;
+  key: number;
+  // Underlay
+  lyric?: string;           // Mora or phoneme text
+  syllabic?: Syllabic;      // MusicXML syllabic type
+  extend?: boolean;         // Melisma (extend from previous)
+  // Ties
+  tieStart?: boolean;
+  tieEnd?: boolean;
+  // For non-onset tied notes, this marks them as continuations
+  isContinuation?: boolean;
+}
+
+export type Syllabic = 'single' | 'begin' | 'middle' | 'end';
+
+export interface BreathMark {
+  tick: number;
+  dur?: number;
+  intensity?: number;
+}
+
+// ============ MIDI Track ============
 
 export interface MidiTrack extends BaseTrack {
   kind: 'midi';
   channel: number;
   program: number;
   defaultVel: number;
+  events: TrackEvent[];
 }
+
+// ============ Track Events ============
 
 export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent | AftertouchEvent | PolyAftertouchEvent | NRPNEvent | SysExEvent | PhonemeEvent | BreathEvent | ConsonantOffsetEvent | CrossStaffEvent | PortamentoShapeEvent;
 
@@ -55,6 +116,10 @@ export interface NoteEvent {
   key: number;
   vel?: number;
   lyric?: string;
+  // Extended underlay for MusicXML
+  syllabic?: Syllabic;
+  extend?: boolean;
+  // Articulation
   articulation?: Articulation;
 }
 

@@ -1,35 +1,47 @@
-// Simple Melody Demo
-// Demonstrates basic use of theory and articulation modules
+// TakoScore v2.0 - Simple Vocal Demo
+// Demonstrates the phrase-first vocal synthesis model
 
-import { majorScale, majorTriad, minorTriad, QUARTER, EIGHTH, HALF } from "std:theory";
-import { staccato, legato, accent } from "std:articulation";
+score "はじめまして" {
+  backend neutrino {
+    singer "KIRITAN"
+    lang ja
+  }
 
-title("Simple Melody");
-ppq(480);
-tempo(120);
-timeSig(4, 4);
+  tempo 120
+  time 4/4
+  key C major
 
-export proc main() {
-  // Piano melody
-  track(midi, piano, {}) {
-    // Play C major scale with staccato
-    const scale = majorScale(C4);
-    for (i in 0..8) {
-      staccato(scale[i], EIGHTH, 80);
+  part Vocal {
+    // First phrase - greeting
+    phrase {
+      notes:
+        | C4 q  D4 q  E4 q  F4 q |
+        | G4 h         A4 h     |;
+
+      lyrics mora:
+        は じ め ま し て;
     }
 
-    // Play C major chord
-    const cMaj = majorTriad(C4);
-    chord(cMaj, HALF);
+    rest q    // Phrase boundary
 
-    // Melody with accents
-    accent(G4, QUARTER, 100);
-    legato(E4, QUARTER, 80);
-    legato(C4, QUARTER, 80);
-    accent(D4, QUARTER, 100);
+    // Second phrase - with melisma
+    phrase {
+      notes:
+        | G4 q  A4 q  B4 q  C5 q |
+        | D5 h~        D5 h     |;   // Tied notes
 
-    // End with chord
-    const aMin = minorTriad(A3);
-    chord(aMin, HALF);
+      lyrics mora:
+        よ ろ し く ね _;   // _ extends "ね" across the tie
+    }
+  }
+
+  // Piano accompaniment
+  part Piano {
+    midi ch:1 program:0
+
+    | [C4 E4 G4] w |
+    | [F4 A4 C5] w |
+    | [G4 B4 D5] w |
+    | [C4 E4 G4] w |
   }
 }

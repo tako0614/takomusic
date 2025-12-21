@@ -53,7 +53,8 @@
       "Bash(mf:*)",
       "Bash(mf)",
       "Bash(npm run test:*)",
-      "Bash(npm version:*)"
+      "Bash(npm version:*)",
+      "Bash(sort:*)"
     ]
   }
 }

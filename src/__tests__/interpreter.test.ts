@@ -4,27 +4,29 @@ import { Parser } from '../parser/index.js';
 import { Interpreter } from '../interpreter/index.js';
 import { MFError } from '../errors.js';
 
-describe('Interpreter', () => {
+describe('Interpreter v2.0', () => {
   function execute(source: string) {
     const lexer = new Lexer(source);
     const tokens = lexer.tokenize();
     const parser = new Parser(tokens);
-    const ast = parser.parse();
+    const score = parser.parse();
     const interpreter = new Interpreter();
-    return interpreter.execute(ast);
+    return interpreter.execute(score);
   }
 
-  it('should execute basic song with vocal track', () => {
+  it('should execute basic score with vocal part', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
+      score "Test" {
+        tempo 120
+        time 4/4
 
-        track(vocal, v1, { engine: "test" }) {
-          at(1:1);
-          note(C4, 1/4, "あ");
-          note(D4, 1/4, "い");
+        part Vocal {
+          phrase {
+            notes:
+              | C4 q  D4 q |;
+            lyrics mora:
+              あ い;
+          }
         }
       }
     `;
@@ -38,17 +40,15 @@ describe('Interpreter', () => {
     expect(ir.tracks[0].events.length).toBe(2);
   });
 
-  it('should execute MIDI track with notes', () => {
+  it('should execute MIDI part with notes', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
+      score "Test" {
+        tempo 120
+        time 4/4
 
-        track(midi, drums, { ch: 10, vel: 100 }) {
-          at(1:1);
-          drum(kick, 1/4, 110);
-          drum(snare, 1/4);
+        part Piano {
+          midi ch:1 program:0
+          | C4 q  E4 q  G4 q  C5 q |
         }
       }
     `;
@@ -56,268 +56,132 @@ describe('Interpreter', () => {
 
     expect(ir.tracks[0].kind).toBe('midi');
     const midiTrack = ir.tracks[0] as any;
-    expect(midiTrack.channel).toBe(9); // 0-based
-    expect(midiTrack.events.length).toBe(2);
-    expect(midiTrack.events[0].key).toBe(36); // kick
-    expect(midiTrack.events[1].key).toBe(38); // snare
+    expect(midiTrack.channel).toBe(0);
+    expect(midiTrack.events.length).toBe(4);
   });
 
-  it('should execute for loop', () => {
+  it('should handle tied notes correctly', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
+      score "Test" {
+        tempo 120
+        time 4/4
 
-        track(midi, bass, { ch: 1 }) {
-          at(1:1);
-          for (i in 1..=4) {
-            note(C3, 1/4);
+        part Vocal {
+          phrase {
+            notes:
+              | C4 h~ C4 h |;
+            lyrics mora:
+              あ;
           }
         }
       }
     `;
     const ir = execute(source);
 
-    expect(ir.tracks[0].events.length).toBe(4);
-  });
-
-  it('should execute proc calls', () => {
-    const source = `
-      proc PATTERN() {
-        note(C4, 1/8);
-        note(E4, 1/8);
-      }
-
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(midi, lead, { ch: 1 }) {
-          at(1:1);
-          PATTERN();
-          PATTERN();
-        }
-      }
-    `;
-    const ir = execute(source);
-
-    expect(ir.tracks[0].events.length).toBe(4);
-  });
-
-  it('should execute Pitch arithmetic', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(midi, lead, { ch: 1 }) {
-          at(1:1);
-          const root = C4;
-          note(root, 1/4);
-          note(root + 4, 1/4);
-          note(root + 7, 1/4);
-        }
-      }
-    `;
-    const ir = execute(source);
-
+    // Two note events (tied), but lyrics only advance once
+    expect(ir.tracks[0].events.length).toBe(2);
     const events = ir.tracks[0].events as any[];
-    expect(events[0].key).toBe(60); // C4
-    expect(events[1].key).toBe(64); // E4
-    expect(events[2].key).toBe(67); // G4
+    expect(events[0].lyric).toBe('あ');
+    // Second note is continuation, no new lyric
   });
 
-  it('should execute chord()', () => {
+  it('should handle melisma correctly', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
+      score "Test" {
+        tempo 120
+        time 4/4
 
-        track(midi, piano, { ch: 1 }) {
-          at(1:1);
-          chord([C4, E4, G4], 1/2);
+        part Vocal {
+          phrase {
+            notes:
+              | C4 q  D4 q  E4 q |;
+            lyrics mora:
+              あ _ _;
+          }
         }
       }
     `;
     const ir = execute(source);
 
     expect(ir.tracks[0].events.length).toBe(3);
-    // All notes should have the same tick
-    expect(ir.tracks[0].events[0].tick).toBe(ir.tracks[0].events[1].tick);
-    expect(ir.tracks[0].events[1].tick).toBe(ir.tracks[0].events[2].tick);
-  });
-
-  it('should throw E001 when ppq not set', () => {
-    const source = `
-      export proc main() {
-        timeSig(4, 4);
-        tempo(120);
-      }
-    `;
-    expect(() => execute(source)).toThrow();
-  });
-
-  it('should throw E010 when tempo at tick=0 not set', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-      }
-    `;
-    expect(() => execute(source)).toThrow();
-  });
-
-  it('should throw E050 when global function called after track', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(midi, t1, { ch: 1 }) { }
-        tempo(140); // ERROR: after track
-      }
-    `;
-    expect(() => execute(source)).toThrow();
-  });
-
-  it('should throw E200 on vocal note overlap', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(vocal, v1, {}) {
-          at(1:1);
-          note(C4, 1/2, "あ");
-          at(1:1);
-          note(D4, 1/4, "い"); // overlaps
-        }
-      }
-    `;
-    expect(() => execute(source)).toThrow();
-  });
-
-  it('should throw on invalid Dur (zero)', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(midi, t1, { ch: 1 }) {
-          note(C4, 0/4);
-        }
-      }
-    `;
-    expect(() => execute(source)).toThrow();
-  });
-
-  it('should preserve cursor across track re-entry', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(midi, t1, { ch: 1 }) {
-          at(1:1);
-          note(C4, 1/4);
-        }
-
-        track(midi, t1, { ch: 1 }) {
-          // cursor should be at 1:2 now
-          note(D4, 1/4);
-        }
-      }
-    `;
-    const ir = execute(source);
-
-    expect(ir.tracks[0].events.length).toBe(2);
-    expect(ir.tracks[0].events[0].tick).toBe(0);
-    expect(ir.tracks[0].events[1].tick).toBe(480); // continued from previous
-  });
-
-  it('should handle multiple time signatures', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        timeSig(3:1, 3, 4);
-        tempo(120);
-
-        track(midi, t1, { ch: 1 }) {
-          at(1:1);
-          note(C4, 1/4);  // tick 0
-          at(2:1);
-          note(D4, 1/4);  // tick 1920 (4/4 bar = 1920 ticks)
-          at(3:1);
-          note(E4, 1/4);  // tick 3840 (after 2 bars of 4/4)
-          at(4:1);
-          note(F4, 1/4);  // tick 5280 (3840 + 3/4 bar = 3840 + 1440)
-        }
-      }
-    `;
-    const ir = execute(source);
-
     const events = ir.tracks[0].events as any[];
-    expect(events[0].tick).toBe(0);     // 1:1
-    expect(events[1].tick).toBe(1920);  // 2:1 (after one 4/4 bar)
-    expect(events[2].tick).toBe(3840);  // 3:1 (after two 4/4 bars)
-    expect(events[3].tick).toBe(5280);  // 4:1 (3840 + one 3/4 bar = 3840 + 1440)
+    expect(events[0].lyric).toBe('あ');
+    expect(events[1].extend).toBe(true);
+    expect(events[2].extend).toBe(true);
   });
 
-  it('should throw E110 on pitch out of range', () => {
+  it('should handle rest between phrases', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
+      score "Test" {
+        tempo 120
+        time 4/4
 
-        track(midi, t1, { ch: 1 }) {
-          at(1:1);
-          const badPitch = C4 + 100;
-          note(badPitch, 1/4);
+        part Vocal {
+          phrase {
+            notes: | C4 q |;
+            lyrics mora: あ;
+          }
+          rest q
+          phrase {
+            notes: | D4 q |;
+            lyrics mora: い;
+          }
         }
       }
     `;
-    expect(() => execute(source)).toThrow(/Pitch.*out of range/);
+    const ir = execute(source);
+
+    // Should have 2 note events and 1 rest
+    expect(ir.tracks[0].events.length).toBe(3);
   });
 
-  it('should throw E210 on missing lyric for vocal', () => {
+  it('should execute MIDI chord', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
+      score "Test" {
+        tempo 120
+        time 4/4
 
-        track(vocal, v1, {}) {
-          at(1:1);
-          note(C4, 1/4);
+        part Piano {
+          midi ch:1 program:0
+          | [C4 E4 G4] w |
         }
       }
     `;
-    expect(() => execute(source)).toThrow(/Vocal.*lyric/i);
+    const ir = execute(source);
+
+    // Chord should produce 3 note events at same tick
+    expect(ir.tracks[0].events.length).toBe(3);
+    const events = ir.tracks[0].events as any[];
+    expect(events[0].tick).toBe(events[1].tick);
+    expect(events[1].tick).toBe(events[2].tick);
   });
 
-  it('should throw E210 on empty lyric for vocal', () => {
+  it('should set title from score', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(vocal, v1, {}) {
-          at(1:1);
-          note(C4, 1/4, "");
-        }
+      score "My Song Title" {
+        tempo 120
+        time 4/4
+        part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
       }
     `;
-    expect(() => execute(source)).toThrow(/Vocal.*lyric/i);
+    const ir = execute(source);
+    expect(ir.title).toBe('My Song Title');
+  });
+
+  it('should handle backend configuration', () => {
+    const source = `
+      score "Test" {
+        backend neutrino {
+          singer "KIRITAN"
+          lang ja
+        }
+        tempo 120
+        time 4/4
+        part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
+      }
+    `;
+    const ir = execute(source);
+    expect(ir.backend?.name).toBe('neutrino');
+    expect(ir.backend?.singer).toBe('KIRITAN');
   });
 });

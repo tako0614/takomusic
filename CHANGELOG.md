@@ -2,6 +2,103 @@
 
 All notable changes to TakoMusic will be documented in this file.
 
+## [2.0.0] - 2024-12-21
+
+### Breaking Changes - Complete Language Redesign
+
+**TakoScore v2.0** is a complete redesign of the language, optimized for NEUTRINO vocal synthesis.
+
+#### Core Design Changes
+
+1. **Phrase-first Architecture**
+   - `phrase {}` blocks are now first-class syntax elements
+   - Phrases directly map to NEUTRINO's generation units
+   - Phrase boundaries are explicit (rests or breath marks)
+
+2. **Underlay Model**
+   - Notes and lyrics are now separate sections within a phrase
+   - `notes:` section contains pitch/duration data
+   - `lyrics mora:` section contains syllable tokens
+   - Lyric assignment is by **onset** (tied notes don't advance lyrics)
+
+3. **Melisma with `_`**
+   - Use `_` to extend a syllable across multiple notes
+   - Maps to MusicXML `<extend>` element
+   - No more automatic note splitting
+
+4. **Tie Operator `~`**
+   - Ties are explicit with `~` between notes
+   - Tied notes are **not onsets** (don't consume lyrics)
+
+5. **Bar-line Notation**
+   - Notes written with `| ... |` bar delimiters
+   - Visual structure matches musical measures
+
+#### New Syntax
+
+```mf
+score "Song Title" {
+  backend neutrino {
+    singer "KIRITAN"
+    lang ja
+  }
+
+  tempo 120
+  time 4/4
+
+  part Vocal {
+    phrase {
+      notes:
+        | C4 q  D4 q  E4 q  F4 q |
+        | G4 h         A4 h     |;
+
+      lyrics mora:
+        は じ め ま し て;
+    }
+
+    rest q
+
+    phrase {
+      notes:
+        | G4 q  A4 q  B4 q  C5 q |;
+
+      lyrics mora:
+        よ ろ し く;
+    }
+  }
+}
+```
+
+#### Migration Guide
+
+| v1.x | v2.0 |
+|------|------|
+| `track(vocal, name, {})` | `part Name { phrase { ... } }` |
+| `note(C4, 1/4, "は")` | `notes: \| C4 q \|; lyrics mora: は;` |
+| `rest(1/4)` | `rest q` |
+| Auto note splitting | Manual: use one mora per note |
+| Implicit phrase boundaries | Explicit: `phrase {}` blocks |
+
+#### Removed Features
+
+- `track()` syntax (replaced by `part {}`)
+- Automatic lyric splitting
+- Long lyrics on single notes
+- Implicit phrase detection
+
+### Added
+
+- **New AST types**: `Score`, `PartDeclaration`, `PhraseBlock`, `NotesSection`, `LyricsSection`, `LyricToken`
+- **New IR types**: `Phrase`, `PhraseNote`, `Syllabic`, `BreathMark`
+- **Backend settings**: `phonemeBudgetPerOnset`, `maxPhraseSeconds`
+- **MusicXML improvements**: Key signature support, `<extend>` for melisma
+
+### Changed
+
+- Schema version updated to `2.0`
+- MusicXML generator now uses phrase-based notes
+- Software identifier changed to `TakoMusic v2.0.0`
+
 ## [1.3.7] - 2024-12-21
 
 ### Changed

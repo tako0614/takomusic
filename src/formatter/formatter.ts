@@ -1,52 +1,176 @@
-// Formatter for MFS source code
+// Formatter for TakoScore v2.0 source code
 
 import type {
-  Program,
+  Score,
   Statement,
   Expression,
   Parameter,
+  GlobalStatement,
+  PartDeclaration,
+  PhraseBlock,
 } from '../types/ast.js';
 
 export class Formatter {
   private indent: number = 0;
   private output: string[] = [];
 
-  format(program: Program): string {
+  format(score: Score): string {
     this.indent = 0;
     this.output = [];
 
-    // Group statements
-    const imports: Statement[] = [];
-    const others: Statement[] = [];
+    // Score header
+    this.output.push(`score "${score.title}" {`);
+    this.indent++;
 
-    for (const stmt of program.statements) {
-      if (stmt.kind === 'ImportStatement') {
-        imports.push(stmt);
-      } else {
-        others.push(stmt);
+    // Backend config
+    if (score.backend) {
+      this.output.push(`${this.getIndent()}backend ${score.backend.name} {`);
+      this.indent++;
+      for (const opt of score.backend.options) {
+        this.output.push(`${this.getIndent()}${opt.key} ${this.formatExpression(opt.value)}`);
       }
-    }
-
-    // Format imports first
-    for (const stmt of imports) {
-      this.formatStatement(stmt);
-    }
-
-    // Add blank line after imports if there are any
-    if (imports.length > 0 && others.length > 0) {
+      this.indent--;
+      this.output.push(`${this.getIndent()}}`);
       this.output.push('');
     }
 
-    // Format other statements
-    for (let i = 0; i < others.length; i++) {
-      this.formatStatement(others[i]);
-      // Add blank line between top-level declarations
-      if (i < others.length - 1) {
-        this.output.push('');
+    // Global statements (tempo, time, key, imports, consts)
+    for (const stmt of score.globals) {
+      this.formatGlobalStatement(stmt);
+    }
+
+    if (score.globals.length > 0) {
+      this.output.push('');
+    }
+
+    // Parts
+    for (const part of score.parts) {
+      this.formatPart(part);
+      this.output.push('');
+    }
+
+    this.indent--;
+    this.output.push('}');
+
+    return this.output.join('\n') + '\n';
+  }
+
+  private formatGlobalStatement(stmt: GlobalStatement): void {
+    switch (stmt.kind) {
+      case 'TempoStatement':
+        this.output.push(`${this.getIndent()}tempo ${this.formatExpression(stmt.bpm)}`);
+        break;
+      case 'TimeSignatureStatement':
+        this.output.push(`${this.getIndent()}time ${this.formatExpression(stmt.numerator)}/${this.formatExpression(stmt.denominator)}`);
+        break;
+      case 'KeySignatureStatement':
+        this.output.push(`${this.getIndent()}key ${this.formatExpression(stmt.root)} ${stmt.mode}`);
+        break;
+      case 'PpqStatement':
+        this.output.push(`${this.getIndent()}ppq ${this.formatExpression(stmt.value)}`);
+        break;
+      case 'ImportStatement':
+        if (stmt.namespace) {
+          this.output.push(`${this.getIndent()}import * as ${stmt.namespace} from "${stmt.path}";`);
+        } else {
+          this.output.push(`${this.getIndent()}import { ${stmt.imports.join(', ')} } from "${stmt.path}";`);
+        }
+        break;
+      case 'ConstDeclaration':
+        this.output.push(`${this.getIndent()}const ${stmt.name} = ${this.formatExpression(stmt.value)};`);
+        break;
+      case 'ProcDeclaration':
+        this.formatProc(stmt);
+        break;
+    }
+  }
+
+  private formatPart(part: PartDeclaration): void {
+    this.output.push(`${this.getIndent()}part ${part.name} {`);
+    this.indent++;
+
+    // MIDI options
+    if (part.partKind === 'midi' && part.options.length > 0) {
+      const opts = part.options.map(o => `${o.key}:${this.formatExpression(o.value)}`).join(' ');
+      this.output.push(`${this.getIndent()}midi ${opts}`);
+      this.output.push('');
+    }
+
+    for (const item of part.body) {
+      if (item.kind === 'PhraseBlock') {
+        this.formatPhraseBlock(item);
+      } else if (item.kind === 'RestStatement') {
+        this.output.push(`${this.getIndent()}rest ${this.formatExpression(item.duration)}`);
+      } else if (item.kind === 'MidiBar') {
+        const notes = item.items.map(n => {
+          if (n.kind === 'MidiNote') {
+            return `${this.formatExpression(n.pitch)} ${this.formatExpression(n.duration)}`;
+          } else if (n.kind === 'MidiChord') {
+            const pitches = n.pitches.map(p => this.formatExpression(p)).join(' ');
+            return `[${pitches}] ${this.formatExpression(n.duration)}`;
+          } else if (n.kind === 'MidiDrum') {
+            return `${n.name} ${this.formatExpression(n.duration)}`;
+          }
+          return '';
+        }).join('  ');
+        this.output.push(`${this.getIndent()}| ${notes} |`);
+      } else {
+        this.formatStatement(item as Statement);
       }
     }
 
-    return this.output.join('\n') + '\n';
+    this.indent--;
+    this.output.push(`${this.getIndent()}}`);
+  }
+
+  private formatPhraseBlock(phrase: PhraseBlock): void {
+    this.output.push(`${this.getIndent()}phrase {`);
+    this.indent++;
+
+    // Notes section
+    if (phrase.notesSection) {
+      this.output.push(`${this.getIndent()}notes:`);
+      this.indent++;
+      for (const bar of phrase.notesSection.bars) {
+        const notes = bar.notes.map(n => {
+          let s = `${this.formatExpression(n.pitch)} ${this.formatExpression(n.duration)}`;
+          if (n.tieStart) s += '~';
+          return s;
+        }).join('  ');
+        this.output.push(`${this.getIndent()}| ${notes} |`);
+      }
+      this.output.push(`${this.getIndent()};`);
+      this.indent--;
+      this.output.push('');
+    }
+
+    // Lyrics section
+    if (phrase.lyricsSection) {
+      const tokens = phrase.lyricsSection.tokens.map(t => t.value).join(' ');
+      this.output.push(`${this.getIndent()}lyrics ${phrase.lyricsSection.mode}:`);
+      this.indent++;
+      this.output.push(`${this.getIndent()}${tokens};`);
+      this.indent--;
+    }
+
+    this.indent--;
+    this.output.push(`${this.getIndent()}}`);
+  }
+
+  private formatProc(proc: { name: string; params: Parameter[]; body: Statement[] }): void {
+    const params = proc.params.map(p => {
+      if (p.rest) return `...${p.name}`;
+      if (p.defaultValue) return `${p.name} = ${this.formatExpression(p.defaultValue)}`;
+      return p.name;
+    }).join(', ');
+
+    this.output.push(`${this.getIndent()}proc ${proc.name}(${params}) {`);
+    this.indent++;
+    for (const stmt of proc.body) {
+      this.formatStatement(stmt);
+    }
+    this.indent--;
+    this.output.push(`${this.getIndent()}}`);
   }
 
   private formatStatement(stmt: Statement): void {
@@ -181,20 +305,6 @@ export class Formatter {
 
       case 'IndexAssignmentStatement':
         this.line(`${this.formatExpr(stmt.object)}[${this.formatExpr(stmt.index)}] = ${this.formatExpr(stmt.value)};`);
-        break;
-
-      case 'TrackBlock':
-        let trackArgs = `${stmt.trackKind}, ${stmt.id}`;
-        if (stmt.options) {
-          trackArgs += `, ${this.formatExpr(stmt.options)}`;
-        }
-        this.line(`track(${trackArgs}) {`);
-        this.indent++;
-        for (const s of stmt.body) {
-          this.formatStatement(s);
-        }
-        this.indent--;
-        this.line('}');
         break;
 
       case 'ExpressionStatement':
