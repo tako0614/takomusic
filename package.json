@@ -1,6 +1,6 @@
 {
   "name": "takomusic",
-  "version": "1.3.7",
+  "version": "1.3.14",
   "description": "TakoMusic - A domain-specific language for music composition that generates VSQX, MusicXML, and MIDI",
   "type": "module",
   "main": "dist/index.js",
@@ -41,6 +41,8 @@
     "vitest": "^1.0.0"
   },
   "dependencies": {
+    "kuroshiro": "^1.2.0",
+    "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "toml": "^3.0.0"
   },
   "engines": {

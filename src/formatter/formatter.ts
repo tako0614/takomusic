@@ -244,7 +244,12 @@ export class Formatter {
         return `${expr.note}${expr.octave}`;
 
       case 'DurLiteral':
-        return `${expr.numerator}/${expr.denominator}${'.'.repeat(expr.dots)}`;
+        // Tick-based duration
+        if (expr.ticks !== undefined) {
+          return `${expr.ticks}t`;
+        }
+        // Fraction/note-based duration
+        return `${expr.numerator}/${expr.denominator}${'.'.repeat(expr.dots ?? 0)}`;
 
       case 'TimeLiteral':
         if (expr.sub === 0) {

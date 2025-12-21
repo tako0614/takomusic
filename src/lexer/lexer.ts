@@ -223,9 +223,27 @@ export class Lexer {
       return this.readTimeLiteral(pos, start);
     }
 
-    // Check for Dur literal (n/d)
+    // Check for Dur literal (n/d fraction format)
     if (this.peek() === '/') {
       return this.readDurLiteral(pos, start);
+    }
+
+    // Check for note-based duration literal (1n, 2n, 4n, 8n, 16n, etc.)
+    if (this.peek() === 'n') {
+      this.advance(); // consume 'n'
+      // Check for dotted note (4n., 8n..)
+      while (this.peek() === '.') {
+        this.advance();
+      }
+      const value = this.source.slice(start, this.position);
+      return { type: TokenType.DUR, value, position: pos };
+    }
+
+    // Check for tick-based duration literal (480t, 240t, etc.)
+    if (this.peek() === 't') {
+      this.advance(); // consume 't'
+      const value = this.source.slice(start, this.position);
+      return { type: TokenType.DUR, value, position: pos };
     }
 
     // Check for float

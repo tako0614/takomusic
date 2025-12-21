@@ -306,12 +306,14 @@ import type {
 import {
   RuntimeValue,
   FunctionValue,
+  DurValue,
   makeInt,
   makeFloat,
   makeString,
   makeBool,
   makePitch,
   makeDur,
+  makeDurTicks,
   makeTime,
   makeArray,
   makeObject,
@@ -448,9 +450,12 @@ export class Interpreter {
       }
     }
 
-    // Second pass: execute top-level expression statements (ppq, tempo, timeSig, etc.)
+    // Second pass: execute top-level statements (const, let, expression statements)
     for (const stmt of program.statements) {
-      if (stmt.kind === 'ExpressionStatement') {
+      if (stmt.kind === 'ExpressionStatement' ||
+          stmt.kind === 'ConstDeclaration' ||
+          stmt.kind === 'LetDeclaration' ||
+          stmt.kind === 'ExportStatement') {
         this.executeStatement(stmt);
       }
     }
@@ -842,11 +847,21 @@ export class Interpreter {
         return makePitch(expr.midi);
 
       case 'DurLiteral':
-        // Validate: Dur cannot be negative or zero
+        // Handle tick-based duration
+        if (expr.ticks !== undefined) {
+          if (expr.ticks <= 0) {
+            throw new MFError('E101', `Invalid duration: ${expr.ticks}t (must be positive)`, expr.position, this.filePath);
+          }
+          return makeDurTicks(expr.ticks);
+        }
+        // Handle fraction/note-based duration
+        if (expr.numerator === undefined || expr.denominator === undefined) {
+          throw new MFError('E101', 'Invalid duration literal', expr.position, this.filePath);
+        }
         if (expr.numerator <= 0 || expr.denominator <= 0) {
           throw new MFError('E101', `Invalid duration: ${expr.numerator}/${expr.denominator} (must be positive)`, expr.position, this.filePath);
         }
-        return makeDur(expr.numerator, expr.denominator, expr.dots);
+        return makeDur(expr.numerator, expr.denominator, expr.dots ?? 0);
 
       case 'TimeLiteral':
         return makeTime(expr.bar, expr.beat, expr.sub);
@@ -1061,6 +1076,14 @@ export class Interpreter {
       }
       // Dur + Dur
       if (left.type === 'dur' && right.type === 'dur') {
+        // Both must be fraction-based for arithmetic
+        if (left.ticks !== undefined || right.ticks !== undefined) {
+          throw createError('E400', 'Cannot perform arithmetic on tick-based durations', leftExpr.position, this.filePath);
+        }
+        if (left.numerator === undefined || left.denominator === undefined ||
+            right.numerator === undefined || right.denominator === undefined) {
+          throw createError('E400', 'Invalid duration for arithmetic', leftExpr.position, this.filePath);
+        }
         const num = left.numerator * right.denominator + right.numerator * left.denominator;
         const den = left.denominator * right.denominator;
         const gcd = this.gcd(num, den);
@@ -1092,6 +1115,13 @@ export class Interpreter {
     if (op === '*') {
       // Dur * Int
       if (left.type === 'dur' && right.type === 'int') {
+        // Handle tick-based duration
+        if (left.ticks !== undefined) {
+          return makeDurTicks(left.ticks * right.value);
+        }
+        if (left.numerator === undefined || left.denominator === undefined) {
+          throw createError('E400', 'Invalid duration for arithmetic', leftExpr.position, this.filePath);
+        }
         const num = left.numerator * right.value;
         const gcd = this.gcd(num, left.denominator);
         return makeDur(num / gcd, left.denominator / gcd);
@@ -1110,6 +1140,13 @@ export class Interpreter {
       if (left.type === 'dur' && right.type === 'int') {
         if (right.value === 0) {
           throw createError('E400', 'Division by zero', leftExpr.position, this.filePath);
+        }
+        // Handle tick-based duration
+        if (left.ticks !== undefined) {
+          return makeDurTicks(Math.round(left.ticks / right.value));
+        }
+        if (left.numerator === undefined || left.denominator === undefined) {
+          throw createError('E400', 'Invalid duration for arithmetic', leftExpr.position, this.filePath);
         }
         const den = left.denominator * right.value;
         const gcd = this.gcd(left.numerator, den);
@@ -9414,10 +9451,20 @@ export class Interpreter {
     let toNote = { numerator: 1, denominator: 4 };
 
     if (fromNoteArg.type === 'dur') {
-      fromNote = { numerator: fromNoteArg.numerator, denominator: fromNoteArg.denominator };
+      if (fromNoteArg.ticks !== undefined) {
+        throw new MFError('TYPE', 'metricMod() requires fraction-based durations, not tick-based', position, this.filePath);
+      }
+      if (fromNoteArg.numerator !== undefined && fromNoteArg.denominator !== undefined) {
+        fromNote = { numerator: fromNoteArg.numerator, denominator: fromNoteArg.denominator };
+      }
     }
     if (toNoteArg.type === 'dur') {
-      toNote = { numerator: toNoteArg.numerator, denominator: toNoteArg.denominator };
+      if (toNoteArg.ticks !== undefined) {
+        throw new MFError('TYPE', 'metricMod() requires fraction-based durations, not tick-based', position, this.filePath);
+      }
+      if (toNoteArg.numerator !== undefined && toNoteArg.denominator !== undefined) {
+        toNote = { numerator: toNoteArg.numerator, denominator: toNoteArg.denominator };
+      }
     }
 
     if (!track.metricModulations) track.metricModulations = [];
@@ -10359,12 +10406,46 @@ export class Interpreter {
     }
   }
 
-  private durToTicks(dur: { numerator: number; denominator: number }, position: any): number {
+  private durToTicks(dur: DurValue, position: any): number {
+    // Handle tick-based duration directly
+    if (dur.ticks !== undefined) {
+      let ticks = dur.ticks;
+
+      // Apply nested tuplet ratios
+      if (this.currentTrack?.tupletStack && this.currentTrack.tupletStack.length > 0) {
+        for (const tuplet of this.currentTrack.tupletStack) {
+          ticks = (ticks * tuplet.normal) / tuplet.actual;
+        }
+        ticks = Math.round(ticks);
+      }
+
+      if (ticks < 1) {
+        throw createError('E101', `Duration too small after tuplet application`, position, this.filePath);
+      }
+      return ticks;
+    }
+
+    // Handle fraction-based duration
+    if (dur.numerator === undefined || dur.denominator === undefined) {
+      throw createError('E101', 'Invalid duration value', position, this.filePath);
+    }
+
     if (this.ir.ppq === 0) {
       throw createError('E001', 'ppq not set', position, this.filePath);
     }
     // ticks = ppq * 4 * n / d
     let ticks = (this.ir.ppq * 4 * dur.numerator) / dur.denominator;
+
+    // Apply dotted note multiplier
+    if (dur.dots && dur.dots > 0) {
+      let multiplier = 1;
+      let addition = 0.5;
+      for (let i = 0; i < dur.dots; i++) {
+        multiplier += addition;
+        addition /= 2;
+      }
+      ticks *= multiplier;
+    }
 
     // Apply nested tuplet ratios (multiply all normal/actual ratios)
     if (this.currentTrack?.tupletStack && this.currentTrack.tupletStack.length > 0) {

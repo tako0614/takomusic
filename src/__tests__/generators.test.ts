@@ -116,7 +116,7 @@ describe('MIDI Generator', () => {
 });
 
 describe('MusicXML Generator', () => {
-  it('should generate valid MusicXML structure', () => {
+  it('should generate valid MusicXML structure', async () => {
     const ir: SongIR = {
       schemaVersion: '0.1',
       title: 'Test Song',
@@ -126,14 +126,14 @@ describe('MusicXML Generator', () => {
       tracks: [],
     };
 
-    const xml = generateMusicXML(ir);
+    const xml = await generateMusicXML(ir);
 
     expect(xml).toContain('<?xml version="1.0"');
     expect(xml).toContain('score-partwise');
     expect(xml).toContain('<work-title>Test Song</work-title>');
   });
 
-  it('should include vocal notes with lyrics', () => {
+  it('should include vocal notes with lyrics', async () => {
     const ir: SongIR = {
       schemaVersion: '0.1',
       title: 'Test',
@@ -154,7 +154,7 @@ describe('MusicXML Generator', () => {
       ],
     };
 
-    const xml = generateMusicXML(ir);
+    const xml = await generateMusicXML(ir);
 
     expect(xml).toContain('<lyric>');
     expect(xml).toContain('<text>あ</text>');
@@ -163,7 +163,7 @@ describe('MusicXML Generator', () => {
     expect(xml).toContain('<step>D</step>');
   });
 
-  it('should include tempo marking', () => {
+  it('should include tempo marking', async () => {
     const ir: SongIR = {
       schemaVersion: '0.1',
       title: 'Test',
@@ -181,14 +181,14 @@ describe('MusicXML Generator', () => {
       ],
     };
 
-    const xml = generateMusicXML(ir);
+    const xml = await generateMusicXML(ir);
 
     expect(xml).toContain('<per-minute>140</per-minute>');
     expect(xml).toContain('<beats>3</beats>');
     expect(xml).toContain('<beat-type>4</beat-type>');
   });
 
-  it('should escape XML special characters', () => {
+  it('should escape XML special characters', async () => {
     const ir: SongIR = {
       schemaVersion: '0.1',
       title: 'Test & <Special>',
@@ -198,9 +198,36 @@ describe('MusicXML Generator', () => {
       tracks: [],
     };
 
-    const xml = generateMusicXML(ir);
+    const xml = await generateMusicXML(ir);
 
     expect(xml).toContain('Test &amp; &lt;Special&gt;');
+  });
+
+  it('should convert kanji lyrics to hiragana', async () => {
+    const ir: SongIR = {
+      schemaVersion: '0.1',
+      title: 'Test',
+      ppq: 480,
+      tempos: [{ tick: 0, bpm: 120 }],
+      timeSigs: [{ tick: 0, numerator: 4, denominator: 4 }],
+      tracks: [
+        {
+          id: 'v1',
+          kind: 'vocal',
+          name: 'Vocal',
+          meta: {},
+          events: [
+            { type: 'note', tick: 0, dur: 480, key: 60, lyric: '愛' },
+          ],
+        } as VocalTrack,
+      ],
+    };
+
+    const xml = await generateMusicXML(ir);
+
+    // Should contain hiragana instead of kanji
+    expect(xml).toContain('<text>あい</text>');
+    expect(xml).not.toContain('<text>愛</text>');
   });
 });
 
