@@ -2,6 +2,7 @@
 
 import type { RuntimeValue } from './runtime.js';
 import type { ProcDeclaration } from '../types/ast.js';
+import { MFError } from '../errors.js';
 
 export interface Variable {
   value: RuntimeValue;
@@ -19,14 +20,14 @@ export class Scope {
 
   defineConst(name: string, value: RuntimeValue): void {
     if (this.variables.has(name)) {
-      throw new Error(`Variable '${name}' is already defined`);
+      throw new MFError('RUNTIME', `Variable '${name}' is already defined`);
     }
     this.variables.set(name, { value, mutable: false });
   }
 
   defineLet(name: string, value: RuntimeValue): void {
     if (this.variables.has(name)) {
-      throw new Error(`Variable '${name}' is already defined`);
+      throw new MFError('RUNTIME', `Variable '${name}' is already defined`);
     }
     this.variables.set(name, { value, mutable: true });
   }
@@ -34,10 +35,10 @@ export class Scope {
   assign(name: string, value: RuntimeValue): void {
     const variable = this.resolveVariable(name);
     if (!variable) {
-      throw new Error(`Undefined variable '${name}'`);
+      throw new MFError('E400', `Undefined variable '${name}'`);
     }
     if (!variable.mutable) {
-      throw new Error(`Cannot reassign constant '${name}'`);
+      throw new MFError('RUNTIME', `Cannot reassign constant '${name}'`);
     }
     variable.value = value;
   }

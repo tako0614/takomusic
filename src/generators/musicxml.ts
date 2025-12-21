@@ -32,11 +32,14 @@ export function generateMusicXML(ir: SongIR): string {
   const notes = track.events.filter((e): e is NoteEvent => e.type === 'note');
 
   // Get divisions (ticks per quarter note = ppq)
-  const divisions = ir.ppq;
+  // Ensure divisions is at least 1 to prevent division by zero
+  const divisions = Math.max(1, ir.ppq || 480);
 
-  // Get time signature
-  const timeSig = ir.timeSigs[0] ?? { numerator: 4, denominator: 4 };
-  const ticksPerMeasure = (divisions * 4 * timeSig.numerator) / timeSig.denominator;
+  // Get time signature with safe defaults
+  const timeSig = ir.timeSigs.length > 0 ? ir.timeSigs[0] : { numerator: 4, denominator: 4, tick: 0 };
+  // Ensure denominator is at least 1 to prevent division by zero
+  const safeDenominator = Math.max(1, timeSig.denominator || 4);
+  const ticksPerMeasure = (divisions * 4 * timeSig.numerator) / safeDenominator;
 
   // Get tempo
   const tempo = ir.tempos[0]?.bpm ?? 120;
@@ -141,22 +144,32 @@ export function generateMusicXML(ir: SongIR): string {
   return xml;
 }
 
+/**
+ * Type guard to check if a note has extended properties
+ */
+function isNoteEventFull(note: NoteEvent): note is NoteEventFull {
+  return 'dynamic' in note || 'graceNotes' in note || 'tieStart' in note ||
+         'tieEnd' in note || 'slurStart' in note || 'slurEnd' in note ||
+         'voice' in note || 'tuplet' in note || 'fermata' in note;
+}
+
 function generateNote(note: NoteEvent, divisions: number): string {
-  const extNote = note as NoteEventFull;
-  const octave = Math.floor(note.key / 12) - 1;
-  const pitchClass = note.key % 12;
+  // Safely access extended note properties
+  const extNote = isNoteEventFull(note) ? note : null;
+  const octave = Math.floor((note.key ?? 60) / 12) - 1;
+  const pitchClass = (note.key ?? 60) % 12;
   const step = NOTE_NAMES[pitchClass];
   const alter = NOTE_ALTERS[pitchClass];
 
   let xml = '';
 
   // Add dynamic direction if present
-  if (extNote.dynamic) {
+  if (extNote?.dynamic) {
     xml += generateDynamic(extNote.dynamic);
   }
 
   // Generate grace notes if present
-  if (extNote.graceNotes && extNote.graceNotes.length > 0) {
+  if (extNote?.graceNotes && extNote.graceNotes.length > 0) {
     for (const grace of extNote.graceNotes) {
       xml += generateGraceNote(grace);
     }
@@ -175,20 +188,20 @@ function generateNote(note: NoteEvent, divisions: number): string {
 `;
 
   // Add tie element (before type)
-  if (extNote.tieStart && extNote.tieEnd) {
+  if (extNote?.tieStart && extNote?.tieEnd) {
     xml += `        <tie type="stop"/>
         <tie type="start"/>
 `;
-  } else if (extNote.tieStart) {
+  } else if (extNote?.tieStart) {
     xml += `        <tie type="start"/>
 `;
-  } else if (extNote.tieEnd) {
+  } else if (extNote?.tieEnd) {
     xml += `        <tie type="stop"/>
 `;
   }
 
   // Add voice if specified
-  if (extNote.voice) {
+  if (extNote?.voice) {
     xml += `        <voice>${extNote.voice}</voice>
 `;
   }
@@ -197,7 +210,7 @@ function generateNote(note: NoteEvent, divisions: number): string {
 `;
 
   // Add time modification for tuplets
-  if (extNote.tuplet) {
+  if (extNote?.tuplet) {
     xml += `        <time-modification>
           <actual-notes>${extNote.tuplet.actual}</actual-notes>
           <normal-notes>${extNote.tuplet.normal}</normal-notes>
@@ -206,44 +219,44 @@ function generateNote(note: NoteEvent, divisions: number): string {
   }
 
   // Add notations element for slurs, ties, articulations, tuplets, fermata
-  const hasNotations = extNote.slurStart || extNote.slurEnd ||
-    extNote.tieStart || extNote.tieEnd ||
-    note.articulation || extNote.tuplet || extNote.fermata;
+  const hasNotations = extNote?.slurStart || extNote?.slurEnd ||
+    extNote?.tieStart || extNote?.tieEnd ||
+    note.articulation || extNote?.tuplet || extNote?.fermata;
 
   if (hasNotations) {
     xml += `        <notations>
 `;
     // Tied notation
-    if (extNote.tieStart && extNote.tieEnd) {
+    if (extNote?.tieStart && extNote?.tieEnd) {
       xml += `          <tied type="stop"/>
           <tied type="start"/>
 `;
-    } else if (extNote.tieStart) {
+    } else if (extNote?.tieStart) {
       xml += `          <tied type="start"/>
 `;
-    } else if (extNote.tieEnd) {
+    } else if (extNote?.tieEnd) {
       xml += `          <tied type="stop"/>
 `;
     }
 
     // Slur notation
-    if (extNote.slurStart) {
+    if (extNote?.slurStart) {
       xml += `          <slur type="start" number="1"/>
 `;
     }
-    if (extNote.slurEnd) {
+    if (extNote?.slurEnd) {
       xml += `          <slur type="stop" number="1"/>
 `;
     }
 
     // Tuplet notation
-    if (extNote.tuplet) {
+    if (extNote?.tuplet) {
       xml += `          <tuplet type="start"/>
 `;
     }
 
     // Fermata notation
-    if (extNote.fermata) {
+    if (extNote?.fermata) {
       xml += `          <fermata/>
 `;
     }

@@ -218,10 +218,11 @@ function buildNoteTrack(track: MidiTrack, ir: SongIR): Buffer {
   }
 
   // Sort all events by tick, then by type (noteOff before noteOn at same tick)
+  // Pre-compute type order outside the sort function for performance
+  const typeOrder: Record<string, number> = { noteOff: 0, cc: 1, aftertouch: 2, polyAftertouch: 3, pitchBend: 4, nrpn: 5, sysex: 6, noteOn: 7 };
   midiEvents.sort((a, b) => {
     if (a.tick !== b.tick) return a.tick - b.tick;
     // At same tick: noteOff < cc < aftertouch < pitchBend < nrpn < sysex < noteOn
-    const typeOrder = { noteOff: 0, cc: 1, aftertouch: 2, polyAftertouch: 3, pitchBend: 4, nrpn: 5, sysex: 6, noteOn: 7 };
     return typeOrder[a.type] - typeOrder[b.type];
   });
 

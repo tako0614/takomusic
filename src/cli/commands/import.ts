@@ -87,6 +87,13 @@ Examples:
 
       case 'midi':
         console.error('MIDI import is not yet implemented.');
+        console.error('');
+        console.error('Alternatives:');
+        console.error('  1. Use MusicXML format instead (most DAWs can export to MusicXML)');
+        console.error('  2. Manually transcribe the MIDI file using TakoMusic syntax');
+        console.error('');
+        console.error('MIDI import is planned for a future release.');
+        console.error('Track progress: https://github.com/user/takomusic/issues');
         return ExitCodes.STATIC_ERROR;
 
       default:

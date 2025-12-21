@@ -933,7 +933,12 @@ export class Parser {
   private parseCall(): Expression {
     let expr = this.parsePrimary();
 
-    while (true) {
+    // Safety limit to prevent infinite loops in pathological cases
+    const MAX_CHAIN_LENGTH = 1000;
+    let chainLength = 0;
+
+    while (chainLength < MAX_CHAIN_LENGTH) {
+      chainLength++;
       if (this.check(TokenType.LPAREN)) {
         // Function call: expr(args) - supports first-class functions
         expr = this.finishCall(expr);
@@ -989,6 +994,10 @@ export class Parser {
       } else {
         break;
       }
+    }
+
+    if (chainLength >= MAX_CHAIN_LENGTH) {
+      throw this.error('Expression chain too long (possible infinite loop in parser)');
     }
 
     return expr;
@@ -1261,19 +1270,49 @@ export class Parser {
   }
 
   private noteToMidi(note: string, octave: number): number {
-    const noteOffsets: Record<string, number> = {
-      'C': 0, 'C#': 1, 'Db': 1, 'C##': 2, 'Cbb': -2,
-      'D': 2, 'D#': 3, 'Eb': 3, 'D##': 4, 'Dbb': 0,
-      'E': 4, 'Fb': 4, 'E#': 5, 'E##': 6, 'Ebb': 2,
-      'F': 5, 'F#': 6, 'Gb': 6, 'F##': 7, 'Fbb': 3,
-      'G': 7, 'G#': 8, 'Ab': 8, 'G##': 9, 'Gbb': 5,
-      'A': 9, 'A#': 10, 'Bb': 10, 'A##': 11, 'Abb': 7,
-      'B': 11, 'Cb': 11, 'B#': 0, 'B##': 1, 'Bbb': 9,
+    // Note offsets and octave adjustments for enharmonic equivalents
+    // B# = C of next octave, Cb = B of previous octave, etc.
+    const noteData: Record<string, { offset: number; octaveAdjust: number }> = {
+      'C': { offset: 0, octaveAdjust: 0 },
+      'C#': { offset: 1, octaveAdjust: 0 },
+      'Db': { offset: 1, octaveAdjust: 0 },
+      'C##': { offset: 2, octaveAdjust: 0 },
+      'Cbb': { offset: 10, octaveAdjust: -1 }, // Cbb = Bb of previous octave
+      'D': { offset: 2, octaveAdjust: 0 },
+      'D#': { offset: 3, octaveAdjust: 0 },
+      'Eb': { offset: 3, octaveAdjust: 0 },
+      'D##': { offset: 4, octaveAdjust: 0 },
+      'Dbb': { offset: 0, octaveAdjust: 0 },
+      'E': { offset: 4, octaveAdjust: 0 },
+      'Fb': { offset: 4, octaveAdjust: 0 },
+      'E#': { offset: 5, octaveAdjust: 0 },
+      'E##': { offset: 6, octaveAdjust: 0 },
+      'Ebb': { offset: 2, octaveAdjust: 0 },
+      'F': { offset: 5, octaveAdjust: 0 },
+      'F#': { offset: 6, octaveAdjust: 0 },
+      'Gb': { offset: 6, octaveAdjust: 0 },
+      'F##': { offset: 7, octaveAdjust: 0 },
+      'Fbb': { offset: 3, octaveAdjust: 0 },
+      'G': { offset: 7, octaveAdjust: 0 },
+      'G#': { offset: 8, octaveAdjust: 0 },
+      'Ab': { offset: 8, octaveAdjust: 0 },
+      'G##': { offset: 9, octaveAdjust: 0 },
+      'Gbb': { offset: 5, octaveAdjust: 0 },
+      'A': { offset: 9, octaveAdjust: 0 },
+      'A#': { offset: 10, octaveAdjust: 0 },
+      'Bb': { offset: 10, octaveAdjust: 0 },
+      'A##': { offset: 11, octaveAdjust: 0 },
+      'Abb': { offset: 7, octaveAdjust: 0 },
+      'B': { offset: 11, octaveAdjust: 0 },
+      'Cb': { offset: 11, octaveAdjust: -1 }, // Cb = B of previous octave
+      'B#': { offset: 0, octaveAdjust: 1 }, // B# = C of next octave
+      'B##': { offset: 1, octaveAdjust: 1 }, // B## = C# of next octave
+      'Bbb': { offset: 9, octaveAdjust: 0 },
     };
 
-    const offset = noteOffsets[note] ?? 0;
+    const data = noteData[note] ?? { offset: 0, octaveAdjust: 0 };
     // MIDI: C4 = 60, so C0 = 12
-    return (octave + 1) * 12 + offset;
+    return (octave + 1 + data.octaveAdjust) * 12 + data.offset;
   }
 
   private parseDurLiteral(token: Token): DurLiteral {
@@ -1410,7 +1449,12 @@ export class Parser {
     quasis.push(this.advance().value);
 
     // Parse expressions and middle/tail parts
-    while (true) {
+    // Safety limit to prevent infinite loops
+    const MAX_TEMPLATE_PARTS = 1000;
+    let partCount = 0;
+
+    while (partCount < MAX_TEMPLATE_PARTS) {
+      partCount++;
       // Parse expression between ${ and }
       expressions.push(this.parseExpression());
 
@@ -1423,6 +1467,10 @@ export class Parser {
       } else {
         throw this.error('Expected template continuation');
       }
+    }
+
+    if (partCount >= MAX_TEMPLATE_PARTS) {
+      throw this.error('Template literal has too many parts (possible infinite loop)');
     }
 
     return {

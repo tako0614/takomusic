@@ -272,6 +272,20 @@ export function builtinNRPN(this: any, args: Expression[], position: any): Runti
     throw new MFError('TYPE', 'nrpn() parameters must be int', position, this.filePath);
   }
 
+  // Validate NRPN parameter and value ranges (0-127 for each byte)
+  if (paramMSB.value < 0 || paramMSB.value > 127) {
+    throw createError('E121', `nrpn paramMSB ${paramMSB.value} out of range 0..127`, position, this.filePath);
+  }
+  if (paramLSB.value < 0 || paramLSB.value > 127) {
+    throw createError('E121', `nrpn paramLSB ${paramLSB.value} out of range 0..127`, position, this.filePath);
+  }
+  if (valueMSB.value < 0 || valueMSB.value > 127) {
+    throw createError('E121', `nrpn valueMSB ${valueMSB.value} out of range 0..127`, position, this.filePath);
+  }
+  if (valueLSB && valueLSB.type === 'int' && (valueLSB.value < 0 || valueLSB.value > 127)) {
+    throw createError('E121', `nrpn valueLSB ${valueLSB.value} out of range 0..127`, position, this.filePath);
+  }
+
   const event: NRPNEvent = {
     type: 'nrpn',
     tick: track.cursor,
@@ -298,6 +312,17 @@ export function builtinRPN(this: any, args: Expression[], position: any): Runtim
 
   if (paramMSB.type !== 'int' || paramLSB.type !== 'int' || valueMSB.type !== 'int') {
     throw new MFError('TYPE', 'rpn() parameters must be int', position, this.filePath);
+  }
+
+  // Validate RPN parameter and value ranges (0-127 for each byte)
+  if (paramMSB.value < 0 || paramMSB.value > 127) {
+    throw createError('E121', `rpn paramMSB ${paramMSB.value} out of range 0..127`, position, this.filePath);
+  }
+  if (paramLSB.value < 0 || paramLSB.value > 127) {
+    throw createError('E121', `rpn paramLSB ${paramLSB.value} out of range 0..127`, position, this.filePath);
+  }
+  if (valueMSB.value < 0 || valueMSB.value > 127) {
+    throw createError('E121', `rpn valueMSB ${valueMSB.value} out of range 0..127`, position, this.filePath);
   }
 
   // RPN uses CC 101 (MSB), 100 (LSB), 6 (Data Entry)

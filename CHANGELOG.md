@@ -2,6 +2,23 @@
 
 All notable changes to TakoMusic will be documented in this file.
 
+## [1.3.1] - 2024-12-21
+
+### Fixed
+
+- **Critical: Short-circuit evaluation** - Logical operators (`&&`, `||`, `??`) now properly short-circuit, only evaluating the right operand when necessary
+- **Critical: B#/Cb octave calculation** - Enharmonic notes like B#4 now correctly map to C5 (MIDI 72) instead of C4 (60)
+- **Security: Path traversal vulnerability** - Import path validation now handles Windows case-insensitivity and symlinks using `fs.realpathSync`
+- **Division by zero checks** - Added proper validation in duration arithmetic and numeric operations
+- **Error handling consistency** - Replaced generic `Error` throws with `createError()` for better error messages with position info
+- **parseInt/parseFloat validation** - MusicXML importer now safely handles invalid numeric values with `safeParseInt`/`safeParseFloat`
+- **Type safety in MusicXML generator** - Added `isNoteEventFull` type guard and optional chaining for extended note properties
+- **Iteration limit for range()** - Added maximum limit of 1 million elements to prevent memory exhaustion
+- **File watcher resource leak** - Watch mode now properly closes watcher on errors with `closeWatcher` helper
+- **Debounce race condition** - Watch mode tracks pending builds with `pendingBuild` flag to avoid missed rebuilds
+- **MIDI sort performance** - Moved `typeOrder` object outside sort comparator function
+- **Deprecated substr() usage** - Replaced with `substring()` for future compatibility
+
 ## [1.3.0] - 2024-12-20
 
 ### Added
