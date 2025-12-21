@@ -2,7 +2,7 @@
 
 All notable changes to TakoMusic will be documented in this file.
 
-## [1.3.6] - 2024-12-21
+## [1.3.7] - 2024-12-21
 
 ### Changed
 
@@ -12,6 +12,8 @@ All notable changes to TakoMusic will be documented in this file.
   - Improved type safety in builtin functions (replaced `position: any` with `position: Position`)
   - Unified CLI error handling with new `handleCliError()` helper
   - Consolidated `Position` type definition (removed duplicate in `builtins/types.ts`)
+
+## [1.3.6] - 2024-12-21
 
 ### Fixed
 
