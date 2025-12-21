@@ -6,6 +6,30 @@ import { spawn, ChildProcess } from 'child_process';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 
+// Characters that are dangerous in shell contexts
+const SHELL_DANGEROUS_CHARS = /[;&|`$(){}[\]<>!\\'"*?\n\r]/;
+
+/**
+ * Validate that a command argument is safe for shell execution.
+ * Returns true if the argument is safe, false if it contains dangerous characters.
+ */
+function isArgSafe(arg: string): boolean {
+  return !SHELL_DANGEROUS_CHARS.test(arg);
+}
+
+/**
+ * Validate all arguments in a command array.
+ * Throws an error if any argument contains dangerous characters.
+ */
+function validateCommandArgs(cmd: string[], context: string): void {
+  for (const arg of cmd) {
+    if (!isArgSafe(arg)) {
+      throw new Error(`Unsafe character detected in ${context} argument: "${arg}". ` +
+        'Command arguments must not contain shell metacharacters.');
+    }
+  }
+}
+
 // Default timeout: 10 minutes
 const DEFAULT_TIMEOUT = 10 * 60 * 1000;
 
@@ -236,7 +260,7 @@ async function renderMikuProfile(config: any, baseDir: string, timeout: number, 
 }
 
 function runCommand(cmdTemplate: string[], vars: Record<string, string>, timeout: number, dryRun: boolean): Promise<number> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     // Replace template variables
     const cmd = cmdTemplate.map((arg) => {
       let result = arg;
@@ -245,6 +269,15 @@ function runCommand(cmdTemplate: string[], vars: Record<string, string>, timeout
       }
       return result;
     });
+
+    // Security: Validate command arguments to prevent injection
+    try {
+      validateCommandArgs(cmd, 'render command');
+    } catch (err) {
+      console.error(`Security error: ${(err as Error).message}`);
+      reject(err);
+      return;
+    }
 
     console.log(`  > ${cmd.join(' ')}`);
 
@@ -256,9 +289,11 @@ function runCommand(cmdTemplate: string[], vars: Record<string, string>, timeout
     }
 
     const startTime = Date.now();
+    // Security: Use shell: false to prevent shell injection
+    // Arguments are passed directly to the executable without shell interpretation
     const proc = spawn(cmd[0], cmd.slice(1), {
       stdio: 'inherit',
-      shell: true,
+      shell: false,
     });
 
     activeProcess = proc;

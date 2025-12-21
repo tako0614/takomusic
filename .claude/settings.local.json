@@ -38,7 +38,9 @@
       "Bash(for f in lib/*.mf)",
       "Bash(done)",
       "Bash(rm:*)",
-      "Bash(npm pack:*)"
+      "Bash(npm pack:*)",
+      "Bash(mkdir:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

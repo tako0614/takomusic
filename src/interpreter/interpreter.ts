@@ -428,6 +428,11 @@ export class Interpreter {
     this.scope.defineConst(name, value);
   }
 
+  // Get the global scope (for namespace imports)
+  getGlobalScope(): Scope {
+    return this.scope;
+  }
+
   execute(program: Program): SongIR {
     // First pass: collect all proc declarations from this module
     for (const stmt of program.statements) {
@@ -437,6 +442,13 @@ export class Interpreter {
         if (stmt.declaration.kind === 'ProcDeclaration') {
           this.scope.defineProc(stmt.declaration);
         }
+      }
+    }
+
+    // Second pass: execute top-level expression statements (ppq, tempo, timeSig, etc.)
+    for (const stmt of program.statements) {
+      if (stmt.kind === 'ExpressionStatement') {
+        this.executeStatement(stmt);
       }
     }
 
@@ -491,11 +503,17 @@ export class Interpreter {
           this.executeStatements(stmt.consequent);
           this.scope = oldScope;
         } else if (stmt.alternate) {
-          const childScope = this.scope.createChild();
-          const oldScope = this.scope;
-          this.scope = childScope;
-          this.executeStatements(stmt.alternate);
-          this.scope = oldScope;
+          if (Array.isArray(stmt.alternate)) {
+            // else: alternate is Statement[]
+            const childScope = this.scope.createChild();
+            const oldScope = this.scope;
+            this.scope = childScope;
+            this.executeStatements(stmt.alternate);
+            this.scope = oldScope;
+          } else {
+            // else if: alternate is a single IfStatement
+            this.executeStatement(stmt.alternate);
+          }
         }
         break;
       }
@@ -574,6 +592,50 @@ export class Interpreter {
         break;
       }
 
+      case 'MatchStatement': {
+        const matchValue = this.evaluate(stmt.expression);
+        let matched = false;
+        let defaultCase: { pattern: Expression | null; body: Statement[] } | null = null;
+
+        for (const matchCase of stmt.cases) {
+          if (matchCase.pattern === null) {
+            // Store default case for later
+            defaultCase = matchCase;
+            continue;
+          }
+
+          const caseValue = this.evaluate(matchCase.pattern);
+          if (this.valuesEqual(matchValue, caseValue)) {
+            // Execute the matching case
+            const childScope = this.scope.createChild();
+            const oldScope = this.scope;
+            this.scope = childScope;
+
+            try {
+              this.executeStatements(matchCase.body);
+            } finally {
+              this.scope = oldScope;
+            }
+            matched = true;
+            break;
+          }
+        }
+
+        // If no case matched, execute default case if present
+        if (!matched && defaultCase) {
+          const childScope = this.scope.createChild();
+          const oldScope = this.scope;
+          this.scope = childScope;
+
+          try {
+            this.executeStatements(defaultCase.body);
+          } finally {
+            this.scope = oldScope;
+          }
+        }
+        break;
+      }
+
       case 'ReturnStatement': {
         const value = stmt.value ? this.evaluate(stmt.value) : makeNull();
         throw new ReturnSignal(value);
@@ -627,11 +689,21 @@ export class Interpreter {
       case 'ForEachStatement': {
         const iterable = this.evaluate(stmt.iterable);
 
-        if (iterable.type !== 'array') {
-          throw createError('E400', 'For-each requires an array', stmt.position, this.filePath);
+        // Build the list of elements to iterate over
+        let elements: RuntimeValue[] = [];
+        if (iterable.type === 'array') {
+          elements = iterable.elements;
+        } else if (iterable.type === 'string') {
+          // Iterate over characters
+          elements = [...iterable.value].map(c => makeString(c));
+        } else if (iterable.type === 'object') {
+          // Iterate over keys
+          elements = [...iterable.properties.keys()].map(k => makeString(k));
+        } else {
+          throw createError('E400', `Cannot iterate over type '${iterable.type}'`, stmt.position, this.filePath);
         }
 
-        for (const element of iterable.elements) {
+        for (const element of elements) {
           const childScope = this.scope.createChild();
           childScope.defineConst(stmt.variable, element);
           const oldScope = this.scope;
@@ -706,13 +778,15 @@ export class Interpreter {
           if (value.type === 'string') {
             trackState.meta[prop.key] = value.value;
           } else if (value.type === 'int') {
-            if (prop.key === 'ch') {
+            if (prop.key === 'ch' || prop.key === 'channel') {
               trackState.channel = value.value - 1; // Convert to 0-based
             } else if (prop.key === 'program') {
               trackState.program = value.value;
             } else if (prop.key === 'vel') {
               trackState.defaultVel = value.value;
             } else {
+              // Warn about unknown int options
+              console.warn(`Warning: Unknown track option '${prop.key}' in track '${block.id}'`);
               trackState.meta[prop.key] = value.value;
             }
           }
@@ -758,6 +832,9 @@ export class Interpreter {
       case 'BoolLiteral':
         return makeBool(expr.value);
 
+      case 'NullLiteral':
+        return makeNull();
+
       case 'PitchLiteral':
         return makePitch(expr.midi);
 
@@ -766,7 +843,7 @@ export class Interpreter {
         if (expr.numerator <= 0 || expr.denominator <= 0) {
           throw new MFError('E101', `Invalid duration: ${expr.numerator}/${expr.denominator} (must be positive)`, expr.position, this.filePath);
         }
-        return makeDur(expr.numerator, expr.denominator);
+        return makeDur(expr.numerator, expr.denominator, expr.dots);
 
       case 'TimeLiteral':
         return makeTime(expr.bar, expr.beat, expr.sub);
@@ -806,6 +883,10 @@ export class Interpreter {
 
       case 'IndexExpression': {
         const obj = this.evaluate(expr.object);
+        // Optional chaining: return null if object is null
+        if (expr.optional && obj.type === 'null') {
+          return makeNull();
+        }
         const idx = this.evaluate(expr.index);
 
         if (obj.type === 'array') {
@@ -862,6 +943,10 @@ export class Interpreter {
 
       case 'MemberExpression': {
         const obj = this.evaluate(expr.object);
+        // Optional chaining: return null if object is null
+        if (expr.optional && obj.type === 'null') {
+          return makeNull();
+        }
         if (obj.type === 'object') {
           const value = obj.properties.get(expr.property);
           return value ?? makeNull();
@@ -884,6 +969,30 @@ export class Interpreter {
       case 'RangeExpression':
         throw new Error(`${expr.kind} cannot be evaluated as expression`);
 
+      case 'ConditionalExpression':
+        // Ternary operator: condition ? consequent : alternate
+        return isTruthy(this.evaluate(expr.condition))
+          ? this.evaluate(expr.consequent)
+          : this.evaluate(expr.alternate);
+
+      case 'TemplateLiteral': {
+        // Template literal: `Hello ${name}!`
+        let result = '';
+        for (let i = 0; i < expr.quasis.length; i++) {
+          result += expr.quasis[i];
+          if (i < expr.expressions.length) {
+            const val = this.evaluate(expr.expressions[i]);
+            result += toString(val);
+          }
+        }
+        return makeString(result);
+      }
+
+      case 'TypeofExpression': {
+        const val = this.evaluate(expr.operand);
+        return makeString(val.type);
+      }
+
       default:
         throw new Error(`Unknown expression kind: ${(expr as Expression).kind}`);
     }
@@ -899,6 +1008,10 @@ export class Interpreter {
     }
     if (op === '||') {
       return makeBool(isTruthy(left) || isTruthy(right));
+    }
+    // Nullish coalescing: return left if not null/undefined, else right
+    if (op === '??') {
+      return left.type === 'null' ? right : left;
     }
 
     // Comparison operators
@@ -1007,6 +1120,37 @@ export class Interpreter {
       return makeFloat(l % r);
     }
 
+    // Bitwise operators (only work on integers)
+    if (op === '&') {
+      const l = Math.trunc(toNumber(left));
+      const r = Math.trunc(toNumber(right));
+      return makeInt(l & r);
+    }
+
+    if (op === '|') {
+      const l = Math.trunc(toNumber(left));
+      const r = Math.trunc(toNumber(right));
+      return makeInt(l | r);
+    }
+
+    if (op === '^') {
+      const l = Math.trunc(toNumber(left));
+      const r = Math.trunc(toNumber(right));
+      return makeInt(l ^ r);
+    }
+
+    if (op === '<<') {
+      const l = Math.trunc(toNumber(left));
+      const r = Math.trunc(toNumber(right));
+      return makeInt(l << r);
+    }
+
+    if (op === '>>') {
+      const l = Math.trunc(toNumber(left));
+      const r = Math.trunc(toNumber(right));
+      return makeInt(l >> r);
+    }
+
     throw new Error(`Unknown binary operator: ${op}`);
   }
 
@@ -1020,6 +1164,11 @@ export class Interpreter {
     if (op === '-') {
       const n = toNumber(operand);
       return operand.type === 'float' ? makeFloat(-n) : makeInt(-n);
+    }
+
+    if (op === '~') {
+      const n = Math.trunc(toNumber(operand));
+      return makeInt(~n);
     }
 
     throw new Error(`Unknown unary operator: ${op}`);
@@ -2798,10 +2947,10 @@ export class Interpreter {
       // User-defined proc
       const proc = this.scope.lookupProc(callee);
       if (proc) {
-        // Track recursion depth
+        // Track recursion depth (relaxed from 100 to 1000)
         const currentDepth = this.callStack.get(callee) || 0;
-        if (currentDepth >= 100) {
-          throw createError('E310', `Maximum recursion depth exceeded in '${callee}'`, position, this.filePath);
+        if (currentDepth >= 1000) {
+          throw new MFError('E310', `Maximum recursion depth (1000) exceeded in '${callee}'`, position, this.filePath);
         }
 
         this.callStack.set(callee, currentDepth + 1);
@@ -2863,7 +3012,11 @@ export class Interpreter {
     // Create new scope chained to closure scope (not current scope!)
     const callScope = fn.closure.createChild();
 
-    // Bind parameters
+    // Bind parameters (with default value support)
+    // We need to evaluate defaults in the call scope so they can reference earlier params
+    const oldScope = this.scope;
+    this.scope = callScope;
+
     for (let i = 0; i < fn.params.length; i++) {
       const param = fn.params[i];
       if (param.rest) {
@@ -2871,12 +3024,20 @@ export class Interpreter {
         callScope.defineConst(param.name, makeArray(evalArgs.slice(i)));
         break;
       }
-      const value = i < evalArgs.length ? evalArgs[i] : makeNull();
+      let value: RuntimeValue;
+      if (i < evalArgs.length) {
+        value = evalArgs[i];
+      } else if (param.defaultValue) {
+        // Evaluate default value in call scope (can reference earlier params)
+        value = this.evaluate(param.defaultValue);
+      } else {
+        value = makeNull();
+      }
       callScope.defineConst(param.name, value);
     }
 
-    const oldScope = this.scope;
-    this.scope = callScope;
+    // Scope is already set to callScope for default value evaluation
+    // Keep it that way for body execution
 
     let result: RuntimeValue = makeNull();
     try {

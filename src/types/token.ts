@@ -9,6 +9,12 @@ export enum TokenType {
   DUR = 'DUR',
   TIME = 'TIME',
 
+  // Template literals
+  TEMPLATE_HEAD = 'TEMPLATE_HEAD',      // `text${
+  TEMPLATE_MIDDLE = 'TEMPLATE_MIDDLE',  // }text${
+  TEMPLATE_TAIL = 'TEMPLATE_TAIL',      // }text`
+  TEMPLATE_STRING = 'TEMPLATE_STRING',  // `text` (no interpolation)
+
   // Identifiers and Keywords
   IDENT = 'IDENT',
   IMPORT = 'IMPORT',
@@ -26,6 +32,12 @@ export enum TokenType {
   CONTINUE = 'CONTINUE',
   TRUE = 'TRUE',
   FALSE = 'FALSE',
+  NULL = 'NULL',
+  MATCH = 'MATCH',
+  CASE = 'CASE',
+  DEFAULT = 'DEFAULT',
+  AS = 'AS',
+  TYPEOF = 'TYPEOF',
 
   // Track kinds (contextual keywords)
   VOCAL = 'VOCAL',
@@ -41,6 +53,12 @@ export enum TokenType {
   MINUSEQ = 'MINUSEQ',
   STAREQ = 'STAREQ',
   SLASHEQ = 'SLASHEQ',
+  PERCENTEQ = 'PERCENTEQ',  // %=
+  BITANDEQ = 'BITANDEQ',    // &=
+  BITOREQ = 'BITOREQ',      // |=
+  BITXOREQ = 'BITXOREQ',    // ^=
+  SHLEQ = 'SHLEQ',          // <<=
+  SHREQ = 'SHREQ',          // >>=
   EQ = 'EQ',
   EQEQ = 'EQEQ',
   NEQ = 'NEQ',
@@ -51,6 +69,17 @@ export enum TokenType {
   AND = 'AND',
   OR = 'OR',
   NOT = 'NOT',
+  QUESTION = 'QUESTION',      // ? for ternary operator
+  QUESTIONDOT = 'QUESTIONDOT', // ?. for optional chaining
+  NULLISH = 'NULLISH',        // ?? for nullish coalescing
+
+  // Bitwise operators
+  BITAND = 'BITAND',      // &
+  BITOR = 'BITOR',        // |
+  BITXOR = 'BITXOR',      // ^
+  BITNOT = 'BITNOT',      // ~
+  SHL = 'SHL',            // <<
+  SHR = 'SHR',            // >>
 
   // Range operators
   DOTDOT = 'DOTDOT',
@@ -104,6 +133,12 @@ export const KEYWORDS: Record<string, TokenType> = {
   continue: TokenType.CONTINUE,
   true: TokenType.TRUE,
   false: TokenType.FALSE,
+  null: TokenType.NULL,
+  match: TokenType.MATCH,
+  case: TokenType.CASE,
+  default: TokenType.DEFAULT,
+  as: TokenType.AS,
+  typeof: TokenType.TYPEOF,
   vocal: TokenType.VOCAL,
   midi: TokenType.MIDI,
 };

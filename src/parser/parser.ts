@@ -17,6 +17,8 @@ import {
   ForStatement,
   ForEachStatement,
   WhileStatement,
+  MatchStatement,
+  MatchCase,
   ReturnStatement,
   BreakStatement,
   ContinueStatement,
@@ -42,6 +44,7 @@ import {
   SpreadElement,
   RangeExpression,
   Parameter,
+  TemplateLiteral,
 } from '../types/ast.js';
 import { MFError } from '../errors.js';
 
@@ -49,6 +52,8 @@ export class Parser {
   private tokens: Token[];
   private current: number = 0;
   private filePath?: string;
+  private errors: MFError[] = [];
+  private panicMode: boolean = false;
 
   constructor(tokens: Token[], filePath?: string) {
     this.tokens = tokens;
@@ -67,6 +72,72 @@ export class Parser {
     }
 
     return { kind: 'Program', statements, position: pos };
+  }
+
+  // Parse with error recovery - collects multiple errors instead of stopping at first
+  parseWithErrors(): { program: Program; errors: MFError[] } {
+    this.errors = [];
+    const statements: Statement[] = [];
+    const pos = this.peek().position;
+
+    while (!this.isAtEnd()) {
+      try {
+        this.panicMode = false;
+        const stmt = this.parseStatement();
+        if (stmt) {
+          statements.push(stmt);
+        }
+      } catch (e) {
+        if (e instanceof MFError) {
+          this.errors.push(e);
+          this.synchronize();
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    const program: Program = { kind: 'Program', statements, position: pos };
+    return { program, errors: this.errors };
+  }
+
+  // Synchronize after an error by skipping to the next statement boundary
+  private synchronize(): void {
+    this.panicMode = true;
+    this.advance();
+
+    while (!this.isAtEnd()) {
+      // If we just passed a semicolon, we're at a statement boundary
+      if (this.previous().type === TokenType.SEMICOLON) {
+        return;
+      }
+
+      // If the current token starts a new statement, we're synchronized
+      switch (this.peek().type) {
+        case TokenType.PROC:
+        case TokenType.CONST:
+        case TokenType.LET:
+        case TokenType.IF:
+        case TokenType.FOR:
+        case TokenType.WHILE:
+        case TokenType.MATCH:
+        case TokenType.RETURN:
+        case TokenType.BREAK:
+        case TokenType.CONTINUE:
+        case TokenType.IMPORT:
+        case TokenType.EXPORT:
+        case TokenType.VOCAL:
+        case TokenType.MIDI:
+          return;
+      }
+
+      this.advance();
+    }
+  }
+
+  // Get collected errors (for parseWithErrors)
+  getErrors(): MFError[] {
+    return this.errors;
   }
 
   private parseStatement(): Statement | null {
@@ -102,6 +173,10 @@ export class Parser {
       return this.parseWhile();
     }
 
+    if (this.check(TokenType.MATCH)) {
+      return this.parseMatch();
+    }
+
     if (this.check(TokenType.RETURN)) {
       return this.parseReturn();
     }
@@ -126,7 +201,26 @@ export class Parser {
   private parseImport(): ImportStatement {
     const pos = this.advance().position; // consume 'import'
 
-    this.expect(TokenType.LBRACE, "Expected '{' after 'import'");
+    // Check for wildcard import: import * as name from "path"
+    if (this.check(TokenType.STAR)) {
+      this.advance(); // consume '*'
+      this.expect(TokenType.AS, "Expected 'as' after '*' in import");
+      const nameToken = this.expect(TokenType.IDENT, 'Expected namespace identifier after "as"');
+      this.expect(TokenType.IDENT, "Expected 'from'"); // 'from' keyword
+      const pathToken = this.expect(TokenType.STRING, 'Expected module path');
+      this.expect(TokenType.SEMICOLON, "Expected ';' after import");
+
+      return {
+        kind: 'ImportStatement',
+        imports: [],
+        namespace: nameToken.value,
+        path: pathToken.value,
+        position: pos,
+      };
+    }
+
+    // Named imports: import { a, b } from "path"
+    this.expect(TokenType.LBRACE, "Expected '{' or '*' after 'import'");
     const imports: string[] = [];
 
     if (!this.check(TokenType.RBRACE)) {
@@ -177,6 +271,7 @@ export class Parser {
     const params: Parameter[] = [];
 
     if (!this.check(TokenType.RPAREN)) {
+      let hasDefault = false;
       do {
         // Check for rest parameter
         if (this.check(TokenType.SPREAD)) {
@@ -186,7 +281,17 @@ export class Parser {
           break; // Rest must be last
         }
         const param = this.expect(TokenType.IDENT, 'Expected parameter name');
-        params.push({ name: param.value });
+        // Check for default value
+        if (this.match(TokenType.EQ)) {
+          hasDefault = true;
+          const defaultValue = this.parseExpression();
+          params.push({ name: param.value, defaultValue });
+        } else {
+          if (hasDefault) {
+            throw this.error('Required parameters cannot follow parameters with default values');
+          }
+          params.push({ name: param.value });
+        }
       } while (this.match(TokenType.COMMA));
     }
 
@@ -244,11 +349,16 @@ export class Parser {
     this.expect(TokenType.LBRACE, "Expected '{' before if body");
 
     const consequent = this.parseBlock();
-    let alternate: Statement[] | null = null;
+    let alternate: IfStatement | Statement[] | null = null;
 
     if (this.match(TokenType.ELSE)) {
-      this.expect(TokenType.LBRACE, "Expected '{' after 'else'");
-      alternate = this.parseBlock();
+      if (this.check(TokenType.IF)) {
+        // else if: recursively parse as nested IfStatement
+        alternate = this.parseIf();
+      } else {
+        this.expect(TokenType.LBRACE, "Expected '{' after 'else'");
+        alternate = this.parseBlock();
+      }
     }
 
     return {
@@ -330,6 +440,47 @@ export class Parser {
       kind: 'WhileStatement',
       condition,
       body,
+      position: pos,
+    };
+  }
+
+  private parseMatch(): MatchStatement {
+    const pos = this.advance().position; // consume 'match'
+    this.expect(TokenType.LPAREN, "Expected '(' after 'match'");
+    const expression = this.parseExpression();
+    this.expect(TokenType.RPAREN, "Expected ')' after match expression");
+    this.expect(TokenType.LBRACE, "Expected '{' before match cases");
+
+    const cases: MatchCase[] = [];
+    let hasDefault = false;
+
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      if (this.check(TokenType.CASE)) {
+        this.advance(); // consume 'case'
+        const pattern = this.parseExpression();
+        this.expect(TokenType.LBRACE, "Expected '{' before case body");
+        const body = this.parseBlock();
+        cases.push({ pattern, body });
+      } else if (this.check(TokenType.DEFAULT)) {
+        if (hasDefault) {
+          throw new MFError('SYNTAX', 'Multiple default cases in match statement', this.peek().position, this.filePath);
+        }
+        this.advance(); // consume 'default'
+        this.expect(TokenType.LBRACE, "Expected '{' before default body");
+        const body = this.parseBlock();
+        cases.push({ pattern: null, body });
+        hasDefault = true;
+      } else {
+        throw new MFError('SYNTAX', "Expected 'case' or 'default' in match statement", this.peek().position, this.filePath);
+      }
+    }
+
+    this.expect(TokenType.RBRACE, "Expected '}' after match cases");
+
+    return {
+      kind: 'MatchStatement',
+      expression,
+      cases,
       position: pos,
     };
   }
@@ -459,10 +610,10 @@ export class Parser {
       throw this.error('Invalid assignment target');
     }
 
-    // Compound assignment: +=, -=, *=, /=
+    // Compound assignment: +=, -=, *=, /=, %=, &=, |=, ^=, <<=, >>=
     if (this.checkCompoundAssign()) {
       const op = this.advance().value; // e.g., '+='
-      const binaryOp = op.charAt(0); // e.g., '+'
+      const binaryOp = this.getCompoundAssignOp(op); // e.g., '+'
       const rhs = this.parseExpression();
       this.expect(TokenType.SEMICOLON, "Expected ';' after assignment");
 
@@ -516,19 +667,51 @@ export class Parser {
 
   private checkCompoundAssign(): boolean {
     return this.check(TokenType.PLUSEQ) || this.check(TokenType.MINUSEQ) ||
-           this.check(TokenType.STAREQ) || this.check(TokenType.SLASHEQ);
+           this.check(TokenType.STAREQ) || this.check(TokenType.SLASHEQ) ||
+           this.check(TokenType.PERCENTEQ) || this.check(TokenType.BITANDEQ) ||
+           this.check(TokenType.BITOREQ) || this.check(TokenType.BITXOREQ) ||
+           this.check(TokenType.SHLEQ) || this.check(TokenType.SHREQ);
+  }
+
+  private getCompoundAssignOp(op: string): string {
+    // Map compound assignment operator to its binary operator
+    const opMap: Record<string, string> = {
+      '+=': '+', '-=': '-', '*=': '*', '/=': '/', '%=': '%',
+      '&=': '&', '|=': '|', '^=': '^', '<<=': '<<', '>>=': '>>'
+    };
+    return opMap[op] || op.charAt(0);
   }
 
   // Expression parsing with precedence climbing
   private parseExpression(): Expression {
-    return this.parseOr();
+    return this.parseConditional();
+  }
+
+  // Ternary operator: a ? b : c (lowest precedence)
+  private parseConditional(): Expression {
+    let expr = this.parseOr();
+
+    if (this.match(TokenType.QUESTION)) {
+      const consequent = this.parseExpression();
+      this.expect(TokenType.COLON, "Expected ':' in ternary expression");
+      const alternate = this.parseConditional();
+      expr = {
+        kind: 'ConditionalExpression',
+        condition: expr,
+        consequent,
+        alternate,
+        position: expr.position,
+      } as import('../types/ast.js').ConditionalExpression;
+    }
+
+    return expr;
   }
 
   private parseOr(): Expression {
-    let left = this.parseAnd();
+    let left = this.parseNullish();
 
     while (this.match(TokenType.OR)) {
-      const right = this.parseAnd();
+      const right = this.parseNullish();
       left = {
         kind: 'BinaryExpression',
         operator: '||',
@@ -541,14 +724,82 @@ export class Parser {
     return left;
   }
 
+  private parseNullish(): Expression {
+    let left = this.parseAnd();
+
+    while (this.match(TokenType.NULLISH)) {
+      const right = this.parseAnd();
+      left = {
+        kind: 'BinaryExpression',
+        operator: '??',
+        left,
+        right,
+        position: left.position,
+      };
+    }
+
+    return left;
+  }
+
   private parseAnd(): Expression {
-    let left = this.parseEquality();
+    let left = this.parseBitOr();
 
     while (this.match(TokenType.AND)) {
-      const right = this.parseEquality();
+      const right = this.parseBitOr();
       left = {
         kind: 'BinaryExpression',
         operator: '&&',
+        left,
+        right,
+        position: left.position,
+      };
+    }
+
+    return left;
+  }
+
+  private parseBitOr(): Expression {
+    let left = this.parseBitXor();
+
+    while (this.match(TokenType.BITOR)) {
+      const right = this.parseBitXor();
+      left = {
+        kind: 'BinaryExpression',
+        operator: '|',
+        left,
+        right,
+        position: left.position,
+      };
+    }
+
+    return left;
+  }
+
+  private parseBitXor(): Expression {
+    let left = this.parseBitAnd();
+
+    while (this.match(TokenType.BITXOR)) {
+      const right = this.parseBitAnd();
+      left = {
+        kind: 'BinaryExpression',
+        operator: '^',
+        left,
+        right,
+        position: left.position,
+      };
+    }
+
+    return left;
+  }
+
+  private parseBitAnd(): Expression {
+    let left = this.parseEquality();
+
+    while (this.match(TokenType.BITAND)) {
+      const right = this.parseEquality();
+      left = {
+        kind: 'BinaryExpression',
+        operator: '&',
         left,
         right,
         position: left.position,
@@ -577,7 +828,7 @@ export class Parser {
   }
 
   private parseComparison(): Expression {
-    let left = this.parseAdditive();
+    let left = this.parseShift();
 
     while (
       this.check(TokenType.LT) ||
@@ -585,6 +836,24 @@ export class Parser {
       this.check(TokenType.LTEQ) ||
       this.check(TokenType.GTEQ)
     ) {
+      const op = this.advance().value;
+      const right = this.parseShift();
+      left = {
+        kind: 'BinaryExpression',
+        operator: op,
+        left,
+        right,
+        position: left.position,
+      };
+    }
+
+    return left;
+  }
+
+  private parseShift(): Expression {
+    let left = this.parseAdditive();
+
+    while (this.check(TokenType.SHL) || this.check(TokenType.SHR)) {
       const op = this.advance().value;
       const right = this.parseAdditive();
       left = {
@@ -636,7 +905,7 @@ export class Parser {
   }
 
   private parseUnary(): Expression {
-    if (this.check(TokenType.NOT) || this.check(TokenType.MINUS)) {
+    if (this.check(TokenType.NOT) || this.check(TokenType.MINUS) || this.check(TokenType.BITNOT)) {
       const op = this.advance().value;
       const operand = this.parseUnary();
       return {
@@ -645,6 +914,17 @@ export class Parser {
         operand,
         position: operand.position,
       };
+    }
+
+    // typeof operator
+    if (this.check(TokenType.TYPEOF)) {
+      const pos = this.advance().position;
+      const operand = this.parseUnary();
+      return {
+        kind: 'TypeofExpression',
+        operand,
+        position: pos,
+      } as import('../types/ast.js').TypeofExpression;
     }
 
     return this.parseCall();
@@ -666,6 +946,7 @@ export class Parser {
           kind: 'IndexExpression',
           object: expr,
           index,
+          optional: false,
           position: pos,
         } as IndexExpression;
       } else if (this.check(TokenType.DOT)) {
@@ -676,8 +957,35 @@ export class Parser {
           kind: 'MemberExpression',
           object: expr,
           property: prop.value,
+          optional: false,
           position: pos,
         } as MemberExpression;
+      } else if (this.check(TokenType.QUESTIONDOT)) {
+        // Optional chaining: expr?.property or expr?.[index]
+        const pos = this.advance().position; // consume '?.'
+        if (this.check(TokenType.LBRACKET)) {
+          // Optional index: expr?.[index]
+          this.advance(); // consume '['
+          const index = this.parseExpression();
+          this.expect(TokenType.RBRACKET, "Expected ']' after index");
+          expr = {
+            kind: 'IndexExpression',
+            object: expr,
+            index,
+            optional: true,
+            position: pos,
+          } as IndexExpression;
+        } else {
+          // Optional property: expr?.property
+          const prop = this.expect(TokenType.IDENT, 'Expected property name after "?."');
+          expr = {
+            kind: 'MemberExpression',
+            object: expr,
+            property: prop.value,
+            optional: true,
+            position: pos,
+          } as MemberExpression;
+        }
       } else {
         break;
       }
@@ -768,6 +1076,15 @@ export class Parser {
       };
     }
 
+    // Null literal
+    if (this.check(TokenType.NULL)) {
+      this.advance();
+      return {
+        kind: 'NullLiteral',
+        position: token.position,
+      } as import('../types/ast.js').NullLiteral;
+    }
+
     // Pitch literal
     if (this.check(TokenType.PITCH)) {
       this.advance();
@@ -794,6 +1111,11 @@ export class Parser {
     // Object literal
     if (this.check(TokenType.LBRACE)) {
       return this.parseObjectLiteral();
+    }
+
+    // Template literal
+    if (this.check(TokenType.TEMPLATE_STRING) || this.check(TokenType.TEMPLATE_HEAD)) {
+      return this.parseTemplateLiteral();
     }
 
     // Identifier
@@ -895,14 +1217,32 @@ export class Parser {
   }
 
   private parsePitchLiteral(token: Token): PitchLiteral {
-    // Parse pitch like C4, C#4, Db4
+    // Parse pitch like C4, C#4, Db4, C##4, Cx4, Cbb4
     const value = token.value;
     let idx = 0;
 
     const noteChar = value[idx++].toUpperCase();
     let accidental = '';
-    if (value[idx] === '#' || value[idx] === 'b') {
-      accidental = value[idx++];
+    if (value[idx] === '#') {
+      accidental = '#';
+      idx++;
+      // Check for double sharp (##)
+      if (value[idx] === '#') {
+        accidental = '##';
+        idx++;
+      }
+    } else if (value[idx] === 'x') {
+      // 'x' notation for double sharp
+      accidental = '##';
+      idx++;
+    } else if (value[idx] === 'b') {
+      accidental = 'b';
+      idx++;
+      // Check for double flat (bb)
+      if (value[idx] === 'b') {
+        accidental = 'bb';
+        idx++;
+      }
     }
 
     const octaveStr = value.slice(idx);
@@ -922,13 +1262,13 @@ export class Parser {
 
   private noteToMidi(note: string, octave: number): number {
     const noteOffsets: Record<string, number> = {
-      'C': 0, 'C#': 1, 'Db': 1,
-      'D': 2, 'D#': 3, 'Eb': 3,
-      'E': 4, 'Fb': 4, 'E#': 5,
-      'F': 5, 'F#': 6, 'Gb': 6,
-      'G': 7, 'G#': 8, 'Ab': 8,
-      'A': 9, 'A#': 10, 'Bb': 10,
-      'B': 11, 'Cb': 11, 'B#': 0,
+      'C': 0, 'C#': 1, 'Db': 1, 'C##': 2, 'Cbb': -2,
+      'D': 2, 'D#': 3, 'Eb': 3, 'D##': 4, 'Dbb': 0,
+      'E': 4, 'Fb': 4, 'E#': 5, 'E##': 6, 'Ebb': 2,
+      'F': 5, 'F#': 6, 'Gb': 6, 'F##': 7, 'Fbb': 3,
+      'G': 7, 'G#': 8, 'Ab': 8, 'G##': 9, 'Gbb': 5,
+      'A': 9, 'A#': 10, 'Bb': 10, 'A##': 11, 'Abb': 7,
+      'B': 11, 'Cb': 11, 'B#': 0, 'B##': 1, 'Bbb': 9,
     };
 
     const offset = noteOffsets[note] ?? 0;
@@ -937,8 +1277,20 @@ export class Parser {
   }
 
   private parseDurLiteral(token: Token): DurLiteral {
-    // Parse duration like 1/4, 3/8
-    const [numStr, denStr] = token.value.split('/');
+    // Parse duration like 1/4, 3/8, 1/4., 1/4..
+    const value = token.value;
+
+    // Count trailing dots
+    let dots = 0;
+    let i = value.length - 1;
+    while (i >= 0 && value[i] === '.') {
+      dots++;
+      i--;
+    }
+
+    // Extract fraction part (without dots)
+    const fractionPart = value.slice(0, value.length - dots);
+    const [numStr, denStr] = fractionPart.split('/');
     const numerator = parseInt(numStr, 10);
     const denominator = parseInt(denStr, 10);
 
@@ -946,6 +1298,7 @@ export class Parser {
       kind: 'DurLiteral',
       numerator,
       denominator,
+      dots,
       position: token.position,
     };
   }
@@ -1036,6 +1389,50 @@ export class Parser {
     };
   }
 
+  private parseTemplateLiteral(): TemplateLiteral {
+    const pos = this.peek().position;
+    const quasis: string[] = [];
+    const expressions: Expression[] = [];
+
+    // Simple template string without interpolation
+    if (this.check(TokenType.TEMPLATE_STRING)) {
+      quasis.push(this.advance().value);
+      return {
+        kind: 'TemplateLiteral',
+        quasis,
+        expressions,
+        position: pos,
+      };
+    }
+
+    // Template with interpolation
+    // Head: `text${
+    quasis.push(this.advance().value);
+
+    // Parse expressions and middle/tail parts
+    while (true) {
+      // Parse expression between ${ and }
+      expressions.push(this.parseExpression());
+
+      // Expect TEMPLATE_MIDDLE or TEMPLATE_TAIL
+      if (this.check(TokenType.TEMPLATE_MIDDLE)) {
+        quasis.push(this.advance().value);
+      } else if (this.check(TokenType.TEMPLATE_TAIL)) {
+        quasis.push(this.advance().value);
+        break;
+      } else {
+        throw this.error('Expected template continuation');
+      }
+    }
+
+    return {
+      kind: 'TemplateLiteral',
+      quasis,
+      expressions,
+      position: pos,
+    };
+  }
+
   // Helper methods
   private peek(): Token {
     return this.tokens[this.current];
@@ -1053,6 +1450,10 @@ export class Parser {
     if (!this.isAtEnd()) {
       this.current++;
     }
+    return this.tokens[this.current - 1];
+  }
+
+  private previous(): Token {
     return this.tokens[this.current - 1];
   }
 

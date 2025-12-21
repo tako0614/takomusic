@@ -30,6 +30,7 @@ export type Statement =
   | ForStatement
   | ForEachStatement
   | WhileStatement
+  | MatchStatement
   | ReturnStatement
   | BreakStatement
   | ContinueStatement
@@ -38,7 +39,8 @@ export type Statement =
 
 export interface ImportStatement extends BaseNode {
   kind: 'ImportStatement';
-  imports: string[];
+  imports: string[];      // Named imports: import { a, b } from "path"
+  namespace?: string;     // Namespace import: import * as ns from "path"
   path: string;
 }
 
@@ -121,7 +123,7 @@ export interface IfStatement extends BaseNode {
   kind: 'IfStatement';
   condition: Expression;
   consequent: Statement[];
-  alternate: Statement[] | null;
+  alternate: IfStatement | Statement[] | null;
 }
 
 export interface ForStatement extends BaseNode {
@@ -142,6 +144,17 @@ export interface WhileStatement extends BaseNode {
   kind: 'WhileStatement';
   condition: Expression;
   body: Statement[];
+}
+
+export interface MatchCase {
+  pattern: Expression | null; // null for default case
+  body: Statement[];
+}
+
+export interface MatchStatement extends BaseNode {
+  kind: 'MatchStatement';
+  expression: Expression;
+  cases: MatchCase[];
 }
 
 export interface ReturnStatement extends BaseNode {
@@ -177,6 +190,7 @@ export type Expression =
   | FloatLiteral
   | StringLiteral
   | BoolLiteral
+  | NullLiteral
   | PitchLiteral
   | DurLiteral
   | TimeLiteral
@@ -190,7 +204,10 @@ export type Expression =
   | ObjectLiteral
   | ArrowFunction
   | SpreadElement
-  | RangeExpression;
+  | RangeExpression
+  | ConditionalExpression
+  | TemplateLiteral
+  | TypeofExpression;
 
 export interface IntLiteral extends BaseNode {
   kind: 'IntLiteral';
@@ -207,9 +224,19 @@ export interface StringLiteral extends BaseNode {
   value: string;
 }
 
+export interface TemplateLiteral extends BaseNode {
+  kind: 'TemplateLiteral';
+  quasis: string[];      // Static string parts
+  expressions: Expression[];  // Interpolated expressions
+}
+
 export interface BoolLiteral extends BaseNode {
   kind: 'BoolLiteral';
   value: boolean;
+}
+
+export interface NullLiteral extends BaseNode {
+  kind: 'NullLiteral';
 }
 
 export interface PitchLiteral extends BaseNode {
@@ -223,6 +250,7 @@ export interface DurLiteral extends BaseNode {
   kind: 'DurLiteral';
   numerator: number;
   denominator: number;
+  dots: number; // 0 = none, 1 = dotted (1.5x), 2 = double-dotted (1.75x)
 }
 
 export interface TimeLiteral extends BaseNode {
@@ -260,12 +288,19 @@ export interface IndexExpression extends BaseNode {
   kind: 'IndexExpression';
   object: Expression;
   index: Expression;
+  optional?: boolean;  // ?.[index] optional chaining
 }
 
 export interface MemberExpression extends BaseNode {
   kind: 'MemberExpression';
   object: Expression;
   property: string;
+  optional?: boolean;  // ?.property optional chaining
+}
+
+export interface TypeofExpression extends BaseNode {
+  kind: 'TypeofExpression';
+  operand: Expression;
 }
 
 export interface ArrayLiteral extends BaseNode {
@@ -301,4 +336,11 @@ export interface RangeExpression extends BaseNode {
   start: Expression;
   end: Expression;
   inclusive: boolean;
+}
+
+export interface ConditionalExpression extends BaseNode {
+  kind: 'ConditionalExpression';
+  condition: Expression;
+  consequent: Expression;
+  alternate: Expression;
 }

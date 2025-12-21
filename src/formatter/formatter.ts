@@ -52,7 +52,11 @@ export class Formatter {
   private formatStatement(stmt: Statement): void {
     switch (stmt.kind) {
       case 'ImportStatement':
-        this.line(`import { ${stmt.imports.join(', ')} } from "${stmt.path}";`);
+        if (stmt.namespace) {
+          this.line(`import * as ${stmt.namespace} from "${stmt.path}";`);
+        } else {
+          this.line(`import { ${stmt.imports.join(', ')} } from "${stmt.path}";`);
+        }
         break;
 
       case 'ExportStatement':
@@ -84,14 +88,46 @@ export class Formatter {
         }
         this.indent--;
         if (stmt.alternate) {
-          this.line('} else {');
-          this.indent++;
-          for (const s of stmt.alternate) {
-            this.formatStatement(s);
+          if (Array.isArray(stmt.alternate)) {
+            // else: alternate is Statement[]
+            this.line('} else {');
+            this.indent++;
+            for (const s of stmt.alternate) {
+              this.formatStatement(s);
+            }
+            this.indent--;
+            this.line('}');
+          } else {
+            // else if: alternate is a single IfStatement
+            // Format as "} else if (...) {"
+            const indentStr = '  '.repeat(this.indent);
+            this.output.push(`${indentStr}} else if (${this.formatExpr(stmt.alternate.condition)}) {`);
+            this.indent++;
+            for (const s of stmt.alternate.consequent) {
+              this.formatStatement(s);
+            }
+            this.indent--;
+            // Handle the else if's alternate recursively
+            if (stmt.alternate.alternate) {
+              if (Array.isArray(stmt.alternate.alternate)) {
+                this.line('} else {');
+                this.indent++;
+                for (const s of stmt.alternate.alternate) {
+                  this.formatStatement(s);
+                }
+                this.indent--;
+                this.line('}');
+              } else {
+                // More else if chains - use recursion via a helper
+                this.formatElseIf(stmt.alternate.alternate);
+              }
+            } else {
+              this.line('}');
+            }
           }
-          this.indent--;
+        } else {
+          this.line('}');
         }
-        this.line('}');
         break;
 
       case 'ForStatement':
@@ -201,11 +237,14 @@ export class Formatter {
       case 'BoolLiteral':
         return expr.value ? 'true' : 'false';
 
+      case 'NullLiteral':
+        return 'null';
+
       case 'PitchLiteral':
         return `${expr.note}${expr.octave}`;
 
       case 'DurLiteral':
-        return `${expr.numerator}/${expr.denominator}`;
+        return `${expr.numerator}/${expr.denominator}${'.'.repeat(expr.dots)}`;
 
       case 'TimeLiteral':
         if (expr.sub === 0) {
@@ -290,5 +329,31 @@ export class Formatter {
   private line(text: string): void {
     const indentStr = '  '.repeat(this.indent);
     this.output.push(indentStr + text);
+  }
+
+  private formatElseIf(stmt: import('../types/ast.js').IfStatement): void {
+    const indentStr = '  '.repeat(this.indent);
+    this.output.push(`${indentStr}} else if (${this.formatExpr(stmt.condition)}) {`);
+    this.indent++;
+    for (const s of stmt.consequent) {
+      this.formatStatement(s);
+    }
+    this.indent--;
+    if (stmt.alternate) {
+      if (Array.isArray(stmt.alternate)) {
+        this.line('} else {');
+        this.indent++;
+        for (const s of stmt.alternate) {
+          this.formatStatement(s);
+        }
+        this.indent--;
+        this.line('}');
+      } else {
+        // More else if chains
+        this.formatElseIf(stmt.alternate);
+      }
+    } else {
+      this.line('}');
+    }
   }
 }

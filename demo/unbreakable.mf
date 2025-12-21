@@ -1,0 +1,259 @@
+// Unbreakable - Fast Rock Demo
+// A song about staying true to yourself
+
+import { powerChord, QUARTER, EIGHTH, HALF, WHOLE, SIXTEENTH } from "std:theory";
+import { accent, marcato } from "std:articulation";
+
+// Power chord riff patterns
+proc guitarRiff() {
+  // E power chord pattern
+  const eChord = powerChord(E2);
+  chord(eChord, EIGHTH);
+  rest(SIXTEENTH);
+  chord(eChord, SIXTEENTH);
+  chord(eChord, EIGHTH);
+  rest(EIGHTH);
+
+  // A power chord
+  const aChord = powerChord(A2);
+  chord(aChord, EIGHTH);
+  chord(aChord, EIGHTH);
+
+  // B power chord
+  const bChord = powerChord(B2);
+  chord(bChord, QUARTER);
+}
+
+proc guitarIntro() {
+  for (i in 0..2) {
+    guitarRiff();
+  }
+}
+
+proc guitarVerse() {
+  for (i in 0..4) {
+    const eChord = powerChord(E2);
+    chord(eChord, EIGHTH);
+    rest(EIGHTH);
+    chord(eChord, EIGHTH);
+    rest(EIGHTH);
+
+    const gChord = powerChord(G2);
+    chord(gChord, EIGHTH);
+    rest(EIGHTH);
+
+    const aChord = powerChord(A2);
+    chord(aChord, QUARTER);
+  }
+}
+
+proc guitarChorus() {
+  for (i in 0..2) {
+    // E - G - A - B progression
+    const eChord = powerChord(E3);
+    marcato(eChord[0], QUARTER, 120);
+    marcato(eChord[1], QUARTER, 120);
+
+    const gChord = powerChord(G3);
+    accent(gChord[0], QUARTER, 110);
+    accent(gChord[1], QUARTER, 110);
+
+    const aChord = powerChord(A3);
+    chord(aChord, HALF);
+
+    const bChord = powerChord(B3);
+    chord(bChord, HALF);
+  }
+}
+
+// Bass line
+proc bassIntro() {
+  for (i in 0..2) {
+    note(E1, EIGHTH, 100);
+    rest(SIXTEENTH);
+    note(E1, SIXTEENTH, 90);
+    note(E1, EIGHTH, 100);
+    rest(EIGHTH);
+    note(A1, EIGHTH, 100);
+    note(A1, EIGHTH, 90);
+    note(B1, QUARTER, 100);
+  }
+}
+
+proc bassVerse() {
+  for (i in 0..4) {
+    note(E1, EIGHTH, 100);
+    rest(EIGHTH);
+    note(E1, EIGHTH, 90);
+    rest(EIGHTH);
+    note(G1, EIGHTH, 100);
+    rest(EIGHTH);
+    note(A1, QUARTER, 100);
+  }
+}
+
+proc bassChorus() {
+  for (i in 0..2) {
+    note(E1, QUARTER, 110);
+    note(E1, QUARTER, 100);
+    note(G1, QUARTER, 110);
+    note(G1, QUARTER, 100);
+    note(A1, HALF, 110);
+    note(B1, HALF, 110);
+  }
+}
+
+// Drum pattern
+proc drumIntro() {
+  for (bar in 0..2) {
+    // Fast rock beat
+    drum(kick, QUARTER);
+    drum(hhc, EIGHTH);
+    drum(hhc, EIGHTH);
+    drum(snare, QUARTER);
+    drum(hhc, EIGHTH);
+    drum(kick, EIGHTH);
+    drum(kick, EIGHTH);
+    drum(hhc, EIGHTH);
+    drum(snare, QUARTER);
+    drum(hhc, QUARTER);
+  }
+}
+
+proc drumVerse() {
+  for (bar in 0..4) {
+    drum(kick, QUARTER);
+    drum(hhc, EIGHTH);
+    drum(hhc, EIGHTH);
+    drum(snare, QUARTER);
+    drum(hhc, EIGHTH);
+    drum(hhc, EIGHTH);
+    drum(kick, EIGHTH);
+    drum(kick, EIGHTH);
+    drum(hhc, EIGHTH);
+    drum(hhc, EIGHTH);
+    drum(snare, QUARTER);
+    drum(hhc, QUARTER);
+  }
+}
+
+proc drumChorus() {
+  for (bar in 0..4) {
+    // Driving chorus beat
+    drum(crash, QUARTER);
+    drum(kick, EIGHTH);
+    drum(kick, EIGHTH);
+    drum(snare, QUARTER);
+    drum(hho, EIGHTH);
+    drum(hho, EIGHTH);
+    drum(kick, QUARTER);
+    drum(kick, EIGHTH);
+    drum(kick, EIGHTH);
+    drum(snare, QUARTER);
+    drum(hho, QUARTER);
+  }
+}
+
+export proc main() {
+  // Song settings
+  title("Unbreakable");
+  ppq(480);
+  tempo(180);
+  timeSig(4, 4);
+
+  // Distortion Guitar (GM program 30)
+  track(midi, distguitar, {ch: 1, program: 30}) {
+    guitarIntro();
+    at(5:1);
+    guitarVerse();
+    at(13:1);
+    guitarChorus();
+  }
+
+  // Bass (GM program 33 = Electric Bass finger)
+  track(midi, bass, {ch: 2, program: 33}) {
+    bassIntro();
+    at(5:1);
+    bassVerse();
+    at(13:1);
+    bassChorus();
+  }
+
+  // Drums (ch 10 = GM drums)
+  track(midi, drums, {ch: 10}) {
+    drumIntro();
+    at(5:1);
+    drumVerse();
+    at(13:1);
+    drumChorus();
+  }
+
+  // Vocal - Lyrics about staying true to yourself
+  track(vocal, lead, {}) {
+    at(5:1);
+    // Verse 1: "Who decides what's right or wrong"
+    note(E4, QUARTER, "だ");
+    note(E4, QUARTER, "れ");
+    note(G4, QUARTER, "が");
+    note(A4, QUARTER, "き");
+    note(A4, HALF, "め");
+    note(G4, QUARTER, "た");
+    rest(QUARTER);
+
+    // "This path I walk alone"
+    note(E4, QUARTER, "ひ");
+    note(E4, QUARTER, "と");
+    note(G4, QUARTER, "り");
+    note(A4, QUARTER, "で");
+    note(B4, HALF, "あ");
+    note(A4, QUARTER, "る");
+    note(G4, QUARTER, "く");
+
+    // "Don't need your approval"
+    note(E4, QUARTER, "お");
+    note(G4, QUARTER, "ま");
+    note(A4, QUARTER, "え");
+    note(A4, QUARTER, "の");
+    note(B4, HALF, "こ");
+    note(A4, QUARTER, "と");
+    note(G4, QUARTER, "ば");
+
+    // "I know who I am"
+    note(A4, QUARTER, "じ");
+    note(B4, QUARTER, "ぶ");
+    note(B4, QUARTER, "ん");
+    note(A4, QUARTER, "を");
+    note(G4, HALF, "し");
+    note(E4, HALF, "る");
+
+    at(13:1);
+    // Chorus: "I won't break, I won't bend"
+    note(E5, HALF, "お");
+    note(D5, QUARTER, "れ");
+    note(E5, QUARTER, "な");
+    note(G5, HALF, "い");
+    rest(HALF);
+
+    // "Standing tall until the end"
+    note(E5, HALF, "ま");
+    note(D5, QUARTER, "げ");
+    note(E5, QUARTER, "な");
+    note(G5, HALF, "い");
+    rest(HALF);
+
+    // "This is me, unbreakable"
+    note(A5, QUARTER, "こ");
+    note(G5, QUARTER, "れ");
+    note(E5, QUARTER, "が");
+    note(G5, HALF, "お");
+    note(E5, QUARTER, "れ");
+    note(D5, HALF, "だ");
+
+    // "Forever standing on my own"
+    note(E5, QUARTER, "く");
+    note(G5, QUARTER, "だ");
+    note(A5, QUARTER, "け");
+    note(G5, QUARTER, "な");
+    note(E5, WHOLE, "い");
+  }
+}

@@ -31,6 +31,7 @@ export class Checker {
   private tempoEventCount: number = 0;
   private inVocalTrack: boolean = false;
   private currentTrackKind: 'vocal' | 'midi' | null = null;
+  private importChain: Set<string> = new Set(); // Track import chain for circular detection
 
   constructor(baseDir: string) {
     this.baseDir = baseDir;
@@ -91,9 +92,16 @@ export class Checker {
         this.definedSymbols.add(stmt.name);
         // NOT added to constSymbols - let is mutable
       } else if (stmt.kind === 'ImportStatement') {
-        for (const name of stmt.imports) {
-          this.definedSymbols.add(name);
-          this.constSymbols.add(name); // imports are constant
+        if (stmt.namespace) {
+          // Namespace import: import * as ns from "path"
+          this.definedSymbols.add(stmt.namespace);
+          this.constSymbols.add(stmt.namespace);
+        } else {
+          // Named imports: import { a, b } from "path"
+          for (const name of stmt.imports) {
+            this.definedSymbols.add(name);
+            this.constSymbols.add(name); // imports are constant
+          }
         }
       }
     }
@@ -139,8 +147,14 @@ export class Checker {
           this.checkStatement(s, filePath);
         }
         if (stmt.alternate) {
-          for (const s of stmt.alternate) {
-            this.checkStatement(s, filePath);
+          if (Array.isArray(stmt.alternate)) {
+            // else: alternate is Statement[]
+            for (const s of stmt.alternate) {
+              this.checkStatement(s, filePath);
+            }
+          } else {
+            // else if: alternate is a single IfStatement
+            this.checkStatement(stmt.alternate, filePath);
           }
         }
         break;
@@ -150,7 +164,8 @@ export class Checker {
         this.checkExpression(stmt.range.end, filePath);
         // Check if range bounds are compile-time constants
         if (!this.isConstant(stmt.range.start) || !this.isConstant(stmt.range.end)) {
-          this.addError('E401', 'For range bounds must be compile-time constants', stmt.position, filePath);
+          // Relaxed: now a warning instead of error
+          this.addWarning('W401', 'For range bounds are not compile-time constants - runtime iteration limit (100000) will be enforced', stmt.position, filePath);
         }
         // Add loop variable to scope for body checking
         this.definedSymbols.add(stmt.variable);
@@ -158,6 +173,62 @@ export class Checker {
         for (const s of stmt.body) {
           this.checkStatement(s, filePath);
         }
+        break;
+
+      case 'ForEachStatement':
+        this.checkExpression(stmt.iterable, filePath);
+        this.definedSymbols.add(stmt.variable);
+        this.constSymbols.add(stmt.variable);
+        for (const s of stmt.body) {
+          this.checkStatement(s, filePath);
+        }
+        break;
+
+      case 'WhileStatement':
+        this.checkExpression(stmt.condition, filePath);
+        for (const s of stmt.body) {
+          this.checkStatement(s, filePath);
+        }
+        break;
+
+      case 'MatchStatement':
+        this.checkExpression(stmt.expression, filePath);
+        for (const c of stmt.cases) {
+          if (c.pattern) {
+            this.checkExpression(c.pattern, filePath);
+          }
+          for (const s of c.body) {
+            this.checkStatement(s, filePath);
+          }
+        }
+        break;
+
+      case 'ReturnStatement':
+        if (stmt.value) {
+          this.checkExpression(stmt.value, filePath);
+        }
+        break;
+
+      case 'BreakStatement':
+      case 'ContinueStatement':
+        // No expression to check
+        break;
+
+      case 'IndexAssignmentStatement':
+        this.checkExpression(stmt.object, filePath);
+        this.checkExpression(stmt.index, filePath);
+        this.checkExpression(stmt.value, filePath);
+        break;
+
+      case 'PropertyAssignmentStatement':
+        this.checkExpression(stmt.object, filePath);
+        this.checkExpression(stmt.value, filePath);
+        break;
+
+      case 'DestructuringDeclaration':
+        this.checkExpression(stmt.value, filePath);
+        // Add destructured variables to scope
+        this.addPatternVariables(stmt.pattern, stmt.mutable);
         break;
 
       case 'TrackBlock':
@@ -189,6 +260,16 @@ export class Checker {
       return;
     }
 
+    // Check for circular imports
+    const normalizedPath = path.normalize(importPath);
+    if (this.importChain.has(normalizedPath)) {
+      this.addError('E302', `Circular import detected: ${stmt.path}`, stmt.position, filePath);
+      return;
+    }
+
+    // Add to import chain before processing
+    this.importChain.add(normalizedPath);
+
     // Check imported module for top-level execution
     try {
       const source = fs.readFileSync(importPath, 'utf-8');
@@ -208,11 +289,17 @@ export class Checker {
           }
         } else if (s.kind === 'TrackBlock') {
           this.addError('E300', 'Top-level track block in imported module', s.position, importPath);
+        } else if (s.kind === 'ImportStatement') {
+          // Recursively check nested imports for circular dependencies
+          this.checkImport(s, importPath);
         }
       }
     } catch (err) {
       this.addError('E400', `Error reading import: ${stmt.path}`, stmt.position, filePath);
     }
+
+    // Remove from import chain after processing
+    this.importChain.delete(normalizedPath);
   }
 
   private checkProc(proc: ProcDeclaration, filePath: string): void {
@@ -389,6 +476,37 @@ export class Checker {
     }
   }
 
+  private addPatternVariables(pattern: import('../types/ast.js').DestructuringPattern, mutable: boolean): void {
+    if (pattern.kind === 'ArrayPattern') {
+      for (const elem of pattern.elements) {
+        if (elem === null) continue;
+        if (typeof elem === 'string') {
+          this.definedSymbols.add(elem);
+          if (!mutable) this.constSymbols.add(elem);
+        } else {
+          this.addPatternVariables(elem, mutable);
+        }
+      }
+      if (pattern.rest) {
+        this.definedSymbols.add(pattern.rest);
+        if (!mutable) this.constSymbols.add(pattern.rest);
+      }
+    } else if (pattern.kind === 'ObjectPattern') {
+      for (const prop of pattern.properties) {
+        if (typeof prop.value === 'string') {
+          this.definedSymbols.add(prop.value);
+          if (!mutable) this.constSymbols.add(prop.value);
+        } else {
+          this.addPatternVariables(prop.value, mutable);
+        }
+      }
+      if (pattern.rest) {
+        this.definedSymbols.add(pattern.rest);
+        if (!mutable) this.constSymbols.add(pattern.rest);
+      }
+    }
+  }
+
   private isConstant(expr: Expression): boolean {
     switch (expr.kind) {
       case 'IntLiteral':
@@ -415,12 +533,13 @@ export class Checker {
 
   private checkRecursion(): void {
     // DFS to detect cycles in call graph
+    // Relaxed: now a warning instead of error, runtime depth limit (1000) will be enforced
     const visited = new Set<string>();
     const stack = new Set<string>();
 
     const dfs = (proc: string, path: string[]): boolean => {
       if (stack.has(proc)) {
-        this.addError('E310', `Recursion detected: ${[...path, proc].join(' -> ')}`);
+        this.addWarning('W310', `Recursion detected: ${[...path, proc].join(' -> ')} - runtime depth limit (1000) will be enforced`);
         return true;
       }
 
