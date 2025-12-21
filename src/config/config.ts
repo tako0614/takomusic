@@ -179,7 +179,12 @@ export function validateConfig(configPath: string): ConfigValidationResult {
 export function findConfigPath(startDir: string): string | null {
   let currentDir = startDir;
 
-  while (true) {
+  // Safety limit to prevent infinite loops (max 100 directory levels)
+  const MAX_DEPTH = 100;
+  let depth = 0;
+
+  while (depth < MAX_DEPTH) {
+    depth++;
     const configPath = path.join(currentDir, 'mfconfig.toml');
     if (fs.existsSync(configPath)) {
       return configPath;
@@ -191,6 +196,9 @@ export function findConfigPath(startDir: string): string | null {
     }
     currentDir = parentDir;
   }
+
+  // Reached max depth without finding config or root
+  return null;
 }
 
 function mergeConfig(defaults: MFConfig, parsed: any): MFConfig {

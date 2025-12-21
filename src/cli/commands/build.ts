@@ -124,32 +124,66 @@ function startWatchMode(
     const srcDir = path.join(baseDir, 'src');
     let debounceTimer: NodeJS.Timeout | null = null;
     let isBuilding = false;
+    let pendingBuild = false;
 
     console.log(`\nWatching for changes in ${path.relative(baseDir, srcDir)}...`);
     console.log('Press Ctrl+C to stop.\n');
 
+    const closeWatcher = () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+      }
+      watcher.close();
+    };
+
     const watcher = fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
       if (!filename || !filename.endsWith('.mf')) return;
-      if (isBuilding) return;
 
-      // Debounce rapid changes
+      // If already building, mark that we need another build after this one
+      if (isBuilding) {
+        pendingBuild = true;
+        return;
+      }
+
+      // Debounce rapid changes - set isBuilding immediately to prevent race condition
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
 
       debounceTimer = setTimeout(async () => {
         isBuilding = true;
-        console.log(`\n[${new Date().toLocaleTimeString()}] Change detected: ${filename}`);
-        await runBuild(baseDir, entryPath, config, profile);
-        console.log('\nWaiting for changes...');
-        isBuilding = false;
+        debounceTimer = null;
+
+        try {
+          console.log(`\n[${new Date().toLocaleTimeString()}] Change detected: ${filename}`);
+          await runBuild(baseDir, entryPath, config, profile);
+        } catch (err) {
+          console.error(`Build error: ${(err as Error).message}`);
+        } finally {
+          isBuilding = false;
+          console.log('\nWaiting for changes...');
+
+          // If another change came in while building, trigger a new build
+          if (pendingBuild) {
+            pendingBuild = false;
+            watcher.emit('change', 'change', filename);
+          }
+        }
       }, 100);
+    });
+
+    // Handle errors on the watcher
+    watcher.on('error', (err) => {
+      console.error(`Watcher error: ${err.message}`);
+      closeWatcher();
+      resolve(ExitCodes.IO_ERROR);
     });
 
     // Handle Ctrl+C
     process.on('SIGINT', () => {
       console.log('\nStopping watch mode...');
-      watcher.close();
+      closeWatcher();
       resolve(ExitCodes.SUCCESS);
     });
   });

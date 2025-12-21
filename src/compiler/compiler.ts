@@ -14,17 +14,42 @@ import { isStdlibImport, resolveStdlibPath, getStdlibDir } from '../utils/stdlib
 /**
  * Validate that a resolved module path is safe (no path traversal attacks).
  * Modules must be within the project base directory or the standard library.
+ * Uses path.relative to handle case-insensitivity on Windows and symlinks.
  */
 function isPathSafe(resolvedPath: string, baseDir: string): boolean {
-  const normalizedPath = path.normalize(resolvedPath);
-  const normalizedBase = path.normalize(baseDir);
-  const normalizedStdlib = path.normalize(getStdlibDir());
+  // Resolve symlinks and normalize paths
+  let realPath: string;
+  let realBase: string;
+  let realStdlib: string;
 
-  // Allow paths within the project directory or stdlib
-  return normalizedPath.startsWith(normalizedBase + path.sep) ||
-         normalizedPath.startsWith(normalizedStdlib + path.sep) ||
-         normalizedPath === normalizedBase ||
-         normalizedPath === normalizedStdlib;
+  try {
+    realPath = fs.realpathSync(resolvedPath);
+  } catch {
+    // File doesn't exist yet or can't be resolved - use normalized path
+    realPath = path.resolve(resolvedPath);
+  }
+
+  try {
+    realBase = fs.realpathSync(baseDir);
+  } catch {
+    realBase = path.resolve(baseDir);
+  }
+
+  try {
+    realStdlib = fs.realpathSync(getStdlibDir());
+  } catch {
+    realStdlib = path.resolve(getStdlibDir());
+  }
+
+  // Use path.relative to check if path is within allowed directories
+  // If relative path starts with '..', it's outside the directory
+  const relativeToBase = path.relative(realBase, realPath);
+  const relativeToStdlib = path.relative(realStdlib, realPath);
+
+  const isWithinBase = !relativeToBase.startsWith('..') && !path.isAbsolute(relativeToBase);
+  const isWithinStdlib = !relativeToStdlib.startsWith('..') && !path.isAbsolute(relativeToStdlib);
+
+  return isWithinBase || isWithinStdlib;
 }
 
 interface Module {

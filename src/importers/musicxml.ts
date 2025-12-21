@@ -66,6 +66,22 @@ const STEP_TO_PITCH: Record<string, number> = {
 // Pitch class to step and accidental
 const PITCH_TO_NOTE: string[] = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
 
+/**
+ * Safely parse an integer from a string, returning a default value if invalid
+ */
+function safeParseInt(value: string, defaultValue: number = 0): number {
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
+
+/**
+ * Safely parse a float from a string, returning a default value if invalid
+ */
+function safeParseFloat(value: string, defaultValue: number = 0): number {
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
+
 export function importMusicXML(xmlContent: string): string {
   const score = parseMusicXML(xmlContent);
   return generateMFS(score);
@@ -118,7 +134,7 @@ function parseMusicXML(xml: string): MusicXMLScore {
     const measureRegex = /<measure[^>]*number="(\d+)"[^>]*>([\s\S]*?)<\/measure>/g;
     let measureMatch;
     while ((measureMatch = measureRegex.exec(partContent)) !== null) {
-      const measureNum = parseInt(measureMatch[1]);
+      const measureNum = safeParseInt(measureMatch[1], part.measures.length + 1);
       const measureContent = measureMatch[2];
       const measure = parseMeasure(measureNum, measureContent);
       part.measures.push(measure);
@@ -144,20 +160,22 @@ function parseMeasure(number: number, content: string): MusicXMLMeasure {
 
     const divisionsMatch = attrContent.match(/<divisions>(\d+)<\/divisions>/);
     if (divisionsMatch) {
-      measure.attributes.divisions = parseInt(divisionsMatch[1]);
+      const divisions = safeParseInt(divisionsMatch[1], 1);
+      // Ensure divisions is at least 1 to prevent division by zero
+      measure.attributes.divisions = Math.max(1, divisions);
     }
 
     const timeMatch = attrContent.match(/<time>[\s\S]*?<beats>(\d+)<\/beats>[\s\S]*?<beat-type>(\d+)<\/beat-type>/);
     if (timeMatch) {
       measure.attributes.time = {
-        beats: parseInt(timeMatch[1]),
-        beatType: parseInt(timeMatch[2]),
+        beats: safeParseInt(timeMatch[1], 4),
+        beatType: safeParseInt(timeMatch[2], 4),
       };
     }
 
     const keyMatch = attrContent.match(/<key>[\s\S]*?<fifths>(-?\d+)<\/fifths>/);
     if (keyMatch) {
-      measure.attributes.key = { fifths: parseInt(keyMatch[1]) };
+      measure.attributes.key = { fifths: safeParseInt(keyMatch[1], 0) };
     }
   }
 
@@ -169,7 +187,7 @@ function parseMeasure(number: number, content: string): MusicXMLMeasure {
 
     const tempoMatch = dirContent.match(/<sound[^>]*tempo="([\d.]+)"/);
     if (tempoMatch) {
-      measure.direction.tempo = parseFloat(tempoMatch[1]);
+      measure.direction.tempo = safeParseFloat(tempoMatch[1], 120);
     }
 
     const dynamicsMatch = dirContent.match(/<dynamics>[\s\S]*?<(\w+)\s*\/>/);
@@ -214,19 +232,19 @@ function parseNote(content: string): MusicXMLNote {
   if (pitchMatch) {
     note.pitch = {
       step: pitchMatch[1],
-      octave: parseInt(pitchMatch[2]),
+      octave: safeParseInt(pitchMatch[2], 4),
     };
 
     const alterMatch = content.match(/<alter>(-?\d+)<\/alter>/);
     if (alterMatch) {
-      note.pitch.alter = parseInt(alterMatch[1]);
+      note.pitch.alter = safeParseInt(alterMatch[1], 0);
     }
   }
 
   // Extract duration
   const durationMatch = content.match(/<duration>(\d+)<\/duration>/);
   if (durationMatch) {
-    note.duration = parseInt(durationMatch[1]);
+    note.duration = safeParseInt(durationMatch[1], 1);
   }
 
   // Extract type
@@ -238,7 +256,7 @@ function parseNote(content: string): MusicXMLNote {
   // Extract voice
   const voiceMatch = content.match(/<voice>(\d+)<\/voice>/);
   if (voiceMatch) {
-    note.voice = parseInt(voiceMatch[1]);
+    note.voice = safeParseInt(voiceMatch[1], 1);
   }
 
   // Extract lyrics

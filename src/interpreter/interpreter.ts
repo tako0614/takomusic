@@ -999,20 +999,34 @@ export class Interpreter {
   }
 
   private evaluateBinary(op: string, leftExpr: Expression, rightExpr: Expression): RuntimeValue {
-    const left = this.evaluate(leftExpr);
-    const right = this.evaluate(rightExpr);
-
-    // Short-circuit evaluation for logical operators
+    // Short-circuit evaluation for logical operators - evaluate right side only if needed
     if (op === '&&') {
-      return makeBool(isTruthy(left) && isTruthy(right));
+      const left = this.evaluate(leftExpr);
+      if (!isTruthy(left)) {
+        return makeBool(false);
+      }
+      const right = this.evaluate(rightExpr);
+      return makeBool(isTruthy(right));
     }
     if (op === '||') {
-      return makeBool(isTruthy(left) || isTruthy(right));
+      const left = this.evaluate(leftExpr);
+      if (isTruthy(left)) {
+        return makeBool(true);
+      }
+      const right = this.evaluate(rightExpr);
+      return makeBool(isTruthy(right));
     }
-    // Nullish coalescing: return left if not null/undefined, else right
+    // Nullish coalescing: return left if not null, else evaluate right
     if (op === '??') {
-      return left.type === 'null' ? right : left;
+      const left = this.evaluate(leftExpr);
+      if (left.type !== 'null') {
+        return left;
+      }
+      return this.evaluate(rightExpr);
     }
+
+    const left = this.evaluate(leftExpr);
+    const right = this.evaluate(rightExpr);
 
     // Comparison operators
     if (op === '==' || op === '!=') {
@@ -1091,15 +1105,21 @@ export class Interpreter {
     if (op === '/') {
       // Dur / Int
       if (left.type === 'dur' && right.type === 'int') {
+        if (right.value === 0) {
+          throw createError('E400', 'Division by zero', leftExpr.position, this.filePath);
+        }
         const den = left.denominator * right.value;
         const gcd = this.gcd(left.numerator, den);
+        if (gcd === 0) {
+          throw createError('E400', 'Division by zero in duration calculation', leftExpr.position, this.filePath);
+        }
         return makeDur(left.numerator / gcd, den / gcd);
       }
       // Numeric
       const l = toNumber(left);
       const r = toNumber(right);
       if (r === 0) {
-        throw new Error('Division by zero');
+        throw createError('E400', 'Division by zero', rightExpr.position, this.filePath);
       }
       // Division always returns float unless both are int and divide evenly
       if (left.type === 'int' && right.type === 'int' && l % r === 0) {
@@ -1112,7 +1132,7 @@ export class Interpreter {
       const l = toNumber(left);
       const r = toNumber(right);
       if (r === 0) {
-        throw new Error('Modulo by zero');
+        throw createError('E400', 'Modulo by zero', rightExpr.position, this.filePath);
       }
       if (left.type === 'int' && right.type === 'int') {
         return makeInt(l % r);
@@ -1151,7 +1171,7 @@ export class Interpreter {
       return makeInt(l >> r);
     }
 
-    throw new Error(`Unknown binary operator: ${op}`);
+    throw createError('E400', `Unknown binary operator: ${op}`, leftExpr.position, this.filePath);
   }
 
   private evaluateUnary(op: string, operandExpr: Expression): RuntimeValue {
@@ -1171,7 +1191,7 @@ export class Interpreter {
       return makeInt(~n);
     }
 
-    throw new Error(`Unknown unary operator: ${op}`);
+    throw createError('E400', `Unknown unary operator: ${op}`, operandExpr.position, this.filePath);
   }
 
   private evaluateCall(
@@ -1887,15 +1907,17 @@ export class Interpreter {
           throw createError('E400', 'substr() requires at least 2 arguments', position, this.filePath);
         }
         const str = this.evaluate(args[0]);
-        const start = toNumber(this.evaluate(args[1]));
-        const length = args.length > 2 ? toNumber(this.evaluate(args[2])) : undefined;
+        const startIdx = Math.floor(toNumber(this.evaluate(args[1])));
+        const length = args.length > 2 ? Math.floor(toNumber(this.evaluate(args[2]))) : undefined;
         if (str.type !== 'string') {
           throw createError('E400', 'substr() first argument must be a string', position, this.filePath);
         }
+        // Handle negative start index (from end of string)
+        const actualStart = startIdx < 0 ? Math.max(0, str.value.length + startIdx) : startIdx;
         if (length !== undefined) {
-          return makeString(str.value.substr(start, length));
+          return makeString(str.value.substring(actualStart, actualStart + length));
         }
-        return makeString(str.value.substr(start));
+        return makeString(str.value.substring(actualStart));
       }
 
       case 'indexOf': {
@@ -2167,6 +2189,12 @@ export class Interpreter {
         }
         if (step === 0) {
           throw createError('E400', 'range() step cannot be 0', position, this.filePath);
+        }
+        // Check iteration limit to prevent memory exhaustion
+        const maxRangeSize = 1000000; // 1 million elements max
+        const expectedSize = Math.abs(Math.ceil((end - start) / step));
+        if (expectedSize > maxRangeSize) {
+          throw createError('E401', `range() would create ${expectedSize} elements, exceeding limit of ${maxRangeSize}`, position, this.filePath);
         }
         const result: RuntimeValue[] = [];
         if (step > 0) {
