@@ -51,7 +51,9 @@
       "Bash(npm cache clean:*)",
       "Bash(npm i:*)",
       "Bash(mf:*)",
-      "Bash(mf)"
+      "Bash(mf)",
+      "Bash(npm run test:*)",
+      "Bash(npm version:*)"
     ]
   }
 }

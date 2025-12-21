@@ -9,6 +9,18 @@ import type { Position } from '../types/token.js';
 import { findSimilarSymbols } from '../errors.js';
 import { isStdlibImport, resolveStdlibPath } from '../utils/stdlib.js';
 
+// Count Japanese syllables (morae) for NEUTRINO compatibility
+// Small kana (ゃゅょぁぃぅぇぉっ) don't count as separate syllables
+function countSyllables(lyric: string): number {
+  // Small hiragana and katakana that combine with previous character
+  const smallKana = /[ゃゅょぁぃぅぇぉっャュョァィゥェォッ]/g;
+  // Remove small kana (they don't count as separate syllables)
+  const withoutSmall = lyric.replace(smallKana, '');
+  // Count remaining kana characters
+  const kanaOnly = withoutSmall.replace(/[^\u3040-\u309F\u30A0-\u30FF]/g, '');
+  return kanaOnly.length;
+}
+
 export interface Diagnostic {
   code: string;
   severity: 'error' | 'warning';
@@ -307,10 +319,24 @@ export class Checker {
     this.currentProc = proc.name;
     this.callGraph.set(proc.name, new Set());
 
+    // Save current symbols to restore after proc scope
+    const savedSymbols = new Set(this.definedSymbols);
+    const savedConstSymbols = new Set(this.constSymbols);
+
+    // Add proc parameters to scope
+    for (const param of proc.params) {
+      this.definedSymbols.add(param.name);
+      // Parameters are treated as const within the proc
+      this.constSymbols.add(param.name);
+    }
+
     for (const stmt of proc.body) {
       this.checkStatement(stmt, filePath);
     }
 
+    // Restore symbols (simple scoping)
+    this.definedSymbols = savedSymbols;
+    this.constSymbols = savedConstSymbols;
     this.currentProc = oldProc;
   }
 
@@ -376,7 +402,9 @@ export class Checker {
           if (durArg.kind === 'DurLiteral') {
             // Check if duration is less than 1/64 (very short)
             // Using 1/64 as threshold since ppq/16 with ppq=480 would be 30 ticks = 1/64
-            if (durArg.numerator === 1 && durArg.denominator > 64) {
+            // Only check fraction-based durations (not tick-based)
+            if (durArg.numerator !== undefined && durArg.denominator !== undefined &&
+                durArg.numerator === 1 && durArg.denominator > 64) {
               this.addWarning('W100', `Extremely short note duration: ${durArg.numerator}/${durArg.denominator}`, expr.position, filePath);
             }
           }
@@ -392,6 +420,17 @@ export class Checker {
             if (lyricArg.kind === 'StringLiteral') {
               if (lyricArg.value.trim() === '') {
                 this.addError('E210', 'Vocal note() lyric cannot be empty', expr.position, filePath);
+              }
+              // E211: Check for kanji in lyrics (NEUTRINO only supports hiragana/katakana)
+              if (/[\u4E00-\u9FFF]/.test(lyricArg.value)) {
+                this.addError('E211', `Lyric contains kanji: "${lyricArg.value}" - NEUTRINO only supports hiragana/katakana`, expr.position, filePath,
+                  'Convert kanji to hiragana for vocal synthesis');
+              }
+              // E212: Check syllable count (NEUTRINO works best with 1-2 syllables per note)
+              const syllableCount = countSyllables(lyricArg.value);
+              if (syllableCount > 2) {
+                this.addError('E212', `Lyric "${lyricArg.value}" has ${syllableCount} syllables - NEUTRINO requires 1-2 syllables per note`, expr.position, filePath,
+                  'Split into multiple notes with 1-2 syllables each');
               }
             }
           }

@@ -248,9 +248,12 @@ export interface PitchLiteral extends BaseNode {
 
 export interface DurLiteral extends BaseNode {
   kind: 'DurLiteral';
-  numerator: number;
-  denominator: number;
-  dots: number; // 0 = none, 1 = dotted (1.5x), 2 = double-dotted (1.75x)
+  // Fraction/note-based duration (1/4, 4n, 8n., etc.)
+  numerator?: number;
+  denominator?: number;
+  dots?: number; // 0 = none, 1 = dotted (1.5x), 2 = double-dotted (1.75x)
+  // Tick-based duration (480t, 240t, etc.)
+  ticks?: number;
 }
 
 export interface TimeLiteral extends BaseNode {

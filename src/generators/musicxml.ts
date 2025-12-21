@@ -16,11 +16,12 @@ import type {
   RepeatEvent,
   OttavaEvent,
 } from '../types/ir.js';
+import { containsKanji, kanjiToHiragana, countSyllables, splitLyricForNeutrino } from '../utils/kanji.js';
 
 const NOTE_NAMES = ['C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'];
 const NOTE_ALTERS = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
 
-export function generateMusicXML(ir: SongIR): string {
+export async function generateMusicXML(ir: SongIR): Promise<string> {
   const vocalTracks = ir.tracks.filter((t): t is VocalTrack => t.kind === 'vocal');
 
   if (vocalTracks.length === 0) {
@@ -30,6 +31,60 @@ export function generateMusicXML(ir: SongIR): string {
   // Use first vocal track
   const track = vocalTracks[0];
   const notes = track.events.filter((e): e is NoteEvent => e.type === 'note');
+
+  // Check for kanji in lyrics and convert to hiragana with warning
+  const kanjiConversions: { original: string; converted: string }[] = [];
+  for (const note of notes) {
+    if (note.lyric && containsKanji(note.lyric)) {
+      const converted = await kanjiToHiragana(note.lyric);
+      kanjiConversions.push({ original: note.lyric, converted });
+      // Update the lyric in place
+      note.lyric = converted;
+    }
+  }
+  if (kanjiConversions.length > 0) {
+    console.warn(`Warning: Lyrics contain kanji which NEUTRINO cannot synthesize. Converting to hiragana:`);
+    for (const { original, converted } of kanjiConversions) {
+      console.warn(`  "${original}" -> "${converted}"`);
+    }
+  }
+
+  // Split notes with more than 2 syllables into multiple notes
+  const splitNotes: NoteEvent[] = [];
+  const splitWarnings: { original: string; splits: string[] }[] = [];
+  for (const note of notes) {
+    if (note.lyric && countSyllables(note.lyric) > 2) {
+      const chunks = splitLyricForNeutrino(note.lyric);
+      splitWarnings.push({ original: note.lyric, splits: chunks });
+
+      // Divide duration equally among chunks
+      const chunkDur = Math.floor(note.dur / chunks.length);
+      let currentTick = note.tick;
+
+      for (let i = 0; i < chunks.length; i++) {
+        // Last chunk gets any remaining ticks
+        const dur = i === chunks.length - 1
+          ? note.dur - (chunkDur * (chunks.length - 1))
+          : chunkDur;
+
+        splitNotes.push({
+          ...note,
+          tick: currentTick,
+          dur,
+          lyric: chunks[i],
+        });
+        currentTick += dur;
+      }
+    } else {
+      splitNotes.push(note);
+    }
+  }
+  if (splitWarnings.length > 0) {
+    console.warn(`Warning: Some lyrics have more than 2 syllables. Splitting notes for NEUTRINO compatibility:`);
+    for (const { original, splits } of splitWarnings) {
+      console.warn(`  "${original}" -> [${splits.map(s => `"${s}"`).join(', ')}]`);
+    }
+  }
 
   // Get divisions (ticks per quarter note = ppq)
   // Ensure divisions is at least 1 to prevent division by zero
@@ -44,9 +99,9 @@ export function generateMusicXML(ir: SongIR): string {
   // Get tempo
   const tempo = ir.tempos[0]?.bpm ?? 120;
 
-  // Group notes by measure
+  // Group notes by measure (use splitNotes instead of notes)
   const measures: NoteEvent[][] = [];
-  for (const note of notes) {
+  for (const note of splitNotes) {
     const measureIndex = Math.floor(note.tick / ticksPerMeasure);
     while (measures.length <= measureIndex) {
       measures.push([]);
@@ -62,7 +117,8 @@ export function generateMusicXML(ir: SongIR): string {
   // Use array and join for better performance with large scores
   const xmlParts: string[] = [];
 
-  xmlParts.push(`<?xml version="1.0" encoding="UTF-8"?>
+  // Add UTF-8 BOM for Windows compatibility (especially NEUTRINO)
+  xmlParts.push(`\uFEFF<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="3.1">
   <work>

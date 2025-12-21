@@ -209,8 +209,8 @@ async function buildCliProfile(ir: SongIR, config: MFConfig, baseDir: string): P
   // Generate MusicXML for vocal tracks
   const musicxmlPath = path.join(baseDir, cliConfig.musicxmlOut);
   fs.mkdirSync(path.dirname(musicxmlPath), { recursive: true });
-  const musicxml = generateMusicXML(ir);
-  fs.writeFileSync(musicxmlPath, musicxml);
+  const musicxml = await generateMusicXML(ir);
+  fs.writeFileSync(musicxmlPath, musicxml, 'utf8');
   console.log(`Generated: ${path.relative(baseDir, musicxmlPath)}`);
   count++;
 
@@ -237,7 +237,7 @@ async function buildMikuProfile(ir: SongIR, config: MFConfig, baseDir: string): 
   const vsqxPath = path.join(baseDir, mikuConfig.vsqxOut);
   fs.mkdirSync(path.dirname(vsqxPath), { recursive: true });
   const vsqx = generateVsqx(ir);
-  fs.writeFileSync(vsqxPath, vsqx);
+  fs.writeFileSync(vsqxPath, vsqx, 'utf8');
   console.log(`Generated: ${path.relative(baseDir, vsqxPath)}`);
   count++;
 

@@ -157,11 +157,9 @@ function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
     if (note.key < 0 || note.key > 127) {
       throw new Error(`Invalid note key: ${note.key}. Must be 0-127.`);
     }
-    const vel = note.vel ?? track.defaultVel;
-    // Validate velocity (0-127)
-    if (vel < 0 || vel > 127) {
-      throw new Error(`Invalid velocity: ${vel}. Must be 0-127.`);
-    }
+    const rawVel = note.vel ?? track.defaultVel;
+    // Clamp velocity to valid MIDI range (0-127)
+    const vel = Math.max(0, Math.min(127, rawVel));
     midiEvents.push({
       tick: note.tick,
       type: 'noteOn',

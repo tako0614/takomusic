@@ -1330,8 +1330,24 @@ export class Parser {
   }
 
   private parseDurLiteral(token: Token): DurLiteral {
-    // Parse duration like 1/4, 3/8, 1/4., 1/4..
+    // Parse duration in various formats:
+    // - Fraction: 1/4, 3/8, 1/4., 1/4..
+    // - Note-based: 1n, 2n, 4n, 8n, 16n, 4n., 8n..
+    // - Tick-based: 480t, 240t
     const value = token.value;
+
+    // Check for tick-based duration (ends with 't')
+    if (value.endsWith('t')) {
+      const ticks = parseInt(value.slice(0, -1), 10);
+      if (isNaN(ticks)) {
+        throw new MFError('SYNTAX', `Invalid tick duration: ${token.value}`, token.position, this.filePath);
+      }
+      return {
+        kind: 'DurLiteral',
+        ticks,
+        position: token.position,
+      };
+    }
 
     // Count trailing dots
     let dots = 0;
@@ -1341,12 +1357,29 @@ export class Parser {
       i--;
     }
 
-    // Extract fraction part (without dots)
-    const fractionPart = value.slice(0, value.length - dots);
-    if (fractionPart === '' || !fractionPart.includes('/')) {
+    // Extract core part (without dots)
+    const corePart = value.slice(0, value.length - dots);
+
+    // Check for note-based duration (ends with 'n')
+    if (corePart.endsWith('n')) {
+      const denominator = parseInt(corePart.slice(0, -1), 10);
+      if (isNaN(denominator) || denominator === 0) {
+        throw new MFError('SYNTAX', `Invalid note duration: ${token.value}`, token.position, this.filePath);
+      }
+      return {
+        kind: 'DurLiteral',
+        numerator: 1,
+        denominator,
+        dots,
+        position: token.position,
+      };
+    }
+
+    // Fraction format (1/4, 3/8, etc.)
+    if (!corePart.includes('/')) {
       throw new MFError('SYNTAX', `Invalid duration literal: ${token.value}`, token.position, this.filePath);
     }
-    const [numStr, denStr] = fractionPart.split('/');
+    const [numStr, denStr] = corePart.split('/');
     const numerator = parseInt(numStr, 10);
     const denominator = parseInt(denStr, 10);
 
@@ -1385,6 +1418,10 @@ export class Parser {
 
     if (!this.check(TokenType.RBRACKET)) {
       do {
+        // Allow trailing comma
+        if (this.check(TokenType.RBRACKET)) {
+          break;
+        }
         if (this.check(TokenType.SPREAD)) {
           const spreadPos = this.advance().position; // consume '...'
           elements.push({

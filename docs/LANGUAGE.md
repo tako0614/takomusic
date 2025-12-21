@@ -548,8 +548,36 @@ track(midi, piano, {ch: 1, program: 0}) {
 
 ```mfs
 track(vocal, lead, {}) {
-  note(C4, 4n, "la");  // Requires lyric
+  note(C4, 4n, "ら");  // Requires lyric
 }
+```
+
+**Lyric Restrictions:**
+
+Vocal tracks are synthesized using NEUTRINO, which has specific requirements:
+
+1. **Hiragana/Katakana only** - Kanji characters are not supported (E211)
+2. **1-2 syllables per note** - Each note can have at most 2 syllables (E212)
+
+Small kana (ゃゅょぁぃぅぇぉっ) combine with the previous character and don't count as separate syllables.
+
+```mfs
+// ✓ Correct - hiragana, 2 syllables
+note(C4, 4n, "こん");
+note(D4, 4n, "にち");
+note(E4, 4n, "は");
+
+// ✓ Correct - katakana
+note(C4, 4n, "ラ");
+
+// ✓ Correct - きょ counts as 1 syllable (ょ is small)
+note(C4, 4n, "きょう");  // 2 syllables: きょ + う
+
+// ✗ Error E211 - kanji not supported
+note(C4, 4n, "今日は");  // Use "きょうは" instead
+
+// ✗ Error E212 - too many syllables
+note(C4, 4n, "こんにちは");  // 5 syllables - split into multiple notes
 ```
 
 ### Track Options
