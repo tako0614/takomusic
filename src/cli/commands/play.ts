@@ -8,6 +8,7 @@ import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 import { Compiler } from '../../compiler/index.js';
 import { generateMidi } from '../../generators/midi.js';
+import { handleCliError } from '../errorHandler.js';
 
 // Track active process for stopping playback
 let activeProcess: ChildProcess | null = null;
@@ -19,6 +20,10 @@ export async function playCommand(args: string[]): Promise<number> {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-s' || args[i] === '--soundfont') {
+      if (i + 1 >= args.length) {
+        console.error('--soundfont requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       soundfont = args[i + 1];
       i++;
     } else if (args[i] === '-l' || args[i] === '--loop') {
@@ -110,15 +115,21 @@ Description:
 
     return result;
   } catch (err) {
-    if (err instanceof Error) {
-      console.error(err.message);
-    }
-    return ExitCodes.STATIC_ERROR;
+    return handleCliError(err);
   }
 }
 
+// Store handler reference for cleanup
+let stopHandler: (() => void) | null = null;
+
 function setupStopHandler(): void {
-  const handler = () => {
+  // Remove any existing handler to prevent accumulation
+  if (stopHandler) {
+    process.removeListener('SIGINT', stopHandler);
+    process.removeListener('SIGTERM', stopHandler);
+  }
+
+  stopHandler = () => {
     if (activeProcess) {
       console.log('\nStopping playback...');
       activeProcess.kill('SIGTERM');
@@ -132,8 +143,8 @@ function setupStopHandler(): void {
     }
   };
 
-  process.on('SIGINT', handler);
-  process.on('SIGTERM', handler);
+  process.on('SIGINT', stopHandler);
+  process.on('SIGTERM', stopHandler);
 }
 
 function findDefaultSoundfont(): string | undefined {

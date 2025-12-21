@@ -1,13 +1,20 @@
 // MIDI builtin functions: cc, expression, modulation, pan, volume, sustain, pitchBend, aftertouch, nrpn, sysex
 
 import type { Expression } from '../../types/ast.js';
+import type { Position } from '../../types/token.js';
 import type { CCEvent, PitchBendEvent, AftertouchEvent, PolyAftertouchEvent, NRPNEvent, SysExEvent } from '../../types/ir.js';
 import { RuntimeValue, makeNull, makeInt, toNumber } from '../runtime.js';
 import { MFError, createError } from '../../errors.js';
+import {
+  validateMidiValue,
+  validatePitch,
+  validatePitchBend,
+  validateCCController,
+} from '../validators.js';
 
-// Using 'any' for 'this' to avoid circular dependency and private member issues
+// Using 'any' for 'this' to avoid circular dependency with Interpreter class
 
-export function builtinCC(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinCC(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -25,12 +32,8 @@ export function builtinCC(this: any, args: Expression[], position: any): Runtime
     throw new MFError('TYPE', 'cc() value must be int', position, this.filePath);
   }
 
-  if (controller.value < 0 || controller.value > 127) {
-    throw createError('E120', `CC controller ${controller.value} out of range 0..127`, position, this.filePath);
-  }
-  if (value.value < 0 || value.value > 127) {
-    throw createError('E121', `CC value ${value.value} out of range 0..127`, position, this.filePath);
-  }
+  validateCCController(controller.value, position, this.filePath);
+  validateMidiValue(value.value, 'CC value', position, this.filePath);
 
   const event: CCEvent = {
     type: 'cc',
@@ -42,7 +45,7 @@ export function builtinCC(this: any, args: Expression[], position: any): Runtime
   return makeNull();
 }
 
-export function builtinExpression(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinExpression(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -54,9 +57,7 @@ export function builtinExpression(this: any, args: Expression[], position: any):
   if (value.type !== 'int') {
     throw new MFError('TYPE', 'expression() value must be int', position, this.filePath);
   }
-  if (value.value < 0 || value.value > 127) {
-    throw createError('E121', `expression value ${value.value} out of range 0..127`, position, this.filePath);
-  }
+  validateMidiValue(value.value, 'expression value', position, this.filePath);
 
   const event: CCEvent = {
     type: 'cc',
@@ -68,7 +69,7 @@ export function builtinExpression(this: any, args: Expression[], position: any):
   return makeNull();
 }
 
-export function builtinModulation(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinModulation(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -80,9 +81,7 @@ export function builtinModulation(this: any, args: Expression[], position: any):
   if (value.type !== 'int') {
     throw new MFError('TYPE', 'modulation() value must be int', position, this.filePath);
   }
-  if (value.value < 0 || value.value > 127) {
-    throw createError('E121', `modulation value ${value.value} out of range 0..127`, position, this.filePath);
-  }
+  validateMidiValue(value.value, 'modulation value', position, this.filePath);
 
   const event: CCEvent = {
     type: 'cc',
@@ -94,7 +93,7 @@ export function builtinModulation(this: any, args: Expression[], position: any):
   return makeNull();
 }
 
-export function builtinPan(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinPan(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -106,9 +105,7 @@ export function builtinPan(this: any, args: Expression[], position: any): Runtim
   if (value.type !== 'int') {
     throw new MFError('TYPE', 'pan() value must be int', position, this.filePath);
   }
-  if (value.value < 0 || value.value > 127) {
-    throw createError('E121', `pan value ${value.value} out of range 0..127 (64=center)`, position, this.filePath);
-  }
+  validateMidiValue(value.value, 'pan value', position, this.filePath);
 
   const event: CCEvent = {
     type: 'cc',
@@ -120,7 +117,7 @@ export function builtinPan(this: any, args: Expression[], position: any): Runtim
   return makeNull();
 }
 
-export function builtinVolume(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinVolume(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -132,9 +129,7 @@ export function builtinVolume(this: any, args: Expression[], position: any): Run
   if (value.type !== 'int') {
     throw new MFError('TYPE', 'volume() value must be int', position, this.filePath);
   }
-  if (value.value < 0 || value.value > 127) {
-    throw createError('E121', `volume value ${value.value} out of range 0..127`, position, this.filePath);
-  }
+  validateMidiValue(value.value, 'volume value', position, this.filePath);
 
   const event: CCEvent = {
     type: 'cc',
@@ -169,7 +164,7 @@ export function builtinSustain(this: any, args: Expression[], position: any): Ru
   return makeNull();
 }
 
-export function builtinPitchBend(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinPitchBend(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -181,9 +176,7 @@ export function builtinPitchBend(this: any, args: Expression[], position: any): 
   if (value.type !== 'int') {
     throw new MFError('TYPE', 'pitchBend() value must be int', position, this.filePath);
   }
-  if (value.value < -8192 || value.value > 8191) {
-    throw createError('E122', `pitchBend value ${value.value} out of range -8192..8191`, position, this.filePath);
-  }
+  validatePitchBend(value.value, position, this.filePath);
 
   const event: PitchBendEvent = {
     type: 'pitchBend',
@@ -194,7 +187,7 @@ export function builtinPitchBend(this: any, args: Expression[], position: any): 
   return makeNull();
 }
 
-export function builtinAftertouch(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinAftertouch(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -206,9 +199,7 @@ export function builtinAftertouch(this: any, args: Expression[], position: any):
   if (value.type !== 'int') {
     throw new MFError('TYPE', 'aftertouch() value must be int', position, this.filePath);
   }
-  if (value.value < 0 || value.value > 127) {
-    throw createError('E121', `aftertouch value ${value.value} out of range 0..127`, position, this.filePath);
-  }
+  validateMidiValue(value.value, 'aftertouch value', position, this.filePath);
 
   const event: AftertouchEvent = {
     type: 'aftertouch',
@@ -219,7 +210,7 @@ export function builtinAftertouch(this: any, args: Expression[], position: any):
   return makeNull();
 }
 
-export function builtinPolyAftertouch(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinPolyAftertouch(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -238,12 +229,8 @@ export function builtinPolyAftertouch(this: any, args: Expression[], position: a
   }
 
   const keyVal = key.type === 'pitch' ? key.midi : key.value;
-  if (keyVal < 0 || keyVal > 127) {
-    throw createError('E110', `polyAftertouch key ${keyVal} out of range 0..127`, position, this.filePath);
-  }
-  if (value.value < 0 || value.value > 127) {
-    throw createError('E121', `polyAftertouch value ${value.value} out of range 0..127`, position, this.filePath);
-  }
+  validatePitch(keyVal, position, this.filePath);
+  validateMidiValue(value.value, 'polyAftertouch value', position, this.filePath);
 
   const event: PolyAftertouchEvent = {
     type: 'polyAftertouch',
@@ -255,7 +242,7 @@ export function builtinPolyAftertouch(this: any, args: Expression[], position: a
   return makeNull();
 }
 
-export function builtinNRPN(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinNRPN(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -272,18 +259,11 @@ export function builtinNRPN(this: any, args: Expression[], position: any): Runti
     throw new MFError('TYPE', 'nrpn() parameters must be int', position, this.filePath);
   }
 
-  // Validate NRPN parameter and value ranges (0-127 for each byte)
-  if (paramMSB.value < 0 || paramMSB.value > 127) {
-    throw createError('E121', `nrpn paramMSB ${paramMSB.value} out of range 0..127`, position, this.filePath);
-  }
-  if (paramLSB.value < 0 || paramLSB.value > 127) {
-    throw createError('E121', `nrpn paramLSB ${paramLSB.value} out of range 0..127`, position, this.filePath);
-  }
-  if (valueMSB.value < 0 || valueMSB.value > 127) {
-    throw createError('E121', `nrpn valueMSB ${valueMSB.value} out of range 0..127`, position, this.filePath);
-  }
-  if (valueLSB && valueLSB.type === 'int' && (valueLSB.value < 0 || valueLSB.value > 127)) {
-    throw createError('E121', `nrpn valueLSB ${valueLSB.value} out of range 0..127`, position, this.filePath);
+  validateMidiValue(paramMSB.value, 'nrpn paramMSB', position, this.filePath);
+  validateMidiValue(paramLSB.value, 'nrpn paramLSB', position, this.filePath);
+  validateMidiValue(valueMSB.value, 'nrpn valueMSB', position, this.filePath);
+  if (valueLSB && valueLSB.type === 'int') {
+    validateMidiValue(valueLSB.value, 'nrpn valueLSB', position, this.filePath);
   }
 
   const event: NRPNEvent = {
@@ -298,7 +278,7 @@ export function builtinNRPN(this: any, args: Expression[], position: any): Runti
   return makeNull();
 }
 
-export function builtinRPN(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinRPN(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -314,16 +294,9 @@ export function builtinRPN(this: any, args: Expression[], position: any): Runtim
     throw new MFError('TYPE', 'rpn() parameters must be int', position, this.filePath);
   }
 
-  // Validate RPN parameter and value ranges (0-127 for each byte)
-  if (paramMSB.value < 0 || paramMSB.value > 127) {
-    throw createError('E121', `rpn paramMSB ${paramMSB.value} out of range 0..127`, position, this.filePath);
-  }
-  if (paramLSB.value < 0 || paramLSB.value > 127) {
-    throw createError('E121', `rpn paramLSB ${paramLSB.value} out of range 0..127`, position, this.filePath);
-  }
-  if (valueMSB.value < 0 || valueMSB.value > 127) {
-    throw createError('E121', `rpn valueMSB ${valueMSB.value} out of range 0..127`, position, this.filePath);
-  }
+  validateMidiValue(paramMSB.value, 'rpn paramMSB', position, this.filePath);
+  validateMidiValue(paramLSB.value, 'rpn paramLSB', position, this.filePath);
+  validateMidiValue(valueMSB.value, 'rpn valueMSB', position, this.filePath);
 
   // RPN uses CC 101 (MSB), 100 (LSB), 6 (Data Entry)
   const ccEvents: CCEvent[] = [
@@ -335,7 +308,7 @@ export function builtinRPN(this: any, args: Expression[], position: any): Runtim
   return makeNull();
 }
 
-export function builtinSysEx(this: any, args: Expression[], position: any): RuntimeValue {
+export function builtinSysEx(this: any, args: Expression[], position: Position): RuntimeValue {
   this.checkTrackPhase(position);
   const track = this.currentTrack!;
 
@@ -353,9 +326,7 @@ export function builtinSysEx(this: any, args: Expression[], position: any): Runt
     if (el.type !== 'int') {
       throw new MFError('TYPE', 'sysex() array must contain only int', position, this.filePath);
     }
-    if (el.value < 0 || el.value > 127) {
-      throw createError('E121', `sysex byte ${el.value} out of range 0..127`, position, this.filePath);
-    }
+    validateMidiValue(el.value, 'sysex byte', position, this.filePath);
     bytes.push(el.value);
   }
 

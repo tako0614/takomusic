@@ -2,6 +2,45 @@
 
 All notable changes to TakoMusic will be documented in this file.
 
+## [1.3.6] - 2024-12-21
+
+### Changed
+
+- **Code quality improvements**
+  - Added common validation functions (`validators.ts`) for MIDI values, pitch, pitch bend, time signatures
+  - Eliminated duplicate time signature validation code in `builtinTimeSig()`
+  - Improved type safety in builtin functions (replaced `position: any` with `position: Position`)
+  - Unified CLI error handling with new `handleCliError()` helper
+  - Consolidated `Position` type definition (removed duplicate in `builtins/types.ts`)
+
+### Fixed
+
+- **Security: FFmpeg filter syntax** - Allow `=` character in render command arguments for FFmpeg filter expressions
+
+## [1.3.5] - 2024-12-21
+
+### Fixed
+
+- **Windows path compatibility** - Allow backslash (`\`) in render command paths for Windows file paths
+
+## [1.3.4] - 2024-12-21
+
+### Changed
+
+- **Dynamic version display** - CLI now reads version from package.json instead of hardcoded value
+
+## [1.3.3] - 2024-12-21
+
+### Fixed
+
+- **Watch mode directory detection** - Fixed issue where watch mode couldn't detect the correct directory when entry file is in a subdirectory
+
+## [1.3.2] - 2024-12-21
+
+### Fixed
+
+- Minor bug fixes and stability improvements
+
 ## [1.3.1] - 2024-12-21
 
 ### Fixed
