@@ -647,11 +647,27 @@ export class Lexer {
     return char >= '0' && char <= '9';
   }
 
+
   private isAlpha(char: string): boolean {
     return (
       (char >= 'a' && char <= 'z') ||
       (char >= 'A' && char <= 'Z') ||
-      char === '_'
+      char === '_' ||
+      this.isJapaneseChar(char)
+    );
+  }
+
+  private isJapaneseChar(char: string): boolean {
+    const code = char.charCodeAt(0);
+    // Hiragana: U+3040-U+309F
+    // Katakana: U+30A0-U+30FF
+    // CJK Unified Ideographs (Kanji): U+4E00-U+9FFF
+    // Half-width Katakana: U+FF65-U+FF9F
+    return (
+      (code >= 0x3040 && code <= 0x309F) ||
+      (code >= 0x30A0 && code <= 0x30FF) ||
+      (code >= 0x4E00 && code <= 0x9FFF) ||
+      (code >= 0xFF65 && code <= 0xFF9F)
     );
   }
 

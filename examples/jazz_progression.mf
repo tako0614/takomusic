@@ -1,48 +1,49 @@
 // Jazz Progression Demo
-// Demonstrates chord progressions, voicings, and walking bass
+// Demonstrates chord voicings and walking bass in v2.0
 
-import { majorSeventh, minorSeventh, dominantSeventh } from "std:theory";
-import { firstInversion, secondInversion } from "std:theory";
-import { QUARTER, HALF, WHOLE } from "std:theory";
-import { walkingBass, albertiBass } from "std:notation";
+score "Jazz Progression" {
+  tempo 100
+  time 4/4
 
-title("Jazz Progression");
-ppq(480);
-tempo(100);
-timeSig(4, 4);
+  // Piano comping with jazz voicings
+  part Piano {
+    midi ch:1 program:0
 
-export proc main() {
-  // Piano comping
-  track(midi, piano, {}) {
     // II-V-I in C major
-    const chordDm7 = minorSeventh(D3);
-    const chordG7 = dominantSeventh(G3);
-    const chordCmaj7 = majorSeventh(C3);
+    // Dm7 (D F A C) - first bar
+    | [D3 F3 A3 C4] w |
 
-    // First chord - Dm7 in first inversion
-    chord(firstInversion(chordDm7), WHOLE);
+    // G7 (G B D F) - second bar
+    | [G3 B3 D4 F4] w |
 
-    // Second chord - G7 in second inversion
-    chord(secondInversion(chordG7), WHOLE);
-
-    // Resolution - Cmaj7 root position
-    chord(chordCmaj7, WHOLE * 2);
+    // Cmaj7 (C E G B) - bars 3-4
+    | [C3 E3 G3 B3] w |
+    | [C3 E3 G3 B3] w |
   }
 
   // Walking bass line
-  track(midi, bass, {}) {
-    const bassDm7 = minorSeventh(D2);
-    const bassG7 = dominantSeventh(G2);
-    const bassCmaj7 = majorSeventh(C2);
+  part Bass {
+    midi ch:2 program:32
 
-    // Walk through the changes
-    walkingBass(bassDm7, bassG7, QUARTER);
-    walkingBass(bassG7, bassCmaj7, QUARTER);
+    // Bar 1 - Dm7 walk
+    | D2 q  E2 q  F2 q  A2 q |
 
-    // Settle on the root
-    note(C2, HALF);
-    note(G2, QUARTER);
-    note(C2, QUARTER);
-    note(C2, WHOLE);
+    // Bar 2 - G7 walk
+    | G2 q  A2 q  B2 q  D3 q |
+
+    // Bar 3-4 - Cmaj7 resolution
+    | C2 h  G2 q  C2 q |
+    | C2 w |
+  }
+
+  // Light drums (brushes style)
+  part Drums {
+    midi ch:10 program:0
+
+    // Swing feel on ride
+    | ride q  ride q  ride q  ride q |
+    | ride q  ride q  ride q  ride q |
+    | ride q  ride q  ride q  ride q |
+    | ride q  ride q  ride q  ride q |
   }
 }

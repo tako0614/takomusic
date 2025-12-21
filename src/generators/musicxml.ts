@@ -303,7 +303,7 @@ function generateNoteWithUnderlay(note: NoteEvent | PhraseNote, divisions: numbe
   // Add notations element for slurs, ties, articulations, tuplets, fermata
   const hasNotations = extNote?.slurStart || extNote?.slurEnd ||
     tieStart || tieEnd ||
-    note.articulation || extNote?.tuplet || extNote?.fermata;
+    (note as NoteEvent).articulation || extNote?.tuplet || extNote?.fermata;
 
   if (hasNotations) {
     xml += `        <notations>
@@ -344,8 +344,8 @@ function generateNoteWithUnderlay(note: NoteEvent | PhraseNote, divisions: numbe
     }
 
     // Articulations
-    if (note.articulation) {
-      xml += generateArticulation(note.articulation);
+    if ((note as NoteEvent).articulation) {
+      xml += generateArticulation((note as NoteEvent).articulation!);
     }
 
     xml += `        </notations>

@@ -353,11 +353,6 @@ export class Checker {
         this.checkExpression(stmt.value, filePath);
         break;
 
-      case 'DestructuringDeclaration':
-        this.checkExpression(stmt.value, filePath);
-        // Add destructured variables to scope
-        this.addPatternVariables(stmt.pattern, stmt.mutable);
-        break;
 
       case 'ExpressionStatement':
         this.checkExpression(stmt.expression, filePath);
@@ -609,36 +604,6 @@ export class Checker {
     }
   }
 
-  private addPatternVariables(pattern: import('../types/ast.js').DestructuringPattern, mutable: boolean): void {
-    if (pattern.kind === 'ArrayPattern') {
-      for (const elem of pattern.elements) {
-        if (elem === null) continue;
-        if (typeof elem === 'string') {
-          this.definedSymbols.add(elem);
-          if (!mutable) this.constSymbols.add(elem);
-        } else {
-          this.addPatternVariables(elem, mutable);
-        }
-      }
-      if (pattern.rest) {
-        this.definedSymbols.add(pattern.rest);
-        if (!mutable) this.constSymbols.add(pattern.rest);
-      }
-    } else if (pattern.kind === 'ObjectPattern') {
-      for (const prop of pattern.properties) {
-        if (typeof prop.value === 'string') {
-          this.definedSymbols.add(prop.value);
-          if (!mutable) this.constSymbols.add(prop.value);
-        } else {
-          this.addPatternVariables(prop.value, mutable);
-        }
-      }
-      if (pattern.rest) {
-        this.definedSymbols.add(pattern.rest);
-        if (!mutable) this.constSymbols.add(pattern.rest);
-      }
-    }
-  }
 
   private isConstant(expr: Expression): boolean {
     switch (expr.kind) {
