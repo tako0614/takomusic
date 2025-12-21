@@ -679,7 +679,11 @@ export class Parser {
       '+=': '+', '-=': '-', '*=': '*', '/=': '/', '%=': '%',
       '&=': '&', '|=': '|', '^=': '^', '<<=': '<<', '>>=': '>>'
     };
-    return opMap[op] || op.charAt(0);
+    const result = opMap[op];
+    if (result === undefined) {
+      throw new Error(`Unknown compound assignment operator: ${op}`);
+    }
+    return result;
   }
 
   // Expression parsing with precedence climbing

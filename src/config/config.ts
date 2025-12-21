@@ -76,7 +76,12 @@ export function loadConfig(configPath: string): MFConfig {
   try {
     const content = fs.readFileSync(configPath, 'utf-8');
     const parsed = TOML.parse(content);
-    return mergeConfig(DEFAULT_CONFIG, parsed);
+    const config = mergeConfig(DEFAULT_CONFIG, parsed);
+
+    // Validate required fields and types
+    validateLoadedConfig(config, configPath);
+
+    return config;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
       throw new Error(`Config file not found: ${configPath}`);
@@ -85,6 +90,61 @@ export function loadConfig(configPath: string): MFConfig {
       throw new Error(`Invalid TOML syntax in ${configPath}: ${err.message}`);
     }
     throw err;
+  }
+}
+
+function validateLoadedConfig(config: MFConfig, configPath: string): void {
+  const errors: string[] = [];
+
+  // Validate project section
+  if (!config.project) {
+    errors.push('Missing [project] section');
+  } else {
+    if (typeof config.project.entry !== 'string' || config.project.entry.trim() === '') {
+      errors.push('project.entry must be a non-empty string');
+    }
+    if (typeof config.project.dist !== 'string' || config.project.dist.trim() === '') {
+      errors.push('project.dist must be a non-empty string');
+    }
+    if (typeof config.project.out !== 'string' || config.project.out.trim() === '') {
+      errors.push('project.out must be a non-empty string');
+    }
+    if (typeof config.project.defaultProfile !== 'string') {
+      errors.push('project.defaultProfile must be a string');
+    }
+  }
+
+  // Validate profiles section
+  if (config.profiles) {
+    if (config.profiles.cli) {
+      const cli = config.profiles.cli;
+      if (cli.backend !== 'headless') {
+        errors.push('profiles.cli.backend must be "headless"');
+      }
+      if (cli.vocalCmd !== undefined && !Array.isArray(cli.vocalCmd)) {
+        errors.push('profiles.cli.vocalCmd must be an array of strings');
+      }
+      if (cli.midiCmd !== undefined && !Array.isArray(cli.midiCmd)) {
+        errors.push('profiles.cli.midiCmd must be an array of strings');
+      }
+      if (cli.mixCmd !== undefined && !Array.isArray(cli.mixCmd)) {
+        errors.push('profiles.cli.mixCmd must be an array of strings');
+      }
+    }
+
+    if (config.profiles.miku) {
+      const miku = config.profiles.miku;
+      if (miku.backend !== 'miku-daw') {
+        errors.push('profiles.miku.backend must be "miku-daw"');
+      }
+      if (miku.importStrategy !== 'manual') {
+        errors.push('profiles.miku.importStrategy must be "manual"');
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid configuration in ${configPath}:\n  - ${errors.join('\n  - ')}`);
   }
 }
 

@@ -443,24 +443,37 @@ function pitchToMFS(pitch: { step: string; octave: number; alter?: number }): st
   return `${stepLower}${accidental}${pitch.octave}`;
 }
 
+// Helper for floating-point comparison with relative epsilon
+function approxEquals(a: number, b: number): boolean {
+  const epsilon = Math.max(Math.abs(a), Math.abs(b)) * 1e-9;
+  return Math.abs(a - b) <= Math.max(epsilon, 1e-12);
+}
+
 function durationToMFS(duration: number, divisions: number): string {
+  // Ensure divisions is positive to avoid division by zero
+  if (divisions <= 0) {
+    return `${duration}t`;
+  }
   const quarterNotes = duration / divisions;
 
-  if (quarterNotes === 4) return '1n';
-  if (quarterNotes === 2) return '2n';
-  if (quarterNotes === 1) return '4n';
-  if (quarterNotes === 0.5) return '8n';
-  if (quarterNotes === 0.25) return '16n';
-  if (quarterNotes === 0.125) return '32n';
+  // Use approxEquals for floating-point safe comparison
+  if (approxEquals(quarterNotes, 4)) return '1n';
+  if (approxEquals(quarterNotes, 2)) return '2n';
+  if (approxEquals(quarterNotes, 1)) return '4n';
+  if (approxEquals(quarterNotes, 0.5)) return '8n';
+  if (approxEquals(quarterNotes, 0.25)) return '16n';
+  if (approxEquals(quarterNotes, 0.125)) return '32n';
 
   // Dotted notes
-  if (quarterNotes === 3) return '2n.';
-  if (quarterNotes === 1.5) return '4n.';
-  if (quarterNotes === 0.75) return '8n.';
+  if (approxEquals(quarterNotes, 3)) return '2n.';
+  if (approxEquals(quarterNotes, 1.5)) return '4n.';
+  if (approxEquals(quarterNotes, 0.75)) return '8n.';
 
-  // Triplets
-  if (Math.abs(quarterNotes - 2/3) < 0.01) return '4n/3';
-  if (Math.abs(quarterNotes - 1/3) < 0.01) return '8n/3';
+  // Triplets - use exact fractions for comparison
+  if (approxEquals(quarterNotes, 2/3)) return '4n/3';
+  if (approxEquals(quarterNotes, 1/3)) return '8n/3';
+  if (approxEquals(quarterNotes, 4/3)) return '2n/3';
+  if (approxEquals(quarterNotes, 1/6)) return '16n/3';
 
   // Default to ticks
   const ticks = Math.round(duration * (480 / divisions));

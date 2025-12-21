@@ -320,6 +320,7 @@ import {
   toNumber,
   isTruthy,
   toString,
+  deepClone,
 } from './runtime.js';
 import { Scope } from './scope.js';
 import { createError, MFError } from '../errors.js';
@@ -402,6 +403,8 @@ export class Interpreter {
   private currentTrack: TrackState | null = null;
   private trackStarted: boolean = false;
   private callStack: Map<string, number> = new Map();
+  private callDepth: number = 0;
+  private static readonly MAX_CALL_DEPTH = 1000;
   private forIterationCount: number = 0;
   private filePath?: string;
 
@@ -1302,6 +1305,9 @@ export class Interpreter {
         if (pitch.midi < 0 || pitch.midi > 127) {
           throw createError('E110', `Pitch ${pitch.midi} out of range 0..127`, position, this.filePath);
         }
+        if (vel.value < 0 || vel.value > 127) {
+          throw createError('E110', `Velocity ${vel.value} out of range 0..127`, position, this.filePath);
+        }
 
         const event: NoteEvent = {
           type: 'note',
@@ -1485,15 +1491,22 @@ export class Interpreter {
       // Array utilities
       case 'fill': {
         // fill(size, value) - create array of size filled with value
+        // Each element is a deep clone to avoid shared references
         if (args.length !== 2) {
           throw createError('E400', 'fill() requires 2 arguments', position, this.filePath);
         }
         const size = Math.floor(toNumber(this.evaluate(args[0])));
+        if (size < 0) {
+          throw createError('E400', 'fill() size must be non-negative', position, this.filePath);
+        }
+        if (size > 1000000) {
+          throw createError('E401', 'fill() size exceeds maximum (1000000)', position, this.filePath);
+        }
         const value = this.evaluate(args[1]);
         const elements: RuntimeValue[] = [];
         for (let i = 0; i < size; i++) {
-          // Deep copy for non-primitive values would be needed for objects
-          elements.push(value);
+          // Deep clone to avoid shared references for arrays/objects
+          elements.push(deepClone(value));
         }
         return makeArray(elements);
       }
@@ -1552,7 +1565,8 @@ export class Interpreter {
         if (arr.elements.length === 0) {
           return makeNull();
         }
-        return arr.elements.pop()!;
+        const popped = arr.elements.pop();
+        return popped ?? makeNull();
       }
 
       case 'concat': {
@@ -3037,6 +3051,13 @@ export class Interpreter {
     evalArgs: RuntimeValue[],
     position: { line: number; column: number; offset: number }
   ): RuntimeValue {
+    // Check recursion depth to prevent stack overflow
+    this.callDepth++;
+    if (this.callDepth > Interpreter.MAX_CALL_DEPTH) {
+      this.callDepth--;
+      throw createError('E401', `Maximum call depth exceeded (${Interpreter.MAX_CALL_DEPTH})`, position, this.filePath);
+    }
+
     // Create new scope chained to closure scope (not current scope!)
     const callScope = fn.closure.createChild();
 
@@ -3081,11 +3102,13 @@ export class Interpreter {
         result = e.value;
       } else {
         this.scope = oldScope;
+        this.callDepth--;
         throw e;
       }
     }
 
     this.scope = oldScope;
+    this.callDepth--;
     return result;
   }
 
