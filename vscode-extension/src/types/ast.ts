@@ -1,17 +1,183 @@
-// AST node types for TakoMusic language
+// AST node types for TakoScore v2.0 language
 
-import type { Position } from './token';
+import type { Position } from './token.js';
 
 export interface BaseNode {
   kind: string;
   position: Position;
 }
 
-// ============ Program ============
+// ============ Score ============
 
-export interface Program extends BaseNode {
-  kind: 'Program';
-  statements: Statement[];
+export interface Score extends BaseNode {
+  kind: 'Score';
+  title: string;
+  backend: BackendConfig | null;
+  globals: GlobalStatement[];
+  parts: PartDeclaration[];
+}
+
+// ============ Backend Configuration ============
+
+export interface BackendConfig extends BaseNode {
+  kind: 'BackendConfig';
+  name: string;  // 'neutrino', etc.
+  options: BackendOption[];
+}
+
+export interface BackendOption extends BaseNode {
+  kind: 'BackendOption';
+  key: string;
+  value: Expression;
+}
+
+// ============ Global Statements ============
+
+export type GlobalStatement =
+  | TempoStatement
+  | TimeSignatureStatement
+  | KeySignatureStatement
+  | PpqStatement
+  | ImportStatement
+  | ConstDeclaration
+  | ProcDeclaration;
+
+export interface TempoStatement extends BaseNode {
+  kind: 'TempoStatement';
+  bpm: Expression;
+  at?: Expression;  // Optional time position
+}
+
+export interface TimeSignatureStatement extends BaseNode {
+  kind: 'TimeSignatureStatement';
+  numerator: Expression;
+  denominator: Expression;
+  at?: Expression;  // Optional time position
+}
+
+export interface KeySignatureStatement extends BaseNode {
+  kind: 'KeySignatureStatement';
+  root: Expression;
+  mode: 'major' | 'minor';
+}
+
+export interface PpqStatement extends BaseNode {
+  kind: 'PpqStatement';
+  value: Expression;
+}
+
+// ============ Parts ============
+
+export interface PartDeclaration extends BaseNode {
+  kind: 'PartDeclaration';
+  name: string;
+  partKind: 'vocal' | 'midi' | null;  // Inferred or explicit
+  options: PartOption[];
+  body: PartBodyItem[];
+}
+
+export interface PartOption extends BaseNode {
+  kind: 'PartOption';
+  key: string;
+  value: Expression;
+}
+
+export type PartBodyItem =
+  | PhraseBlock
+  | RestStatement
+  | MidiBar
+  | Statement;
+
+// ============ Phrase Block (Vocal) ============
+
+export interface PhraseBlock extends BaseNode {
+  kind: 'PhraseBlock';
+  notesSection: NotesSection | null;
+  lyricsSection: LyricsSection | null;
+  breathMarks: BreathMark[];
+}
+
+export interface NotesSection extends BaseNode {
+  kind: 'NotesSection';
+  bars: NoteBar[];
+}
+
+export interface NoteBar extends BaseNode {
+  kind: 'NoteBar';
+  notes: NoteItem[];
+}
+
+export interface NoteItem extends BaseNode {
+  kind: 'NoteItem';
+  pitch: Expression;
+  duration: Expression;
+  tieStart?: boolean;   // ~ after note
+  tieEnd?: boolean;     // tied from previous
+  slurStart?: boolean;  // ( after note
+  slurEnd?: boolean;    // ) after note
+}
+
+export interface LyricsSection extends BaseNode {
+  kind: 'LyricsSection';
+  mode: 'mora' | 'phoneme';
+  tokens: LyricToken[];
+}
+
+export interface LyricToken extends BaseNode {
+  kind: 'LyricToken';
+  value: string;      // Mora/phoneme text or '_' for melisma
+  isMelisma: boolean; // true if '_'
+}
+
+export interface BreathMark extends BaseNode {
+  kind: 'BreathMark';
+  afterBar: number;   // Index of bar after which breath occurs
+}
+
+// ============ Rest Statement ============
+
+export interface RestStatement extends BaseNode {
+  kind: 'RestStatement';
+  duration: Expression;
+}
+
+// ============ MIDI Bar ============
+
+export interface MidiBar extends BaseNode {
+  kind: 'MidiBar';
+  items: MidiBarItem[];
+}
+
+export type MidiBarItem =
+  | MidiNote
+  | MidiChord
+  | MidiDrum
+  | MidiRest;
+
+export interface MidiNote extends BaseNode {
+  kind: 'MidiNote';
+  pitch: Expression;
+  duration: Expression;
+  velocity?: Expression;
+}
+
+export interface MidiChord extends BaseNode {
+  kind: 'MidiChord';
+  pitches: Expression[];
+  duration: Expression;
+  velocity?: Expression;
+}
+
+export interface MidiDrum extends BaseNode {
+  kind: 'MidiDrum';
+  name: string;
+  duration: Expression;
+  velocity?: Expression;
+}
+
+export interface MidiRest extends BaseNode {
+  kind: 'MidiRest';
+  duration: Expression;
 }
 
 // ============ Statements ============
@@ -23,15 +189,22 @@ export type Statement =
   | ConstDeclaration
   | LetDeclaration
   | AssignmentStatement
+  | IndexAssignmentStatement
+  | PropertyAssignmentStatement
   | IfStatement
   | ForStatement
+  | ForEachStatement
+  | WhileStatement
+  | MatchStatement
   | ReturnStatement
-  | ExpressionStatement
-  | TrackBlock;
+  | BreakStatement
+  | ContinueStatement
+  | ExpressionStatement;
 
 export interface ImportStatement extends BaseNode {
   kind: 'ImportStatement';
-  imports: string[];
+  imports: string[];      // Named imports: import { a, b } from "path"
+  namespace?: string;     // Namespace import: import * as ns from "path"
   path: string;
 }
 
@@ -40,10 +213,17 @@ export interface ExportStatement extends BaseNode {
   declaration: ProcDeclaration | ConstDeclaration;
 }
 
+// Parameter definition (supports rest and default values)
+export interface Parameter {
+  name: string;
+  rest?: boolean;
+  defaultValue?: Expression;
+}
+
 export interface ProcDeclaration extends BaseNode {
   kind: 'ProcDeclaration';
   name: string;
-  params: string[];
+  params: Parameter[];
   body: Statement[];
   exported: boolean;
 }
@@ -67,11 +247,25 @@ export interface AssignmentStatement extends BaseNode {
   value: Expression;
 }
 
+export interface IndexAssignmentStatement extends BaseNode {
+  kind: 'IndexAssignmentStatement';
+  object: Expression;
+  index: Expression;
+  value: Expression;
+}
+
+export interface PropertyAssignmentStatement extends BaseNode {
+  kind: 'PropertyAssignmentStatement';
+  object: Expression;
+  property: string;
+  value: Expression;
+}
+
 export interface IfStatement extends BaseNode {
   kind: 'IfStatement';
   condition: Expression;
   consequent: Statement[];
-  alternate: Statement[] | null;
+  alternate: IfStatement | Statement[] | null;
 }
 
 export interface ForStatement extends BaseNode {
@@ -81,22 +275,46 @@ export interface ForStatement extends BaseNode {
   body: Statement[];
 }
 
+export interface ForEachStatement extends BaseNode {
+  kind: 'ForEachStatement';
+  variable: string;
+  iterable: Expression;
+  body: Statement[];
+}
+
+export interface WhileStatement extends BaseNode {
+  kind: 'WhileStatement';
+  condition: Expression;
+  body: Statement[];
+}
+
+export interface MatchCase {
+  pattern: Expression | null; // null for default case
+  body: Statement[];
+}
+
+export interface MatchStatement extends BaseNode {
+  kind: 'MatchStatement';
+  expression: Expression;
+  cases: MatchCase[];
+}
+
 export interface ReturnStatement extends BaseNode {
   kind: 'ReturnStatement';
   value: Expression | null;
 }
 
+export interface BreakStatement extends BaseNode {
+  kind: 'BreakStatement';
+}
+
+export interface ContinueStatement extends BaseNode {
+  kind: 'ContinueStatement';
+}
+
 export interface ExpressionStatement extends BaseNode {
   kind: 'ExpressionStatement';
   expression: Expression;
-}
-
-export interface TrackBlock extends BaseNode {
-  kind: 'TrackBlock';
-  trackKind: 'vocal' | 'midi';
-  id: string;
-  options: ObjectLiteral | null;
-  body: Statement[];
 }
 
 // ============ Expressions ============
@@ -106,6 +324,7 @@ export type Expression =
   | FloatLiteral
   | StringLiteral
   | BoolLiteral
+  | NullLiteral
   | PitchLiteral
   | DurLiteral
   | TimeLiteral
@@ -113,11 +332,16 @@ export type Expression =
   | BinaryExpression
   | UnaryExpression
   | CallExpression
+  | IndexExpression
+  | MemberExpression
   | ArrayLiteral
   | ObjectLiteral
-  | RangeExpression
   | ArrowFunction
-  | MemberExpression;
+  | SpreadElement
+  | RangeExpression
+  | ConditionalExpression
+  | TemplateLiteral
+  | TypeofExpression;
 
 export interface IntLiteral extends BaseNode {
   kind: 'IntLiteral';
@@ -134,9 +358,19 @@ export interface StringLiteral extends BaseNode {
   value: string;
 }
 
+export interface TemplateLiteral extends BaseNode {
+  kind: 'TemplateLiteral';
+  quasis: string[];      // Static string parts
+  expressions: Expression[];  // Interpolated expressions
+}
+
 export interface BoolLiteral extends BaseNode {
   kind: 'BoolLiteral';
   value: boolean;
+}
+
+export interface NullLiteral extends BaseNode {
+  kind: 'NullLiteral';
 }
 
 export interface PitchLiteral extends BaseNode {
@@ -148,8 +382,14 @@ export interface PitchLiteral extends BaseNode {
 
 export interface DurLiteral extends BaseNode {
   kind: 'DurLiteral';
-  numerator: number;
-  denominator: number;
+  // Note-based duration (w, h, q, e, s, t, x)
+  noteValue?: 'w' | 'h' | 'q' | 'e' | 's' | 't' | 'x';
+  dots?: number; // 0 = none, 1 = dotted (1.5x), 2 = double-dotted (1.75x)
+  // Tick-based duration (480t, 240t, etc.)
+  ticks?: number;
+  // Fraction representation for internal use
+  numerator?: number;
+  denominator?: number;
 }
 
 export interface TimeLiteral extends BaseNode {
@@ -179,18 +419,55 @@ export interface UnaryExpression extends BaseNode {
 
 export interface CallExpression extends BaseNode {
   kind: 'CallExpression';
-  callee: string;
-  arguments: Expression[];
+  callee: Expression;
+  arguments: (Expression | SpreadElement)[];
+}
+
+export interface IndexExpression extends BaseNode {
+  kind: 'IndexExpression';
+  object: Expression;
+  index: Expression;
+  optional?: boolean;  // ?.[index] optional chaining
+}
+
+export interface MemberExpression extends BaseNode {
+  kind: 'MemberExpression';
+  object: Expression;
+  property: string;
+  optional?: boolean;  // ?.property optional chaining
+}
+
+export interface TypeofExpression extends BaseNode {
+  kind: 'TypeofExpression';
+  operand: Expression;
 }
 
 export interface ArrayLiteral extends BaseNode {
   kind: 'ArrayLiteral';
-  elements: Expression[];
+  elements: (Expression | SpreadElement)[];
 }
+
+// Object property types
+export type ObjectProperty =
+  | { kind: 'property'; key: string; value: Expression; shorthand: boolean }
+  | { kind: 'spread'; argument: Expression };
 
 export interface ObjectLiteral extends BaseNode {
   kind: 'ObjectLiteral';
-  properties: { key: string; value: Expression }[];
+  properties: ObjectProperty[];
+}
+
+// Arrow function expression
+export interface ArrowFunction extends BaseNode {
+  kind: 'ArrowFunction';
+  params: Parameter[];
+  body: Expression | Statement[];
+}
+
+// Spread element for arrays and function calls
+export interface SpreadElement extends BaseNode {
+  kind: 'SpreadElement';
+  argument: Expression;
 }
 
 export interface RangeExpression extends BaseNode {
@@ -200,15 +477,9 @@ export interface RangeExpression extends BaseNode {
   inclusive: boolean;
 }
 
-export interface ArrowFunction extends BaseNode {
-  kind: 'ArrowFunction';
-  params: string[];
-  body: Expression;
-}
-
-export interface MemberExpression extends BaseNode {
-  kind: 'MemberExpression';
-  object: Expression;
-  property: Expression;
-  computed: boolean;
+export interface ConditionalExpression extends BaseNode {
+  kind: 'ConditionalExpression';
+  condition: Expression;
+  consequent: Expression;
+  alternate: Expression;
 }

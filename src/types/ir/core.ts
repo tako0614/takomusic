@@ -66,7 +66,7 @@ export interface Phrase {
   startTick: number;
   endTick: number;
   notes: PhraseNote[];
-  breaths: BreathMark[];
+  breaths: IRBreathMark[];
 }
 
 /**
@@ -89,7 +89,7 @@ export interface PhraseNote {
 
 export type Syllabic = 'single' | 'begin' | 'middle' | 'end';
 
-export interface BreathMark {
+export interface IRBreathMark {
   tick: number;
   dur?: number;
   intensity?: number;

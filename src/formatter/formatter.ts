@@ -14,6 +14,14 @@ export class Formatter {
   private indent: number = 0;
   private output: string[] = [];
 
+  private getIndent(): string {
+    return '  '.repeat(this.indent);
+  }
+
+  private formatExpression(expr: Expression): string {
+    return this.formatExpr(expr);
+  }
+
   format(score: Score): string {
     this.indent = 0;
     this.output = [];
@@ -80,7 +88,7 @@ export class Formatter {
         this.output.push(`${this.getIndent()}const ${stmt.name} = ${this.formatExpression(stmt.value)};`);
         break;
       case 'ProcDeclaration':
-        this.formatProc(stmt);
+        this.formatProcDecl(stmt);
         break;
     }
   }
@@ -157,7 +165,7 @@ export class Formatter {
     this.output.push(`${this.getIndent()}}`);
   }
 
-  private formatProc(proc: { name: string; params: Parameter[]; body: Statement[] }): void {
+  private formatProcDecl(proc: { name: string; params: Parameter[]; body: Statement[] }): void {
     const params = proc.params.map(p => {
       if (p.rest) return `...${p.name}`;
       if (p.defaultValue) return `${p.name} = ${this.formatExpression(p.defaultValue)}`;

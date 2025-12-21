@@ -54,7 +54,10 @@
       "Bash(mf)",
       "Bash(npm run test:*)",
       "Bash(npm version:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)",
+      "Bash(do echo \"Parsing $f...\")"
     ]
   }
 }

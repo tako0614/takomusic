@@ -107,15 +107,17 @@ export function createError(
 function getDefaultSuggestion(code: string, details?: string): string | undefined {
   switch (code) {
     case 'E001':
-      return 'Add ppq(480) at the start of main()';
+      return 'Ensure score has tempo and time signature';
     case 'E010':
-      return 'Add tempo(120) at the start of main()';
+      return 'Add tempo N at the start of score';
     case 'E011':
-      return 'Add timeSig(4, 4) at the start of main()';
+      return 'Add time N/M at the start of score';
     case 'E020':
       return 'Time signature changes must occur at the start of a bar';
     case 'E050':
-      return 'Move global functions (ppq, tempo, timeSig, title) before any track() blocks';
+      return 'Global settings (tempo, time, key) must come before parts';
+    case 'E100':
+      return 'Ensure lyric count matches onset count (ties don\'t increase onsets, use _ for melisma)';
     case 'E110':
       return 'Valid MIDI pitch range is 0-127 (C-1 to G9). Try using a different octave.';
     case 'E120':
@@ -137,17 +139,16 @@ function getDefaultSuggestion(code: string, details?: string): string | undefine
     case 'E134':
       return 'Valid vocal styles: soft, normal, power, falsetto, whisper, breathy, belt, head, chest';
     case 'E200':
-      return 'Vocal notes cannot overlap. Use rest() or adjust timing with at()';
+      return 'Vocal notes cannot overlap. Use rest or separate phrases.';
     case 'E210':
-      return 'Vocal note() requires a lyric: note(C4, 1/4, "あ")';
+      return 'Use phrase { notes: ...; lyrics mora: ...; } for vocal parts';
+    case 'E211':
+      return 'NEUTRINO requires hiragana/katakana lyrics. Convert kanji to reading.';
     case 'E300':
       return 'Imported modules should only contain proc/const definitions, not executable code';
     case 'E310':
       return 'Procedures cannot call themselves directly or indirectly';
     case 'E400':
-      if (details?.includes('main')) {
-        return 'Add "export proc main() { ... }" to define the entry point';
-      }
       return undefined; // Will use symbol suggestion instead
     case 'E401':
       return 'For loop range bounds must be const values, not let variables';

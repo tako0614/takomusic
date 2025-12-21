@@ -1,0 +1,62 @@
+// =============================================================
+// Rock Demo - TakoScore v2.0
+// - 4/4, BPM 160
+// - E minor power chord progression
+// =============================================================
+
+score "Rock Demo" {
+  tempo 160
+  time 4/4
+  key E minor
+
+  // Rhythm Guitar - power chords
+  part Guitar {
+    midi ch:1 program:29
+
+    // Verse pattern (E5 - C5 - G5 - D5)
+    | [E2 B2 E3] e  re  [E2 B2 E3] e  re  [E2 B2 E3] e  re  [E2 B2 E3] e  re |
+    | [C3 G3 C4] e  re  [C3 G3 C4] e  re  [C3 G3 C4] e  re  [C3 G3 C4] e  re |
+    | [G2 D3 G3] e  re  [G2 D3 G3] e  re  [G2 D3 G3] e  re  [G2 D3 G3] e  re |
+    | [D3 A3 D4] e  re  [D3 A3 D4] e  re  [D3 A3 D4] e  re  [D3 A3 D4] e  re |
+
+    // Chorus pattern - big chords
+    | [G2 D3 G3] h  [G2 D3 G3] h |
+    | [D3 A3 D4] h  [D3 A3 D4] h |
+    | [E2 B2 E3] h  [E2 B2 E3] h |
+    | [C3 G3 C4] h  [C3 G3 C4] h |
+  }
+
+  // Bass
+  part Bass {
+    midi ch:2 program:33
+
+    // Verse
+    | E1 q  E1 q  E1 q  E1 q |
+    | C2 q  C2 q  C2 q  C2 q |
+    | G1 q  G1 q  G1 q  G1 q |
+    | D2 q  D2 q  D2 q  D2 q |
+
+    // Chorus
+    | G1 h  G1 h |
+    | D2 h  D2 h |
+    | E1 h  E1 h |
+    | C2 h  C2 h |
+  }
+
+  // Drums
+  part Drums {
+    midi ch:10 program:0
+
+    // Verse - 8th note pattern
+    | kick e  hhc e  snare e  hhc e  kick e  hhc e  snare e  hhc e |
+    | kick e  hhc e  snare e  hhc e  kick e  hhc e  snare e  hhc e |
+    | kick e  hhc e  snare e  hhc e  kick e  hhc e  snare e  hhc e |
+    | kick e  hhc e  snare e  hhc e  kick e  kick e  snare e  snare e |
+
+    // Chorus - driving
+    | kick q  snare q  kick q  snare q |
+    | kick q  snare q  kick q  snare q |
+    | kick q  snare q  kick q  snare q |
+    | kick q  snare q  crash w |
+  }
+}

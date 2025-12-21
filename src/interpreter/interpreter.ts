@@ -459,7 +459,7 @@ export class Interpreter {
         const value = this.evaluate(opt.value);
         if (opt.key === 'singer' && value.type === 'string') {
           this.ir.backend.singer = value.value;
-        } else if (opt.key === 'lang' && (value.type === 'string' || value.type === 'ident')) {
+        } else if (opt.key === 'lang' && (value.type === 'string')) {
           this.ir.backend.lang = toString(value);
         } else if (opt.key === 'phonemeBudgetPerOnset' && value.type === 'int') {
           this.ir.backend.phonemeBudgetPerOnset = value.value;
@@ -1072,9 +1072,11 @@ export class Interpreter {
       case 'ProcDeclaration':
         // Already handled in first pass
         break;
+      default: {
+        const unknownStmt = stmt as Statement;
+        throw createError('E400', `Unknown statement kind: ${unknownStmt.kind}`, unknownStmt.position, this.filePath);
+      }
 
-      default:
-        throw createError('E400', `Unknown statement kind: ${(stmt as Statement).kind}`, stmt.position, this.filePath);
     }
   }
 
@@ -10873,6 +10875,7 @@ export class Interpreter {
             engine: state.meta.engine as string | undefined,
             voice: state.meta.voice as string | undefined,
           },
+          phrases: state.phrases ?? [],
           events: state.events,
           vocaloidParams: state.vocaloidParams && state.vocaloidParams.length > 0
             ? state.vocaloidParams

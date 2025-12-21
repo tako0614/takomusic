@@ -8,7 +8,7 @@ import type { SongIR, VocalTrack, MidiTrack } from '../types/ir.js';
 describe('MIDI Generator', () => {
   it('should generate valid MIDI header', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -28,7 +28,7 @@ describe('MIDI Generator', () => {
 
   it('should include tempo and time signature events', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -45,7 +45,7 @@ describe('MIDI Generator', () => {
 
   it('should generate notes for MIDI tracks', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -76,7 +76,7 @@ describe('MIDI Generator', () => {
 
   it('should handle multiple MIDI tracks', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -118,7 +118,7 @@ describe('MIDI Generator', () => {
 describe('MusicXML Generator', () => {
   it('should generate valid MusicXML structure', async () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test Song',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -135,7 +135,7 @@ describe('MusicXML Generator', () => {
 
   it('should include vocal notes with lyrics', async () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -165,7 +165,7 @@ describe('MusicXML Generator', () => {
 
   it('should include tempo marking', async () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 140 }],
@@ -190,7 +190,7 @@ describe('MusicXML Generator', () => {
 
   it('should escape XML special characters', async () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test & <Special>',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -205,7 +205,7 @@ describe('MusicXML Generator', () => {
 
   it('should convert kanji lyrics to hiragana', async () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -234,7 +234,7 @@ describe('MusicXML Generator', () => {
 describe('VSQX Generator', () => {
   it('should generate valid VSQX structure', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test Song',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -251,7 +251,7 @@ describe('VSQX Generator', () => {
 
   it('should include vocal notes', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -280,7 +280,7 @@ describe('VSQX Generator', () => {
 
   it('should include tempo events', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [
@@ -301,7 +301,7 @@ describe('VSQX Generator', () => {
 describe('Tempo MIDI Generator', () => {
   it('should generate MIDI with only tempo track', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [{ tick: 0, bpm: 120 }],
@@ -330,7 +330,7 @@ describe('Tempo MIDI Generator', () => {
 
   it('should include multiple tempo changes', () => {
     const ir: SongIR = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: 'Test',
       ppq: 480,
       tempos: [

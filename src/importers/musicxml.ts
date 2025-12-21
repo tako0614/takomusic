@@ -302,145 +302,189 @@ function parseNote(content: string): MusicXMLNote {
 function generateMFS(score: MusicXMLScore): string {
   const lines: string[] = [];
 
-  // Header
+  // Header comment
   lines.push('// Generated from MusicXML');
-  if (score.title) {
-    lines.push(`title "${score.title}"`);
-  }
   if (score.composer) {
     lines.push(`// Composer: ${score.composer}`);
   }
   lines.push('');
 
+  // Score block
+  const title = score.title || 'Imported';
+  lines.push(`score "${title}" {`);
+
   // Default settings
   let currentDivisions = 1;
   let currentTempo = 120;
+  let currentTimeNum = 4;
+  let currentTimeDen = 4;
 
-  // Generate tracks
-  for (const part of score.parts) {
-    const trackName = sanitizeTrackName(part.name);
-    lines.push(`track ${trackName} {`);
-    lines.push('  kind: midi');
-    lines.push('  channel: 1');
-    lines.push('  program: 0');
-    lines.push('');
-
-    let inSlur = false;
-
-    for (const measure of part.measures) {
-      // Handle attributes
-      if (measure.attributes) {
-        if (measure.attributes.divisions) {
-          currentDivisions = measure.attributes.divisions;
-        }
-        if (measure.attributes.time) {
-          lines.push(`  timeSig(${measure.attributes.time.beats}, ${measure.attributes.time.beatType})`);
-        }
-      }
-
-      // Handle direction
-      if (measure.direction) {
-        if (measure.direction.tempo && measure.direction.tempo !== currentTempo) {
-          currentTempo = measure.direction.tempo;
-          lines.push(`  tempo(${currentTempo})`);
-        }
-        if (measure.direction.dynamics) {
-          lines.push(`  ${measure.direction.dynamics}()`);
-        }
-      }
-
-      // Handle notes
-      const chordNotes: MusicXMLNote[] = [];
-
-      for (const note of measure.notes) {
-        if (note.chord) {
-          chordNotes.push(note);
-          continue;
-        }
-
-        // Flush previous chord if any
-        if (chordNotes.length > 0) {
-          const chordStr = generateChord(chordNotes, currentDivisions);
-          lines.push(`  ${chordStr}`);
-          chordNotes.length = 0;
-        }
-
-        // Handle slurs
-        if (note.slur === 'start' && !inSlur) {
-          lines.push('  slurStart()');
-          inSlur = true;
-        }
-
-        // Generate note or rest
-        if (note.rest) {
-          const durStr = durationToMFS(note.duration, currentDivisions);
-          lines.push(`  r(${durStr})`);
-        } else if (note.grace) {
-          if (note.pitch) {
-            const pitchStr = pitchToMFS(note.pitch);
-            lines.push(`  grace(${pitchStr})`);
-          }
-        } else if (note.pitch) {
-          const pitchStr = pitchToMFS(note.pitch);
-          const durStr = durationToMFS(note.duration, currentDivisions);
-
-          let noteCall = '';
-          if (note.lyrics) {
-            noteCall = `n(${pitchStr}, ${durStr}, "${note.lyrics}")`;
-          } else {
-            noteCall = `n(${pitchStr}, ${durStr})`;
-          }
-
-          // Add articulations
-          if (note.staccato) {
-            noteCall = `staccato() ${noteCall}`;
-          } else if (note.accent) {
-            noteCall = `accent() ${noteCall}`;
-          }
-
-          if (note.fermata) {
-            noteCall += ' fermata()';
-          }
-
-          lines.push(`  ${noteCall}`);
-
-          // Add to chord collection for next iteration
-          chordNotes.push(note);
-        }
-
-        // Handle slur end
-        if (note.slur === 'stop' && inSlur) {
-          lines.push('  slurEnd()');
-          inSlur = false;
-        }
-      }
-
-      // Flush remaining chord notes
-      if (chordNotes.length > 1) {
-        const chordStr = generateChord(chordNotes, currentDivisions);
-        lines.push(`  ${chordStr}`);
-      }
-
-      // Add measure separator comment
-      lines.push(`  // measure ${measure.number}`);
+  // Collect global settings from first measure
+  if (score.parts.length > 0 && score.parts[0].measures.length > 0) {
+    const firstMeasure = score.parts[0].measures[0];
+    if (firstMeasure.attributes?.time) {
+      currentTimeNum = firstMeasure.attributes.time.beats;
+      currentTimeDen = firstMeasure.attributes.time.beatType;
     }
+    if (firstMeasure.direction?.tempo) {
+      currentTempo = firstMeasure.direction.tempo;
+    }
+  }
 
-    lines.push('}');
+  lines.push(`  tempo ${currentTempo}`);
+  lines.push(`  time ${currentTimeNum}/${currentTimeDen}`);
+  lines.push('');
+
+  // Generate parts
+  for (const part of score.parts) {
+    const partName = sanitizeTrackName(part.name) || 'Part';
+    const hasLyrics = part.measures.some(m => m.notes.some(n => n.lyrics));
+
+    if (hasLyrics) {
+      // Vocal part with phrases
+      lines.push(`  part ${partName} {`);
+      generateVocalPart(lines, part, currentDivisions);
+      lines.push('  }');
+    } else {
+      // MIDI part with bars
+      lines.push(`  part ${partName} {`);
+      lines.push('    midi ch:1 program:0');
+      generateMidiPart(lines, part, currentDivisions);
+      lines.push('  }');
+    }
     lines.push('');
   }
+
+  lines.push('}');
 
   return lines.join('\n');
 }
 
-function pitchToMFS(pitch: { step: string; octave: number; alter?: number }): string {
-  const stepLower = pitch.step.toLowerCase();
+function generateVocalPart(lines: string[], part: MusicXMLPart, divisions: number): void {
+  // Group notes into phrases (separated by rests)
+  let phraseNotes: { pitch: string; dur: string; lyric?: string; tie?: string }[] = [];
+  let phraseLyrics: string[] = [];
+
+  for (const measure of part.measures) {
+    if (measure.attributes?.divisions) {
+      divisions = measure.attributes.divisions;
+    }
+
+    for (const note of measure.notes) {
+      if (note.chord) continue; // Skip chord notes for vocal
+
+      if (note.rest) {
+        // Flush current phrase
+        if (phraseNotes.length > 0) {
+          outputPhrase(lines, phraseNotes, phraseLyrics);
+          phraseNotes = [];
+          phraseLyrics = [];
+        }
+        // Add rest
+        const durStr = durationToMFSv2(note.duration, divisions);
+        lines.push(`    rest ${durStr}`);
+      } else if (note.pitch) {
+        const pitchStr = pitchToMFSv2(note.pitch);
+        const durStr = durationToMFSv2(note.duration, divisions);
+        const tieStr = note.tie === 'start' ? '~' : '';
+
+        phraseNotes.push({ pitch: pitchStr, dur: durStr + tieStr, lyric: note.lyrics, tie: note.tie });
+
+        if (note.lyrics && note.tie !== 'stop') {
+          phraseLyrics.push(note.lyrics);
+        } else if (note.tie === 'stop') {
+          // Continuation of tied note - don't add lyric
+        } else {
+          phraseLyrics.push('_'); // Melisma if no lyric
+        }
+      }
+    }
+  }
+
+  // Flush remaining phrase
+  if (phraseNotes.length > 0) {
+    outputPhrase(lines, phraseNotes, phraseLyrics);
+  }
+}
+
+function outputPhrase(
+  lines: string[],
+  notes: { pitch: string; dur: string; lyric?: string; tie?: string }[],
+  lyrics: string[]
+): void {
+  if (notes.length === 0) return;
+
+  lines.push('    phrase {');
+  lines.push('      notes:');
+
+  // Build bar line
+  let barLine = '        |';
+  for (const n of notes) {
+    barLine += ` ${n.pitch} ${n.dur} `;
+  }
+  barLine += '|;';
+  lines.push(barLine);
+
+  lines.push('      lyrics mora:');
+  // Clean up lyrics
+  const cleanLyrics = lyrics.map(l => l || '_').join(' ');
+  lines.push(`        ${cleanLyrics};`);
+
+  lines.push('    }');
+}
+
+function generateMidiPart(lines: string[], part: MusicXMLPart, divisions: number): void {
+  for (const measure of part.measures) {
+    if (measure.attributes?.divisions) {
+      divisions = measure.attributes.divisions;
+    }
+
+    let barLine = '    |';
+    const chordNotes: MusicXMLNote[] = [];
+
+    for (const note of measure.notes) {
+      if (note.chord) {
+        chordNotes.push(note);
+        continue;
+      }
+
+      // Flush chord
+      if (chordNotes.length > 0) {
+        const lastNote = chordNotes[chordNotes.length - 1];
+        const pitches = chordNotes.filter(n => n.pitch).map(n => pitchToMFSv2(n.pitch!));
+        if (pitches.length > 0 && lastNote.pitch) {
+          pitches.unshift(pitchToMFSv2(lastNote.pitch));
+        }
+        const durStr = durationToMFSv2(chordNotes[0].duration || lastNote.duration, divisions);
+        barLine += ` [${pitches.join(' ')}] ${durStr} `;
+        chordNotes.length = 0;
+      }
+
+      if (note.rest) {
+        const durStr = durationToMFSv2(note.duration, divisions);
+        barLine += ` r${durStr} `;
+      } else if (note.pitch) {
+        const pitchStr = pitchToMFSv2(note.pitch);
+        const durStr = durationToMFSv2(note.duration, divisions);
+        const tieStr = note.tie === 'start' ? '~' : '';
+        barLine += ` ${pitchStr} ${durStr}${tieStr} `;
+        chordNotes.push(note); // Track for potential chord
+      }
+    }
+
+    barLine += '|';
+    lines.push(barLine);
+  }
+}
+
+function pitchToMFSv2(pitch: { step: string; octave: number; alter?: number }): string {
   let accidental = '';
   if (pitch.alter === 1) {
     accidental = '#';
   } else if (pitch.alter === -1) {
     accidental = 'b';
   }
-  return `${stepLower}${accidental}${pitch.octave}`;
+  return `${pitch.step}${accidental}${pitch.octave}`;
 }
 
 // Helper for floating-point comparison with relative epsilon
@@ -449,7 +493,7 @@ function approxEquals(a: number, b: number): boolean {
   return Math.abs(a - b) <= Math.max(epsilon, 1e-12);
 }
 
-function durationToMFS(duration: number, divisions: number): string {
+function durationToMFSv2(duration: number, divisions: number): string {
   // Ensure divisions is positive to avoid division by zero
   if (divisions <= 0) {
     return `${duration}t`;
@@ -457,51 +501,31 @@ function durationToMFS(duration: number, divisions: number): string {
   const quarterNotes = duration / divisions;
 
   // Use approxEquals for floating-point safe comparison
-  if (approxEquals(quarterNotes, 4)) return '1n';
-  if (approxEquals(quarterNotes, 2)) return '2n';
-  if (approxEquals(quarterNotes, 1)) return '4n';
-  if (approxEquals(quarterNotes, 0.5)) return '8n';
-  if (approxEquals(quarterNotes, 0.25)) return '16n';
-  if (approxEquals(quarterNotes, 0.125)) return '32n';
+  if (approxEquals(quarterNotes, 4)) return 'w';
+  if (approxEquals(quarterNotes, 2)) return 'h';
+  if (approxEquals(quarterNotes, 1)) return 'q';
+  if (approxEquals(quarterNotes, 0.5)) return 'e';
+  if (approxEquals(quarterNotes, 0.25)) return 's';
+  if (approxEquals(quarterNotes, 0.125)) return 't';
 
   // Dotted notes
-  if (approxEquals(quarterNotes, 3)) return '2n.';
-  if (approxEquals(quarterNotes, 1.5)) return '4n.';
-  if (approxEquals(quarterNotes, 0.75)) return '8n.';
-
-  // Triplets - use exact fractions for comparison
-  if (approxEquals(quarterNotes, 2/3)) return '4n/3';
-  if (approxEquals(quarterNotes, 1/3)) return '8n/3';
-  if (approxEquals(quarterNotes, 4/3)) return '2n/3';
-  if (approxEquals(quarterNotes, 1/6)) return '16n/3';
+  if (approxEquals(quarterNotes, 3)) return 'h.';
+  if (approxEquals(quarterNotes, 1.5)) return 'q.';
+  if (approxEquals(quarterNotes, 0.75)) return 'e.';
 
   // Default to ticks
   const ticks = Math.round(duration * (480 / divisions));
   return `${ticks}t`;
 }
 
-function generateChord(notes: MusicXMLNote[], divisions: number): string {
-  if (notes.length === 0) return '';
-  if (notes.length === 1 && notes[0].pitch) {
-    const pitchStr = pitchToMFS(notes[0].pitch);
-    const durStr = durationToMFS(notes[0].duration, divisions);
-    return `n(${pitchStr}, ${durStr})`;
-  }
-
-  const pitches = notes
-    .filter(n => n.pitch)
-    .map(n => pitchToMFS(n.pitch!));
-
-  const durStr = durationToMFS(notes[0].duration, divisions);
-  return `chord([${pitches.join(', ')}], ${durStr})`;
-}
-
 function sanitizeTrackName(name: string): string {
-  // Convert to valid MFS identifier
+  // Convert to valid identifier
   return name
     .replace(/[^a-zA-Z0-9_]/g, '_')
     .replace(/^(\d)/, '_$1')
-    .toLowerCase();
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    || 'Part';
 }
 
 // CLI usage

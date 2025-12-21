@@ -596,12 +596,51 @@ export class Parser {
     return drumNames.includes(name.toLowerCase());
   }
 
+  // Check if token type is a contextual keyword that can be used as identifier
+  // These keywords are only meaningful in specific contexts (score/part blocks)
+  private isContextualKeyword(type: TokenType): boolean {
+    return [
+      TokenType.REST,
+      TokenType.NOTES,
+      TokenType.LYRICS,
+      TokenType.PHRASE,
+      TokenType.TEMPO,
+      TokenType.KEY,
+      TokenType.BREATH,
+      TokenType.PART,
+      TokenType.VOCAL,
+      TokenType.MIDI,
+      TokenType.MAJOR,
+      TokenType.MINOR,
+      TokenType.SINGER,
+      TokenType.LANG,
+      TokenType.BACKEND,
+      TokenType.PPQ,
+      TokenType.TIME_SIG,
+      TokenType.TIE,
+    ].includes(type);
+  }
+
   // Main entry point - parse Score
   parse(): Score {
     if (this.check(TokenType.SCORE)) {
       return this.parseScore();
     }
     throw this.error("TakoScore v2.0 requires 'score' block at start of file");
+  }
+
+  // Parse a module file (library) - contains only statements, no score block
+  parseModule(): Statement[] {
+    const statements: Statement[] = [];
+
+    while (!this.isAtEnd()) {
+      const stmt = this.parseStatement();
+      if (stmt) {
+        statements.push(stmt);
+      }
+    }
+
+    return statements;
   }
 
   // Parse with error recovery
@@ -801,11 +840,11 @@ export class Parser {
         // Check for rest parameter
         if (this.check(TokenType.SPREAD)) {
           this.advance(); // consume '...'
-          const param = this.expect(TokenType.IDENT, 'Expected rest parameter name');
+          const param = this.expectIdentifierOrDur('Expected rest parameter name');
           params.push({ name: param.value, rest: true });
           break; // Rest must be last
         }
-        const param = this.expect(TokenType.IDENT, 'Expected parameter name');
+        const param = this.expectIdentifierOrDur('Expected parameter name');
         // Check for default value
         if (this.match(TokenType.EQ)) {
           hasDefault = true;
@@ -837,7 +876,7 @@ export class Parser {
 
   private parseConst(exported: boolean): ConstDeclaration {
     const pos = this.advance().position; // consume 'const'
-    const name = this.expect(TokenType.IDENT, 'Expected constant name').value;
+    const name = this.expectIdentifierOrDur('Expected constant name').value;
     this.expect(TokenType.EQ, "Expected '=' after constant name");
     const value = this.parseExpression();
     this.expect(TokenType.SEMICOLON, "Expected ';' after constant value");
@@ -853,7 +892,7 @@ export class Parser {
 
   private parseLet(): LetDeclaration {
     const pos = this.advance().position; // consume 'let'
-    const name = this.expect(TokenType.IDENT, 'Expected variable name').value;
+    const name = this.expectIdentifierOrDur('Expected variable name').value;
     this.expect(TokenType.EQ, "Expected '=' after variable name");
     const value = this.parseExpression();
     this.expect(TokenType.SEMICOLON, "Expected ';' after variable value");
@@ -1594,8 +1633,19 @@ export class Parser {
       return this.parsePitchLiteral(token);
     }
 
-    // Dur literal
+    // Dur literal - but only if it's a "real" duration, not a bare single letter
+    // Bare single letters (w, h, q, e, s, t, x) are treated as identifiers in expression context
     if (this.check(TokenType.DUR)) {
+      const durValue = token.value;
+      // If it's just a single letter (no dots, no number prefix), treat as identifier
+      if (/^[whqestx]$/.test(durValue)) {
+        this.advance();
+        return {
+          kind: 'Identifier',
+          name: durValue,
+          position: token.position,
+        };
+      }
       this.advance();
       return this.parseDurLiteral(token);
     }
@@ -1623,6 +1673,17 @@ export class Parser {
 
     // Identifier
     if (this.check(TokenType.IDENT)) {
+      this.advance();
+      return {
+        kind: 'Identifier',
+        name: token.value,
+        position: token.position,
+      };
+    }
+
+    // Allow contextual keywords to be used as identifiers in expression context
+    // These are keywords that are only meaningful in score/part blocks
+    if (this.isContextualKeyword(token.type)) {
       this.advance();
       return {
         kind: 'Identifier',
@@ -1665,11 +1726,11 @@ export class Parser {
       do {
         if (this.check(TokenType.SPREAD)) {
           this.advance();
-          const name = this.expect(TokenType.IDENT, 'Expected parameter name');
+          const name = this.expectIdentifierOrDur('Expected parameter name');
           params.push({ name: name.value, rest: true });
           break;
         }
-        if (!this.check(TokenType.IDENT)) {
+        if (!this.check(TokenType.IDENT) && !this.check(TokenType.DUR)) {
           isArrow = false;
           break;
         }
@@ -2100,6 +2161,18 @@ export class Parser {
 
   private expect(type: TokenType, message: string): Token {
     if (this.check(type)) {
+      return this.advance();
+    }
+    throw this.error(message);
+  }
+
+  // Expect an identifier or a duration shorthand (w, h, q, e, s, t, x) used as identifier
+  private expectIdentifierOrDur(message: string): Token {
+    if (this.check(TokenType.IDENT) || this.check(TokenType.DUR)) {
+      return this.advance();
+    }
+    // Also accept contextual keywords as identifiers
+    if (this.isContextualKeyword(this.peek().type)) {
       return this.advance();
     }
     throw this.error(message);

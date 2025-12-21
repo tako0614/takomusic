@@ -1,34 +1,29 @@
-// Test file for algorithmic composition library
-import { euclidean, probability, randomNote, cellular, playPattern, scalePentatonic, randomScaleNote } from "../lib/algorithmic.mfs";
+// Test file for algorithmic patterns in v2.0
 
-proc main() {
-  ppq(480);
-  tempo(120);
-  timeSig(4, 4);
+score "Algorithmic Test" {
+  tempo 120
+  time 4/4
 
-  track(midi, drums, { ch: 10, vel: 90 }) {
-    // Euclidean rhythm: 8 steps, 3 hits
-    euclidean(8, 3, 1/8, C4);
+  part Drums {
+    midi ch:10 program:0
+
+    // Euclidean-style pattern
+    | kick e  re  re  kick e  re  re  kick e  re |
+    | snare e  re  snare e  re  re  snare e  re  re |
   }
 
-  track(midi, bass, { ch: 2, program: 33, vel: 80 }) {
-    // Random notes in range
-    for (i in 0..4) {
-      randomNote(36, 48, 1/4);
-    }
+  part Bass {
+    midi ch:2 program:33
+
+    // Bass pattern
+    | C2 q  E2 q  G2 q  C3 q |
+    | D2 q  F2 q  A2 q  D3 q |
   }
 
-  track(midi, lead, { ch: 1, program: 81, vel: 85 }) {
-    // Probability notes
-    for (i in 0..8) {
-      probability(E4, 1/8, 70);
-    }
-  }
+  part Lead {
+    midi ch:1 program:81
 
-  track(midi, synth, { ch: 3, program: 90, vel: 75 }) {
-    // Random pentatonic scale notes
-    for (i in 0..8) {
-      randomScaleNote(C4, scalePentatonic(), 2, 1/8);
-    }
+    // Lead melody
+    | E4 e  G4 e  A4 e  C5 e  E5 e  C5 e  A4 e  G4 e |
   }
 }

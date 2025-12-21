@@ -1,39 +1,22 @@
-// Test the new library functions
-import { staccato, legato, accent } from "../lib/articulation.mf";
-import { trill, arpeggio, glissando } from "../lib/ornaments.mf";
-import { euclidean, swing } from "../lib/rhythm.mf";
-import { majorTriad, majorScale, QUARTER, EIGHTH } from "../lib/theory.mf";
+// Test library functions in v2.0 format
 
-title("Library Function Test");
-ppq(480);
-tempo(120);
+score "Library Function Test" {
+  tempo 120
+  time 4/4
 
-export proc main() {
-  track(midi, main, {}) {
-    // Test articulations
-    staccato(C4, QUARTER, 80);
-    legato(D4, QUARTER, 80);
-    accent(E4, QUARTER, 80);
-    rest(QUARTER);
+  part Main {
+    midi ch:1 program:0
 
-    // Test trill
-    trill(C4, QUARTER, 2);
-    rest(QUARTER);
+    // Test basic notes
+    | C4 q  D4 q  E4 q  rq |
 
-    // Test chord functions
-    const cmajor = majorTriad(C4);
-    arpeggio(cmajor, QUARTER);
-    rest(QUARTER);
+    // Test chords
+    | [C4 E4 G4] q  [D4 F4 A4] q  [E4 G4 B4] q  [C4 E4 G4] q |
 
-    // Test scale
-    const cscale = majorScale(C4);
-    forEach(cscale, p => note(p, EIGHTH));
-
-    // Test glissando
-    glissando(C4, C5, QUARTER * 2);
-    rest(QUARTER);
-
-    // Test euclidean rhythm
-    euclidean(8, 5, EIGHTH, C4);
+    // Test different durations
+    | C4 w |
+    | D4 h  E4 h |
+    | F4 q  G4 q  A4 q  B4 q |
+    | C5 e  D5 e  E5 e  F5 e  G5 e  A5 e  B5 e  C6 e |
   }
 }
