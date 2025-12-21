@@ -418,6 +418,10 @@ export async function initCommand(args: string[]): Promise<number> {
   // Parse arguments
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-t' || args[i] === '--template') {
+      if (i + 1 >= args.length) {
+        console.error('--template requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       templateName = args[i + 1];
       i++;
     } else if (args[i] === '-l' || args[i] === '--list') {

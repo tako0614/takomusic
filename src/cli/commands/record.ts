@@ -36,15 +36,36 @@ export async function recordCommand(args: string[]): Promise<number> {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-o' || args[i] === '--output') {
+      if (i + 1 >= args.length) {
+        console.error('--output requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       outputFile = args[i + 1];
       i++;
     } else if (args[i] === '-t' || args[i] === '--tempo') {
-      tempo = parseInt(args[i + 1]);
+      if (i + 1 >= args.length) {
+        console.error('--tempo requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
+      const parsed = parseInt(args[i + 1], 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        console.error(`Invalid tempo value: ${args[i + 1]}`);
+        return ExitCodes.STATIC_ERROR;
+      }
+      tempo = parsed;
       i++;
     } else if (args[i] === '-q' || args[i] === '--quantize') {
+      if (i + 1 >= args.length) {
+        console.error('--quantize requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       quantize = args[i + 1];
       i++;
     } else if (args[i] === '-d' || args[i] === '--device') {
+      if (i + 1 >= args.length) {
+        console.error('--device requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
       device = args[i + 1];
       i++;
     } else if (args[i] === '-l' || args[i] === '--list') {
@@ -121,6 +142,10 @@ Examples:
   await waitForEnter();
 
   isRecording = false;
+
+  // Cleanup stdin before continuing
+  cleanupStdin();
+
   if (midiProcess) {
     midiProcess.kill();
   }
@@ -215,6 +240,9 @@ function findMIDIUtility(): string | null {
   return 'generic';
 }
 
+// Store keyboard listener for cleanup
+let keyboardDataListener: ((data: Buffer) => void) | null = null;
+
 async function startMIDICapture(utility: string, device?: string): Promise<ChildProcess | null> {
   // For now, use simulated keyboard input as fallback
   // Real MIDI capture would use platform-specific tools
@@ -227,6 +255,17 @@ async function startMIDICapture(utility: string, device?: string): Promise<Child
   setupKeyboardSimulation();
 
   return null;
+}
+
+function cleanupStdin(): void {
+  if (keyboardDataListener) {
+    process.stdin.removeListener('data', keyboardDataListener);
+    keyboardDataListener = null;
+  }
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(false);
+  }
+  process.stdin.pause();
 }
 
 function setupKeyboardSimulation(): void {
@@ -253,7 +292,8 @@ function setupKeyboardSimulation(): void {
   }
   process.stdin.resume();
 
-  process.stdin.on('data', (data) => {
+  // Store the listener for cleanup
+  keyboardDataListener = (data: Buffer) => {
     const key = data.toString().toLowerCase();
 
     if (key === '\r' || key === '\n') {
@@ -262,7 +302,8 @@ function setupKeyboardSimulation(): void {
     }
 
     if (key === '\u0003') {
-      // Ctrl+C
+      // Ctrl+C - cleanup before exit
+      cleanupStdin();
       process.exit(0);
     }
 
@@ -294,7 +335,9 @@ function setupKeyboardSimulation(): void {
         process.stdout.write('+');
       }
     }
-  });
+  };
+
+  process.stdin.on('data', keyboardDataListener);
 }
 
 function waitForEnter(): Promise<void> {
@@ -314,21 +357,25 @@ function eventsToNotes(events: MIDIEvent[]): RecordedNote[] {
   const activeNotes: Map<number, { startTime: number; velocity: number }> = new Map();
 
   for (const event of events) {
+    // Skip events without note property
+    if (event.note === undefined) {
+      continue;
+    }
     if (event.type === 'note_on' && event.velocity && event.velocity > 0) {
-      activeNotes.set(event.note!, {
+      activeNotes.set(event.note, {
         startTime: event.time,
         velocity: event.velocity,
       });
     } else if (event.type === 'note_off' || (event.type === 'note_on' && event.velocity === 0)) {
-      const noteStart = activeNotes.get(event.note!);
+      const noteStart = activeNotes.get(event.note);
       if (noteStart) {
         notes.push({
-          pitch: event.note!,
+          pitch: event.note,
           startTime: noteStart.startTime,
           endTime: event.time,
           velocity: noteStart.velocity,
         });
-        activeNotes.delete(event.note!);
+        activeNotes.delete(event.note);
       }
     }
   }
@@ -351,6 +398,10 @@ function eventsToNotes(events: MIDIEvent[]): RecordedNote[] {
 }
 
 function generateMFSFromNotes(notes: RecordedNote[], tempo: number, quantize: string): string {
+  // Defensive check for valid tempo
+  if (tempo <= 0 || !Number.isFinite(tempo)) {
+    throw new Error(`Invalid tempo: ${tempo}`);
+  }
   const ppq = 480;
   const msPerBeat = 60000 / tempo;
   const msPerTick = msPerBeat / ppq;
@@ -414,6 +465,10 @@ function generateMFSFromNotes(notes: RecordedNote[], tempo: number, quantize: st
 }
 
 function midiToPitchStr(midi: number): string {
+  // Ensure MIDI value is in valid range
+  if (midi < 0 || midi > 127) {
+    throw new Error(`Invalid MIDI note: ${midi}. Must be 0-127.`);
+  }
   const noteNames = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
   const octave = Math.floor(midi / 12) - 1;
   const note = noteNames[midi % 12];

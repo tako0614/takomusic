@@ -97,8 +97,16 @@ function buildTempoTrack(ir: SongIR): Buffer {
 
     if (event.type === 'tempo') {
       const tempo = event.data as TempoEvent;
+      // Validate BPM
+      if (tempo.bpm <= 0 || !Number.isFinite(tempo.bpm)) {
+        throw new Error(`Invalid tempo: BPM must be a positive number, got ${tempo.bpm}`);
+      }
       // Convert BPM to microseconds per quarter note
       const uspq = Math.round(60000000 / tempo.bpm);
+      // MIDI tempo is a 24-bit value (0-16777215 microseconds)
+      if (uspq > 0xFFFFFF) {
+        throw new Error(`Tempo too slow: BPM ${tempo.bpm} results in invalid MIDI data`);
+      }
       events.push(buildTempoEvent(delta, uspq));
     } else {
       const ts = event.data as TimeSigEvent;
@@ -145,11 +153,20 @@ function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
 
   // Add note on/off events
   for (const note of noteEvents) {
+    // Validate note key (0-127)
+    if (note.key < 0 || note.key > 127) {
+      throw new Error(`Invalid note key: ${note.key}. Must be 0-127.`);
+    }
+    const vel = note.vel ?? track.defaultVel;
+    // Validate velocity (0-127)
+    if (vel < 0 || vel > 127) {
+      throw new Error(`Invalid velocity: ${vel}. Must be 0-127.`);
+    }
     midiEvents.push({
       tick: note.tick,
       type: 'noteOn',
       key: note.key,
-      vel: note.vel ?? track.defaultVel,
+      vel: vel,
     });
     midiEvents.push({
       tick: note.tick + note.dur,
@@ -160,6 +177,13 @@ function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
 
   // Add CC events
   for (const cc of ccEvents) {
+    // Validate CC values (0-127)
+    if (cc.controller < 0 || cc.controller > 127) {
+      throw new Error(`Invalid CC controller: ${cc.controller}. Must be 0-127.`);
+    }
+    if (cc.value < 0 || cc.value > 127) {
+      throw new Error(`Invalid CC value: ${cc.value}. Must be 0-127.`);
+    }
     midiEvents.push({
       tick: cc.tick,
       type: 'cc',
@@ -170,6 +194,10 @@ function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
 
   // Add pitch bend events
   for (const pb of pitchBendEvents) {
+    // Validate pitch bend (-8192 to 8191)
+    if (pb.value < -8192 || pb.value > 8191) {
+      throw new Error(`Invalid pitch bend value: ${pb.value}. Must be -8192 to 8191.`);
+    }
     midiEvents.push({
       tick: pb.tick,
       type: 'pitchBend',
@@ -179,6 +207,10 @@ function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
 
   // Add aftertouch events
   for (const at of aftertouchEvents) {
+    // Validate aftertouch (0-127)
+    if (at.value < 0 || at.value > 127) {
+      throw new Error(`Invalid aftertouch value: ${at.value}. Must be 0-127.`);
+    }
     midiEvents.push({
       tick: at.tick,
       type: 'aftertouch',
@@ -188,6 +220,13 @@ function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
 
   // Add polyphonic aftertouch events
   for (const pat of polyAftertouchEvents) {
+    // Validate poly aftertouch (0-127)
+    if (pat.key < 0 || pat.key > 127) {
+      throw new Error(`Invalid poly aftertouch key: ${pat.key}. Must be 0-127.`);
+    }
+    if (pat.value < 0 || pat.value > 127) {
+      throw new Error(`Invalid poly aftertouch value: ${pat.value}. Must be 0-127.`);
+    }
     midiEvents.push({
       tick: pat.tick,
       type: 'polyAftertouch',
@@ -198,6 +237,19 @@ function buildNoteTrack(track: MidiTrack, _ir: SongIR): Buffer {
 
   // Add NRPN events
   for (const nrpn of nrpnEvents) {
+    // Validate NRPN values (7-bit: 0-127)
+    if (nrpn.paramMSB < 0 || nrpn.paramMSB > 127) {
+      throw new Error(`Invalid NRPN paramMSB: ${nrpn.paramMSB}. Must be 0-127.`);
+    }
+    if (nrpn.paramLSB < 0 || nrpn.paramLSB > 127) {
+      throw new Error(`Invalid NRPN paramLSB: ${nrpn.paramLSB}. Must be 0-127.`);
+    }
+    if (nrpn.valueMSB < 0 || nrpn.valueMSB > 127) {
+      throw new Error(`Invalid NRPN valueMSB: ${nrpn.valueMSB}. Must be 0-127.`);
+    }
+    if (nrpn.valueLSB !== undefined && (nrpn.valueLSB < 0 || nrpn.valueLSB > 127)) {
+      throw new Error(`Invalid NRPN valueLSB: ${nrpn.valueLSB}. Must be 0-127.`);
+    }
     midiEvents.push({
       tick: nrpn.tick,
       type: 'nrpn',
@@ -337,8 +389,12 @@ function buildTimeSigEvent(delta: number, num: number, den: number): Buffer {
   // Numerator
   data[offset++] = num;
 
-  // Denominator as power of 2
-  data[offset++] = Math.log2(den);
+  // Denominator as power of 2 (validate it's a power of 2)
+  const log2Den = Math.log2(den);
+  if (!Number.isInteger(log2Den) || log2Den < 0 || log2Den > 6) {
+    throw new Error(`Invalid time signature denominator: ${den}. Must be a power of 2 (1, 2, 4, 8, 16, 32, 64).`);
+  }
+  data[offset++] = log2Den;
 
   // Clocks per metronome click (default 24)
   data[offset++] = 24;

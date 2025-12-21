@@ -94,6 +94,10 @@ export function generateVsqx(ir: SongIR): string {
 `;
   } else {
     for (const t of ir.tempos) {
+      // Validate BPM
+      if (t.bpm <= 0 || !Number.isFinite(t.bpm)) {
+        throw new Error(`Invalid tempo: BPM must be a positive number, got ${t.bpm}`);
+      }
       xml += `    <tempo>
       <t>${t.tick}</t>
       <v>${Math.round(t.bpm * 100)}</v>

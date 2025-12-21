@@ -68,8 +68,16 @@ function buildTempoTrack(ir: SongIR): Buffer {
 
     if (event.type === 'tempo') {
       const tempo = event.data as TempoEvent;
+      // Validate BPM
+      if (tempo.bpm <= 0 || !Number.isFinite(tempo.bpm)) {
+        throw new Error(`Invalid tempo: BPM must be a positive number, got ${tempo.bpm}`);
+      }
       // Convert BPM to microseconds per quarter note
       const uspq = Math.round(60000000 / tempo.bpm);
+      // MIDI tempo is a 24-bit value (0-16777215 microseconds)
+      if (uspq > 0xFFFFFF) {
+        throw new Error(`Tempo too slow: BPM ${tempo.bpm} results in invalid MIDI data`);
+      }
       events.push(buildTempoEvent(delta, uspq));
     } else {
       const ts = event.data as TimeSigEvent;
@@ -131,8 +139,12 @@ function buildTimeSigEvent(delta: number, num: number, den: number): Buffer {
   // Numerator
   data[offset++] = num;
 
-  // Denominator as power of 2
-  data[offset++] = Math.log2(den);
+  // Denominator as power of 2 (validate it's a power of 2)
+  const log2Den = Math.log2(den);
+  if (!Number.isInteger(log2Den) || log2Den < 0 || log2Den > 6) {
+    throw new Error(`Invalid time signature denominator: ${den}. Must be a power of 2 (1, 2, 4, 8, 16, 32, 64).`);
+  }
+  data[offset++] = log2Den;
 
   // Clocks per metronome click (default 24)
   data[offset++] = 24;

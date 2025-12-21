@@ -14,7 +14,12 @@ export async function importCommand(args: string[]): Promise<number> {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-f' || args[i] === '--format') {
-      format = args[i + 1] as ImportFormat;
+      const formatArg = args[i + 1]?.toLowerCase();
+      if (formatArg !== 'musicxml' && formatArg !== 'midi' && formatArg !== 'auto') {
+        console.error(`Invalid format: ${args[i + 1]}. Valid formats are: musicxml, midi, auto`);
+        return ExitCodes.STATIC_ERROR;
+      }
+      format = formatArg;
       i++;
     } else if (args[i] === '-o' || args[i] === '--output') {
       outputFile = args[i + 1];
