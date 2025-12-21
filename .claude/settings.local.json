@@ -45,7 +45,13 @@
       "Bash(npm publish:*)",
       "Bash(git push)",
       "Bash(timeout:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(npm i:*)",
+      "Bash(mf:*)",
+      "Bash(mf)"
     ]
   }
 }

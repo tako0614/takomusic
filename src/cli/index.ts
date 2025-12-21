@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // TakoMusic CLI entry point
 
-import { parseArgs } from 'util';
+import { createRequire } from 'module';
 import { initCommand } from './commands/init.js';
 import { fmtCommand } from './commands/fmt.js';
 import { checkCommand } from './commands/check.js';
@@ -13,8 +13,13 @@ import { importCommand } from './commands/import.js';
 import { recordCommand } from './commands/record.js';
 import { ExitCodes } from '../errors.js';
 
+// Read version from package.json
+const require = createRequire(import.meta.url);
+const pkg = require('../../package.json');
+const VERSION = pkg.version;
+
 const HELP = `
-TakoMusic v1.2.0 - Music composition with MFS language
+TakoMusic v${VERSION} - Music composition with MFS language
 
 Usage: mf <command> [options]
 
@@ -52,7 +57,7 @@ async function main(): Promise<number> {
   }
 
   if (args[0] === '-v' || args[0] === '--version') {
-    console.log('TakoMusic v1.2.0');
+    console.log(`TakoMusic v${VERSION}`);
     return ExitCodes.SUCCESS;
   }
 
