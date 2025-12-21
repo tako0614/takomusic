@@ -1,8 +1,8 @@
-// Static checker for MFS source
+// Static checker for TakoScore v2.0 source
 
 import * as fs from 'fs';
 import * as path from 'path';
-import type { Program, Statement, Expression, ProcDeclaration } from '../types/ast.js';
+import type { Score, Statement, Expression, ProcDeclaration, GlobalStatement, PartDeclaration, PhraseBlock } from '../types/ast.js';
 import { Lexer } from '../lexer/index.js';
 import { Parser } from '../parser/index.js';
 import type { Position } from '../types/token.js';
@@ -49,7 +49,7 @@ export class Checker {
     this.baseDir = baseDir;
   }
 
-  check(program: Program, filePath: string): Diagnostic[] {
+  check(score: Score, filePath: string): Diagnostic[] {
     this.diagnostics = [];
     this.definedSymbols.clear();
     this.constSymbols.clear();
@@ -57,17 +57,17 @@ export class Checker {
     this.callGraph.clear();
     this.tempoEventCount = 0;
 
-    // First pass: collect all proc declarations
-    this.collectDeclarations(program);
+    // First pass: collect all proc declarations from globals
+    this.collectDeclarations(score);
 
-    // Second pass: check each statement
-    for (const stmt of program.statements) {
-      this.checkStatement(stmt, filePath);
+    // Second pass: check global statements
+    for (const stmt of score.globals) {
+      this.checkGlobalStatement(stmt, filePath);
     }
 
-    // Check for main procedure
-    if (!this.procs.has('main')) {
-      this.addError('E400', 'No main() procedure found', undefined, filePath);
+    // Third pass: check parts
+    for (const part of score.parts) {
+      this.checkPart(part, filePath);
     }
 
     // Check for recursion
@@ -81,31 +81,17 @@ export class Checker {
     return this.diagnostics;
   }
 
-  private collectDeclarations(program: Program): void {
-    for (const stmt of program.statements) {
+  private collectDeclarations(score: Score): void {
+    for (const stmt of score.globals) {
       if (stmt.kind === 'ProcDeclaration') {
         this.procs.set(stmt.name, stmt);
         this.definedSymbols.add(stmt.name);
-        this.constSymbols.add(stmt.name); // procs are constant
-      } else if (stmt.kind === 'ExportStatement') {
-        if (stmt.declaration.kind === 'ProcDeclaration') {
-          this.procs.set(stmt.declaration.name, stmt.declaration);
-          this.definedSymbols.add(stmt.declaration.name);
-          this.constSymbols.add(stmt.declaration.name);
-        } else {
-          // export const
-          this.definedSymbols.add(stmt.declaration.name);
-          this.constSymbols.add(stmt.declaration.name);
-        }
+        this.constSymbols.add(stmt.name);
       } else if (stmt.kind === 'ConstDeclaration') {
         this.definedSymbols.add(stmt.name);
         this.constSymbols.add(stmt.name);
-      } else if (stmt.kind === 'LetDeclaration') {
-        this.definedSymbols.add(stmt.name);
-        // NOT added to constSymbols - let is mutable
       } else if (stmt.kind === 'ImportStatement') {
         if (stmt.namespace) {
-          // Namespace import: import * as ns from "path"
           this.definedSymbols.add(stmt.namespace);
           this.constSymbols.add(stmt.namespace);
         } else {
@@ -117,6 +103,136 @@ export class Checker {
         }
       }
     }
+  }
+
+  private checkGlobalStatement(stmt: GlobalStatement, filePath: string): void {
+    switch (stmt.kind) {
+      case 'ImportStatement':
+        this.checkImport(stmt, filePath);
+        break;
+      case 'ProcDeclaration':
+        this.checkProc(stmt, filePath);
+        break;
+      case 'ConstDeclaration':
+        this.checkExpression(stmt.value, filePath);
+        break;
+      case 'TempoStatement':
+        this.tempoEventCount++;
+        this.checkExpression(stmt.bpm, filePath);
+        break;
+      case 'TimeSignatureStatement':
+        this.checkExpression(stmt.numerator, filePath);
+        this.checkExpression(stmt.denominator, filePath);
+        break;
+      case 'KeySignatureStatement':
+        this.checkExpression(stmt.root, filePath);
+        break;
+      case 'PpqStatement':
+        this.checkExpression(stmt.value, filePath);
+        break;
+    }
+  }
+
+  private checkPart(part: PartDeclaration, filePath: string): void {
+    this.currentTrackKind = part.partKind;
+    this.inVocalTrack = part.partKind === 'vocal';
+
+    for (const item of part.body) {
+      if (item.kind === 'PhraseBlock') {
+        this.checkPhraseBlock(item, filePath);
+      } else if (item.kind === 'RestStatement') {
+        this.checkExpression(item.duration, filePath);
+      } else if (item.kind === 'MidiBar') {
+        for (const midiItem of item.items) {
+          if (midiItem.kind === 'MidiNote') {
+            this.checkExpression(midiItem.pitch, filePath);
+            this.checkExpression(midiItem.duration, filePath);
+          } else if (midiItem.kind === 'MidiChord') {
+            for (const pitch of midiItem.pitches) {
+              this.checkExpression(pitch, filePath);
+            }
+            this.checkExpression(midiItem.duration, filePath);
+          } else if (midiItem.kind === 'MidiDrum') {
+            this.checkExpression(midiItem.duration, filePath);
+          }
+        }
+      } else {
+        this.checkStatement(item as Statement, filePath);
+      }
+    }
+
+    this.currentTrackKind = null;
+    this.inVocalTrack = false;
+  }
+
+  private checkPhraseBlock(phrase: PhraseBlock, filePath: string): void {
+    // Check notes section
+    if (phrase.notesSection) {
+      for (const bar of phrase.notesSection.bars) {
+        for (const note of bar.notes) {
+          this.checkExpression(note.pitch, filePath);
+          this.checkExpression(note.duration, filePath);
+
+          // Check pitch range for vocal
+          if (note.pitch.kind === 'PitchLiteral') {
+            const midi = note.pitch.midi;
+            if (midi < 0 || midi > 127) {
+              this.addError('E110', `Pitch out of range: ${midi}`, note.pitch.position, filePath);
+            }
+            // Warn for extreme vocal ranges
+            if (midi < 40 || midi > 84) {
+              this.addWarning('W110', `Note ${midi} may be outside comfortable vocal range`, note.pitch.position, filePath);
+            }
+          }
+        }
+      }
+    }
+
+    // Check lyrics section
+    if (phrase.lyricsSection) {
+      const onsetCount = phrase.notesSection ?
+        this.countOnsets(phrase) : 0;
+      const lyricCount = phrase.lyricsSection.tokens.length;
+
+      if (onsetCount !== lyricCount) {
+        this.addError('E100',
+          `Lyric count mismatch: ${onsetCount} onsets, ${lyricCount} lyrics`,
+          phrase.lyricsSection.position, filePath);
+      }
+
+      // Check for kanji in lyrics
+      for (const token of phrase.lyricsSection.tokens) {
+        if (!token.isMelisma && this.containsKanji(token.value)) {
+          this.addError('E211',
+            `Kanji in lyrics: "${token.value}" - NEUTRINO requires hiragana/katakana`,
+            token.position, filePath);
+        }
+      }
+    }
+  }
+
+  private countOnsets(phrase: PhraseBlock): number {
+    if (!phrase.notesSection) return 0;
+
+    let count = 0;
+    let prevTie = false;
+
+    for (const bar of phrase.notesSection.bars) {
+      for (const note of bar.notes) {
+        // If previous note had tie and this is same pitch, don't count
+        if (!prevTie) {
+          count++;
+        }
+        prevTie = note.tieStart || false;
+      }
+    }
+
+    return count;
+  }
+
+  private containsKanji(text: string): boolean {
+    // CJK Unified Ideographs range
+    return /[\u4E00-\u9FFF]/.test(text);
   }
 
   private checkStatement(stmt: Statement, filePath: string): void {
@@ -243,18 +359,6 @@ export class Checker {
         this.addPatternVariables(stmt.pattern, stmt.mutable);
         break;
 
-      case 'TrackBlock':
-        this.trackStarted = true;
-        // Track the kind of track for context-aware checks
-        this.currentTrackKind = stmt.trackKind as 'vocal' | 'midi';
-        this.inVocalTrack = stmt.trackKind === 'vocal';
-        for (const s of stmt.body) {
-          this.checkStatement(s, filePath);
-        }
-        this.inVocalTrack = false;
-        this.currentTrackKind = null;
-        break;
-
       case 'ExpressionStatement':
         this.checkExpression(stmt.expression, filePath);
         break;
@@ -282,27 +386,17 @@ export class Checker {
     // Add to import chain before processing
     this.importChain.add(normalizedPath);
 
-    // Check imported module for top-level execution
+    // Check imported module
     try {
       const source = fs.readFileSync(importPath, 'utf-8');
       const lexer = new Lexer(source, importPath);
       const tokens = lexer.tokenize();
       const parser = new Parser(tokens, importPath);
-      const program = parser.parse();
+      const score = parser.parse();
 
-      for (const s of program.statements) {
-        if (s.kind === 'ExpressionStatement') {
-          if (s.expression.kind === 'CallExpression') {
-            const forbidden = ['track', 'note', 'rest', 'chord', 'drum', 'at', 'advance', 'title', 'ppq', 'tempo', 'timeSig'];
-            const calleeName = s.expression.callee.kind === 'Identifier' ? s.expression.callee.name : null;
-            if (calleeName && forbidden.includes(calleeName)) {
-              this.addError('E300', `Top-level execution in imported module: ${calleeName}()`, s.position, importPath);
-            }
-          }
-        } else if (s.kind === 'TrackBlock') {
-          this.addError('E300', 'Top-level track block in imported module', s.position, importPath);
-        } else if (s.kind === 'ImportStatement') {
-          // Recursively check nested imports for circular dependencies
+      // Check nested imports
+      for (const s of score.globals) {
+        if (s.kind === 'ImportStatement') {
           this.checkImport(s, importPath);
         }
       }

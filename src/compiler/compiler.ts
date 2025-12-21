@@ -5,7 +5,7 @@ import * as path from 'path';
 import { Lexer } from '../lexer/index.js';
 import { Parser } from '../parser/index.js';
 import { Interpreter } from '../interpreter/index.js';
-import type { Program, ProcDeclaration, ConstDeclaration } from '../types/ast.js';
+import type { Score, ProcDeclaration, ConstDeclaration } from '../types/ast.js';
 import type { SongIR } from '../types/ir.js';
 import { MFError, createError } from '../errors.js';
 import { makeInt, makeFloat, makeString, makeBool, makeNull, makePitch, makeDur, makeTime, makeObject } from '../interpreter/runtime.js';
@@ -55,7 +55,7 @@ function isPathSafe(resolvedPath: string, baseDir: string): boolean {
 
 interface Module {
   path: string;
-  program: Program;
+  program: Score;
   exports: Map<string, ProcDeclaration | ConstDeclaration>;
 }
 
@@ -108,12 +108,10 @@ export class Compiler {
     const parser = new Parser(tokens, absolutePath);
     const program = parser.parse();
 
-    // Extract exports
+    // Extract exports from globals
     const exports = new Map<string, ProcDeclaration | ConstDeclaration>();
-    for (const stmt of program.statements) {
-      if (stmt.kind === 'ExportStatement') {
-        exports.set(stmt.declaration.name, stmt.declaration);
-      } else if (stmt.kind === 'ProcDeclaration' && stmt.exported) {
+    for (const stmt of program.globals) {
+      if (stmt.kind === 'ProcDeclaration' && stmt.exported) {
         exports.set(stmt.name, stmt);
       } else if (stmt.kind === 'ConstDeclaration' && stmt.exported) {
         exports.set(stmt.name, stmt);
@@ -128,29 +126,7 @@ export class Compiler {
 
     this.modules.set(absolutePath, module);
 
-    // Validate imported module (no top-level execution)
-    if (this.modules.size > 1) {
-      this.validateImportedModule(program, absolutePath);
-    }
-
     return module;
-  }
-
-  private validateImportedModule(program: Program, filePath: string): void {
-    for (const stmt of program.statements) {
-      if (stmt.kind === 'ExpressionStatement') {
-        const expr = stmt.expression;
-        if (expr.kind === 'CallExpression') {
-          const forbidden = ['track', 'note', 'rest', 'chord', 'drum', 'at', 'advance', 'title', 'ppq', 'tempo', 'timeSig'];
-          const calleeName = expr.callee.kind === 'Identifier' ? expr.callee.name : null;
-          if (calleeName && forbidden.includes(calleeName)) {
-            throw createError('E300', `Top-level execution in imported module: ${calleeName}()`, stmt.position, filePath);
-          }
-        }
-      } else if (stmt.kind === 'TrackBlock') {
-        throw createError('E300', 'Top-level track block in imported module', stmt.position, filePath);
-      }
-    }
   }
 
   private resolveAndRegister(module: Module, interpreter: Interpreter, visited: Set<string>): void {
@@ -162,7 +138,7 @@ export class Compiler {
     const moduleDir = path.dirname(module.path);
 
     // Process imports first (depth-first)
-    for (const stmt of module.program.statements) {
+    for (const stmt of module.program.globals) {
       if (stmt.kind === 'ImportStatement') {
         // Resolve import path (handle std: imports)
         const importPath = isStdlibImport(stmt.path)

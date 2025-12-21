@@ -161,21 +161,54 @@ export function splitIntoSyllables(lyric: string): string[] {
 }
 
 /**
- * Split lyric into chunks of max 2 syllables each
- * For NEUTRINO compatibility
+ * Count phonemes in a Japanese lyric
+ * NEUTRINO has a limit of 8 phonemes per note
+ * Each kana produces 1-3 phonemes depending on the character
  */
-export function splitLyricForNeutrino(lyric: string): string[] {
+export function countPhonemes(lyric: string): number {
+  let count = 0;
+  for (const char of lyric) {
+    // Characters that produce 3 phonemes (consonant + y + vowel)
+    if (/[きぎしじちぢにひびぴみり]/.test(char)) {
+      // Check if followed by small ya/yu/yo
+      count += 2; // Base consonant + vowel (may be adjusted by small kana)
+    } else if (/[ゃゅょ]/.test(char)) {
+      // Small ya/yu/yo adds 'y' phoneme and replaces previous vowel
+      count += 1; // Just the y sound (vowel already counted)
+    } else if (/[っ]/.test(char)) {
+      // Small tsu (geminate consonant) - counts as 1 phoneme
+      count += 1;
+    } else if (/[ん]/.test(char)) {
+      // N sound - 1 phoneme
+      count += 1;
+    } else if (/[あいうえお]/.test(char)) {
+      // Vowels only - 1 phoneme
+      count += 1;
+    } else if (/[\u3040-\u309F\u30A0-\u30FF]/.test(char)) {
+      // Other kana (consonant + vowel) - 2 phonemes
+      count += 2;
+    }
+  }
+  return count;
+}
+
+/**
+ * Split lyric into chunks that fit within NEUTRINO's syllable limit
+ * @param lyric The lyric to split
+ * @param maxSyllables Maximum syllables per chunk (default: 7 to be safe under limit of 8)
+ */
+export function splitLyricBySyllables(lyric: string, maxSyllables: number = 7): string[] {
   const syllables = splitIntoSyllables(lyric);
 
-  if (syllables.length <= 2) {
+  // Check if already within limit
+  if (syllables.length <= maxSyllables) {
     return [lyric];
   }
 
-  // Group into chunks of 2 syllables
+  // Build chunks that stay within syllable limit
   const chunks: string[] = [];
-  for (let i = 0; i < syllables.length; i += 2) {
-    const chunk = syllables.slice(i, i + 2).join('');
-    chunks.push(chunk);
+  for (let i = 0; i < syllables.length; i += maxSyllables) {
+    chunks.push(syllables.slice(i, i + maxSyllables).join(''));
   }
 
   return chunks;

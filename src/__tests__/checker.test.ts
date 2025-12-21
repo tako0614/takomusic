@@ -6,26 +6,27 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-describe('Checker', () => {
+describe('Checker v2.0', () => {
   function check(source: string, filePath = 'test.mf') {
     const lexer = new Lexer(source, filePath);
     const tokens = lexer.tokenize();
     const parser = new Parser(tokens, filePath);
-    const program = parser.parse();
+    const score = parser.parse();
     const checker = new Checker(path.dirname(filePath));
-    return checker.check(program, filePath);
+    return checker.check(score, filePath);
   }
 
-  it('should pass valid program', () => {
+  it('should pass valid score', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
+      score "Test" {
+        tempo 120
+        time 4/4
 
-        track(midi, t1, { ch: 1 }) {
-          at(1:1);
-          note(C4, 1/4);
+        part Vocal {
+          phrase {
+            notes: | C4 q |;
+            lyrics mora: あ;
+          }
         }
       }
     `;
@@ -34,141 +35,53 @@ describe('Checker', () => {
     expect(errors.length).toBe(0);
   });
 
-  it('should detect E400 (no main)', () => {
+  it('should detect E100 (lyric count mismatch)', () => {
     const source = `
-      proc foo() {
-        ppq(480);
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E400' && d.message.includes('main'))).toBe(true);
-  });
+      score "Test" {
+        tempo 120
+        time 4/4
 
-  it('should detect E400 (undefined symbol)', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        const x = undefinedVar;
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E400' && d.message.includes('undefinedVar'))).toBe(true);
-  });
-
-  it('should detect E050 (global after track)', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-
-        track(midi, t1, { ch: 1 }) { }
-        tempo(140);
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E050')).toBe(true);
-  });
-
-  it('should warn W310 (direct recursion)', () => {
-    const source = `
-      proc foo() {
-        foo();
-      }
-
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        foo();
-      }
-    `;
-    const diagnostics = check(source);
-    // Changed from E310 error to W310 warning
-    expect(diagnostics.some(d => d.code === 'W310' && d.severity === 'warning')).toBe(true);
-  });
-
-  it('should warn W310 (indirect recursion)', () => {
-    const source = `
-      proc foo() {
-        bar();
-      }
-
-      proc bar() {
-        foo();
-      }
-
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        foo();
-      }
-    `;
-    const diagnostics = check(source);
-    // Changed from E310 error to W310 warning
-    expect(diagnostics.some(d => d.code === 'W310' && d.severity === 'warning')).toBe(true);
-  });
-
-  it('should warn W401 (for range not constant with let)', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        let n = 4;
-        for (i in 1..=n) {
-          const x = i;
+        part Vocal {
+          phrase {
+            notes: | C4 q  D4 q  E4 q  F4 q |;
+            lyrics mora: あ い;
+          }
         }
       }
     `;
     const diagnostics = check(source);
-    // Changed from E401 error to W401 warning
-    expect(diagnostics.some(d => d.code === 'W401' && d.severity === 'warning')).toBe(true);
+    expect(diagnostics.some(d => d.code === 'E100')).toBe(true);
   });
 
-  it('should allow for range with const', () => {
+  it('should detect E211 (kanji in lyrics)', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        const n = 4;
-        for (i in 1..=n) {
-          const x = i;
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        part Vocal {
+          phrase {
+            notes: | C4 q |;
+            lyrics mora: 音;
+          }
         }
       }
     `;
     const diagnostics = check(source);
-    const errors = diagnostics.filter(d => d.severity === 'error');
-    expect(errors.length).toBe(0);
+    expect(diagnostics.some(d => d.code === 'E211')).toBe(true);
   });
 
-  it('should detect E110 (pitch out of range)', () => {
+  it('should warn W110 (vocal pitch out of range)', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(midi, t1, { ch: 1 }) {
-          note(C10, 1/4);
-        }
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E110')).toBe(true);
-  });
+      score "Test" {
+        tempo 120
+        time 4/4
 
-  it('should warn W110 (vocal pitch out of typical range)', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(vocal, v1, {}) {
-          note(C2, 1/4, "あ");
+        part Vocal {
+          phrase {
+            notes: | C2 q |;
+            lyrics mora: あ;
+          }
         }
       }
     `;
@@ -176,83 +89,17 @@ describe('Checker', () => {
     expect(diagnostics.some(d => d.code === 'W110')).toBe(true);
   });
 
-  it('should warn W100 (extremely short note)', () => {
+  it('should allow tied notes with fewer lyrics', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(midi, t1, { ch: 1 }) {
-          note(C4, 1/128);
-        }
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'W100')).toBe(true);
-  });
+      score "Test" {
+        tempo 120
+        time 4/4
 
-  it('should warn W200 (too many tempo events)', () => {
-    let tempoLines = '';
-    for (let i = 0; i < 130; i++) {
-      tempoLines += `tempo(${120 + i});\n`;
-    }
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        ${tempoLines}
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'W200')).toBe(true);
-  });
-
-  it('should detect E300 (top-level execution in import)', () => {
-    // Create a temp file for the import
-    const tmpDir = os.tmpdir();
-    const libPath = path.join(tmpDir, 'test_lib.mf');
-    const mainPath = path.join(tmpDir, 'test_main.mf');
-
-    fs.writeFileSync(libPath, `
-      note(C4, 1/4, "あ");
-      export proc FOO() { }
-    `);
-
-    const mainSource = `
-      import { FOO } from "./test_lib.mf";
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        FOO();
-      }
-    `;
-    fs.writeFileSync(mainPath, mainSource);
-
-    const lexer = new Lexer(mainSource, mainPath);
-    const tokens = lexer.tokenize();
-    const parser = new Parser(tokens, mainPath);
-    const program = parser.parse();
-    const checker = new Checker(tmpDir);
-    const diagnostics = checker.check(program, mainPath);
-
-    // Cleanup
-    fs.unlinkSync(libPath);
-    fs.unlinkSync(mainPath);
-
-    expect(diagnostics.some(d => d.code === 'E300')).toBe(true);
-  });
-
-  it('should allow drum names without E400', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(midi, drums, { ch: 10 }) {
-          drum(kick, 1/4);
-          drum(snare, 1/4);
-          drum(hhc, 1/4);
+        part Vocal {
+          phrase {
+            notes: | C4 h~ C4 h |;
+            lyrics mora: あ;
+          }
         }
       }
     `;
@@ -261,78 +108,58 @@ describe('Checker', () => {
     expect(errors.length).toBe(0);
   });
 
-  it('should detect E210 (vocal note missing lyric)', () => {
+  it('should allow melisma', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(vocal, v1, {}) {
-          note(C4, 1/4);
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        part Vocal {
+          phrase {
+            notes: | C4 q  D4 q  E4 q |;
+            lyrics mora: あ _ _;
+          }
         }
       }
     `;
     const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E210')).toBe(true);
+    const errors = diagnostics.filter(d => d.severity === 'error');
+    expect(errors.length).toBe(0);
   });
 
-  it('should detect E210 (vocal note empty lyric)', () => {
+  it('should pass valid MIDI part', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(vocal, v1, {}) {
-          note(C4, 1/4, "");
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        part Piano {
+          midi ch:1 program:0
+          | C4 q  E4 q  G4 q  C5 q |
         }
       }
     `;
     const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E210')).toBe(true);
+    const errors = diagnostics.filter(d => d.severity === 'error');
+    expect(errors.length).toBe(0);
   });
 
-  it('should detect E220 (drum in vocal track)', () => {
+  it('should pass score with multiple parts', () => {
     const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(vocal, v1, {}) {
-          drum(kick, 1/4);
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        part Vocal {
+          phrase {
+            notes: | C4 q  D4 q |;
+            lyrics mora: あ い;
+          }
         }
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E220')).toBe(true);
-  });
 
-  it('should detect E221 (chord in vocal track)', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(vocal, v1, {}) {
-          chord([C4, E4, G4], 1/4);
-        }
-      }
-    `;
-    const diagnostics = check(source);
-    expect(diagnostics.some(d => d.code === 'E221')).toBe(true);
-  });
-
-  it('should pass valid vocal track', () => {
-    const source = `
-      export proc main() {
-        ppq(480);
-        timeSig(4, 4);
-        tempo(120);
-        track(vocal, v1, {}) {
-          at(1:1);
-          note(C4, 1/4, "あ");
-          note(D4, 1/4, "い");
-          rest(1/4);
-          note(E4, 1/4, "う");
+        part Piano {
+          midi ch:1 program:0
+          | [C3 E3 G3] h  [F3 A3 C4] h |
         }
       }
     `;

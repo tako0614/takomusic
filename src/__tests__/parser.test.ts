@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Lexer } from '../lexer/index.js';
 import { Parser } from '../parser/index.js';
 
-describe('Parser', () => {
+describe('Parser v2.0', () => {
   function parse(source: string) {
     const lexer = new Lexer(source);
     const tokens = lexer.tokenize();
@@ -10,121 +10,199 @@ describe('Parser', () => {
     return parser.parse();
   }
 
-  it('should parse const declaration', () => {
-    const ast = parse('const x = 42;');
-    expect(ast.statements.length).toBe(1);
-    expect(ast.statements[0].kind).toBe('ConstDeclaration');
-    const decl = ast.statements[0] as any;
-    expect(decl.name).toBe('x');
-    expect(decl.value.kind).toBe('IntLiteral');
-    expect(decl.value.value).toBe(42);
+  it('should parse minimal score', () => {
+    const score = parse(`
+      score "Test" {
+        tempo 120
+        time 4/4
+        part Vocal {
+          phrase {
+            notes:
+              | C4 q |;
+            lyrics mora:
+              あ;
+          }
+        }
+      }
+    `);
+    expect(score.kind).toBe('Score');
+    expect(score.title).toBe('Test');
+    expect(score.parts.length).toBe(1);
+    expect(score.parts[0].name).toBe('Vocal');
   });
 
-  it('should parse let declaration', () => {
-    const ast = parse('let y = "hello";');
-    expect(ast.statements.length).toBe(1);
-    expect(ast.statements[0].kind).toBe('LetDeclaration');
-    const decl = ast.statements[0] as any;
-    expect(decl.name).toBe('y');
-    expect(decl.value.kind).toBe('StringLiteral');
-    expect(decl.value.value).toBe('hello');
+  it('should parse backend config', () => {
+    const score = parse(`
+      score "Test" {
+        backend neutrino {
+          singer "KIRITAN"
+          lang ja
+        }
+        part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
+      }
+    `);
+    expect(score.backend).not.toBeNull();
+    expect(score.backend!.name).toBe('neutrino');
+    expect(score.backend!.options.length).toBe(2);
   });
 
-  it('should parse pitch literals with correct MIDI values', () => {
-    const ast = parse('const p = C4;');
-    const decl = ast.statements[0] as any;
-    expect(decl.value.kind).toBe('PitchLiteral');
-    expect(decl.value.midi).toBe(60); // C4 = 60
+  it('should parse tempo and time signature', () => {
+    const score = parse(`
+      score "Test" {
+        tempo 140
+        time 3/4
+        part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
+      }
+    `);
+    expect(score.globals.some(g => g.kind === 'TempoStatement')).toBe(true);
+    expect(score.globals.some(g => g.kind === 'TimeSignatureStatement')).toBe(true);
   });
 
-  it('should parse duration literals', () => {
-    const ast = parse('const d = 1/4;');
-    const decl = ast.statements[0] as any;
-    expect(decl.value.kind).toBe('DurLiteral');
-    expect(decl.value.numerator).toBe(1);
-    expect(decl.value.denominator).toBe(4);
+  it('should parse key signature', () => {
+    const score = parse(`
+      score "Test" {
+        key C major
+        part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
+      }
+    `);
+    const keySig = score.globals.find(g => g.kind === 'KeySignatureStatement') as any;
+    expect(keySig).toBeDefined();
+    expect(keySig.mode).toBe('major');
   });
 
-  it('should parse time literals', () => {
-    const ast = parse('const t = 2:3:100;');
-    const decl = ast.statements[0] as any;
-    expect(decl.value.kind).toBe('TimeLiteral');
-    expect(decl.value.bar).toBe(2);
-    expect(decl.value.beat).toBe(3);
-    expect(decl.value.sub).toBe(100);
+  it('should parse phrase with notes and lyrics', () => {
+    const score = parse(`
+      score "Test" {
+        part Vocal {
+          phrase {
+            notes:
+              | C4 q  D4 q  E4 q  F4 q |;
+            lyrics mora:
+              は じ め ま;
+          }
+        }
+      }
+    `);
+    const phrase = score.parts[0].body[0] as any;
+    expect(phrase.kind).toBe('PhraseBlock');
+    expect(phrase.notesSection.bars[0].notes.length).toBe(4);
+    expect(phrase.lyricsSection.tokens.length).toBe(4);
   });
 
-  it('should parse proc declaration', () => {
-    const ast = parse('proc foo(a, b) { const x = a; }');
-    expect(ast.statements[0].kind).toBe('ProcDeclaration');
-    const proc = ast.statements[0] as any;
-    expect(proc.name).toBe('foo');
-    expect(proc.params).toEqual([{ name: 'a' }, { name: 'b' }]);
-    expect(proc.body.length).toBe(1);
+  it('should parse tied notes', () => {
+    const score = parse(`
+      score "Test" {
+        part V {
+          phrase {
+            notes:
+              | C4 h~ C4 h |;
+            lyrics mora:
+              あ;
+          }
+        }
+      }
+    `);
+    const phrase = score.parts[0].body[0] as any;
+    const notes = phrase.notesSection.bars[0].notes;
+    expect(notes[0].tieStart).toBe(true);
+    expect(notes[1].tieStart).toBeFalsy();
   });
 
-  it('should parse export proc', () => {
-    const ast = parse('export proc main() { }');
-    expect(ast.statements[0].kind).toBe('ExportStatement');
-    const exp = ast.statements[0] as any;
-    expect(exp.declaration.kind).toBe('ProcDeclaration');
-    expect(exp.declaration.name).toBe('main');
+  it('should parse melisma (_)', () => {
+    const score = parse(`
+      score "Test" {
+        part V {
+          phrase {
+            notes:
+              | C4 q  D4 q  E4 q |;
+            lyrics mora:
+              あ _ _;
+          }
+        }
+      }
+    `);
+    const phrase = score.parts[0].body[0] as any;
+    const tokens = phrase.lyricsSection.tokens;
+    expect(tokens[0].isMelisma).toBe(false);
+    expect(tokens[1].isMelisma).toBe(true);
+    expect(tokens[2].isMelisma).toBe(true);
   });
 
-  it('should parse if statement', () => {
-    const ast = parse('if (x == 1) { const y = 2; } else { const z = 3; }');
-    expect(ast.statements[0].kind).toBe('IfStatement');
-    const ifStmt = ast.statements[0] as any;
-    expect(ifStmt.condition.kind).toBe('BinaryExpression');
-    expect(ifStmt.consequent.length).toBe(1);
-    expect(ifStmt.alternate.length).toBe(1);
+  it('should parse rest statement', () => {
+    const score = parse(`
+      score "Test" {
+        part V {
+          phrase { notes: | C4 q |; lyrics mora: あ; }
+          rest q
+          phrase { notes: | D4 q |; lyrics mora: い; }
+        }
+      }
+    `);
+    expect(score.parts[0].body[1].kind).toBe('RestStatement');
   });
 
-  it('should parse for statement', () => {
-    const ast = parse('for (i in 1..=4) { const x = i; }');
-    expect(ast.statements[0].kind).toBe('ForStatement');
-    const forStmt = ast.statements[0] as any;
-    expect(forStmt.variable).toBe('i');
-    expect(forStmt.range.inclusive).toBe(true);
+  it('should parse MIDI part with bars', () => {
+    const score = parse(`
+      score "Test" {
+        part Piano {
+          midi ch:1 program:0
+          | C4 q  E4 q  G4 q  C5 q |
+        }
+      }
+    `);
+    expect(score.parts[0].partKind).toBe('midi');
+    expect(score.parts[0].body[0].kind).toBe('MidiBar');
   });
 
-  it('should parse track block', () => {
-    const ast = parse('track(vocal, v1, { engine: "piapro" }) { }');
-    expect(ast.statements[0].kind).toBe('TrackBlock');
-    const track = ast.statements[0] as any;
-    expect(track.trackKind).toBe('vocal');
-    expect(track.id).toBe('v1');
-    expect(track.options.properties[0].key).toBe('engine');
+  it('should parse MIDI chord', () => {
+    const score = parse(`
+      score "Test" {
+        part Piano {
+          midi ch:1 program:0
+          | [C4 E4 G4] w |
+        }
+      }
+    `);
+    const bar = score.parts[0].body[0] as any;
+    expect(bar.items[0].kind).toBe('MidiChord');
+    expect(bar.items[0].pitches.length).toBe(3);
   });
 
-  it('should parse import statement', () => {
-    const ast = parse('import { CHORUS, VERSE } from "./lib.mf";');
-    expect(ast.statements[0].kind).toBe('ImportStatement');
-    const imp = ast.statements[0] as any;
-    expect(imp.imports).toEqual(['CHORUS', 'VERSE']);
-    expect(imp.path).toBe('./lib.mf');
+  it('should parse short duration literals', () => {
+    const score = parse(`
+      score "Test" {
+        part V {
+          phrase {
+            notes:
+              | C4 w  D4 h  E4 q  F4 e |;
+            lyrics mora:
+              あ い う え;
+          }
+        }
+      }
+    `);
+    const notes = (score.parts[0].body[0] as any).notesSection.bars[0].notes;
+    expect(notes[0].duration.kind).toBe('DurLiteral');
   });
 
-  it('should parse binary expressions', () => {
-    const ast = parse('const x = C4 + 2;');
-    const decl = ast.statements[0] as any;
-    expect(decl.value.kind).toBe('BinaryExpression');
-    expect(decl.value.operator).toBe('+');
+  it('should parse const in globals', () => {
+    const score = parse(`
+      score "Test" {
+        const BPM = 120
+        tempo BPM
+        part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
+      }
+    `);
+    expect(score.globals.some(g => g.kind === 'ConstDeclaration')).toBe(true);
   });
 
-  it('should parse call expressions', () => {
-    const ast = parse('note(C4, 1/4, "あ");');
-    const stmt = ast.statements[0] as any;
-    expect(stmt.expression.kind).toBe('CallExpression');
-    expect(stmt.expression.callee.kind).toBe('Identifier');
-    expect(stmt.expression.callee.name).toBe('note');
-    expect(stmt.expression.arguments.length).toBe(3);
-  });
-
-  it('should parse array literals', () => {
-    const ast = parse('const arr = [C4, E4, G4];');
-    const decl = ast.statements[0] as any;
-    expect(decl.value.kind).toBe('ArrayLiteral');
-    expect(decl.value.elements.length).toBe(3);
+  it('should parse proc in globals', () => {
+    const score = parse(`
+      score "Test" {
+        proc helper() { }
+        part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
+      }
+    `);
+    expect(score.globals.some(g => g.kind === 'ProcDeclaration')).toBe(true);
   });
 });

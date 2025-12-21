@@ -1,11 +1,12 @@
-// MusicXML generator for vocal tracks
+// MusicXML generator for TakoScore v2.0 - Underlay model support
 
 import type {
   SongIR,
   VocalTrack,
   NoteEvent,
-  TempoEvent,
-  TimeSigEvent,
+  Phrase,
+  PhraseNote,
+  Syllabic,
   DynamicMark,
   NoteEventExtended,
   NoteEventFull,
@@ -16,7 +17,7 @@ import type {
   RepeatEvent,
   OttavaEvent,
 } from '../types/ir.js';
-import { containsKanji, kanjiToHiragana, countSyllables, splitLyricForNeutrino } from '../utils/kanji.js';
+import { containsKanji, kanjiToHiragana, countSyllables, splitLyricBySyllables } from '../utils/kanji.js';
 
 const NOTE_NAMES = ['C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'];
 const NOTE_ALTERS = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
@@ -30,7 +31,21 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
 
   // Use first vocal track
   const track = vocalTracks[0];
-  const notes = track.events.filter((e): e is NoteEvent => e.type === 'note');
+
+  // v2.0: Use phrase-based notes if available
+  let notes: (NoteEvent | PhraseNote)[] = [];
+
+  if (track.phrases && track.phrases.length > 0) {
+    // Flatten phrases into notes with underlay info preserved
+    for (const phrase of track.phrases) {
+      for (const pn of phrase.notes) {
+        notes.push(pn);
+      }
+    }
+  } else {
+    // Fallback to legacy events
+    notes = track.events.filter((e): e is NoteEvent => e.type === 'note');
+  }
 
   // Check for kanji in lyrics and convert to hiragana with warning
   const kanjiConversions: { original: string; converted: string }[] = [];
@@ -38,7 +53,6 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
     if (note.lyric && containsKanji(note.lyric)) {
       const converted = await kanjiToHiragana(note.lyric);
       kanjiConversions.push({ original: note.lyric, converted });
-      // Update the lyric in place
       note.lyric = converted;
     }
   }
@@ -49,59 +63,41 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
     }
   }
 
-  // Split notes with more than 2 syllables into multiple notes
-  const splitNotes: NoteEvent[] = [];
-  const splitWarnings: { original: string; splits: string[] }[] = [];
+  // v2.0: Don't auto-split notes - the language enforces proper syllable counts
+  // Only validate phoneme budget if configured
+  const phonemeBudget = ir.backend?.phonemeBudgetPerOnset ?? 8;
+  const budgetWarnings: string[] = [];
+
   for (const note of notes) {
-    if (note.lyric && countSyllables(note.lyric) > 2) {
-      const chunks = splitLyricForNeutrino(note.lyric);
-      splitWarnings.push({ original: note.lyric, splits: chunks });
-
-      // Divide duration equally among chunks
-      const chunkDur = Math.floor(note.dur / chunks.length);
-      let currentTick = note.tick;
-
-      for (let i = 0; i < chunks.length; i++) {
-        // Last chunk gets any remaining ticks
-        const dur = i === chunks.length - 1
-          ? note.dur - (chunkDur * (chunks.length - 1))
-          : chunkDur;
-
-        splitNotes.push({
-          ...note,
-          tick: currentTick,
-          dur,
-          lyric: chunks[i],
-        });
-        currentTick += dur;
+    if (note.lyric) {
+      const syllableCount = countSyllables(note.lyric);
+      if (syllableCount > phonemeBudget) {
+        budgetWarnings.push(`"${note.lyric}" (${syllableCount} syllables) at tick ${note.tick}`);
       }
-    } else {
-      splitNotes.push(note);
     }
   }
-  if (splitWarnings.length > 0) {
-    console.warn(`Warning: Some lyrics have more than 2 syllables. Splitting notes for NEUTRINO compatibility:`);
-    for (const { original, splits } of splitWarnings) {
-      console.warn(`  "${original}" -> [${splits.map(s => `"${s}"`).join(', ')}]`);
+
+  if (budgetWarnings.length > 0) {
+    console.warn(`Warning: Some lyrics exceed phoneme budget (${phonemeBudget}):`);
+    for (const w of budgetWarnings) {
+      console.warn(`  ${w}`);
     }
   }
 
   // Get divisions (ticks per quarter note = ppq)
-  // Ensure divisions is at least 1 to prevent division by zero
   const divisions = Math.max(1, ir.ppq || 480);
 
   // Get time signature with safe defaults
   const timeSig = ir.timeSigs.length > 0 ? ir.timeSigs[0] : { numerator: 4, denominator: 4, tick: 0 };
-  // Ensure denominator is at least 1 to prevent division by zero
   const safeDenominator = Math.max(1, timeSig.denominator || 4);
   const ticksPerMeasure = (divisions * 4 * timeSig.numerator) / safeDenominator;
 
   // Get tempo
   const tempo = ir.tempos[0]?.bpm ?? 120;
 
-  // Group notes by measure (use splitNotes instead of notes)
-  const measures: NoteEvent[][] = [];
-  for (const note of splitNotes) {
+  // Group notes by measure
+  const measures: (NoteEvent | PhraseNote)[][] = [];
+  for (const note of notes) {
     const measureIndex = Math.floor(note.tick / ticksPerMeasure);
     while (measures.length <= measureIndex) {
       measures.push([]);
@@ -114,7 +110,6 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
     measures.push([]);
   }
 
-  // Use array and join for better performance with large scores
   const xmlParts: string[] = [];
 
   // Add UTF-8 BOM for Windows compatibility (especially NEUTRINO)
@@ -126,7 +121,7 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
   </work>
   <identification>
     <encoding>
-      <software>TakoMusic v1.0.0-alpha</software>
+      <software>TakoMusic v2.0.0</software>
     </encoding>
   </identification>
   <part-list>
@@ -145,7 +140,7 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
       xmlParts.push(`      <attributes>
         <divisions>${divisions}</divisions>
         <key>
-          <fifths>0</fifths>
+          <fifths>${getKeyFifths(ir.keySignature)}</fifths>
         </key>
         <time>
           <beats>${timeSig.numerator}</beats>
@@ -181,8 +176,8 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
         xmlParts.push(generateRest(restDur, divisions));
       }
 
-      // Add note
-      xmlParts.push(generateNote(note, divisions));
+      // Add note with underlay info
+      xmlParts.push(generateNoteWithUnderlay(note, divisions));
       currentTick = note.tick + note.dur;
     }
 
@@ -203,18 +198,43 @@ export async function generateMusicXML(ir: SongIR): Promise<string> {
   return xmlParts.join('');
 }
 
+function getKeyFifths(keySignature?: { root: string; mode: 'major' | 'minor' }): number {
+  if (!keySignature) return 0;
+
+  // Circle of fifths: C=0, G=1, D=2, A=3, E=4, B=5, F#=6, F=-1, Bb=-2, etc.
+  const majorFifths: Record<string, number> = {
+    'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 'B': 5, 'F#': 6, 'Gb': -6,
+    'F': -1, 'Bb': -2, 'Eb': -3, 'Ab': -4, 'Db': -5, 'Cb': -7
+  };
+
+  const minorFifths: Record<string, number> = {
+    'A': 0, 'E': 1, 'B': 2, 'F#': 3, 'C#': 4, 'G#': 5, 'D#': 6,
+    'D': -1, 'G': -2, 'C': -3, 'F': -4, 'Bb': -5, 'Eb': -6
+  };
+
+  const lookup = keySignature.mode === 'major' ? majorFifths : minorFifths;
+  return lookup[keySignature.root] ?? 0;
+}
+
+/**
+ * Type guard to check if a note has phrase-level properties
+ */
+function isPhraseNote(note: NoteEvent | PhraseNote): note is PhraseNote {
+  return 'isContinuation' in note || ('extend' in note && note.extend !== undefined);
+}
+
 /**
  * Type guard to check if a note has extended properties
  */
-function isNoteEventFull(note: NoteEvent): note is NoteEventFull {
+function isNoteEventFull(note: NoteEvent | PhraseNote): note is NoteEventFull {
   return 'dynamic' in note || 'graceNotes' in note || 'tieStart' in note ||
          'tieEnd' in note || 'slurStart' in note || 'slurEnd' in note ||
          'voice' in note || 'tuplet' in note || 'fermata' in note;
 }
 
-function generateNote(note: NoteEvent, divisions: number): string {
-  // Safely access extended note properties
+function generateNoteWithUnderlay(note: NoteEvent | PhraseNote, divisions: number): string {
   const extNote = isNoteEventFull(note) ? note : null;
+  const phraseNote = isPhraseNote(note) ? note : null;
   const octave = Math.floor((note.key ?? 60) / 12) - 1;
   const pitchClass = (note.key ?? 60) % 12;
   const step = NOTE_NAMES[pitchClass];
@@ -246,15 +266,18 @@ function generateNote(note: NoteEvent, divisions: number): string {
         <duration>${note.dur}</duration>
 `;
 
-  // Add tie element (before type)
-  if (extNote?.tieStart && extNote?.tieEnd) {
+  // Add tie element (before type) - support both legacy and phrase-based
+  const tieStart = extNote?.tieStart || phraseNote?.tieStart;
+  const tieEnd = extNote?.tieEnd || phraseNote?.tieEnd;
+
+  if (tieStart && tieEnd) {
     xml += `        <tie type="stop"/>
         <tie type="start"/>
 `;
-  } else if (extNote?.tieStart) {
+  } else if (tieStart) {
     xml += `        <tie type="start"/>
 `;
-  } else if (extNote?.tieEnd) {
+  } else if (tieEnd) {
     xml += `        <tie type="stop"/>
 `;
   }
@@ -279,21 +302,21 @@ function generateNote(note: NoteEvent, divisions: number): string {
 
   // Add notations element for slurs, ties, articulations, tuplets, fermata
   const hasNotations = extNote?.slurStart || extNote?.slurEnd ||
-    extNote?.tieStart || extNote?.tieEnd ||
+    tieStart || tieEnd ||
     note.articulation || extNote?.tuplet || extNote?.fermata;
 
   if (hasNotations) {
     xml += `        <notations>
 `;
     // Tied notation
-    if (extNote?.tieStart && extNote?.tieEnd) {
+    if (tieStart && tieEnd) {
       xml += `          <tied type="stop"/>
           <tied type="start"/>
 `;
-    } else if (extNote?.tieStart) {
+    } else if (tieStart) {
       xml += `          <tied type="start"/>
 `;
-    } else if (extNote?.tieEnd) {
+    } else if (tieEnd) {
       xml += `          <tied type="stop"/>
 `;
     }
@@ -329,11 +352,28 @@ function generateNote(note: NoteEvent, divisions: number): string {
 `;
   }
 
-  if (note.lyric) {
+  // v2.0: Enhanced lyric handling with syllabic and extend
+  if (note.lyric || phraseNote?.extend) {
     xml += `        <lyric>
-          <syllabic>single</syllabic>
-          <text>${escapeXml(note.lyric)}</text>
-        </lyric>
+`;
+
+    // Determine syllabic type
+    const syllabic = (note as PhraseNote).syllabic || 'single';
+    xml += `          <syllabic>${syllabic}</syllabic>
+`;
+
+    if (note.lyric) {
+      xml += `          <text>${escapeXml(note.lyric)}</text>
+`;
+    }
+
+    // Add extend element for melisma
+    if (phraseNote?.extend) {
+      xml += `          <extend type="start"/>
+`;
+    }
+
+    xml += `        </lyric>
 `;
   }
 
@@ -372,7 +412,6 @@ function generateGraceNote(grace: GraceNoteEvent): string {
 }
 
 function generateDynamic(dynamic: DynamicMark): string {
-  // Generate MusicXML dynamics direction
   return `      <direction placement="below">
         <direction-type>
           <dynamics>
@@ -384,10 +423,9 @@ function generateDynamic(dynamic: DynamicMark): string {
 }
 
 function generateArticulation(articulation: Articulation): string {
-  // Map articulation to MusicXML element
   const articulationMap: Record<Articulation, string> = {
     'staccato': 'staccato',
-    'legato': 'tenuto', // MusicXML doesn't have direct legato, use tenuto
+    'legato': 'tenuto',
     'accent': 'accent',
     'tenuto': 'tenuto',
     'marcato': 'strong-accent',

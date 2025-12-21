@@ -381,8 +381,26 @@ export class Lexer {
     }
 
     const value = this.source.slice(start, this.position);
+
+    // v2.0: Check for short duration literals (w, h, q, e, s, t, x with optional dots)
+    // These are: w=whole, h=half, q=quarter, e=eighth, s=sixteenth, t=32nd, x=64th
+    if (this.isDurationShorthand(value)) {
+      // Check for dots after the duration
+      while (this.peek() === '.') {
+        this.advance();
+      }
+      const fullValue = this.source.slice(start, this.position);
+      return { type: TokenType.DUR, value: fullValue, position: pos };
+    }
+
     const type = KEYWORDS[value] || TokenType.IDENT;
     return { type, value, position: pos };
+  }
+
+  // Check if a string is a duration shorthand (w, h, q, e, s, t, x)
+  private isDurationShorthand(value: string): boolean {
+    return value === 'w' || value === 'h' || value === 'q' ||
+           value === 'e' || value === 's' || value === 't' || value === 'x';
   }
 
   private readOperator(): Token {
@@ -503,7 +521,8 @@ export class Lexer {
           this.advance();
           return { type: TokenType.BITOREQ, value: '|=', position: pos };
         }
-        return { type: TokenType.BITOR, value: '|', position: pos };
+        // v2.0: | alone is PIPE for bar lines
+        return { type: TokenType.PIPE, value: '|', position: pos };
 
       case '^':
         if (this.peek() === '=') {
@@ -513,7 +532,19 @@ export class Lexer {
         return { type: TokenType.BITXOR, value: '^', position: pos };
 
       case '~':
-        return { type: TokenType.BITNOT, value: '~', position: pos };
+        // v2.0: ~ is TILDE for ties (also keep BITNOT for backward compat in expressions)
+        return { type: TokenType.TILDE, value: '~', position: pos };
+
+      case '_':
+        // v2.0: _ alone is UNDERSCORE for melisma
+        // But if followed by alphanumeric, it's part of identifier
+        if (!this.isAlphaNumeric(this.peek())) {
+          return { type: TokenType.UNDERSCORE, value: '_', position: pos };
+        }
+        // Put back and read as identifier
+        this.position--;
+        this.column--;
+        return this.readIdentifier();
 
       case '.':
         if (this.peek() === '.') {

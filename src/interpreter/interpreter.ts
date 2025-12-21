@@ -1,11 +1,16 @@
-// Interpreter for MFS language
+// Interpreter for TakoScore v2.0 language
 
 import type {
-  Program,
+  Score,
+  GlobalStatement,
+  PartDeclaration,
+  PartBodyItem,
+  PhraseBlock,
+  RestStatement,
+  MidiBar,
   Statement,
   Expression,
   ProcDeclaration,
-  TrackBlock,
   ObjectLiteral,
 } from '../types/ast.js';
 import type {
@@ -18,6 +23,8 @@ import type {
   RestEvent,
   TempoEvent,
   TimeSigEvent,
+  Phrase,
+  PhraseNote,
   CCEvent,
   PitchBendEvent,
   AftertouchEvent,
@@ -414,9 +421,9 @@ export class Interpreter {
     this.filePath = filePath;
     this.scope = new Scope();
     this.ir = {
-      schemaVersion: '0.1',
+      schemaVersion: '2.0',
       title: null,
-      ppq: 0,
+      ppq: 480, // Default PPQ
       tempos: [],
       timeSigs: [],
       tracks: [],
@@ -438,42 +445,354 @@ export class Interpreter {
     return this.scope;
   }
 
-  execute(program: Program): SongIR {
-    // First pass: collect all proc declarations from this module
-    for (const stmt of program.statements) {
-      if (stmt.kind === 'ProcDeclaration') {
-        this.scope.defineProc(stmt);
-      } else if (stmt.kind === 'ExportStatement') {
-        if (stmt.declaration.kind === 'ProcDeclaration') {
-          this.scope.defineProc(stmt.declaration);
+  // v2.0: Execute a Score AST
+  executeScore(score: Score): SongIR {
+    // Set title
+    this.ir.title = score.title;
+
+    // Process backend settings
+    if (score.backend) {
+      this.ir.backend = {
+        name: score.backend.name,
+      };
+      for (const opt of score.backend.options) {
+        const value = this.evaluate(opt.value);
+        if (opt.key === 'singer' && value.type === 'string') {
+          this.ir.backend.singer = value.value;
+        } else if (opt.key === 'lang' && (value.type === 'string' || value.type === 'ident')) {
+          this.ir.backend.lang = toString(value);
+        } else if (opt.key === 'phonemeBudgetPerOnset' && value.type === 'int') {
+          this.ir.backend.phonemeBudgetPerOnset = value.value;
+        } else if (opt.key === 'maxPhraseSeconds' && (value.type === 'int' || value.type === 'float')) {
+          this.ir.backend.maxPhraseSeconds = toNumber(value);
         }
       }
     }
 
-    // Second pass: execute top-level statements (const, let, expression statements)
-    for (const stmt of program.statements) {
-      if (stmt.kind === 'ExpressionStatement' ||
-          stmt.kind === 'ConstDeclaration' ||
-          stmt.kind === 'LetDeclaration' ||
-          stmt.kind === 'ExportStatement') {
-        this.executeStatement(stmt);
-      }
+    // Process global statements
+    for (const stmt of score.globals) {
+      this.executeGlobalStatement(stmt);
     }
 
-    // Find and execute main()
-    const mainProc = this.scope.lookupProc('main');
-    if (!mainProc) {
-      throw new MFError('E400', 'No main() procedure found', undefined, this.filePath);
+    // Process parts
+    for (const part of score.parts) {
+      this.executePartDeclaration(part);
     }
-
-    // Execute main
-    this.executeStatements(mainProc.body);
 
     // Validate IR
     this.validateIR();
 
-    // Build final IR
-    return this.buildFinalIR();
+    return this.ir;
+  }
+
+  // Execute global statement (tempo, time sig, etc.)
+  private executeGlobalStatement(stmt: GlobalStatement): void {
+    switch (stmt.kind) {
+      case 'TempoStatement': {
+        const bpm = toNumber(this.evaluate(stmt.bpm));
+        const tick = stmt.at ? this.timeToTick(this.evaluate(stmt.at) as any) : 0;
+        // Set default tempo at tick 0 if this is the first
+        if (this.ir.tempos.length === 0 || tick === 0) {
+          this.ir.tempos = this.ir.tempos.filter(t => t.tick !== 0);
+          this.ir.tempos.push({ tick: 0, bpm });
+        } else {
+          this.ir.tempos.push({ tick, bpm });
+        }
+        break;
+      }
+      case 'TimeSignatureStatement': {
+        const numerator = toNumber(this.evaluate(stmt.numerator));
+        const denominator = toNumber(this.evaluate(stmt.denominator));
+        const tick = stmt.at ? this.timeToTick(this.evaluate(stmt.at) as any) : 0;
+        if (this.ir.timeSigs.length === 0 || tick === 0) {
+          this.ir.timeSigs = this.ir.timeSigs.filter(t => t.tick !== 0);
+          this.ir.timeSigs.push({ tick: 0, numerator, denominator });
+        } else {
+          this.ir.timeSigs.push({ tick, numerator, denominator });
+        }
+        break;
+      }
+      case 'KeySignatureStatement': {
+        const rootVal = this.evaluate(stmt.root);
+        let root = 'C';
+        if (rootVal.type === 'string') {
+          root = rootVal.value;
+        } else if (rootVal.type === 'pitch') {
+          // Extract note name from MIDI
+          const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+          root = names[rootVal.midi % 12];
+        }
+        this.ir.keySignature = { root, mode: stmt.mode };
+        break;
+      }
+      case 'PpqStatement': {
+        this.ir.ppq = toNumber(this.evaluate(stmt.value));
+        break;
+      }
+      case 'ImportStatement':
+      case 'ConstDeclaration':
+      case 'ProcDeclaration':
+        // Handle as regular statements
+        this.executeStatement(stmt as Statement);
+        break;
+    }
+  }
+
+  // Execute part declaration
+  private executePartDeclaration(part: PartDeclaration): void {
+    const isVocal = part.partKind === 'vocal' ||
+                    (part.partKind === null && part.body.some(item => item.kind === 'PhraseBlock'));
+
+    // Create track state
+    const trackState: TrackState = {
+      id: part.name,
+      kind: isVocal ? 'vocal' : 'midi',
+      cursor: 0,
+      events: [],
+      meta: {},
+    };
+
+    // Process options
+    for (const opt of part.options) {
+      const value = this.evaluate(opt.value);
+      if (opt.key === 'ch' || opt.key === 'channel') {
+        trackState.channel = toNumber(value) - 1; // Convert to 0-based
+      } else if (opt.key === 'program') {
+        trackState.program = toNumber(value);
+      } else if (opt.key === 'vel') {
+        trackState.defaultVel = toNumber(value);
+      }
+    }
+
+    // Set defaults for MIDI
+    if (!isVocal) {
+      trackState.channel = trackState.channel ?? 0;
+      trackState.program = trackState.program ?? 0;
+      trackState.defaultVel = trackState.defaultVel ?? 96;
+    }
+
+    this.tracks.set(part.name, trackState);
+    this.currentTrack = trackState;
+
+    // Initialize phrases array for vocal tracks
+    if (isVocal) {
+      trackState.phrases = [];
+    }
+
+    // Process body
+    for (const item of part.body) {
+      this.executePartBodyItem(item, trackState);
+    }
+
+    this.currentTrack = null;
+  }
+
+  // Execute part body item
+  private executePartBodyItem(item: PartBodyItem, track: TrackState): void {
+    switch (item.kind) {
+      case 'PhraseBlock':
+        this.executePhraseBlock(item, track);
+        break;
+      case 'RestStatement':
+        this.executeRestStatement(item, track);
+        break;
+      case 'MidiBar':
+        this.executeMidiBar(item, track);
+        break;
+      default:
+        // Regular statement
+        this.executeStatement(item as Statement);
+        break;
+    }
+  }
+
+  // Execute phrase block
+  private executePhraseBlock(phrase: PhraseBlock, track: TrackState): void {
+    const phraseStartTick = track.cursor;
+    const phraseNotes: PhraseNote[] = [];
+
+    // Collect notes from notes section
+    if (phrase.notesSection) {
+      for (const bar of phrase.notesSection.bars) {
+        for (const noteItem of bar.notes) {
+          const pitch = this.evaluate(noteItem.pitch);
+          const dur = this.evaluate(noteItem.duration);
+
+          if (pitch.type !== 'pitch') {
+            throw new MFError('TYPE', 'Expected pitch in note', noteItem.position, this.filePath);
+          }
+
+          const durTicks = this.durToTicks(dur as DurValue, noteItem.position);
+
+          phraseNotes.push({
+            tick: track.cursor,
+            dur: durTicks,
+            key: pitch.midi,
+            tieStart: noteItem.tieStart,
+          });
+
+          track.cursor += durTicks;
+        }
+      }
+    }
+
+    // Mark tied notes as continuations
+    for (let i = 0; i < phraseNotes.length; i++) {
+      if (i > 0 && phraseNotes[i - 1].tieStart &&
+          phraseNotes[i - 1].key === phraseNotes[i].key) {
+        phraseNotes[i].tieEnd = true;
+        phraseNotes[i].isContinuation = true;
+      }
+    }
+
+    // Apply lyrics (underlay)
+    if (phrase.lyricsSection) {
+      let lyricIndex = 0;
+      for (const note of phraseNotes) {
+        if (note.isContinuation) {
+          // Tied continuation - don't advance lyrics
+          continue;
+        }
+
+        if (lyricIndex < phrase.lyricsSection.tokens.length) {
+          const token = phrase.lyricsSection.tokens[lyricIndex];
+          if (token.isMelisma) {
+            // Melisma - extend from previous
+            note.extend = true;
+          } else {
+            note.lyric = token.value;
+          }
+          lyricIndex++;
+        }
+      }
+
+      // Validate count
+      const onsetCount = phraseNotes.filter(n => !n.isContinuation).length;
+      const lyricCount = phrase.lyricsSection.tokens.length;
+      if (onsetCount !== lyricCount) {
+        console.warn(`Warning: Lyric count mismatch: ${onsetCount} onsets, ${lyricCount} lyrics`);
+      }
+    }
+
+    // Convert to events and add to track
+    for (const pn of phraseNotes) {
+      const event: NoteEvent = {
+        type: 'note',
+        tick: pn.tick,
+        dur: pn.dur,
+        key: pn.key,
+        lyric: pn.lyric,
+        syllabic: pn.syllabic,
+        extend: pn.extend,
+      };
+      track.events.push(event);
+    }
+
+    // Store phrase for vocal tracks
+    if (track.phrases) {
+      track.phrases.push({
+        startTick: phraseStartTick,
+        endTick: track.cursor,
+        notes: phraseNotes,
+        breaths: phrase.breathMarks.map(bm => ({ tick: 0 })), // TODO: calculate proper tick
+      });
+    }
+  }
+
+  // Execute rest statement
+  private executeRestStatement(rest: RestStatement, track: TrackState): void {
+    const dur = this.evaluate(rest.duration);
+    const durTicks = this.durToTicks(dur as DurValue, rest.position);
+
+    track.events.push({
+      type: 'rest',
+      tick: track.cursor,
+      dur: durTicks,
+    });
+
+    track.cursor += durTicks;
+  }
+
+  // Execute MIDI bar
+  private executeMidiBar(bar: MidiBar, track: TrackState): void {
+    for (const item of bar.items) {
+      switch (item.kind) {
+        case 'MidiNote': {
+          const pitch = this.evaluate(item.pitch);
+          const dur = this.evaluate(item.duration);
+          const vel = item.velocity ? toNumber(this.evaluate(item.velocity)) : (track.defaultVel ?? 96);
+
+          if (pitch.type !== 'pitch') {
+            throw new MFError('TYPE', 'Expected pitch', item.position, this.filePath);
+          }
+
+          const durTicks = this.durToTicks(dur as DurValue, item.position);
+
+          track.events.push({
+            type: 'note',
+            tick: track.cursor,
+            dur: durTicks,
+            key: pitch.midi,
+            vel,
+          });
+
+          track.cursor += durTicks;
+          break;
+        }
+        case 'MidiChord': {
+          const dur = this.evaluate(item.duration);
+          const vel = item.velocity ? toNumber(this.evaluate(item.velocity)) : (track.defaultVel ?? 96);
+          const durTicks = this.durToTicks(dur as DurValue, item.position);
+
+          for (const pitchExpr of item.pitches) {
+            const pitch = this.evaluate(pitchExpr);
+            if (pitch.type !== 'pitch') {
+              throw new MFError('TYPE', 'Expected pitch in chord', item.position, this.filePath);
+            }
+
+            track.events.push({
+              type: 'note',
+              tick: track.cursor,
+              dur: durTicks,
+              key: pitch.midi,
+              vel,
+            });
+          }
+
+          track.cursor += durTicks;
+          break;
+        }
+        case 'MidiDrum': {
+          const dur = this.evaluate(item.duration);
+          const vel = item.velocity ? toNumber(this.evaluate(item.velocity)) : (track.defaultVel ?? 96);
+          const durTicks = this.durToTicks(dur as DurValue, item.position);
+
+          const drumMidi = DRUM_MAP[item.name.toLowerCase()] ?? 36;
+
+          track.events.push({
+            type: 'note',
+            tick: track.cursor,
+            dur: durTicks,
+            key: drumMidi,
+            vel,
+          });
+
+          track.cursor += durTicks;
+          break;
+        }
+        case 'MidiRest': {
+          const dur = this.evaluate(item.duration);
+          const durTicks = this.durToTicks(dur as DurValue, item.position);
+          track.cursor += durTicks;
+          break;
+        }
+      }
+    }
+  }
+
+  // Main entry point
+  execute(score: Score): SongIR {
+    return this.executeScore(score);
   }
 
   private executeStatements(statements: Statement[]): void {
@@ -736,11 +1055,6 @@ export class Interpreter {
         break;
       }
 
-      case 'TrackBlock': {
-        this.executeTrackBlock(stmt);
-        break;
-      }
-
       case 'ExpressionStatement': {
         this.evaluate(stmt.expression);
         break;
@@ -762,68 +1076,6 @@ export class Interpreter {
       default:
         throw createError('E400', `Unknown statement kind: ${(stmt as Statement).kind}`, stmt.position, this.filePath);
     }
-  }
-
-  private executeTrackBlock(block: TrackBlock): void {
-    this.trackStarted = true;
-
-    // Get or create track state
-    let trackState = this.tracks.get(block.id);
-    if (!trackState) {
-      trackState = {
-        id: block.id,
-        kind: block.trackKind,
-        cursor: 0,
-        events: [],
-        meta: {},
-      };
-
-      // Parse options
-      if (block.options) {
-        for (const prop of block.options.properties) {
-          if (prop.kind !== 'property') continue; // Skip spread in track options
-          const value = this.evaluate(prop.value);
-          if (value.type === 'string') {
-            trackState.meta[prop.key] = value.value;
-          } else if (value.type === 'int') {
-            if (prop.key === 'ch' || prop.key === 'channel') {
-              trackState.channel = value.value - 1; // Convert to 0-based
-            } else if (prop.key === 'program') {
-              trackState.program = value.value;
-            } else if (prop.key === 'vel') {
-              trackState.defaultVel = value.value;
-            } else {
-              // Warn about unknown int options
-              console.warn(`Warning: Unknown track option '${prop.key}' in track '${block.id}'`);
-              trackState.meta[prop.key] = value.value;
-            }
-          }
-        }
-      }
-
-      // Set defaults for MIDI tracks
-      if (block.trackKind === 'midi') {
-        trackState.channel = trackState.channel ?? 0;
-        trackState.program = trackState.program ?? 0;
-        trackState.defaultVel = trackState.defaultVel ?? 96;
-      }
-
-      this.tracks.set(block.id, trackState);
-    }
-
-    // Enter track context
-    const oldTrack = this.currentTrack;
-    this.currentTrack = trackState;
-
-    // Execute body in new scope
-    const childScope = this.scope.createChild();
-    const oldScope = this.scope;
-    this.scope = childScope;
-    this.executeStatements(block.body);
-    this.scope = oldScope;
-
-    // Exit track context
-    this.currentTrack = oldTrack;
   }
 
   private evaluate(expr: Expression): RuntimeValue {

@@ -191,6 +191,8 @@ import type {
   TrackFolderEvent,
   CollaboratorSession,
   VersionDiffEvent,
+  // v2.0 Phrase types
+  Phrase,
 } from '../types/ir.js';
 
 export interface TrackState {
@@ -202,6 +204,8 @@ export interface TrackState {
   channel?: number;
   program?: number;
   defaultVel?: number;
+  // v2.0: Phrase-first model
+  phrases?: Phrase[];
   // Vocaloid parameters
   vocaloidParams?: VocaloidParamEvent[];
   // Notation events

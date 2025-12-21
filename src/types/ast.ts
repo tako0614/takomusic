@@ -1,4 +1,4 @@
-// AST node types for MFS language
+// AST node types for TakoScore v2.0 language
 
 import type { Position } from './token.js';
 
@@ -7,11 +7,177 @@ export interface BaseNode {
   position: Position;
 }
 
-// ============ Program ============
+// ============ Score ============
 
-export interface Program extends BaseNode {
-  kind: 'Program';
-  statements: Statement[];
+export interface Score extends BaseNode {
+  kind: 'Score';
+  title: string;
+  backend: BackendConfig | null;
+  globals: GlobalStatement[];
+  parts: PartDeclaration[];
+}
+
+// ============ Backend Configuration ============
+
+export interface BackendConfig extends BaseNode {
+  kind: 'BackendConfig';
+  name: string;  // 'neutrino', etc.
+  options: BackendOption[];
+}
+
+export interface BackendOption extends BaseNode {
+  kind: 'BackendOption';
+  key: string;
+  value: Expression;
+}
+
+// ============ Global Statements ============
+
+export type GlobalStatement =
+  | TempoStatement
+  | TimeSignatureStatement
+  | KeySignatureStatement
+  | PpqStatement
+  | ImportStatement
+  | ConstDeclaration
+  | ProcDeclaration;
+
+export interface TempoStatement extends BaseNode {
+  kind: 'TempoStatement';
+  bpm: Expression;
+  at?: Expression;  // Optional time position
+}
+
+export interface TimeSignatureStatement extends BaseNode {
+  kind: 'TimeSignatureStatement';
+  numerator: Expression;
+  denominator: Expression;
+  at?: Expression;  // Optional time position
+}
+
+export interface KeySignatureStatement extends BaseNode {
+  kind: 'KeySignatureStatement';
+  root: Expression;
+  mode: 'major' | 'minor';
+}
+
+export interface PpqStatement extends BaseNode {
+  kind: 'PpqStatement';
+  value: Expression;
+}
+
+// ============ Parts ============
+
+export interface PartDeclaration extends BaseNode {
+  kind: 'PartDeclaration';
+  name: string;
+  partKind: 'vocal' | 'midi' | null;  // Inferred or explicit
+  options: PartOption[];
+  body: PartBodyItem[];
+}
+
+export interface PartOption extends BaseNode {
+  kind: 'PartOption';
+  key: string;
+  value: Expression;
+}
+
+export type PartBodyItem =
+  | PhraseBlock
+  | RestStatement
+  | MidiBar
+  | Statement;
+
+// ============ Phrase Block (Vocal) ============
+
+export interface PhraseBlock extends BaseNode {
+  kind: 'PhraseBlock';
+  notesSection: NotesSection | null;
+  lyricsSection: LyricsSection | null;
+  breathMarks: BreathMark[];
+}
+
+export interface NotesSection extends BaseNode {
+  kind: 'NotesSection';
+  bars: NoteBar[];
+}
+
+export interface NoteBar extends BaseNode {
+  kind: 'NoteBar';
+  notes: NoteItem[];
+}
+
+export interface NoteItem extends BaseNode {
+  kind: 'NoteItem';
+  pitch: Expression;
+  duration: Expression;
+  tieStart?: boolean;   // ~ after note
+  tieEnd?: boolean;     // tied from previous
+  slurStart?: boolean;  // ( after note
+  slurEnd?: boolean;    // ) after note
+}
+
+export interface LyricsSection extends BaseNode {
+  kind: 'LyricsSection';
+  mode: 'mora' | 'phoneme';
+  tokens: LyricToken[];
+}
+
+export interface LyricToken extends BaseNode {
+  kind: 'LyricToken';
+  value: string;      // Mora/phoneme text or '_' for melisma
+  isMelisma: boolean; // true if '_'
+}
+
+export interface BreathMark extends BaseNode {
+  kind: 'BreathMark';
+  afterBar: number;   // Index of bar after which breath occurs
+}
+
+// ============ Rest Statement ============
+
+export interface RestStatement extends BaseNode {
+  kind: 'RestStatement';
+  duration: Expression;
+}
+
+// ============ MIDI Bar ============
+
+export interface MidiBar extends BaseNode {
+  kind: 'MidiBar';
+  items: MidiBarItem[];
+}
+
+export type MidiBarItem =
+  | MidiNote
+  | MidiChord
+  | MidiDrum
+  | MidiRest;
+
+export interface MidiNote extends BaseNode {
+  kind: 'MidiNote';
+  pitch: Expression;
+  duration: Expression;
+  velocity?: Expression;
+}
+
+export interface MidiChord extends BaseNode {
+  kind: 'MidiChord';
+  pitches: Expression[];
+  duration: Expression;
+  velocity?: Expression;
+}
+
+export interface MidiDrum extends BaseNode {
+  kind: 'MidiDrum';
+  name: string;
+  duration: Expression;
+  velocity?: Expression;
+}
+
+export interface MidiRest extends BaseNode {
+  kind: 'MidiRest';
+  duration: Expression;
 }
 
 // ============ Statements ============
@@ -25,7 +191,6 @@ export type Statement =
   | AssignmentStatement
   | IndexAssignmentStatement
   | PropertyAssignmentStatement
-  | DestructuringDeclaration
   | IfStatement
   | ForStatement
   | ForEachStatement
@@ -34,8 +199,7 @@ export type Statement =
   | ReturnStatement
   | BreakStatement
   | ContinueStatement
-  | ExpressionStatement
-  | TrackBlock;
+  | ExpressionStatement;
 
 export interface ImportStatement extends BaseNode {
   kind: 'ImportStatement';
@@ -97,28 +261,6 @@ export interface PropertyAssignmentStatement extends BaseNode {
   value: Expression;
 }
 
-// Destructuring patterns
-export type DestructuringPattern = ArrayPattern | ObjectPattern;
-
-export interface ArrayPattern extends BaseNode {
-  kind: 'ArrayPattern';
-  elements: (string | DestructuringPattern | null)[]; // null for holes [a, , b]
-  rest?: string;
-}
-
-export interface ObjectPattern extends BaseNode {
-  kind: 'ObjectPattern';
-  properties: { key: string; value: string | DestructuringPattern }[];
-  rest?: string;
-}
-
-export interface DestructuringDeclaration extends BaseNode {
-  kind: 'DestructuringDeclaration';
-  pattern: DestructuringPattern;
-  value: Expression;
-  mutable: boolean; // true for let, false for const
-}
-
 export interface IfStatement extends BaseNode {
   kind: 'IfStatement';
   condition: Expression;
@@ -173,14 +315,6 @@ export interface ContinueStatement extends BaseNode {
 export interface ExpressionStatement extends BaseNode {
   kind: 'ExpressionStatement';
   expression: Expression;
-}
-
-export interface TrackBlock extends BaseNode {
-  kind: 'TrackBlock';
-  trackKind: 'vocal' | 'midi';
-  id: string;
-  options: ObjectLiteral | null;
-  body: Statement[];
 }
 
 // ============ Expressions ============
@@ -248,12 +382,14 @@ export interface PitchLiteral extends BaseNode {
 
 export interface DurLiteral extends BaseNode {
   kind: 'DurLiteral';
-  // Fraction/note-based duration (1/4, 4n, 8n., etc.)
-  numerator?: number;
-  denominator?: number;
+  // Note-based duration (w, h, q, e, s, t, x)
+  noteValue?: 'w' | 'h' | 'q' | 'e' | 's' | 't' | 'x';
   dots?: number; // 0 = none, 1 = dotted (1.5x), 2 = double-dotted (1.75x)
   // Tick-based duration (480t, 240t, etc.)
   ticks?: number;
+  // Fraction representation for internal use
+  numerator?: number;
+  denominator?: number;
 }
 
 export interface TimeLiteral extends BaseNode {
