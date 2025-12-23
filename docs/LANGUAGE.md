@@ -2,6 +2,44 @@
 
 TakoScore is a domain-specific language for vocal synthesis composition, optimized for NEUTRINO.
 
+## Language Architecture
+
+TakoScore provides two complementary syntaxes that compile to the same IR (Intermediate Representation):
+
+| Syntax | Use Case | Document |
+|--------|----------|----------|
+| **Declarative Syntax** | Score files (`.mf`), human-readable composition | This document |
+| **Procedural API** | Runtime scripting, programmatic generation | [BUILTINS.md](BUILTINS.md) |
+
+### How They Relate
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   Declarative       │     │   Procedural        │
+│   score { ... }     │     │   note(); tempo();  │
+│   part Vocal { }    │     │   track() { }       │
+└─────────┬───────────┘     └─────────┬───────────┘
+          │                           │
+          │  Parse                    │  Execute
+          ▼                           ▼
+     ┌─────────────────────────────────────┐
+     │           TakoScore IR              │
+     │  (Notes, Phrases, MIDI Events)      │
+     └─────────────────────────────────────┘
+                      │
+                      ▼
+            ┌─────────────────┐
+            │  NEUTRINO / SMF │
+            └─────────────────┘
+```
+
+- **Declarative syntax** (this document): Use `score { }` blocks with `part`, `phrase`, and bar notation (`| ... |`). Ideal for static compositions.
+- **Procedural API** ([BUILTINS.md](BUILTINS.md)): Use function calls like `note()`, `tempo()`, `track() { }`. Ideal for algorithmic composition.
+
+Both syntaxes can be mixed: declarative scores can call procedures, and procedural scripts can define metadata.
+
+---
+
 ## Design Principles
 
 ### Core Invariants
@@ -106,6 +144,31 @@ part PartName {
 
 Parts can be `vocal` (for synthesis) or `midi` (for accompaniment).
 
+**Part type detection**:
+
+| Contains | Type | Features |
+|----------|------|----------|
+| `phrase { }` blocks with `lyrics` | `vocal` | Underlay, NEUTRINO synthesis |
+| `midi ch:N` directive | `midi` | MIDI output, chords, no lyrics |
+
+```mf
+// Vocal part (detected by phrase/lyrics)
+part Vocal {
+  phrase {
+    notes: | C4 q |;
+    lyrics mora: あ;
+  }
+}
+
+// MIDI part (detected by midi directive)
+part Piano {
+  midi ch:1 program:0
+  | C4 q  E4 q  G4 q |
+}
+```
+
+> **Note**: A part cannot be both vocal and MIDI. Using both `phrase` blocks with lyrics and `midi` directive in the same part is an error.
+
 ### Vocal Part with Phrases
 
 Phrases are the fundamental unit for NEUTRINO. A phrase is bounded by rests or breaths.
@@ -143,16 +206,41 @@ notes:
   | G4 h         A4 h     |;   // Bar 2
 ```
 
-Duration suffixes:
-- `w` - whole note
-- `h` - half note
-- `q` - quarter note
-- `e` - eighth note
-- `s` - sixteenth note
-- `t` - thirty-second note
-- `x` - sixty-fourth note
+### Duration Notation
+
+TakoScore supports multiple duration notations. The **canonical form** uses letter suffixes:
+
+| Suffix | Value | Notes |
+|--------|-------|-------|
+| `w` | whole note | 4 beats |
+| `h` | half note | 2 beats |
+| `q` | quarter note | 1 beat |
+| `e` | eighth note | 1/2 beat |
+| `s` | sixteenth note | 1/4 beat |
+| `t` | thirty-second note | 1/8 beat |
+| `x` | sixty-fourth note | 1/16 beat |
 
 Dotted notes: append `.` (e.g., `q.` = dotted quarter)
+
+**Alternative notations** (accepted by Procedural API):
+
+| Alternative | Canonical | Description |
+|-------------|-----------|-------------|
+| `1/4` | `q` | Fraction notation |
+| `4n` | `q` | "n" suffix notation |
+| `QUARTER` | `q` | Constant (from `std:theory`) |
+| `480tk` | N/A | Tick literal (PPQ-dependent) |
+
+> **Note**: In declarative syntax, prefer the canonical letter suffixes (`q`, `h`, etc.).
+> The `t` suffix means "thirty-second note", not "ticks". Use `tk` suffix for tick values (e.g., `480tk`).
+
+```mf
+// All equivalent to a quarter note (with PPQ=480):
+C4 q        // Canonical (declarative syntax)
+note(C4, q)      // Procedural - canonical
+note(C4, 1/4)    // Procedural - fraction
+note(C4, 480tk)  // Procedural - ticks
+```
 
 ### Lyrics Section
 
@@ -169,6 +257,46 @@ Or phoneme sequences for advanced control:
 lyrics phoneme:
   k i z u d a r a k e n o m a m a;
 ```
+
+### Mora to Phoneme Expansion
+
+When using `lyrics mora:`, mora tokens are expanded to phonemes according to Japanese pronunciation rules:
+
+| Mora Type | Mora | Phonemes | Notes |
+|-----------|------|----------|-------|
+| Basic | き | k, i | CV (consonant + vowel) |
+| Vowel only | あ | a | Single phoneme |
+| Palatalized | きゃ | ky, a | CyV |
+| Moraic nasal | ん | N | Context-dependent |
+| Geminate | っ | cl | Closure (double consonant) |
+| Long vowel | ー | (extends previous) | Duration only |
+
+**Phoneme budget**: The `phonemeBudgetPerOnset` backend parameter (default: 8) limits phonemes per note onset.
+
+```mf
+// Error E220 if phoneme count exceeds budget
+backend neutrino {
+  phonemeBudgetPerOnset 4    // Strict limit
+}
+
+phrase {
+  notes: | C4 q |;
+  lyrics mora: きゃ;   // OK: ky, a = 2 phonemes
+}
+```
+
+**Using `lyrics phoneme:` directly**:
+
+```mf
+lyrics phoneme:
+  k i z u;   // 4 phonemes for 4 notes
+
+// Grouping for multi-phoneme onsets
+lyrics phoneme:
+  [k i] [z u];   // 2 onsets, 2 phonemes each
+```
+
+> **Note**: For `lyrics phoneme:`, use `[ ]` to group multiple phonemes onto a single onset if needed.
 
 ---
 
@@ -223,8 +351,9 @@ lyric_count = count(mora_tokens)  // including _ tokens
 
 ### Ties
 
-Ties connect two notes of the same pitch. The second note is **not an onset**.
+Ties connect two notes of the same pitch. The second note is **not an onset** and doesn't consume a lyric token.
 
+**Declarative syntax** (recommended in score files):
 ```mf
 notes:
   | C4 h~  C4 h   D4 q  E4 q |;
@@ -233,13 +362,49 @@ lyrics mora:
   こ          ん   に;
 ```
 
-The `~` indicates tie start. The tied C4 doesn't consume a lyric.
+The `~` suffix indicates tie start. The following note of the same pitch is the tie continuation.
 
-### Slurs (Planned)
+**Procedural API** (alternative):
+```javascript
+note(C4, h);
+tie(C4, h);    // Extends the previous C4
+note(D4, q);
+note(E4, q);
+```
 
-> **Note**: Slur syntax is planned for a future release.
+**Tie chaining** (multiple tied notes):
+```mf
+notes:
+  | C4 q~  C4 q~  C4 q~  C4 q |;   // Four quarter notes tied = one whole note
 
-Slurs will connect different pitches for phrasing (not pitch connection).
+lyrics mora:
+  あ;   // Only one onset, one lyric token
+```
+
+> **Note**: Ties must connect notes of the **same pitch**. Attempting to tie different pitches is an error (use slurs instead for phrasing).
+
+### Slurs
+
+> **Status**: Declarative slur syntax is **planned for a future release**.
+> The Procedural API already provides `slurStart()` and `slurEnd()` functions. See [BUILTINS.md](BUILTINS.md#記譜法).
+
+Slurs connect different pitches for phrasing articulation (unlike ties, which connect same pitches).
+
+**Current workaround** (Procedural API):
+```javascript
+slurStart();
+note(C4, q);
+note(D4, q);
+note(E4, q);
+slurEnd();
+```
+
+**Planned declarative syntax**:
+```mf
+// PLANNED - not yet supported
+notes:
+  | C4 q ( D4 q  E4 q ) |;   // Parentheses for slur
+```
 
 ---
 
@@ -257,23 +422,38 @@ part Vocal {
 
 ### Breath Mark
 
-Breath marks can be placed between bars in the notes section:
+> **Status**: The `breath;` syntax within notes section is **planned for a future release**.
+
+Currently, use separate `phrase` blocks with `rest` to indicate phrase boundaries:
 
 ```mf
-phrase {
-  notes:
-    | C4 q  D4 q |
-    breath;          // Breath = phrase boundary within phrase block
-    | E4 q  F4 q |;
+part Vocal {
+  phrase {
+    notes: | C4 q  D4 q |;
+    lyrics mora: き ず;
+  }
 
-  lyrics mora:
-    き ず だ ら;
+  rest q    // Phrase boundary
+
+  phrase {
+    notes: | E4 q  F4 q |;
+    lyrics mora: だ ら;
+  }
 }
 ```
 
-Breath marks are recognized by NEUTRINO as phrase boundaries.
+When implemented, `breath;` will allow phrase boundaries within a single `phrase` block:
 
-> **Note**: Breath mark syntax within notes section is planned for a future release. Currently, use separate phrase blocks with rests to indicate phrase boundaries.
+```mf
+// PLANNED - not yet supported
+phrase {
+  notes:
+    | C4 q  D4 q |
+    breath;
+    | E4 q  F4 q |;
+  lyrics mora: き ず だ ら;
+}
+```
 
 ---
 
@@ -317,7 +497,9 @@ part Vocal {
 }
 ```
 
-Time format is `bar:beat` (1-indexed bars, 0-indexed beats).
+Time format is `bar:beat` where both bar and beat are **1-indexed** (matching standard music notation).
+
+> **Example**: `1:1` = Bar 1, Beat 1 (the first beat of the first measure)
 
 ### Available Parameters
 
@@ -388,8 +570,52 @@ Built-in drum names for channel 10:
 | `string` | Text | `"hello"` |
 | `bool` | Boolean | `true`, `false` |
 | `pitch` | MIDI pitch | `C4`, `F#5`, `Bb3` |
-| `dur` | Duration | `q`, `h.`, `480t` |
+| `dur` | Duration | `q`, `h.`, `480tk` |
 | `time` | Time position | `1:1`, `3:2:240` |
+
+### Compound Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `array` | Ordered collection | `[C4, E4, G4]` |
+| `object` | Key-value pairs | `{ ch: 1, program: 0 }` |
+| `function` | Callable | `(x) => x * 2` |
+
+### Array Literals
+
+```mf
+const scale = [C4, D4, E4, F4, G4];
+const mixed = [1, "hello", true];
+
+// Access
+scale[0]     // C4
+len(scale)   // 5
+```
+
+### Object Literals
+
+```mf
+const config = { ch: 1, program: 0, vel: 100 };
+
+// Access
+config.ch    // 1
+```
+
+### Function Values (Lambda)
+
+```mf
+const double = (x) => x * 2;
+const add = (a, b) => a + b;
+
+// Multi-statement lambda
+const process = (x) => {
+  let result = x * 2;
+  return result + 1;
+};
+
+// Usage with higher-order functions
+map([1, 2, 3], (x) => x * 2);   // [2, 4, 6]
+```
 
 ### Pitch Literals
 
@@ -408,17 +634,24 @@ h       // Half note
 q       // Quarter note
 e       // Eighth note
 s       // Sixteenth note
+t       // Thirty-second note
 q.      // Dotted quarter
-480t    // 480 ticks
+480tk   // 480 ticks (explicit tick notation)
 ```
+
+> **Important**: `t` = thirty-second note, `tk` = ticks. See [Duration Notation](#duration-notation) for details.
 
 ### Time Literals
 
+Time literals use the format `bar:beat` or `bar:beat:tick`. Both bar and beat are **1-indexed**.
+
 ```mf
-1:1       // Bar 1, beat 1
+1:1       // Bar 1, beat 1 (first beat of first measure)
 2:3       // Bar 2, beat 3
-1:1:240   // Bar 1, beat 1, tick 240
+1:1:240   // Bar 1, beat 1, plus 240 ticks
 ```
+
+> **Note**: Ticks are 0-indexed within the beat. With PPQ=480, tick 240 is the midpoint of a beat.
 
 ---
 
@@ -519,6 +752,38 @@ proc makeChord(root, type) {
 
 Procedures can contain `phrase`, `rest`, and MIDI bars (`| ... |`). When called from within a part body, these elements are executed in the part's context.
 
+**Procedure compatibility rules**:
+
+| Procedure contains | Can be called from |
+|--------------------|-------------------|
+| `phrase { }` with lyrics | Vocal parts only |
+| MIDI bars (`\| ... \|`) without lyrics | MIDI parts only |
+| `rest` only | Either |
+| Pure logic (no music content) | Either |
+
+```mf
+// Vocal-only procedure
+proc vocalVerse() {
+  phrase {
+    notes: | C4 q  D4 q |;
+    lyrics mora: あ い;
+  }
+}
+
+// MIDI-only procedure
+proc pianoChord() {
+  | [C4 E4 G4] w |
+}
+
+// Error: calling vocal procedure from MIDI part
+part Piano {
+  midi ch:1
+  vocalVerse();   // Compile error: incompatible procedure type
+}
+```
+
+> **Note**: The compiler validates procedure compatibility at call sites. Mixing vocal content (phrases with lyrics) and pure MIDI content in the same procedure is not recommended.
+
 ---
 
 ## Modules
@@ -560,7 +825,6 @@ This will be **explicit expansion**, not automatic splitting.
 
 | Code | Description |
 |------|-------------|
-| E001 | PPQ not set |
 | E010 | Tempo at tick=0 not set |
 | E011 | Time signature at tick=0 not set |
 | E100 | Lyric count mismatch (onset count ≠ lyric tokens) |
@@ -599,12 +863,37 @@ TakoScore maps cleanly to MusicXML:
 
 ### Syllabic Mapping
 
-| Context | `<syllabic>` |
-|---------|--------------|
-| Single mora word | `single` |
-| Word start | `begin` |
-| Word middle | `middle` |
-| Word end | `end` |
+MusicXML's `<syllabic>` element indicates word position. TakoScore determines this from word boundaries in lyrics.
+
+**Word boundary notation** in lyrics:
+
+```mf
+lyrics mora:
+  [は じ め] [ま し て];   // Two words: "はじめ" and "まして"
+```
+
+Use `[ ]` to group mora tokens into words. Without grouping, each mora is treated as a single-mora word.
+
+| Context | `<syllabic>` | Example |
+|---------|--------------|---------|
+| Single mora word | `single` | `あ` (standalone) |
+| Word start | `begin` | `[は` |
+| Word middle | `middle` | `じ` (in word) |
+| Word end | `end` | `め]` |
+
+```mf
+// Without word grouping - all single
+lyrics mora:
+  あ い う;
+// Result: あ=single, い=single, う=single
+
+// With word grouping
+lyrics mora:
+  [あ い] う;
+// Result: あ=begin, い=end, う=single
+```
+
+> **Note**: Word boundaries are only used for MusicXML `<syllabic>` generation. They don't affect synthesis or underlay matching.
 
 ---
 

@@ -107,7 +107,7 @@ export interface MidiTrack extends BaseTrack {
 
 // ============ Track Events ============
 
-export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent | AftertouchEvent | PolyAftertouchEvent | NRPNEvent | SysExEvent | PhonemeEvent | BreathEvent | ConsonantOffsetEvent | CrossStaffEvent | PortamentoShapeEvent;
+export type TrackEvent = NoteEvent | RestEvent | CCEvent | PitchBendEvent | AftertouchEvent | PolyAftertouchEvent | NRPNEvent | SysExEvent | PhonemeEvent | BreathEvent | ConsonantOffsetEvent | CrossStaffEvent | PortamentoShapeEvent | VocaloidParamEvent;
 
 export interface NoteEvent {
   type: 'note';

@@ -1,7 +1,10 @@
-# TakoMusic 標準モジュール
+# TakoScore 標準モジュール
 
-標準モジュールはTakoMusic言語自体で実装された高レベルな音楽機能ライブラリです。
+標準モジュールはTakoScore言語自体で実装された高レベルな音楽機能ライブラリです。
 ビルトイン関数を組み合わせて、より表現力の高い音楽制作を可能にします。
+
+> **Note**: 標準モジュールは主に Procedural API と組み合わせて使用します。
+> 宣言的構文については [LANGUAGE.md](LANGUAGE.md)、ビルトイン関数については [BUILTINS.md](BUILTINS.md) を参照してください。
 
 ```javascript
 import { majorScale, majorTriad } from "std:theory";
@@ -150,8 +153,31 @@ import { staccato, legato, accent } from "std:articulation";
 ```
 
 > **注**: `staccato`, `legato`, `accent`, `tenuto`, `marcato` はビルトイン関数としても提供されています。
-> インポートせずに直接使用可能です。標準モジュール版は異なる実装を持つ場合があります。
-> 詳しくは [ビルトイン関数](./BUILTINS.md#アーティキュレーション) を参照してください。
+> 名前解決の優先順位については下記を参照してください。
+
+### 名前解決規則
+
+同名の関数がビルトインと標準モジュールの両方に存在する場合、以下の優先順位で解決されます：
+
+1. **ローカルスコープ** - 現在のブロック/関数内の変数
+2. **インポートされた名前** - `import { staccato } from "std:articulation"` で明示的にインポート
+3. **ビルトイン関数** - 暗黙的に利用可能
+
+```javascript
+// ビルトイン版を使用（インポートなし）
+staccato(C4, q, 80);
+
+// 標準モジュール版を使用（明示的インポート）
+import { staccato } from "std:articulation";
+staccato(C4, q, 80);  // インポート版が優先
+
+// ビルトイン版を明示的に使用
+import { staccato as stdStaccato } from "std:articulation";
+staccato(C4, q, 80);      // ビルトイン版
+stdStaccato(C4, q, 80);   // 標準モジュール版
+```
+
+> **重要**: 同名関数でも、ビルトイン版と標準モジュール版は同じ結果を生成することが保証されています。実装の違いはパフォーマンスの最適化のみです。
 
 | 関数 | 説明 | 効果 |
 |------|------|------|

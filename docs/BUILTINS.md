@@ -1,8 +1,12 @@
-# TakoMusic ビルトイン関数リファレンス
+# TakoScore ビルトイン関数リファレンス
 
 ビルトイン関数はランタイムに直接実装された低レベル関数です。
 これらはIR（中間表現）操作やパフォーマンスクリティカルな処理に必要なため、
 ネイティブコードで提供されています。
+
+> **Note**: このドキュメントは TakoScore の **Procedural API** を説明しています。
+> 宣言的構文（`score { }` ブロック）については [LANGUAGE.md](LANGUAGE.md) を参照してください。
+> 両者は同じ IR にコンパイルされ、相互に組み合わせて使用できます。
 
 高レベルな音楽機能は[標準モジュール](./STDLIB.md)を参照してください。
 
@@ -68,9 +72,12 @@ timeSig(3, 4);  // 3/4拍子
 ノートを発音します。
 
 ```javascript
-note(C4, 1/4);           // C4を4分音符で
-note(E4, 1/8, 100);      // E4を8分音符、ベロシティ100で
+note(C4, q);             // C4を4分音符で（canonical）
+note(C4, 1/4);           // C4を4分音符で（fraction notation）
+note(E4, e, 100);        // E4を8分音符、ベロシティ100で
 ```
+
+> **Duration formats**: `q` (canonical), `1/4` (fraction), `4n` (n-suffix), `480tk` (ticks). See [LANGUAGE.md](LANGUAGE.md#duration-notation) for details.
 
 ### `rest(duration)`
 休符を挿入します。
@@ -90,23 +97,47 @@ chord([C4, E4, G4], 1/2);  // Cメジャーを2分音符で
 ドラムノートを発音します。
 
 ```javascript
-drum(kick, 1/4);
-drum(snare, 1/4, 110);
+drum(kick, q);
+drum(snare, q, 110);
 ```
 
 **ドラム名**: `kick`, `snare`, `hhc`, `hho`, `tom1`, `crash`, `ride`
+
+### `track(type, instrument, options) { ... }`
+トラックブロックを定義します。ブロック内のノートはこのトラックに出力されます。
+
+```javascript
+track(midi, piano, { ch: 1, program: 0 }) {
+  note(C4, q);
+  note(E4, q);
+}
+
+track(midi, drums, { ch: 10 }) {
+  drum(kick, q);
+  drum(snare, q);
+}
+```
+
+**パラメータ**:
+- `type`: `midi` または `vocal`
+- `instrument`: 楽器名（任意の識別子）
+- `options`: `{ ch: MIDIチャンネル, program: GMプログラム番号 }`
+
+> **Note**: `track()` は Procedural API 専用です。宣言的構文では `part` ブロックを使用してください。
 
 ---
 
 ## カーソル操作
 
 ### `at(time)`
-カーソルを指定時間に移動します。
+カーソルを指定時間に移動します。時間は `bar:beat` 形式で、両方とも **1-indexed** です。
 
 ```javascript
-at(1:1);      // 1小節目1拍目
-at(2:3:240);  // 2小節目3拍目、240tick
+at(1:1);      // 1小節目1拍目（最初の小節の最初の拍）
+at(2:3:240);  // 2小節目3拍目、+240tick
 ```
+
+> **Note**: bar と beat は両方 1-indexed（楽譜表記と同じ）。tick は beat 内で 0-indexed。
 
 ### `atTick(tick)`
 カーソルを指定tickに移動します。

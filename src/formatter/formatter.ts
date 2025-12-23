@@ -122,6 +122,11 @@ export class Formatter {
           return '';
         }).join('  ');
         this.output.push(`${this.getIndent()}| ${notes} |`);
+      } else if (item.kind === 'AutomationStatement') {
+        const points = item.points.map(p =>
+          `${this.formatExpression(p.time)} ${this.formatExpression(p.value)}`
+        ).join(', ');
+        this.output.push(`${this.getIndent()}${item.paramType} ${points}`);
       } else {
         this.formatStatement(item as Statement);
       }
@@ -142,6 +147,13 @@ export class Formatter {
       for (const bar of phrase.notesSection.bars) {
         const notes = bar.notes.map(n => {
           let s = `${this.formatExpression(n.pitch)} ${this.formatExpression(n.duration)}`;
+          // Voice parameters
+          if (n.voiceParams && n.voiceParams.params.length > 0) {
+            const params = n.voiceParams.params.map(p =>
+              `${p.type}:${this.formatExpression(p.value)}`
+            ).join(' ');
+            s += ` [${params}]`;
+          }
           if (n.tieStart) s += '~';
           return s;
         }).join('  ');
