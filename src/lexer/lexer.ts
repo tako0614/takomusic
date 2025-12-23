@@ -382,10 +382,16 @@ export class Lexer {
 
     const value = this.source.slice(start, this.position);
 
-    // v2.0: Check for short duration literals (w, h, q, e, s, t, x with optional dots)
-    // These are: w=whole, h=half, q=quarter, e=eighth, s=sixteenth, t=32nd, x=64th
-    if (this.isDurationShorthand(value)) {
-      // Check for dots after the duration
+    // v2.0: Standalone _ is UNDERSCORE for melisma
+    if (value === '_') {
+      return { type: TokenType.UNDERSCORE, value: '_', position: pos };
+    }
+
+    // v2.0: Check for short duration literals with dots (w., h., q., e., s., t., x.)
+    // Bare single letters (w, h, q, e, s, t, x) are kept as IDENT and the parser
+    // handles context-dependent interpretation in notes sections
+    if (this.isDurationShorthand(value) && this.peek() === '.') {
+      // Consume all dots
       while (this.peek() === '.') {
         this.advance();
       }

@@ -1,4 +1,4 @@
-// Lexer (Tokenizer) for TakoMusic language
+// Lexer (Tokenizer) for TakoScore v2.0 language (VS Code version)
 
 import { Token, TokenType, Position, KEYWORDS } from './types/token';
 import { MFError } from './errors';
@@ -9,6 +9,8 @@ export class Lexer {
   private line: number = 1;
   private column: number = 1;
   private filePath?: string;
+  private templateStack: number = 0;
+  private inTemplateExpr: boolean = false;
 
   constructor(source: string, filePath?: string) {
     this.source = source;
@@ -33,8 +35,12 @@ export class Lexer {
   }
 
   private nextToken(): Token | null {
-    const pos = this.currentPosition();
     const char = this.peek();
+
+    // Template literal
+    if (char === '`') {
+      return this.readTemplateStart();
+    }
 
     // String literal
     if (char === '"') {
@@ -97,33 +103,140 @@ export class Lexer {
     return { type: TokenType.STRING, value, position: pos };
   }
 
+  private readTemplateStart(): Token {
+    const pos = this.currentPosition();
+    this.advance(); // consume opening backtick
+    let value = '';
+
+    while (!this.isAtEnd()) {
+      const char = this.peek();
+
+      if (char === '`') {
+        this.advance();
+        return { type: TokenType.TEMPLATE_STRING, value, position: pos };
+      }
+
+      if (char === '$' && this.peekNext() === '{') {
+        this.advance();
+        this.advance();
+        this.templateStack++;
+        this.inTemplateExpr = true;
+        return { type: TokenType.TEMPLATE_HEAD, value, position: pos };
+      }
+
+      if (char === '\\') {
+        this.advance();
+        if (!this.isAtEnd()) {
+          const escaped = this.advance();
+          switch (escaped) {
+            case 'n': value += '\n'; break;
+            case 't': value += '\t'; break;
+            case 'r': value += '\r'; break;
+            case '\\': value += '\\'; break;
+            case '`': value += '`'; break;
+            case '$': value += '$'; break;
+            default: value += escaped;
+          }
+        }
+      } else {
+        if (char === '\n') {
+          this.line++;
+          this.column = 1;
+        }
+        value += this.advance();
+      }
+    }
+
+    throw new MFError('SYNTAX', 'Unterminated template literal', pos, this.filePath);
+  }
+
+  private readTemplateMiddle(pos: Position): Token {
+    let value = '';
+
+    while (!this.isAtEnd()) {
+      const char = this.peek();
+
+      if (char === '`') {
+        this.advance();
+        this.templateStack--;
+        this.inTemplateExpr = this.templateStack > 0;
+        return { type: TokenType.TEMPLATE_TAIL, value, position: pos };
+      }
+
+      if (char === '$' && this.peekNext() === '{') {
+        this.advance();
+        this.advance();
+        return { type: TokenType.TEMPLATE_MIDDLE, value, position: pos };
+      }
+
+      if (char === '\\') {
+        this.advance();
+        if (!this.isAtEnd()) {
+          const escaped = this.advance();
+          switch (escaped) {
+            case 'n': value += '\n'; break;
+            case 't': value += '\t'; break;
+            case 'r': value += '\r'; break;
+            case '\\': value += '\\'; break;
+            case '`': value += '`'; break;
+            case '$': value += '$'; break;
+            default: value += escaped;
+          }
+        }
+      } else {
+        if (char === '\n') {
+          this.line++;
+          this.column = 1;
+        }
+        value += this.advance();
+      }
+    }
+
+    throw new MFError('SYNTAX', 'Unterminated template literal', pos, this.filePath);
+  }
+
   private readNumberOrTimeLiteral(): Token {
     const pos = this.currentPosition();
     const start = this.position;
 
-    // Handle negative sign
     if (this.peek() === '-') {
       this.advance();
     }
 
-    // Read integer part
     while (this.isDigit(this.peek())) {
       this.advance();
     }
 
-    // Check for Time literal (bar:beat or bar:beat:sub)
+    // Time literal (bar:beat or bar:beat:sub)
     if (this.peek() === ':') {
       return this.readTimeLiteral(pos, start);
     }
 
-    // Check for Dur literal (n/d)
+    // Dur literal (n/d fraction format)
     if (this.peek() === '/') {
       return this.readDurLiteral(pos, start);
     }
 
-    // Check for float
+    // Note-based duration literal (1n, 2n, 4n, 8n, etc.)
+    if (this.peek() === 'n') {
+      this.advance();
+      while (this.peek() === '.') {
+        this.advance();
+      }
+      const value = this.source.slice(start, this.position);
+      return { type: TokenType.DUR, value, position: pos };
+    }
+
+    // Tick-based duration literal (480t, 240t, etc.)
+    if (this.peek() === 't') {
+      this.advance();
+      const value = this.source.slice(start, this.position);
+      return { type: TokenType.DUR, value, position: pos };
+    }
+
+    // Float
     if (this.peek() === '.' && this.isDigit(this.peekNext())) {
-      this.advance(); // consume '.'
+      this.advance();
       while (this.isDigit(this.peek())) {
         this.advance();
       }
@@ -136,10 +249,8 @@ export class Lexer {
   }
 
   private readTimeLiteral(pos: Position, start: number): Token {
-    // Already read bar part, now at ':'
     this.advance(); // consume first ':'
 
-    // Read beat
     while (this.isDigit(this.peek())) {
       this.advance();
     }
@@ -157,11 +268,13 @@ export class Lexer {
   }
 
   private readDurLiteral(pos: Position, start: number): Token {
-    // Already read numerator part, now at '/'
     this.advance(); // consume '/'
 
-    // Read denominator
     while (this.isDigit(this.peek())) {
+      this.advance();
+    }
+
+    while (this.peek() === '.') {
       this.advance();
     }
 
@@ -170,42 +283,45 @@ export class Lexer {
   }
 
   private isPitchStart(char: string): boolean {
-    return 'CDEFGAB'.includes(char.toUpperCase());
+    return 'CDEFGAB'.includes(char);
   }
 
   private tryReadPitch(): Token | null {
     const pos = this.currentPosition();
     const start = this.position;
 
-    // Read note name (C-G, A-B)
-    const noteName = this.peek().toUpperCase();
+    const noteName = this.peek();
     if (!'CDEFGAB'.includes(noteName)) {
       return null;
     }
     this.advance();
 
-    // Check for sharp or flat
     const accidental = this.peek();
-    if (accidental === '#' || accidental === 'b') {
+    if (accidental === '#') {
       this.advance();
+      if (this.peek() === '#') {
+        this.advance();
+      }
+    } else if (accidental === 'x') {
+      this.advance();
+    } else if (accidental === 'b') {
+      this.advance();
+      if (this.peek() === 'b') {
+        this.advance();
+      }
     }
 
-    // Must have octave number
     if (!this.isDigit(this.peek()) && this.peek() !== '-') {
-      // Not a pitch, backtrack
       this.position = start;
       this.column = pos.column;
       return null;
     }
 
-    // Handle negative octave (rare but possible)
     if (this.peek() === '-') {
       this.advance();
     }
 
-    // Read octave
     if (!this.isDigit(this.peek())) {
-      // Not a pitch, backtrack
       this.position = start;
       this.column = pos.column;
       return null;
@@ -215,9 +331,7 @@ export class Lexer {
       this.advance();
     }
 
-    // Make sure next char is not alphanumeric (would be identifier)
     if (this.isAlphaNumeric(this.peek())) {
-      // Not a pitch, backtrack
       this.position = start;
       this.column = pos.column;
       return null;
@@ -236,8 +350,28 @@ export class Lexer {
     }
 
     const value = this.source.slice(start, this.position);
+
+    // v2.0: Standalone _ is UNDERSCORE for melisma
+    if (value === '_') {
+      return { type: TokenType.UNDERSCORE, value: '_', position: pos };
+    }
+
+    // v2.0: Check for short duration literals with dots (w., h., q., e., s., t., x.)
+    if (this.isDurationShorthand(value) && this.peek() === '.') {
+      while (this.peek() === '.') {
+        this.advance();
+      }
+      const fullValue = this.source.slice(start, this.position);
+      return { type: TokenType.DUR, value: fullValue, position: pos };
+    }
+
     const type = KEYWORDS[value] || TokenType.IDENT;
     return { type, value, position: pos };
+  }
+
+  private isDurationShorthand(value: string): boolean {
+    return value === 'w' || value === 'h' || value === 'q' ||
+           value === 'e' || value === 's' || value === 't' || value === 'x';
   }
 
   private readOperator(): Token {
@@ -245,15 +379,44 @@ export class Lexer {
     const char = this.advance();
 
     switch (char) {
-      case '+': return { type: TokenType.PLUS, value: '+', position: pos };
-      case '-': return { type: TokenType.MINUS, value: '-', position: pos };
-      case '*': return { type: TokenType.STAR, value: '*', position: pos };
-      case '/': return { type: TokenType.SLASH, value: '/', position: pos };
-      case '%': return { type: TokenType.PERCENT, value: '%', position: pos };
+      case '+':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.PLUSEQ, value: '+=', position: pos };
+        }
+        return { type: TokenType.PLUS, value: '+', position: pos };
+      case '-':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.MINUSEQ, value: '-=', position: pos };
+        }
+        return { type: TokenType.MINUS, value: '-', position: pos };
+      case '*':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.STAREQ, value: '*=', position: pos };
+        }
+        return { type: TokenType.STAR, value: '*', position: pos };
+      case '/':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.SLASHEQ, value: '/=', position: pos };
+        }
+        return { type: TokenType.SLASH, value: '/', position: pos };
+      case '%':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.PERCENTEQ, value: '%=', position: pos };
+        }
+        return { type: TokenType.PERCENT, value: '%', position: pos };
       case '(': return { type: TokenType.LPAREN, value: '(', position: pos };
       case ')': return { type: TokenType.RPAREN, value: ')', position: pos };
       case '{': return { type: TokenType.LBRACE, value: '{', position: pos };
-      case '}': return { type: TokenType.RBRACE, value: '}', position: pos };
+      case '}':
+        if (this.inTemplateExpr) {
+          return this.readTemplateMiddle(pos);
+        }
+        return { type: TokenType.RBRACE, value: '}', position: pos };
       case '[': return { type: TokenType.LBRACKET, value: '[', position: pos };
       case ']': return { type: TokenType.RBRACKET, value: ']', position: pos };
       case ',': return { type: TokenType.COMMA, value: ',', position: pos };
@@ -283,12 +446,28 @@ export class Lexer {
           this.advance();
           return { type: TokenType.LTEQ, value: '<=', position: pos };
         }
+        if (this.peek() === '<') {
+          this.advance();
+          if (this.peek() === '=') {
+            this.advance();
+            return { type: TokenType.SHLEQ, value: '<<=', position: pos };
+          }
+          return { type: TokenType.SHL, value: '<<', position: pos };
+        }
         return { type: TokenType.LT, value: '<', position: pos };
 
       case '>':
         if (this.peek() === '=') {
           this.advance();
           return { type: TokenType.GTEQ, value: '>=', position: pos };
+        }
+        if (this.peek() === '>') {
+          this.advance();
+          if (this.peek() === '=') {
+            this.advance();
+            return { type: TokenType.SHREQ, value: '>>=', position: pos };
+          }
+          return { type: TokenType.SHR, value: '>>', position: pos };
         }
         return { type: TokenType.GT, value: '>', position: pos };
 
@@ -297,25 +476,66 @@ export class Lexer {
           this.advance();
           return { type: TokenType.AND, value: '&&', position: pos };
         }
-        throw new MFError('SYNTAX', `Unexpected character: ${char}`, pos, this.filePath);
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.BITANDEQ, value: '&=', position: pos };
+        }
+        return { type: TokenType.BITAND, value: '&', position: pos };
 
       case '|':
         if (this.peek() === '|') {
           this.advance();
           return { type: TokenType.OR, value: '||', position: pos };
         }
-        throw new MFError('SYNTAX', `Unexpected character: ${char}`, pos, this.filePath);
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.BITOREQ, value: '|=', position: pos };
+        }
+        return { type: TokenType.PIPE, value: '|', position: pos };
+
+      case '^':
+        if (this.peek() === '=') {
+          this.advance();
+          return { type: TokenType.BITXOREQ, value: '^=', position: pos };
+        }
+        return { type: TokenType.BITXOR, value: '^', position: pos };
+
+      case '~':
+        return { type: TokenType.TILDE, value: '~', position: pos };
+
+      case '_':
+        if (!this.isAlphaNumeric(this.peek())) {
+          return { type: TokenType.UNDERSCORE, value: '_', position: pos };
+        }
+        this.position--;
+        this.column--;
+        return this.readIdentifier();
 
       case '.':
         if (this.peek() === '.') {
           this.advance();
+          if (this.peek() === '.') {
+            this.advance();
+            return { type: TokenType.SPREAD, value: '...', position: pos };
+          }
           if (this.peek() === '=') {
             this.advance();
             return { type: TokenType.DOTDOTEQ, value: '..=', position: pos };
           }
           return { type: TokenType.DOTDOT, value: '..', position: pos };
         }
-        throw new MFError('SYNTAX', `Unexpected character: ${char}`, pos, this.filePath);
+        return { type: TokenType.DOT, value: '.', position: pos };
+
+      case '?':
+        if (this.peek() === '.') {
+          this.advance();
+          return { type: TokenType.QUESTIONDOT, value: '?.', position: pos };
+        }
+        if (this.peek() === '?') {
+          this.advance();
+          return { type: TokenType.NULLISH, value: '??', position: pos };
+        }
+        return { type: TokenType.QUESTION, value: '?', position: pos };
 
       default:
         throw new MFError('SYNTAX', `Unexpected character: ${char}`, pos, this.filePath);
@@ -333,25 +553,29 @@ export class Lexer {
         this.line++;
         this.column = 1;
       } else if (char === '/' && this.peekNext() === '/') {
-        // Line comment
         while (!this.isAtEnd() && this.peek() !== '\n') {
           this.advance();
         }
       } else if (char === '/' && this.peekNext() === '*') {
-        // Block comment
-        this.advance(); // consume /
-        this.advance(); // consume *
-        while (!this.isAtEnd()) {
-          if (this.peek() === '*' && this.peekNext() === '/') {
+        this.advance();
+        this.advance();
+        let depth = 1;
+        while (!this.isAtEnd() && depth > 0) {
+          if (this.peek() === '/' && this.peekNext() === '*') {
             this.advance();
             this.advance();
-            break;
+            depth++;
+          } else if (this.peek() === '*' && this.peekNext() === '/') {
+            this.advance();
+            this.advance();
+            depth--;
+          } else {
+            if (this.peek() === '\n') {
+              this.line++;
+              this.column = 1;
+            }
+            this.advance();
           }
-          if (this.peek() === '\n') {
-            this.line++;
-            this.column = 1;
-          }
-          this.advance();
         }
       } else {
         break;
@@ -388,7 +612,18 @@ export class Lexer {
     return (
       (char >= 'a' && char <= 'z') ||
       (char >= 'A' && char <= 'Z') ||
-      char === '_'
+      char === '_' ||
+      this.isJapaneseChar(char)
+    );
+  }
+
+  private isJapaneseChar(char: string): boolean {
+    const code = char.charCodeAt(0);
+    return (
+      (code >= 0x3040 && code <= 0x309F) || // Hiragana
+      (code >= 0x30A0 && code <= 0x30FF) || // Katakana
+      (code >= 0x4E00 && code <= 0x9FFF) || // Kanji
+      (code >= 0xFF65 && code <= 0xFF9F)    // Half-width Katakana
     );
   }
 

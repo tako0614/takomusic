@@ -156,6 +156,12 @@ export class Checker {
             this.checkExpression(midiItem.duration, filePath);
           }
         }
+      } else if (item.kind === 'AutomationStatement') {
+        // Check automation points
+        for (const point of item.points) {
+          this.checkExpression(point.time, filePath);
+          this.checkExpression(point.value, filePath);
+        }
       } else {
         this.checkStatement(item as Statement, filePath);
       }
@@ -172,6 +178,13 @@ export class Checker {
         for (const note of bar.notes) {
           this.checkExpression(note.pitch, filePath);
           this.checkExpression(note.duration, filePath);
+
+          // Check voice parameters
+          if (note.voiceParams) {
+            for (const vp of note.voiceParams.params) {
+              this.checkExpression(vp.value, filePath);
+            }
+          }
 
           // Check pitch range for vocal
           if (note.pitch.kind === 'PitchLiteral') {

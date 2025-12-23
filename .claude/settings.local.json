@@ -57,7 +57,8 @@
       "Bash(sort:*)",
       "Bash(git stash:*)",
       "Bash(git stash pop:*)",
-      "Bash(do echo \"Parsing $f...\")"
+      "Bash(do echo \"Parsing $f...\")",
+      "Bash(pkill:*)"
     ]
   }
 }
