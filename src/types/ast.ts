@@ -86,7 +86,21 @@ export type PartBodyItem =
   | PhraseBlock
   | RestStatement
   | MidiBar
+  | AutomationStatement
   | Statement;
+
+// Voice parameter automation over time
+export interface AutomationStatement extends BaseNode {
+  kind: 'AutomationStatement';
+  paramType: VoiceParamType;
+  points: VoiceAutomationPoint[];
+}
+
+export interface VoiceAutomationPoint extends BaseNode {
+  kind: 'VoiceAutomationPoint';
+  time: Expression;   // Time position (e.g., 1:0 = bar 1, beat 0)
+  value: Expression;  // Parameter value (0-127 typically)
+}
 
 // ============ Phrase Block (Vocal) ============
 
@@ -115,7 +129,23 @@ export interface NoteItem extends BaseNode {
   tieEnd?: boolean;     // tied from previous
   slurStart?: boolean;  // ( after note
   slurEnd?: boolean;    // ) after note
+  voiceParams?: VoiceParams;  // Voice tuning parameters [dyn:100 bre:30]
 }
+
+// Voice tuning parameters for vocal synthesis
+export interface VoiceParams extends BaseNode {
+  kind: 'VoiceParams';
+  params: VoiceParam[];
+}
+
+export interface VoiceParam extends BaseNode {
+  kind: 'VoiceParam';
+  type: VoiceParamType;
+  value: Expression;
+}
+
+// Supported voice parameter types (matches IR VocaloidParamType)
+export type VoiceParamType = 'dyn' | 'bre' | 'bri' | 'cle' | 'gen' | 'por' | 'ope' | 'pit';
 
 export interface LyricsSection extends BaseNode {
   kind: 'LyricsSection';
@@ -199,7 +229,10 @@ export type Statement =
   | ReturnStatement
   | BreakStatement
   | ContinueStatement
-  | ExpressionStatement;
+  | ExpressionStatement
+  | PhraseBlock       // For use in procedures called from part body
+  | RestStatement     // For use in procedures called from part body
+  | MidiBar;          // For use in procedures called from part body
 
 export interface ImportStatement extends BaseNode {
   kind: 'ImportStatement';

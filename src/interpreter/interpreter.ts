@@ -456,7 +456,14 @@ export class Interpreter {
         name: score.backend.name,
       };
       for (const opt of score.backend.options) {
-        const value = this.evaluate(opt.value);
+        // Handle identifier values as string literals for certain options
+        let value: RuntimeValue;
+        if (opt.value.kind === 'Identifier') {
+          // Bare identifier - treat as string literal
+          value = { type: 'string', value: (opt.value as any).name };
+        } else {
+          value = this.evaluate(opt.value);
+        }
         if (opt.key === 'singer' && value.type === 'string') {
           this.ir.backend.singer = value.value;
         } else if (opt.key === 'lang' && (value.type === 'string')) {
@@ -478,6 +485,9 @@ export class Interpreter {
     for (const part of score.parts) {
       this.executePartDeclaration(part);
     }
+
+    // Build final IR (convert track states to track objects)
+    this.buildFinalIR();
 
     // Validate IR
     this.validateIR();
@@ -513,14 +523,19 @@ export class Interpreter {
         break;
       }
       case 'KeySignatureStatement': {
-        const rootVal = this.evaluate(stmt.root);
         let root = 'C';
-        if (rootVal.type === 'string') {
-          root = rootVal.value;
-        } else if (rootVal.type === 'pitch') {
-          // Extract note name from MIDI
-          const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-          root = names[rootVal.midi % 12];
+        // Handle Identifier directly (e.g., "key C major" where C is not a variable)
+        if (stmt.root.kind === 'Identifier') {
+          root = (stmt.root as any).name;
+        } else {
+          const rootVal = this.evaluate(stmt.root);
+          if (rootVal.type === 'string') {
+            root = rootVal.value;
+          } else if (rootVal.type === 'pitch') {
+            // Extract note name from MIDI
+            const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            root = names[rootVal.midi % 12];
+          }
         }
         this.ir.keySignature = { root, mode: stmt.mode };
         break;
@@ -599,6 +614,9 @@ export class Interpreter {
       case 'MidiBar':
         this.executeMidiBar(item, track);
         break;
+      case 'AutomationStatement':
+        this.executeAutomationStatement(item, track);
+        break;
       default:
         // Regular statement
         this.executeStatement(item as Statement);
@@ -623,6 +641,20 @@ export class Interpreter {
           }
 
           const durTicks = this.durToTicks(dur as DurValue, noteItem.position);
+
+          // Generate voice parameter events at note start
+          if (noteItem.voiceParams) {
+            for (const vp of noteItem.voiceParams.params) {
+              const paramValue = toNumber(this.evaluate(vp.value));
+              const event: VocaloidParamEvent = {
+                type: 'vocaloidParam',
+                param: this.toIRVoiceParamType(vp.type),
+                tick: track.cursor,
+                value: paramValue,
+              };
+              track.events.push(event);
+            }
+          }
 
           phraseNotes.push({
             tick: track.cursor,
@@ -711,6 +743,63 @@ export class Interpreter {
     });
 
     track.cursor += durTicks;
+  }
+
+  // Execute automation statement: dyn 0:0 100, 1:0 80
+  private executeAutomationStatement(stmt: import('../types/ast.js').AutomationStatement, track: TrackState): void {
+    const irParamType = this.toIRVoiceParamType(stmt.paramType);
+
+    for (const point of stmt.points) {
+      const timeVal = this.evaluate(point.time);
+      const valueVal = this.evaluate(point.value);
+
+      // Convert time to ticks
+      let tick: number;
+      if (timeVal.type === 'time') {
+        // Time literal: bar:beat:sub
+        tick = this.timeToTicks(timeVal.bar, timeVal.beat, timeVal.sub);
+      } else {
+        tick = toNumber(timeVal);
+      }
+
+      const value = toNumber(valueVal);
+
+      const event: VocaloidParamEvent = {
+        type: 'vocaloidParam',
+        param: irParamType,
+        tick,
+        value,
+      };
+
+      track.events.push(event);
+    }
+  }
+
+  // Convert AST VoiceParamType to IR VocaloidParamType
+  private toIRVoiceParamType(astType: import('../types/ast.js').VoiceParamType): VocaloidParamType {
+    const mapping: Record<import('../types/ast.js').VoiceParamType, VocaloidParamType> = {
+      'dyn': 'DYN',
+      'bre': 'BRE',
+      'bri': 'BRI',
+      'cle': 'CLE',
+      'gen': 'GEN',
+      'por': 'POR',
+      'ope': 'OPE',
+      'pit': 'PIT',
+    };
+    return mapping[astType];
+  }
+
+  // Convert bar:beat:sub to ticks
+  private timeToTicks(bar: number, beat: number, sub: number): number {
+    // Get time signature from first timeSig event (default 4/4)
+    const timeSig = this.ir.timeSigs?.[0] || { numerator: 4, denominator: 4 };
+    const beatsPerBar = timeSig.numerator;
+    const beatUnit = timeSig.denominator;
+    const ticksPerBeat = (this.ir.ppq * 4) / beatUnit;
+
+    // Calculate total ticks: bar is 1-indexed
+    return ((bar - 1) * beatsPerBar + beat) * ticksPerBeat + sub;
   }
 
   // Execute MIDI bar
@@ -1069,9 +1158,35 @@ export class Interpreter {
       }
 
       case 'ImportStatement':
-      case 'ProcDeclaration':
-        // Already handled in first pass
+        // Imports are handled during compilation
         break;
+
+      case 'ProcDeclaration':
+        // Register procedure in current scope
+        this.scope.defineProc(stmt);
+        break;
+
+      case 'PhraseBlock':
+        // Phrase blocks in procedures are executed in part context
+        if (this.currentTrack) {
+          this.executePhraseBlock(stmt, this.currentTrack);
+        }
+        break;
+
+      case 'RestStatement':
+        // Rest statements in procedures are executed in part context
+        if (this.currentTrack) {
+          this.executeRestStatement(stmt, this.currentTrack);
+        }
+        break;
+
+      case 'MidiBar':
+        // MIDI bars in procedures are executed in part context
+        if (this.currentTrack) {
+          this.executeMidiBar(stmt, this.currentTrack);
+        }
+        break;
+
       default: {
         const unknownStmt = stmt as Statement;
         throw createError('E400', `Unknown statement kind: ${unknownStmt.kind}`, unknownStmt.position, this.filePath);

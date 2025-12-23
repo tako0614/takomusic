@@ -184,4 +184,127 @@ describe('Interpreter v2.0', () => {
     expect(ir.backend?.name).toBe('neutrino');
     expect(ir.backend?.singer).toBe('KIRITAN');
   });
+
+  it('should handle per-note voice parameters', () => {
+    const source = `
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        part Vocal {
+          phrase {
+            notes:
+              | C4 q [dyn:100 bre:30]  D4 q [dyn:80] |;
+            lyrics mora:
+              あ い;
+          }
+        }
+      }
+    `;
+    const ir = execute(source);
+
+    // Should have 2 note events + voice parameter events
+    const events = ir.tracks[0].events as any[];
+    const noteEvents = events.filter((e) => e.type === 'note');
+    const paramEvents = events.filter((e) => e.type === 'vocaloidParam');
+
+    expect(noteEvents.length).toBe(2);
+    expect(paramEvents.length).toBe(3); // 2 for first note (dyn, bre), 1 for second (dyn)
+
+    // Check first note's parameters (dyn:100, bre:30)
+    const firstNoteParams = paramEvents.filter((e) => e.tick === 0);
+    expect(firstNoteParams.length).toBe(2);
+    expect(firstNoteParams.find((e) => e.param === 'DYN')?.value).toBe(100);
+    expect(firstNoteParams.find((e) => e.param === 'BRE')?.value).toBe(30);
+
+    // Check second note's parameters (dyn:80) - at tick 480 (quarter note)
+    const secondNoteParams = paramEvents.filter((e) => e.tick === 480);
+    expect(secondNoteParams.length).toBe(1);
+    expect(secondNoteParams[0].param).toBe('DYN');
+    expect(secondNoteParams[0].value).toBe(80);
+  });
+
+  it('should handle automation statements', () => {
+    const source = `
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        part Vocal {
+          dyn 1:0 100, 2:0 80, 3:0 120
+          phrase {
+            notes: | C4 w |;
+            lyrics mora: あ;
+          }
+        }
+      }
+    `;
+    const ir = execute(source);
+
+    const events = ir.tracks[0].events as any[];
+    const paramEvents = events.filter((e) => e.type === 'vocaloidParam');
+
+    expect(paramEvents.length).toBe(3);
+    expect(paramEvents[0].param).toBe('DYN');
+    expect(paramEvents[0].tick).toBe(0);      // 1:0 = bar 1, beat 0 = tick 0
+    expect(paramEvents[0].value).toBe(100);
+
+    expect(paramEvents[1].tick).toBe(1920);   // 2:0 = bar 2, beat 0 = tick 1920
+    expect(paramEvents[1].value).toBe(80);
+
+    expect(paramEvents[2].tick).toBe(3840);   // 3:0 = bar 3, beat 0 = tick 3840
+    expect(paramEvents[2].value).toBe(120);
+  });
+
+  it('should execute procedures with phrase blocks', () => {
+    const source = `
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        proc myVerse() {
+          phrase {
+            notes: | C4 q  D4 q |;
+            lyrics mora: あ い;
+          }
+        }
+
+        part Vocal {
+          myVerse();
+        }
+      }
+    `;
+    const ir = execute(source);
+
+    expect(ir.tracks.length).toBe(1);
+    expect(ir.tracks[0].events.length).toBe(2);
+  });
+
+  it('should execute procedures with parameters', () => {
+    const source = `
+      score "Test" {
+        tempo 120
+        time 4/4
+
+        const ROOT = C4;
+
+        proc makeNote(pitch) {
+          phrase {
+            notes: | C4 q |;
+            lyrics mora: あ;
+          }
+        }
+
+        part Vocal {
+          makeNote(ROOT);
+        }
+      }
+    `;
+    const ir = execute(source);
+
+    expect(ir.tracks.length).toBe(1);
+    expect(ir.tracks[0].events.length).toBe(1);
+    const event = ir.tracks[0].events[0] as any;
+    expect(event.key).toBe(60); // C4
+  });
 });
