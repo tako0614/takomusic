@@ -128,7 +128,7 @@ part Vocal {
       | B4 q  C5 q  D5 q  E5 q |;
 
     lyrics mora:
-      ま ま で い て;
+      ま ま で い;
   }
 }
 ```
@@ -257,12 +257,13 @@ part Vocal {
 
 ### Breath Mark
 
+Breath marks can be placed between bars in the notes section:
+
 ```mf
 phrase {
   notes:
-    | C4 q  D4 q |;
-  breath;          // Breath = phrase boundary within phrase block
-  notes:
+    | C4 q  D4 q |
+    breath;          // Breath = phrase boundary within phrase block
     | E4 q  F4 q |;
 
   lyrics mora:
@@ -271,6 +272,8 @@ phrase {
 ```
 
 Breath marks are recognized by NEUTRINO as phrase boundaries.
+
+> **Note**: Breath mark syntax within notes section is planned for a future release. Currently, use separate phrase blocks with rests to indicate phrase boundaries.
 
 ---
 
@@ -465,7 +468,7 @@ for (i in 0..=4) {
 Control structures (`if`, `for`, `while`) can be used inside part bodies for conditional or repeated patterns. They work best with procedure calls:
 
 ```mf
-part Vocal {
+part Piano {
   midi ch:1
   for (i in 0..4) {
     myPattern();
@@ -536,16 +539,18 @@ export const ROOT = C4;
 
 ---
 
-## Mora Helper Function
+## Mora Helper Function (Planned)
 
-For convenience, a mora splitter function is available:
+> **Note**: This feature is planned for a future release.
+
+A mora splitter function will be available for convenience:
 
 ```mf
 lyrics mora:
-  ${mora("きずだらけ")};   // Expands to: き ず だ ら け
+  ${mora("きずだらけ")};   // Will expand to: き ず だ ら け
 ```
 
-This is **explicit expansion**, not automatic splitting.
+This will be **explicit expansion**, not automatic splitting.
 
 ---
 
