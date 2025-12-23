@@ -1,6 +1,6 @@
 {
   "name": "takomusic",
-  "version": "2.0.0",
+  "version": "2.1.1",
   "description": "TakoScore - A phrase-first DSL for vocal synthesis composition optimized for NEUTRINO",
   "type": "module",
   "main": "dist/index.js",
