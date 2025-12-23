@@ -188,7 +188,7 @@ describe('Parser v2.0', () => {
   it('should parse const in globals', () => {
     const score = parse(`
       score "Test" {
-        const BPM = 120
+        const BPM = 120;
         tempo BPM
         part V { phrase { notes: | C4 q |; lyrics mora: あ; } }
       }
@@ -204,5 +204,40 @@ describe('Parser v2.0', () => {
       }
     `);
     expect(score.globals.some(g => g.kind === 'ProcDeclaration')).toBe(true);
+  });
+
+  it('should parse for loop in MIDI part after midi options', () => {
+    // Note: for loops in part body can't directly contain | bars |
+    // They should call procs or use other statements
+    const score = parse(`
+      score "Test" {
+        tempo 120
+        time 4/4
+        part Piano {
+          midi ch:1 program:0
+          | C4 q |
+        }
+      }
+    `);
+    expect(score.parts[0].partKind).toBe('midi');
+    expect(score.parts[0].options.length).toBe(2);
+    // Verify MIDI bar was parsed correctly after midi options
+    expect(score.parts[0].body.some(b => b.kind === 'MidiBar')).toBe(true);
+  });
+
+  it('should parse const declaration after midi options', () => {
+    const score = parse(`
+      score "Test" {
+        tempo 120
+        time 4/4
+        part Piano {
+          midi ch:1
+          const x = 42;
+          | C4 q |
+        }
+      }
+    `);
+    expect(score.parts[0].body.some(b => b.kind === 'ConstDeclaration')).toBe(true);
+    expect(score.parts[0].body.some(b => b.kind === 'MidiBar')).toBe(true);
   });
 });

@@ -68,6 +68,11 @@ import {
   RangeExpression,
   Parameter,
   TemplateLiteral,
+  VoiceParams,
+  VoiceParam,
+  VoiceParamType,
+  AutomationStatement,
+  VoiceAutomationPoint,
 } from '../types/ast.js';
 import { MFError } from '../errors.js';
 
@@ -77,6 +82,7 @@ export class Parser {
   private filePath?: string;
   private errors: MFError[] = [];
   private panicMode: boolean = false;
+  private inNotesSection: boolean = false; // Context flag for parsing notes vs regular code
 
   constructor(tokens: Token[], filePath?: string) {
     this.tokens = tokens;
@@ -156,7 +162,8 @@ export class Parser {
 
     while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
       const optPos = this.peek().position;
-      const key = this.expect(TokenType.IDENT, 'Expected option name').value;
+      // Accept IDENT or contextual keywords as option names
+      const key = this.expectIdentifierOrDur('Expected option name').value;
 
       // Options can be: key value (no colon needed in v2.0 style)
       const value = this.parseExpression();
@@ -195,15 +202,37 @@ export class Parser {
   private parseTimeSignatureStatement(): TimeSignatureStatement {
     const pos = this.advance().position; // consume 'time'
 
-    // Expect n/d format
-    const numToken = this.expect(TokenType.INT, 'Expected time signature numerator');
-    this.expect(TokenType.SLASH, "Expected '/' in time signature");
-    const denToken = this.expect(TokenType.INT, 'Expected time signature denominator');
+    let numerator: number;
+    let denominator: number;
+    let numPos: import('../types/token.js').Position;
+    let denPos: import('../types/token.js').Position;
+
+    // Time signature can be parsed as DUR (4/4 becomes a single token) or as INT SLASH INT
+    if (this.check(TokenType.DUR)) {
+      const durToken = this.advance();
+      const match = /^(\d+)\/(\d+)/.exec(durToken.value);
+      if (!match) {
+        throw this.error('Expected time signature in n/d format');
+      }
+      numerator = parseInt(match[1]);
+      denominator = parseInt(match[2]);
+      numPos = durToken.position;
+      denPos = durToken.position;
+    } else {
+      // Expect n/d format as separate tokens
+      const numToken = this.expect(TokenType.INT, 'Expected time signature numerator');
+      this.expect(TokenType.SLASH, "Expected '/' in time signature");
+      const denToken = this.expect(TokenType.INT, 'Expected time signature denominator');
+      numerator = parseInt(numToken.value);
+      denominator = parseInt(denToken.value);
+      numPos = numToken.position;
+      denPos = denToken.position;
+    }
 
     return {
       kind: 'TimeSignatureStatement',
-      numerator: { kind: 'IntLiteral', value: parseInt(numToken.value), position: numToken.position },
-      denominator: { kind: 'IntLiteral', value: parseInt(denToken.value), position: denToken.position },
+      numerator: { kind: 'IntLiteral', value: numerator, position: numPos },
+      denominator: { kind: 'IntLiteral', value: denominator, position: denPos },
       position: pos,
     };
   }
@@ -253,6 +282,15 @@ export class Parser {
     };
   }
 
+  // Voice parameter type names for automation
+  private static readonly VOICE_PARAM_TYPES = ['dyn', 'bre', 'bri', 'cle', 'gen', 'por', 'ope', 'pit'];
+
+  // Check if current token is a voice parameter type name
+  private isVoiceParamType(): boolean {
+    if (!this.check(TokenType.IDENT)) return false;
+    return Parser.VOICE_PARAM_TYPES.includes(this.peek().value.toLowerCase());
+  }
+
   // Parse part declaration
   private parsePartDeclaration(): PartDeclaration {
     const pos = this.advance().position; // consume 'part'
@@ -272,11 +310,11 @@ export class Parser {
         this.advance();
         partKind = 'midi';
         // Parse options like ch:1 program:0
-        while (!this.check(TokenType.PIPE) && !this.check(TokenType.RBRACE) &&
-               !this.check(TokenType.PHRASE) && !this.check(TokenType.REST) && !this.isAtEnd()) {
+        // Only parse IDENT followed by COLON as options
+        while (this.check(TokenType.IDENT) && this.checkAhead(1, TokenType.COLON) && !this.isAtEnd()) {
           const optPos = this.peek().position;
-          const key = this.expect(TokenType.IDENT, 'Expected option name').value;
-          this.expect(TokenType.COLON, "Expected ':' after option name");
+          const key = this.advance().value; // consume IDENT
+          this.advance(); // consume COLON
           const value = this.parseExpression();
           options.push({ kind: 'PartOption', key, value, position: optPos });
         }
@@ -295,6 +333,10 @@ export class Parser {
         partKind = partKind || 'midi';
         body.push(this.parseMidiBar());
       }
+      // Check for automation statement: dyn 0:0 100, 1:0 80
+      else if (this.isVoiceParamType() && this.checkAhead(1, TokenType.TIME)) {
+        body.push(this.parseAutomationStatement());
+      }
       // Other statements (for, if, etc.)
       else {
         const stmt = this.parseStatement();
@@ -310,6 +352,36 @@ export class Parser {
       partKind,
       options,
       body,
+      position: pos,
+    };
+  }
+
+  // Parse automation statement: dyn 0:0 100, 1:0 80, 2:0 120
+  private parseAutomationStatement(): AutomationStatement {
+    const pos = this.peek().position;
+    const typeToken = this.advance(); // consume param type (dyn, bre, etc.)
+    const paramType = this.toVoiceParamType(typeToken.value, typeToken.position);
+
+    const points: VoiceAutomationPoint[] = [];
+
+    // Parse automation points: time value, time value, ...
+    do {
+      const pointPos = this.peek().position;
+      const time = this.parseExpression(); // Time literal like 0:0, 1:0, 2:0
+      const value = this.parseExpression(); // Value (usually INT)
+
+      points.push({
+        kind: 'VoiceAutomationPoint',
+        time,
+        value,
+        position: pointPos,
+      });
+    } while (this.match(TokenType.COMMA));
+
+    return {
+      kind: 'AutomationStatement',
+      paramType,
+      points,
       position: pos,
     };
   }
@@ -367,10 +439,15 @@ export class Parser {
     const pos = this.peek().position;
     const bars: NoteBar[] = [];
 
+    // Set context flag - we're parsing notes, so duration shorthands are real durations
+    this.inNotesSection = true;
+
     // Parse bars until semicolon
     while (this.check(TokenType.PIPE)) {
       bars.push(this.parseNoteBar());
     }
+
+    this.inNotesSection = false;
 
     this.expect(TokenType.SEMICOLON, "Expected ';' after notes section");
 
@@ -401,15 +478,21 @@ export class Parser {
     };
   }
 
-  // Parse a single note item: C4 q or C4 h~ (with tie)
+  // Parse a single note item: C4 q or C4 h~ (with tie) or C4 q [dyn:100 bre:30]
   private parseNoteItem(): NoteItem {
     const pos = this.peek().position;
 
-    // Parse pitch
-    const pitch = this.parseExpression();
+    // Parse pitch - use parsePrimary to avoid consuming next note
+    const pitch = this.parsePrimary();
 
-    // Parse duration
-    const duration = this.parseExpression();
+    // Parse duration - use parsePrimary to avoid consuming voice params bracket
+    const duration = this.parsePrimary();
+
+    // Check for voice parameters: [dyn:100 bre:30]
+    let voiceParams: VoiceParams | undefined;
+    if (this.check(TokenType.LBRACKET)) {
+      voiceParams = this.parseVoiceParams();
+    }
 
     // Check for tie marker ~
     let tieStart = false;
@@ -423,8 +506,48 @@ export class Parser {
       pitch,
       duration,
       tieStart,
+      voiceParams,
       position: pos,
     };
+  }
+
+  // Parse voice parameters: [dyn:100 bre:30 pit:-50]
+  private parseVoiceParams(): VoiceParams {
+    const pos = this.advance().position; // consume '['
+    const params: VoiceParam[] = [];
+
+    while (!this.check(TokenType.RBRACKET) && !this.isAtEnd()) {
+      const paramPos = this.peek().position;
+      const typeToken = this.expect(TokenType.IDENT, 'Expected voice parameter name');
+      const paramType = this.toVoiceParamType(typeToken.value, paramPos);
+      this.expect(TokenType.COLON, "Expected ':' after parameter name");
+      const value = this.parseExpression();
+
+      params.push({
+        kind: 'VoiceParam',
+        type: paramType,
+        value,
+        position: paramPos,
+      });
+    }
+
+    this.expect(TokenType.RBRACKET, "Expected ']' after voice parameters");
+
+    return {
+      kind: 'VoiceParams',
+      params,
+      position: pos,
+    };
+  }
+
+  // Convert string to VoiceParamType
+  private toVoiceParamType(name: string, pos: import('../types/token.js').Position): VoiceParamType {
+    const validTypes: VoiceParamType[] = ['dyn', 'bre', 'bri', 'cle', 'gen', 'por', 'ope', 'pit'];
+    const lower = name.toLowerCase() as VoiceParamType;
+    if (validTypes.includes(lower)) {
+      return lower;
+    }
+    throw new MFError('SYNTAX', `Unknown voice parameter type: ${name}. Valid types: ${validTypes.join(', ')}`, pos, this.filePath);
   }
 
   // Parse lyrics section: mora: は じ め ま し て;
@@ -508,7 +631,12 @@ export class Parser {
   // Parse rest statement: rest q
   private parseRestStatement(): RestStatement {
     const pos = this.advance().position; // consume 'rest'
+
+    // Duration context - enable note section mode for duration parsing
+    const wasInNotesSection = this.inNotesSection;
+    this.inNotesSection = true;
     const duration = this.parseExpression();
+    this.inNotesSection = wasInNotesSection;
 
     return {
       kind: 'RestStatement',
@@ -522,9 +650,14 @@ export class Parser {
     const pos = this.advance().position; // consume opening |
     const items: MidiBarItem[] = [];
 
+    // Set context flag - we're parsing MIDI notes, so duration shorthands are real durations
+    this.inNotesSection = true;
+
     while (!this.check(TokenType.PIPE) && !this.isAtEnd()) {
       items.push(this.parseMidiBarItem());
     }
+
+    this.inNotesSection = false;
 
     if (this.check(TokenType.PIPE)) {
       this.advance(); // consume closing |
@@ -549,7 +682,8 @@ export class Parser {
     // Check for drum name (kick, snare, etc.)
     if (this.check(TokenType.IDENT) && this.isDrumName(this.peek().value)) {
       const name = this.advance().value;
-      const duration = this.parseExpression();
+      // Use parsePrimary to avoid consuming next item
+      const duration = this.parsePrimary();
       return {
         kind: 'MidiDrum',
         name,
@@ -558,9 +692,9 @@ export class Parser {
       };
     }
 
-    // Regular note: C4 q
-    const pitch = this.parseExpression();
-    const duration = this.parseExpression();
+    // Regular note: C4 q - use parsePrimary for both to avoid consuming next items
+    const pitch = this.parsePrimary();
+    const duration = this.parsePrimary();
 
     return {
       kind: 'MidiNote',
@@ -576,11 +710,13 @@ export class Parser {
     const pitches: Expression[] = [];
 
     while (!this.check(TokenType.RBRACKET) && !this.isAtEnd()) {
-      pitches.push(this.parseExpression());
+      // Only parse primary expressions (pitch literals) in chord context
+      pitches.push(this.parsePrimary());
     }
 
     this.expect(TokenType.RBRACKET, "Expected ']' after chord pitches");
-    const duration = this.parseExpression();
+    // Only parse primary for duration to avoid consuming next chord's bracket
+    const duration = this.parsePrimary();
 
     return {
       kind: 'MidiChord',
@@ -756,6 +892,21 @@ export class Parser {
 
     if (this.check(TokenType.CONTINUE)) {
       return this.parseContinue();
+    }
+
+    // Phrase block (for use in procedures called from part body)
+    if (this.check(TokenType.PHRASE)) {
+      return this.parsePhraseBlock();
+    }
+
+    // Rest statement (for use in procedures called from part body)
+    if (this.check(TokenType.REST)) {
+      return this.parseRestStatement();
+    }
+
+    // MIDI bar (for use in procedures called from part body)
+    if (this.check(TokenType.PIPE)) {
+      return this.parseMidiBar();
     }
 
     // Assignment or expression statement
@@ -1633,19 +1784,9 @@ export class Parser {
       return this.parsePitchLiteral(token);
     }
 
-    // Dur literal - but only if it's a "real" duration, not a bare single letter
-    // Bare single letters (w, h, q, e, s, t, x) are treated as identifiers in expression context
+    // Dur literal - now lexer only produces DUR for dotted shorthands (q., h., etc.)
+    // or fraction/tick formats (1/4, 480t)
     if (this.check(TokenType.DUR)) {
-      const durValue = token.value;
-      // If it's just a single letter (no dots, no number prefix), treat as identifier
-      if (/^[whqestx]$/.test(durValue)) {
-        this.advance();
-        return {
-          kind: 'Identifier',
-          name: durValue,
-          position: token.position,
-        };
-      }
       this.advance();
       return this.parseDurLiteral(token);
     }
@@ -1671,8 +1812,14 @@ export class Parser {
       return this.parseTemplateLiteral();
     }
 
-    // Identifier
+    // Identifier - but in notes section, check if it's a duration shorthand
     if (this.check(TokenType.IDENT)) {
+      const identValue = token.value;
+      // In notes sections, bare single letters (w, h, q, e, s, t, x) are durations
+      if (this.inNotesSection && /^[whqestx]$/.test(identValue)) {
+        this.advance();
+        return this.parseDurLiteralFromIdent(identValue, token.position);
+      }
       this.advance();
       return {
         kind: 'Identifier',
@@ -1968,6 +2115,33 @@ export class Parser {
       denominator,
       dots,
       position: token.position,
+    };
+  }
+
+  // Helper to create a DurLiteral from a shorthand identifier (w, h, q, e, s, t, x)
+  private parseDurLiteralFromIdent(value: string, position: import('../types/token.js').Position): DurLiteral {
+    const shorthandMap: Record<string, { noteValue: 'w' | 'h' | 'q' | 'e' | 's' | 't' | 'x', numerator: number, denominator: number }> = {
+      'w': { noteValue: 'w', numerator: 1, denominator: 1 },
+      'h': { noteValue: 'h', numerator: 1, denominator: 2 },
+      'q': { noteValue: 'q', numerator: 1, denominator: 4 },
+      'e': { noteValue: 'e', numerator: 1, denominator: 8 },
+      's': { noteValue: 's', numerator: 1, denominator: 16 },
+      't': { noteValue: 't', numerator: 1, denominator: 32 },
+      'x': { noteValue: 'x', numerator: 1, denominator: 64 },
+    };
+
+    const info = shorthandMap[value];
+    if (!info) {
+      throw this.error(`Invalid duration shorthand: ${value}`);
+    }
+
+    return {
+      kind: 'DurLiteral',
+      noteValue: info.noteValue,
+      numerator: info.numerator,
+      denominator: info.denominator,
+      dots: 0,
+      position,
     };
   }
 

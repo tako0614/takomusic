@@ -23,6 +23,7 @@ TakoScore is a domain-specific language for vocal synthesis composition, optimiz
 - [Underlay Rules](#underlay-rules)
 - [Ties and Slurs](#ties-and-slurs)
 - [Rests and Breaths](#rests-and-breaths)
+- [Voice Tuning](#voice-tuning)
 - [MIDI Tracks](#midi-tracks)
 - [Types and Literals](#types-and-literals)
 - [Control Structures](#control-structures)
@@ -136,7 +137,7 @@ part Vocal {
 
 Notes are written in a bar-like notation:
 
-```tako
+```mf
 notes:
   | C4 q  D4 q  E4 q  F4 q |    // Bar 1
   | G4 h         A4 h     |;   // Bar 2
@@ -157,14 +158,14 @@ Dotted notes: append `.` (e.g., `q.` = dotted quarter)
 
 Lyrics are mora (syllable) sequences:
 
-```tako
+```mf
 lyrics mora:
   き ず だ ら け の ま ま;
 ```
 
 Or phoneme sequences for advanced control:
 
-```tako
+```mf
 lyrics phoneme:
   k i z u d a r a k e n o m a m a;
 ```
@@ -179,7 +180,7 @@ The underlay system connects notes to lyrics.
 
 Each **onset** (new note, excluding tied continuations) consumes one lyric token.
 
-```tako
+```mf
 notes:
   | C4 q  D4 q  E4 q  F4 q |;
 
@@ -193,7 +194,7 @@ Result: C4="き", D4="ず", E4="だ", F4="ら"
 
 Use `_` to extend the previous syllable across multiple notes:
 
-```tako
+```mf
 notes:
   | G4 q  A4 q  B4 q  C5 q |;
 
@@ -224,7 +225,7 @@ lyric_count = count(mora_tokens)  // including _ tokens
 
 Ties connect two notes of the same pitch. The second note is **not an onset**.
 
-```tako
+```mf
 notes:
   | C4 h~  C4 h   D4 q  E4 q |;
 
@@ -234,16 +235,11 @@ lyrics mora:
 
 The `~` indicates tie start. The tied C4 doesn't consume a lyric.
 
-### Slurs
+### Slurs (Planned)
 
-Slurs connect different pitches (phrasing, not pitch connection):
+> **Note**: Slur syntax is planned for a future release.
 
-```tako
-notes:
-  | C4 q( D4 q  E4 q) F4 q |;
-```
-
-Slurs don't affect lyric assignment.
+Slurs will connect different pitches for phrasing (not pitch connection).
 
 ---
 
@@ -251,7 +247,7 @@ Slurs don't affect lyric assignment.
 
 ### Rest Between Phrases
 
-```tako
+```mf
 part Vocal {
   phrase { ... }
   rest q           // Quarter rest = phrase boundary
@@ -261,7 +257,7 @@ part Vocal {
 
 ### Breath Mark
 
-```tako
+```mf
 phrase {
   notes:
     | C4 q  D4 q |;
@@ -278,11 +274,68 @@ Breath marks are recognized by NEUTRINO as phrase boundaries.
 
 ---
 
+## Voice Tuning
+
+Voice parameters control vocal expression in NEUTRINO synthesis.
+
+### Per-Note Parameters
+
+Attach voice parameters to individual notes using bracket syntax:
+
+```mf
+phrase {
+  notes:
+    | C4 q [dyn:100 bre:30]  D4 q [dyn:80]  E4 h |;
+  lyrics mora:
+    あ い う;
+}
+```
+
+Multiple parameters can be specified in a single bracket:
+
+```mf
+| C4 q [dyn:100 bre:30 bri:64] |
+```
+
+### Automation Curves
+
+Define parameter changes over time using automation statements:
+
+```mf
+part Vocal {
+  // Parameter automation: paramType time value, time value, ...
+  dyn 1:0 100, 2:0 80, 3:0 120
+  bre 1:0 0, 2:0 50, 3:0 0
+
+  phrase {
+    notes: | C4 w  D4 w  E4 w |;
+    lyrics mora: あ い う;
+  }
+}
+```
+
+Time format is `bar:beat` (1-indexed bars, 0-indexed beats).
+
+### Available Parameters
+
+| Parameter | IR Type | Description | Range |
+|-----------|---------|-------------|-------|
+| `dyn` | DYN | Dynamics (volume) | 0-127 |
+| `bre` | BRE | Breathiness | 0-127 |
+| `bri` | BRI | Brightness | 0-127 |
+| `cle` | CLE | Clearness | 0-127 |
+| `gen` | GEN | Gender factor | 0-127 |
+| `por` | POR | Portamento | 0-127 |
+| `ope` | OPE | Opening | 0-127 |
+| `pit` | PIT | Pitch bend | varies |
+
+---
+
 ## MIDI Tracks
 
 MIDI parts use simpler syntax without underlay:
 
-```tako
+```mf
 part Piano {
   midi ch:1 program:0
 
@@ -337,7 +390,7 @@ Built-in drum names for channel 10:
 
 ### Pitch Literals
 
-```tako
+```mf
 C4      // Middle C (MIDI 60)
 C#4     // C sharp
 Db4     // D flat (enharmonic to C#4)
@@ -346,7 +399,7 @@ Bb3     // B flat
 
 ### Duration Literals
 
-```tako
+```mf
 w       // Whole note
 h       // Half note
 q       // Quarter note
@@ -358,7 +411,7 @@ q.      // Dotted quarter
 
 ### Time Literals
 
-```tako
+```mf
 1:1       // Bar 1, beat 1
 2:3       // Bar 2, beat 3
 1:1:240   // Bar 1, beat 1, tick 240
@@ -370,15 +423,22 @@ q.      // Dotted quarter
 
 ### Variables
 
-```tako
-const root = C4;        // Immutable
-let count = 0;          // Mutable
-count = count + 1;
+```mf
+const root = C4;        // Immutable (global or local)
+```
+
+Inside procedures or parts:
+
+```mf
+proc example() {
+  let count = 0;        // Mutable (local only)
+  count = count + 1;
+}
 ```
 
 ### Conditionals
 
-```tako
+```mf
 if (condition) {
   // ...
 } else if (other) {
@@ -390,7 +450,7 @@ if (condition) {
 
 ### Loops
 
-```tako
+```mf
 for (i in 0..4) {
   // i = 0, 1, 2, 3
 }
@@ -400,31 +460,61 @@ for (i in 0..=4) {
 }
 ```
 
+### Control Flow in Part Bodies
+
+Control structures (`if`, `for`, `while`) can be used inside part bodies for conditional or repeated patterns. They work best with procedure calls:
+
+```mf
+part Vocal {
+  midi ch:1
+  for (i in 0..4) {
+    myPattern();
+  }
+}
+```
+
 ---
 
 ## Procedures
 
-```tako
-proc verse(root) {
+Procedures allow you to define reusable musical patterns.
+
+```mf
+proc myVerse() {
   phrase {
     notes:
-      | ${root} q  ${root+2} q  ${root+4} q  ${root+7} q |;
+      | C4 q  D4 q  E4 q  F4 q |;
 
     lyrics mora:
       ら ら ら ら;
   }
 }
 
-export proc main() {
-  verse(C4);
-  rest h;
-  verse(G4);
+part Vocal {
+  myVerse();
+  rest q;
+  myVerse();
 }
 ```
 
-### Exported Entry Point
+### Procedures with Parameters
 
-Every score must have an `export proc main()` or equivalent entry.
+Procedures can accept parameters:
+
+```mf
+proc makeChord(root, type) {
+  // Use parameters in logic
+  if (type == "major") {
+    | [C4 E4 G4] w |
+  }
+}
+```
+
+> **Note**: Template interpolation (`${expr}`) in notes section is planned for a future release.
+
+### Procedures in Parts
+
+Procedures can contain `phrase`, `rest`, and MIDI bars (`| ... |`). When called from within a part body, these elements are executed in the part's context.
 
 ---
 
@@ -432,14 +522,14 @@ Every score must have an `export proc main()` or equivalent entry.
 
 ### Import
 
-```tako
-import { verse, chorus } from "./sections.tako";
+```mf
+import { verse, chorus } from "./sections.mf";
 import { majorScale } from "std:theory";
 ```
 
 ### Export
 
-```tako
+```mf
 export proc myPhrase() { ... }
 export const ROOT = C4;
 ```
@@ -450,7 +540,7 @@ export const ROOT = C4;
 
 For convenience, a mora splitter function is available:
 
-```tako
+```mf
 lyrics mora:
   ${mora("きずだらけ")};   // Expands to: き ず だ ら け
 ```
@@ -515,7 +605,7 @@ TakoScore maps cleanly to MusicXML:
 
 ## Complete Example
 
-```tako
+```mf
 score "はじめまして" {
   backend neutrino {
     singer "KIRITAN"
