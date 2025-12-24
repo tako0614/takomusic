@@ -1,0 +1,46 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "gm_midi",
+  "renderer": "midi.smf",
+  "output": {
+    "path": "out.mid"
+  },
+  "bindings": [
+    {
+      "selector": {
+        "sound": "piano"
+      },
+      "config": {
+        "ch": 1,
+        "program": 0
+      }
+    },
+    {
+      "selector": {
+        "sound": "kit_standard"
+      },
+      "config": {
+        "ch": 10,
+        "drumMap": {
+          "kick": 36,
+          "snare": 38,
+          "hhc": 42,
+          "hho": 46,
+          "crash": 49,
+          "ride": 51
+        }
+      }
+    },
+    {
+      "selector": {
+        "sound": "lead_vocal"
+      },
+      "config": {
+        "ch": 2,
+        "program": 81
+      }
+    }
+  ]
+}

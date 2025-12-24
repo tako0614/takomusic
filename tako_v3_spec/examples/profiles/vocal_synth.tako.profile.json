@@ -1,0 +1,22 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "vocal_synth",
+  "renderer": "vocal.synth.example",
+  "output": {
+    "dir": "build/vocal"
+  },
+  "bindings": [
+    {
+      "selector": {
+        "sound": "lead_vocal"
+      },
+      "config": {
+        "voicebank": "ExampleSinger",
+        "lang": "ja-JP",
+        "g2p": "builtin"
+      }
+    }
+  ]
+}

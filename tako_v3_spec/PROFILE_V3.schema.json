@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tako-lang.example/schemas/PROFILE_V3.schema.json",
+  "title": "Tako v3 Render Profile",
+  "type": "object",
+  "required": [
+    "tako",
+    "profileName",
+    "renderer",
+    "output",
+    "bindings"
+  ],
+  "properties": {
+    "tako": {
+      "type": "object",
+      "required": [
+        "profileVersion"
+      ],
+      "properties": {
+        "profileVersion": {
+          "const": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "profileName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "renderer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Renderer plugin id"
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Binding"
+      },
+      "minItems": 1
+    },
+    "degradePolicy": {
+      "$ref": "#/$defs/DegradePolicy"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Binding": {
+      "type": "object",
+      "required": [
+        "selector",
+        "config"
+      ],
+      "properties": {
+        "selector": {
+          "$ref": "#/$defs/Selector"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Selector": {
+      "type": "object",
+      "properties": {
+        "trackName": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "Instrument",
+            "Drums",
+            "Vocal",
+            "Automation"
+          ]
+        },
+        "sound": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "DegradePolicy": {
+      "type": "string",
+      "enum": [
+        "Error",
+        "Drop",
+        "Approx"
+      ]
+    }
+  }
+}
