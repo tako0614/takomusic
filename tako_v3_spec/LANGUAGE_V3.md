@@ -13,15 +13,15 @@
 ## 2. ファイルとモジュール
 
 ### 2.1 拡張子
-- ソース: `*.tako`
-- Profile: `*.tako.profile.json`（規範）
-- IR dump: `*.tako.score.json`（推奨）
+- ソース: `*.mf`
+- Profile: `*.mf.profile.json`（規範）
+- IR dump: `*.mf.score.json`（推奨）
 
 ### 2.2 import / export
 - `export fn main() -> Score` は **MUST**。
 - import は2種類:
   - `import { name } from "std:core";`
-  - `import { foo } from "./foo.tako";`
+  - `import { foo } from "./foo.mf";`
 
 ### 2.3 名前解決（推奨順）
 1. ローカルスコープ
@@ -29,7 +29,7 @@
 3. std prelude（実装が提供する場合）
 4. コア定義（Score/Clip など）
 
-> 実装者メモ: v2 系の「ビルトインと std の同名衝突」問題を避けるため、v3 は “衝突しにくい設計” を推奨する。
+> 実装者メモ: ビルトインと std の同名衝突を避けるため、衝突しにくい設計を推奨する。
 > 例: std 側は `std:vocal.*` のように module namespace を多用する。
 
 ## 3. 字句仕様（Lexer）

@@ -10,10 +10,10 @@ export const translations = {
     // Hero
     hero: {
       title: 'Music as Code',
-      subtitle: '音楽作成のためのドメイン固有言語',
-      subtitleLine2: 'VSQX、MusicXML、MIDIに一度の記述で出力',
+      subtitle: '中立IRに評価される作曲DSL',
+      subtitleLine2: 'Render Profile + PluginでMIDI/MusicXML/DAWへ出力',
       seeExample: '例を見る',
-      version: 'v1.3.7',
+      version: 'v3',
       license: 'AGPL-3.0',
       copied: 'コピー済み',
     },
@@ -22,15 +22,15 @@ export const translations = {
       title: '作曲に必要なすべてを',
       simpleSyntax: {
         title: 'シンプルな構文',
-        description: '直感的なピッチ（C4, D#5）とデュレーション（1/4, 1/8）リテラルで音楽を記述',
+        description: '`.mf`でscore/clipを記述。ピッチ（C4, D#5）とDur（q, 1/4）で作曲',
       },
       multiFormat: {
         title: 'マルチフォーマット出力',
-        description: 'Vocaloid用VSQX、NEUTRINO用MusicXML、楽器用MIDIを生成',
+        description: 'Renderer PluginでMIDI/MusicXML/DAW等へ出力。音色割当はProfileで分離',
       },
       stdlib: {
         title: '豊富な標準ライブラリ',
-        description: '12モジュール、238以上の関数：音楽理論、パターン、ダイナミクス、ジャンル別機能など',
+        description: 'std:*モジュールでClip合成や変形、歌詞処理を提供',
       },
       vscodeExtension: {
         title: 'VSCode拡張機能',
@@ -38,11 +38,11 @@ export const translations = {
       },
       staticAnalysis: {
         title: '静的解析',
-        description: 'レンダリング前にエラーを検出：ボーカルの重複、歌詞の欠落、音域外のピッチ',
+        description: '未定義SoundIdやrole不一致、負のduration等をレンダリング前に検出',
       },
       cliTools: {
-        title: 'CLIツール',
-        description: 'init, build, check, fmt, play, render - 必要なすべてが1つのツールチェーンに',
+        title: '実装パイプライン',
+        description: 'Parse→型検査→IR正規化→Renderの流れを前提に設計',
       },
     },
     // Code Example
@@ -54,26 +54,30 @@ export const translations = {
     // Standard Library
     stdlib: {
       title: '標準ライブラリ',
-      description: '12のモジュールで238以上の関数を提供。音楽理論からジャンル特有のパターンまで。',
+      description: '9モジュール（analysisは任意）で中立IR向けの機能を提供。',
       modules: {
-        theory: '音楽理論（スケール、コード、ボイシング）',
-        patterns: 'パターン（ユークリッドリズム、アルペジオ）',
-        rhythm: 'リズム（スウィング、グルーブ、ヒューマナイズ）',
-        dynamics: 'ダイナミクス（クレッシェンド、スフォルツァンド）',
-        expression: '表現（ビブラート、ポルタメント、ベンド）',
-        genres: 'ジャンル（ボサノバ、ファンク、EDM、ジャズ）',
+        core: 'Clip合成とScore/Track操作',
+        time: '時間ユーティリティ（bar:beat, Dur）',
+        random: '決定性RNG',
+        transform: '変形（transpose, stretch, quantize）',
+        curves: 'カーブ/補間',
+        theory: '基礎理論（スケール/トライアド）',
+        drums: '抽象ドラムキーとパターン',
+        vocal: '歌詞生成とアンダーレイ',
+        analysis: '解析ユーティリティ（任意）',
       },
       viewDocs: 'ドキュメントを見る',
     },
-    // CLI
-    cli: {
-      title: 'パワフルなCLI',
-      commands: {
-        init: '新規プロジェクト作成',
-        build: 'ウォッチモードでビルド',
-        check: '静的解析を実行',
-        play: 'FluidSynthでプレビュー',
-        render: 'NEUTRINO + FluidSynthでレンダリング',
+    // Pipeline
+    pipeline: {
+      title: '実装パイプライン',
+      steps: {
+        parse: '.mfをASTへ',
+        typecheck: 'import解決と型検査',
+        evaluate: 'main()を評価してScore生成',
+        normalize: 'bar:beatを絶対Posへ',
+        emit: 'IR v3のscore.jsonを出力',
+        render: 'Profile + Pluginで成果物生成',
       },
     },
     // CTA
@@ -100,10 +104,10 @@ export const translations = {
     // Hero
     hero: {
       title: 'Music as Code',
-      subtitle: 'A domain-specific language for music composition.',
-      subtitleLine2: 'Write once, export to VSQX, MusicXML, and MIDI.',
+      subtitle: 'A backend-agnostic DSL that evaluates to neutral IR.',
+      subtitleLine2: 'Render Profiles + Plugins for MIDI/MusicXML/DAW.',
       seeExample: 'See Example',
-      version: 'v1.3.7',
+      version: 'v3',
       license: 'AGPL-3.0',
       copied: 'Copied',
     },
@@ -112,15 +116,15 @@ export const translations = {
       title: 'Everything you need to compose',
       simpleSyntax: {
         title: 'Simple Syntax',
-        description: 'Write music using intuitive pitch (C4, D#5) and duration (1/4, 1/8) literals',
+        description: 'Write `.mf` with score/clip DSL and Dur literals (q, 1/4)',
       },
       multiFormat: {
         title: 'Multi-Format Export',
-        description: 'Generate VSQX for Vocaloid, MusicXML for NEUTRINO, and MIDI for instruments',
+        description: 'Renderer plugins output MIDI/MusicXML/DAW formats with profiles for binding',
       },
       stdlib: {
         title: 'Rich Standard Library',
-        description: '12 modules, 238+ functions: music theory, patterns, dynamics, genre-specific features, and more',
+        description: 'std:* modules for clip composition, transforms, and vocal alignment',
       },
       vscodeExtension: {
         title: 'VSCode Extension',
@@ -128,11 +132,11 @@ export const translations = {
       },
       staticAnalysis: {
         title: 'Static Analysis',
-        description: 'Catch errors before rendering: overlapping vocals, missing lyrics, out-of-range pitches',
+        description: 'Catch undefined sounds, role mismatches, and invalid durations before rendering',
       },
       cliTools: {
-        title: 'CLI Tools',
-        description: 'init, build, check, fmt, play, render - everything you need in one toolchain',
+        title: 'Implementation Pipeline',
+        description: 'Designed around parse → typecheck → normalize → render',
       },
     },
     // Code Example
@@ -144,26 +148,30 @@ export const translations = {
     // Standard Library
     stdlib: {
       title: 'Standard Library',
-      description: '12 modules with 238+ functions. From music theory to genre-specific patterns.',
+      description: '9 modules (analysis optional) for backend-agnostic composition.',
       modules: {
-        theory: 'Music Theory (scales, chords, voicings)',
-        patterns: 'Patterns (Euclidean rhythms, arpeggios)',
-        rhythm: 'Rhythm (swing, groove, humanize)',
-        dynamics: 'Dynamics (crescendo, sforzando)',
-        expression: 'Expression (vibrato, portamento, bends)',
-        genres: 'Genres (bossa nova, funk, EDM, jazz)',
+        core: 'Clip composition and Score/Track helpers',
+        time: 'Time utilities (bar:beat, Dur)',
+        random: 'Deterministic RNG',
+        transform: 'Transforms (transpose, stretch, quantize)',
+        curves: 'Curves and interpolation',
+        theory: 'Basic theory (scales/triads)',
+        drums: 'Abstract drum keys and patterns',
+        vocal: 'Lyric creation and underlay',
+        analysis: 'Analysis utilities (optional)',
       },
       viewDocs: 'View Documentation',
     },
-    // CLI
-    cli: {
-      title: 'Powerful CLI',
-      commands: {
-        init: 'Create a new project',
-        build: 'Build with watch mode',
-        check: 'Run static analysis',
-        play: 'Preview with FluidSynth',
-        render: 'Render using NEUTRINO + FluidSynth',
+    // Pipeline
+    pipeline: {
+      title: 'Implementation Pipeline',
+      steps: {
+        parse: 'Parse .mf into AST',
+        typecheck: 'Resolve imports and typecheck',
+        evaluate: 'Evaluate main() into Score',
+        normalize: 'Normalize bar:beat into Pos',
+        emit: 'Emit IR v3 score.json',
+        render: 'Render artifacts via profile + plugin',
       },
     },
     // CTA

@@ -1,7 +1,7 @@
 {
   "name": "takomusic",
   "version": "2.1.2",
-  "description": "TakoScore - A phrase-first DSL for vocal synthesis composition optimized for NEUTRINO",
+  "description": "TakoMusic - A music composition DSL that evaluates to neutral IR and renders via plugins",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -24,10 +24,12 @@
     "dsl",
     "composition",
     "midi",
-    "vsqx",
     "musicxml",
-    "vocaloid",
-    "neutrino"
+    "daw",
+    "render-profile",
+    "plugin",
+    "score",
+    "ir"
   ],
   "repository": {
     "type": "git",
