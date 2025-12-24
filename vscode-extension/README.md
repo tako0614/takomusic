@@ -1,51 +1,30 @@
 # TakoMusic for VS Code
 
-TakoMusic (.mf) ファイルのシンタックスハイライトとスニペットを提供するVS Code拡張機能です。
-
-> Note: Syntax support is being updated for v3. The authoritative spec is `../tako_v3_spec/`.
+VS Code language support for TakoMusic v3 (.mf files).
 
 ## Features
 
-### Syntax Highlighting
+- Syntax highlighting for v3 keywords, score/clip blocks, literals, and std modules
+- Snippets for common v3 structures and events
+- Diagnostics are not implemented for v3 yet
 
-- キーワード (`fn`, `const`, `let`, `if`, `else`, `for`, `import`, `export`)
-- スコアDSL (`score`, `clip`, `sound`, `track`, `meta`, `tempo`, `meter`, `place`, `role`, `kind`)
-- 組み込み関数 (`note`, `rest`, `chord`, `hit`, `at`, `cc`, `automation`, `marker`)
-- ピッチリテラル (`C4`, `D#5`, `Bb3`)
-- デュレーションリテラル (`w`, `h`, `q`, `e`, `s`, `t`, `x`, `1/4`)
-- タイムリテラル (`1:1`, `2:3`)
-- ドラム名 (`kick`, `snare`, `hhc`, `hho`, `tom1`, `crash`, `ride`)
-
-### Snippets (v3 target)
+## Snippets
 
 | Prefix | Description |
 |--------|-------------|
 | `main` | Entry point with `score` |
 | `score` | Score block |
-| `clip` | Clip block |
 | `sound` | Sound declaration |
 | `track` | Track declaration |
+| `clip` | Clip block |
 | `note` | Note event |
-| `chord` | Chord |
-| `rest` | Rest |
+| `chord` | Chord event |
 | `hit` | Drum hit |
-| `for` | For loop |
-| `if` | If statement |
+| `rest` | Rest event |
 | `imp` | Import |
+| `imp-std` | Import from `std:` |
 | `tempo` | Tempo block |
 | `meter` | Meter block |
-
-## Installation
-
-### From VSIX
-
-```bash
-code --install-extension takomusic-1.0.0.vsix
-```
-
-### From Marketplace
-
-Search for "TakoMusic" in the VS Code Extensions view.
 
 ## Example
 
@@ -69,6 +48,18 @@ export fn main() -> Score {
   };
 }
 ```
+
+## Installation
+
+### From VSIX
+
+```bash
+code --install-extension takomusic-1.1.0.vsix
+```
+
+### From Marketplace
+
+Search for "TakoMusic" in the VS Code Extensions view.
 
 ## Links
 

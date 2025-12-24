@@ -1,0 +1,4 @@
+// std:random (v3)
+export const rng = __random.rng;
+export const nextFloat = __random.nextFloat;
+export const nextInt = __random.nextInt;

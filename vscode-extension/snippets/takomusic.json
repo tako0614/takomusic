@@ -2,128 +2,93 @@
   "Main Entry Point": {
     "prefix": "main",
     "body": [
-      "export proc main() {",
-      "\ttitle(\"${1:My Song}\");",
-      "\tppq(480);",
-      "\ttimeSig(4, 4);",
-      "\ttempo(${2:120});",
+      "export fn main() -> Score {",
+      "\treturn score {",
+      "\t\ttempo { 1:1 -> 120bpm; }",
+      "\t\tmeter { 1:1 -> 4/4; }",
       "",
-      "\t$0",
+      "\t\tsound \"piano\" kind instrument {",
+      "\t\t\tlabel \"Piano\";",
+      "\t\t}",
+      "",
+      "\t\ttrack \"Piano\" role Instrument sound \"piano\" {",
+      "\t\t\tplace 1:1 clip {",
+      "\t\t\t\tnote(C4, q);",
+      "\t\t\t\t$0",
+      "\t\t\t};",
+      "\t\t}",
+      "\t};",
       "}"
     ],
-    "description": "Create main entry point"
+    "description": "Create a v3 main entry point"
   },
-  "Vocal Track": {
-    "prefix": "track-vocal",
+  "Score Block": {
+    "prefix": "score",
     "body": [
-      "track(vocal, ${1:v1}, { voice: \"${2:miku}\" }) {",
-      "\tat(${3:1:1});",
+      "score {",
       "\t$0",
       "}"
     ],
-    "description": "Create vocal track"
+    "description": "Score block"
   },
-  "MIDI Track": {
-    "prefix": "track-midi",
+  "Sound Declaration": {
+    "prefix": "sound",
     "body": [
-      "track(midi, ${1:piano}, { ch: ${2:1}, program: ${3:0} }) {",
-      "\tat(${4:1:1});",
+      "sound \"${1:id}\" kind ${2|instrument,drumKit,vocal,fx|} {",
+      "\tlabel \"${3:Label}\";",
       "\t$0",
       "}"
     ],
-    "description": "Create MIDI track"
+    "description": "Sound declaration"
   },
-  "Drum Track": {
-    "prefix": "track-drums",
+  "Track Declaration": {
+    "prefix": "track",
     "body": [
-      "track(midi, drums, { ch: 10, vel: ${1:100} }) {",
-      "\tat(${2:1:1});",
+      "track \"${1:Track}\" role ${2|Instrument,Drums,Vocal,Automation|} sound \"${3:soundId}\" {",
+      "\tplace 1:1 clip {",
+      "\t\t$0",
+      "\t};",
+      "}"
+    ],
+    "description": "Track declaration"
+  },
+  "Clip Block": {
+    "prefix": "clip",
+    "body": [
+      "clip {",
+      "\tnote(C4, q);",
       "\t$0",
       "}"
     ],
-    "description": "Create drum track"
+    "description": "Clip block"
   },
   "Note": {
     "prefix": "note",
     "body": [
-      "note(${1:C4}, ${2:1/4}, \"${3:あ}\");"
+      "note(${1:C4}, ${2:q});"
     ],
-    "description": "Add a note with lyric"
-  },
-  "Note (MIDI)": {
-    "prefix": "notem",
-    "body": [
-      "note(${1:C4}, ${2:1/4});"
-    ],
-    "description": "Add a MIDI note"
+    "description": "Note event"
   },
   "Chord": {
     "prefix": "chord",
     "body": [
-      "chord([${1:C4}, ${2:E4}, ${3:G4}], ${4:1/4});"
+      "chord([${1:C4}, ${2:E4}, ${3:G4}], ${4:q});"
     ],
-    "description": "Add a chord"
+    "description": "Chord event"
+  },
+  "Hit": {
+    "prefix": "hit",
+    "body": [
+      "hit(\"${1:kick}\", ${2:q});"
+    ],
+    "description": "Drum hit"
   },
   "Rest": {
     "prefix": "rest",
     "body": [
-      "rest(${1:1/4});"
+      "rest(${1:q});"
     ],
-    "description": "Add a rest"
-  },
-  "Drum Hit": {
-    "prefix": "drum",
-    "body": [
-      "drum(${1|kick,snare,hhc,hho,tom1,crash,ride|}, ${2:1/4});"
-    ],
-    "description": "Add a drum hit"
-  },
-  "For Loop": {
-    "prefix": "for",
-    "body": [
-      "for (${1:i} in ${2:1}..=${3:4}) {",
-      "\t$0",
-      "}"
-    ],
-    "description": "For loop"
-  },
-  "If Statement": {
-    "prefix": "if",
-    "body": [
-      "if (${1:condition}) {",
-      "\t$0",
-      "}"
-    ],
-    "description": "If statement"
-  },
-  "If-Else Statement": {
-    "prefix": "ife",
-    "body": [
-      "if (${1:condition}) {",
-      "\t$2",
-      "} else {",
-      "\t$0",
-      "}"
-    ],
-    "description": "If-else statement"
-  },
-  "Procedure": {
-    "prefix": "proc",
-    "body": [
-      "proc ${1:name}(${2:params}) {",
-      "\t$0",
-      "}"
-    ],
-    "description": "Define a procedure"
-  },
-  "Export Procedure": {
-    "prefix": "eproc",
-    "body": [
-      "export proc ${1:name}(${2:params}) {",
-      "\t$0",
-      "}"
-    ],
-    "description": "Define an exported procedure"
+    "description": "Rest event"
   },
   "Import": {
     "prefix": "imp",
@@ -132,247 +97,29 @@
     ],
     "description": "Import from module"
   },
-  "Import Theory": {
-    "prefix": "imp-theory",
+  "Import Std": {
+    "prefix": "imp-std",
     "body": [
-      "import { ${1|major,minor,majorTriad,minorTriad,majorSeventh,minorSeventh,dominantSeventh|} } from \"std:theory\";"
+      "import { ${1:repeat} } from \"std:${2|core,time,random,transform,curves,theory,drums,vocal|}\";"
     ],
-    "description": "Import from theory module"
+    "description": "Import from std module"
   },
-  "Import Patterns": {
-    "prefix": "imp-patterns",
+  "Tempo Block": {
+    "prefix": "tempo",
     "body": [
-      "import { ${1|euclidean,arpeggiate,strum,albertiBass,walkingBass|} } from \"std:patterns\";"
-    ],
-    "description": "Import from patterns module"
-  },
-  "Import Rhythm": {
-    "prefix": "imp-rhythm",
-    "body": [
-      "import { ${1|swing,humanize,triplet,dotted,groove|} } from \"std:rhythm\";"
-    ],
-    "description": "Import from rhythm module"
-  },
-  "Import Dynamics": {
-    "prefix": "imp-dynamics",
-    "body": [
-      "import { ${1|crescendo,decrescendo,sforzando,swell|} } from \"std:dynamics\";"
-    ],
-    "description": "Import from dynamics module"
-  },
-  "Import Expression": {
-    "prefix": "imp-expression",
-    "body": [
-      "import { ${1|vibrato,portamento,bendUp,bendDown|} } from \"std:expression\";"
-    ],
-    "description": "Import from expression module"
-  },
-  "Import Genres": {
-    "prefix": "imp-genres",
-    "body": [
-      "import { ${1|fourOnFloor,funkDrums,bossaNovaGuitar,jazzWalk|} } from \"std:genres\";"
-    ],
-    "description": "Import from genres module"
-  },
-  "Import Composition": {
-    "prefix": "imp-composition",
-    "body": [
-      "import { ${1|sequence,ostinato,canon,retrograde|} } from \"std:composition\";"
-    ],
-    "description": "Import from composition module"
-  },
-  "Import Utils": {
-    "prefix": "imp-utils",
-    "body": [
-      "import { ${1|clip,lerp,mapRange,rotate|} } from \"std:utils\";"
-    ],
-    "description": "Import from utils module"
-  },
-  "At Position": {
-    "prefix": "at",
-    "body": [
-      "at(${1:1}:${2:1});"
-    ],
-    "description": "Set cursor position"
-  },
-  "8-Beat Drum Pattern": {
-    "prefix": "beat8",
-    "body": [
-      "drum(kick, 1/8);",
-      "drum(hhc, 1/8);",
-      "drum(snare, 1/8);",
-      "drum(hhc, 1/8);",
-      "drum(kick, 1/8);",
-      "drum(hhc, 1/8);",
-      "drum(snare, 1/8);",
-      "drum(hhc, 1/8);"
-    ],
-    "description": "8-beat drum pattern (1 bar)"
-  },
-  "4-on-the-floor": {
-    "prefix": "beat4floor",
-    "body": [
-      "for (beat in 0..4) {",
-      "\tdrum(kick, 1/4);",
+      "tempo {",
+      "\t1:1 -> ${1:120}bpm;",
       "}"
     ],
-    "description": "4-on-the-floor kick pattern"
+    "description": "Tempo block"
   },
-  "Major Chord": {
-    "prefix": "chord-major",
+  "Meter Block": {
+    "prefix": "meter",
     "body": [
-      "chord(majorTriad(${1:C4}), ${2:1/4});"
-    ],
-    "description": "Play major triad chord"
-  },
-  "Minor Chord": {
-    "prefix": "chord-minor",
-    "body": [
-      "chord(minorTriad(${1:A4}), ${2:1/4});"
-    ],
-    "description": "Play minor triad chord"
-  },
-  "Seventh Chord": {
-    "prefix": "chord-7",
-    "body": [
-      "chord(dominantSeventh(${1:G4}), ${2:1/4});"
-    ],
-    "description": "Play dominant seventh chord"
-  },
-  "Arpeggio Up": {
-    "prefix": "arp-up",
-    "body": [
-      "arpeggiateUp(${1:majorTriad(C4)}, ${2:1/8});"
-    ],
-    "description": "Arpeggiate chord upward"
-  },
-  "Euclidean Rhythm": {
-    "prefix": "eucl",
-    "body": [
-      "const pattern = euclidean(${1:5}, ${2:8});",
-      "for (i in 0..len(pattern)) {",
-      "\tif (pattern[i]) {",
-      "\t\tdrum(${3:kick}, ${4:1/8});",
-      "\t} else {",
-      "\t\trest(${4:1/8});",
-      "\t}",
+      "meter {",
+      "\t1:1 -> ${1:4}/${2:4};",
       "}"
     ],
-    "description": "Euclidean rhythm pattern"
-  },
-  "Scale Run": {
-    "prefix": "scale-run",
-    "body": [
-      "const notes = scaleNotes(${1:C4}, ${2:major}, ${3:8});",
-      "for (i in 0..len(notes)) {",
-      "\tnote(notes[i], ${4:1/8});",
-      "}"
-    ],
-    "description": "Play scale notes"
-  },
-  "Crescendo": {
-    "prefix": "cresc",
-    "body": [
-      "crescendoUniform([${1:C4, D4, E4, F4}], ${2:1/4}, ${3:40}, ${4:100});"
-    ],
-    "description": "Crescendo passage"
-  },
-  "II-V-I Progression": {
-    "prefix": "prog-251",
-    "body": [
-      "// II-V-I in ${1:C}",
-      "chord(minorSeventh(${2:D4}), ${3:1/2});",
-      "chord(dominantSeventh(${4:G3}), ${3:1/2});",
-      "chord(majorSeventh(${5:C4}), ${6:1/1});"
-    ],
-    "description": "Jazz II-V-I progression"
-  },
-  "Walking Bass": {
-    "prefix": "walk",
-    "body": [
-      "walkingBass(${1:C3}, ${2:major}, ${3:1/4}, ${4:4});"
-    ],
-    "description": "Walking bass line"
-  },
-  "Basic Song Template": {
-    "prefix": "song",
-    "body": [
-      "export proc main() {",
-      "\ttitle(\"${1:My Song}\");",
-      "\tppq(480);",
-      "\ttimeSig(4, 4);",
-      "\ttempo(${2:120});",
-      "",
-      "\ttrack(vocal, v1, { voice: \"miku\" }) {",
-      "\t\tat(1:1);",
-      "\t\t$0",
-      "\t}",
-      "",
-      "\ttrack(midi, piano, { ch: 1, program: 0 }) {",
-      "\t\tat(1:1);",
-      "\t}",
-      "",
-      "\ttrack(midi, drums, { ch: 10, vel: 100 }) {",
-      "\t\tat(1:1);",
-      "\t}",
-      "}"
-    ],
-    "description": "Basic song template with vocal, piano, and drums"
-  },
-  "EDM Template": {
-    "prefix": "song-edm",
-    "body": [
-      "import { fourOnFloor } from \"std:genres\";",
-      "",
-      "export proc main() {",
-      "\ttitle(\"${1:EDM Track}\");",
-      "\tppq(480);",
-      "\ttimeSig(4, 4);",
-      "\ttempo(${2:128});",
-      "",
-      "\ttrack(midi, synth, { ch: 1, program: 81 }) {",
-      "\t\tat(1:1);",
-      "\t\t$0",
-      "\t}",
-      "",
-      "\ttrack(midi, bass, { ch: 2, program: 38 }) {",
-      "\t\tat(1:1);",
-      "\t}",
-      "",
-      "\ttrack(midi, drums, { ch: 10, vel: 110 }) {",
-      "\t\tat(1:1);",
-      "\t\tfourOnFloor(1/4, 8);",
-      "\t}",
-      "}"
-    ],
-    "description": "EDM song template"
-  },
-  "Jazz Template": {
-    "prefix": "song-jazz",
-    "body": [
-      "import { swing } from \"std:rhythm\";",
-      "import { walkingBass, jazzVoicing } from \"std:genres\";",
-      "",
-      "export proc main() {",
-      "\ttitle(\"${1:Jazz Tune}\");",
-      "\tppq(480);",
-      "\ttimeSig(4, 4);",
-      "\ttempo(${2:140});",
-      "",
-      "\ttrack(midi, piano, { ch: 1, program: 0 }) {",
-      "\t\tat(1:1);",
-      "\t\t$0",
-      "\t}",
-      "",
-      "\ttrack(midi, bass, { ch: 2, program: 32 }) {",
-      "\t\tat(1:1);",
-      "\t}",
-      "",
-      "\ttrack(midi, drums, { ch: 10, vel: 80 }) {",
-      "\t\tat(1:1);",
-      "\t}",
-      "}"
-    ],
-    "description": "Jazz song template"
+    "description": "Meter block"
   }
 }

@@ -18,7 +18,6 @@ This document describes the v3 standard library modules. All std functions are b
 - `std:theory`
 - `std:drums`
 - `std:vocal`
-- `std:analysis` (optional but recommended)
 
 ---
 
@@ -52,8 +51,8 @@ This document describes the v3 standard library modules. All std functions are b
 ## std:random
 
 - `rng(seed: Int) -> Rng`
-- `nextFloat(r: Rng) -> (Rng, Float)` (0..1)
-- `nextInt(r: Rng, lo: Int, hi: Int) -> (Rng, Int)` ([lo, hi))
+- `nextFloat(r: Rng) -> [Rng, Float]` (0..1)
+- `nextInt(r: Rng, lo: Int, hi: Int) -> [Rng, Int]` ([lo, hi))
 
 ---
 
@@ -98,9 +97,9 @@ This document describes the v3 standard library modules. All std functions are b
 
 ### Lyric creation
 
-- `text(text: String, lang: String) -> Lyric`
-- `syllables(tokens: [String|LyricToken], lang: String, words?: [[Int, Int]]) -> Lyric`
-- `phonemes(groups: [[String]], lang: String, alphabet: String, words?: [[Int, Int]]) -> Lyric`
+- `text(text: String, lang?: String) -> Lyric`
+- `syllables(tokens: [String|LyricToken], lang?: String) -> Lyric`
+- `phonemes(groups: [[String]], lang?: String, alphabet?: String) -> Lyric`
 - `ext() -> LyricToken`
 
 LyricToken:
@@ -110,13 +109,15 @@ LyricToken:
 
 ### Underlay
 
-- `align(c: Clip, lyric: Lyric, policy: AlignPolicy) -> Clip`
+- `align(c: Clip, lyric: Lyric) -> Clip`
 
-AlignPolicy:
+AlignPolicy (reserved):
 
 - `Strict`
 - `BestEffort`
 - `MelismaHeuristic`
+
+Current implementations may ignore `policy` values.
 
 ### Expression (vocal:* automation)
 
@@ -124,12 +125,6 @@ AlignPolicy:
 - `portamento(c: Clip, amount: Float, start?: Pos, end?: Pos) -> Clip`
 - `breathiness(c: Clip, amount: Float, start?: Pos, end?: Pos) -> Clip`
 - `loudness(c: Clip, curve: Curve, start: Pos, end: Pos) -> Clip`
-
----
-
-## std:analysis (optional)
-
-Functions are implementation-defined but should remain backend-agnostic.
 
 ---
 

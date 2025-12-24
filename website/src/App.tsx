@@ -1,4 +1,4 @@
-import { createSignal, For } from 'solid-js'
+﻿import { createSignal, For } from 'solid-js'
 import { useI18n } from './i18n'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 
@@ -12,8 +12,8 @@ fn vocalPart() -> Clip {
     note(E4, h, vel: 0.78);
   };
 
-  const lyr = vocal.text("hello", lang:"en-US");
-  c = vocal.align(c, lyr, policy: BestEffort);
+  const lyr = vocal.text("hello", "en-US");
+  c = vocal.align(c, lyr);
 
   return c;
 }
@@ -44,37 +44,36 @@ function App() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-
   const features = [
     {
       title: () => t().features.simpleSyntax.title,
       description: () => t().features.simpleSyntax.description,
-      icon: '🎵',
+      icon: 'S',
     },
     {
       title: () => t().features.multiFormat.title,
       description: () => t().features.multiFormat.description,
-      icon: '📦',
+      icon: 'M',
     },
     {
       title: () => t().features.stdlib.title,
       description: () => t().features.stdlib.description,
-      icon: '📚',
+      icon: 'L',
     },
     {
       title: () => t().features.vscodeExtension.title,
       description: () => t().features.vscodeExtension.description,
-      icon: '💻',
+      icon: 'V',
     },
     {
       title: () => t().features.staticAnalysis.title,
       description: () => t().features.staticAnalysis.description,
-      icon: '🔍',
+      icon: 'A',
     },
     {
       title: () => t().features.cliTools.title,
       description: () => t().features.cliTools.description,
-      icon: '🛠️',
+      icon: 'C',
     },
   ]
 
@@ -96,7 +95,6 @@ function App() {
     { name: 'theory', desc: () => t().stdlib.modules.theory },
     { name: 'drums', desc: () => t().stdlib.modules.drums },
     { name: 'vocal', desc: () => t().stdlib.modules.vocal },
-    { name: 'analysis', desc: () => t().stdlib.modules.analysis },
   ]
 
   return (
@@ -135,7 +133,7 @@ function App() {
               <span class="text-slate-400">$</span>
               <span>npm install -g takomusic</span>
               <span class="text-slate-400 group-hover:text-sky-400 transition-colors">
-                {copied() ? '✓' : '📋'}
+                {copied() ? 'copied' : 'copy'}
               </span>
             </button>
             <a
@@ -200,14 +198,6 @@ function App() {
             <span class="text-slate-400">{t().example.output}:</span>
             <span class="ml-2 text-sky-400">score.json</span>
           </div>
-          <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
-            <span class="text-slate-400">{t().example.output}:</span>
-            <span class="ml-2 text-sky-400">render.mid</span>
-          </div>
-          <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
-            <span class="text-slate-400">{t().example.output}:</span>
-            <span class="ml-2 text-sky-400">render.musicxml</span>
-          </div>
         </div>
       </section>
 
@@ -253,7 +243,7 @@ function App() {
             class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-6 py-3 font-semibold transition-colors"
           >
             {t().stdlib.viewDocs}
-            <span>→</span>
+            <span></span>
           </a>
         </div>
       </section>
@@ -303,3 +293,6 @@ function App() {
 }
 
 export default App
+
+
+

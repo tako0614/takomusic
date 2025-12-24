@@ -16,8 +16,8 @@ fn vocalPart() -> Clip {
     note(E4, h, vel: 0.78);
   };
 
-  const lyr = vocal.text("hello", lang:"en-US");
-  c = vocal.align(c, lyr, policy: BestEffort);
+  const lyr = vocal.text("hello", "en-US");
+  c = vocal.align(c, lyr);
 
   return c;
 }
@@ -189,8 +189,8 @@ Lyrics are not forced by the core language. Use `std:vocal` for alignment.
 ```
 import * as vocal from "std:vocal";
 
-const lyr = vocal.text("hello", lang:"en-US");
-c = vocal.align(c, lyr, policy: BestEffort);
+const lyr = vocal.text("hello", "en-US");
+c = vocal.align(c, lyr);
 ```
 
 ## Determinism

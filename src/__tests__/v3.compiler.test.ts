@@ -1,0 +1,107 @@
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { V3Compiler } from '../compiler.js';
+import { isStdlibImport, resolveStdlibPath, STDLIB_MODULES } from '../utils/stdlib.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
+describe('V3 compiler', () => {
+  const tmpDir = path.join(os.tmpdir(), 'mf-v3-test');
+
+  beforeAll(() => {
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+  });
+
+  afterAll(() => {
+    if (fs.existsSync(tmpDir)) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  function writeFile(name: string, content: string): string {
+    const filePath = path.join(tmpDir, name);
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, content);
+    return filePath;
+  }
+
+  it('compiles a minimal score', () => {
+    const mainPath = writeFile('main.mf', `
+      export fn main() -> Score {
+        return score {
+          tempo {
+            1:1 -> 120bpm;
+          }
+          meter {
+            1:1 -> 4/4;
+          }
+
+          sound "piano" kind instrument {
+            label "Piano";
+          }
+
+          track "Piano" role Instrument sound "piano" {
+            place 1:1 clip {
+              note(C4, q);
+            };
+          }
+        };
+      }
+    `);
+
+    const compiler = new V3Compiler(tmpDir);
+    const ir = compiler.compile(mainPath);
+
+    expect(ir.tako.irVersion).toBe(3);
+    expect(ir.tracks.length).toBe(1);
+    expect(ir.sounds[0].id).toBe('piano');
+  });
+
+  it('resolves stdlib imports', () => {
+    const mainPath = writeFile('with-stdlib.mf', `
+      import { repeat } from "std:core";
+
+      fn motif() -> Clip {
+        return clip {
+          note(C4, q);
+          note(D4, q);
+        };
+      }
+
+      export fn main() -> Score {
+        const part = repeat(motif(), 2);
+        return score {
+          tempo { 1:1 -> 120bpm; }
+          meter { 1:1 -> 4/4; }
+          sound "piano" kind instrument { label "Piano"; }
+          track "Piano" role Instrument sound "piano" {
+            place 1:1 part;
+          }
+        };
+      }
+    `);
+
+    const compiler = new V3Compiler(tmpDir);
+    const ir = compiler.compile(mainPath);
+
+    expect(ir.tracks[0].placements.length).toBe(1);
+    expect(ir.tracks[0].placements[0].clip.events.length).toBe(4);
+  });
+});
+
+describe('V3 stdlib registry', () => {
+  it('resolves std: imports', () => {
+    expect(isStdlibImport('std:core')).toBe(true);
+    expect(isStdlibImport('./local.mf')).toBe(false);
+
+    for (const mod of STDLIB_MODULES) {
+      const modPath = resolveStdlibPath(`std:${mod}`);
+      expect(fs.existsSync(modPath)).toBe(true);
+    }
+  });
+});

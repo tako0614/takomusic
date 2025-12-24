@@ -1,22 +1,31 @@
-// Euclidean Drums Demo
-// Demonstrates procedural drum patterns in v2.0
+// TakoMusic v3 - Drum Groove
 
-score "Euclidean Drums" {
-  tempo 110
-  time 4/4
+import { concat, repeat } from "std:core";
+import { basicRock, fill } from "std:drums";
 
-  // Drum track with MIDI bars
-  part Drums {
-    midi ch:10 program:0
+fn groove() -> Clip {
+  const base = basicRock(2, q);
+  const ending = fill("snare", q);
+  return concat(base, ending);
+}
 
-    // Basic pattern - kick on 1 and 3, snare on 2 and 4
-    | kick q  snare q  kick q  snare q |
-    | kick q  snare q  kick q  snare q |
+export fn main() -> Score {
+  const loop = repeat(groove(), 2);
 
-    // Euclidean-style pattern (5 hits in 16 steps)
-    | kick s  rs  rs  kick s  rs  rs  kick s  rs  rs  kick s  rs  kick s  rs  rs  rs |
+  return score {
+    tempo {
+      1:1 -> 120bpm;
+    }
+    meter {
+      1:1 -> 4/4;
+    }
 
-    // Hi-hat overlay
-    | hhc e  hhc e  hhc e  hhc e  hhc e  hhc e  hhc e  hhc e |
-  }
+    sound "kit_standard" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; }
+    }
+
+    track "Drums" role Drums sound "kit_standard" {
+      place 1:1 loop;
+    }
+  };
 }

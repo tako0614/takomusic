@@ -1,0 +1,8 @@
+// std:core (v3)
+export const concat = __core.concat;
+export const overlay = __core.overlay;
+export const repeat = __core.repeat;
+export const slice = __core.slice;
+export const mapEvents = __core.mapEvents;
+export const withTrack = __core.withTrack;
+export const mapTracks = __core.mapTracks;

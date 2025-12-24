@@ -3,14 +3,8 @@
 
 import { createRequire } from 'module';
 import { initCommand } from './commands/init.js';
-import { fmtCommand } from './commands/fmt.js';
 import { checkCommand } from './commands/check.js';
 import { buildCommand } from './commands/build.js';
-import { renderCommand } from './commands/render.js';
-import { playCommand } from './commands/play.js';
-import { doctorCommand } from './commands/doctor.js';
-import { importCommand } from './commands/import.js';
-import { recordCommand } from './commands/record.js';
 import { ExitCodes } from '../errors.js';
 
 // Read version from package.json
@@ -24,28 +18,18 @@ TakoMusic v${VERSION} - Music composition with MFS language
 Usage: mf <command> [options]
 
 Commands:
-  init              Initialize a new TakoMusic project
-  fmt [path...]     Format MFS source files
-  check [-p profile]  Check source for errors
-  build [-p profile|all]  Build IR and profile-specific outputs
-  render -p <profile|all>  Render audio using external tools
-  play [file.mf]    Live preview using FluidSynth
-  import <file>     Import MusicXML/MIDI to MFS
-  record            Record MIDI input from keyboard
-  doctor [-p profile]  Check external dependencies
+  init              Initialize a new TakoMusic v3 project
+  check             Check v3 source for errors
+  build             Build v3 IR (.mf.score.json)
 
 Options:
-  -p, --profile     Target profile (miku, cli, all)
   -h, --help        Show this help message
   -v, --version     Show version
 
 Examples:
   mf init
-  mf fmt src/
   mf check
-  mf build -p cli
-  mf play src/main.mf
-  mf render -p miku
+  mf build
 `;
 
 async function main(): Promise<number> {
@@ -69,31 +53,17 @@ async function main(): Promise<number> {
       case 'init':
         return await initCommand(commandArgs);
 
-      case 'fmt':
-        return await fmtCommand(commandArgs);
-
       case 'check':
         return await checkCommand(commandArgs);
 
       case 'build':
         return await buildCommand(commandArgs);
 
-      case 'render':
-        return await renderCommand(commandArgs);
-
-      case 'play':
-        return await playCommand(commandArgs);
-
-      case 'import':
-        return await importCommand(commandArgs);
-
-      case 'record':
-        return await recordCommand(commandArgs);
-
-      case 'doctor':
-        return await doctorCommand(commandArgs);
-
       default:
+        if (isV2Command(command)) {
+          console.error(`Command "${command}" is not available in v3 yet.`);
+          return ExitCodes.STATIC_ERROR;
+        }
         console.error(`Unknown command: ${command}`);
         console.log('Run "mf --help" for usage information.');
         return ExitCodes.STATIC_ERROR;
@@ -116,3 +86,14 @@ main()
     console.error('Unhandled error:', err instanceof Error ? err.message : String(err));
     process.exit(ExitCodes.STATIC_ERROR);
   });
+
+function isV2Command(command: string): boolean {
+  return [
+    'fmt',
+    'render',
+    'play',
+    'import',
+    'record',
+    'doctor',
+  ].includes(command);
+}
