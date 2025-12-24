@@ -16,11 +16,11 @@
 - `STDLIB_V3.md`
   - `std:*` のモジュール一覧と API 仕様（規範）
 - `examples/`
-  - `.tako` サンプルと、Profileサンプル（MIDI/ボーカル等）
+  - `.mf` サンプルと、Profileサンプル（MIDI/ボーカル等）
 
 ## 実装パイプライン（推奨）
 
-1. **Parse**: `.tako` → AST
+1. **Parse**: `.mf` → AST
 2. **Resolve/Typecheck**: import 解決・型検査（少なくとも Pos/Dur の分離）
 3. **Evaluate**: `export fn main() -> Score` を評価し、`Score` 値を得る（決定性）
 4. **Normalize IR**:

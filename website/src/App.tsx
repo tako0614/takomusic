@@ -2,28 +2,37 @@ import { createSignal, For } from 'solid-js'
 import { useI18n } from './i18n'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 
-const codeExample = `import { majorTriad, dominantSeventh } from "std:theory";
-import { euclidean } from "std:patterns";
+const codeExample = `import { repeat } from "std:core";
+import * as vocal from "std:vocal";
 
-export proc main() {
-  title("My Song");
-  tempo(120);
-  timeSig(4, 4);
+fn vocalPart() -> Clip {
+  let c = clip {
+    note(C4, q, vel: 0.75);
+    note(D4, q, vel: 0.75);
+    note(E4, h, vel: 0.78);
+  };
 
-  track(midi, piano, { ch: 1 }) {
-    at(1:1);
-    chord(majorTriad(C4), 1/2);
-    chord(dominantSeventh(G3), 1/2);
-  }
+  const lyr = vocal.text("hello", lang:"en-US");
+  c = vocal.align(c, lyr, policy: BestEffort);
 
-  track(midi, drums, { ch: 10 }) {
-    at(1:1);
-    const pattern = euclidean(5, 8);
-    for (i in 0..8) {
-      if (pattern[i]) { drum(kick, 1/8); }
-      else { drum(hhc, 1/8); }
+  return c;
+}
+
+export fn main() -> Score {
+  return score {
+    meta { title "Demo v3"; }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 120bpm; }
+
+    sound "lead_vocal" kind vocal {
+      vocal { lang "en-US"; range A3..E5; }
     }
-  }
+
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 1:1 repeat(vocalPart(), 4);
+    }
+  };
 }`
 
 function App() {
@@ -69,21 +78,25 @@ function App() {
     },
   ]
 
-  const cliCommands = [
-    { cmd: 'mf init myproject', desc: () => t().cli.commands.init },
-    { cmd: 'mf build -w', desc: () => t().cli.commands.build },
-    { cmd: 'mf check', desc: () => t().cli.commands.check },
-    { cmd: 'mf play', desc: () => t().cli.commands.play },
-    { cmd: 'mf render -p cli', desc: () => t().cli.commands.render },
+  const pipelineSteps = [
+    { cmd: 'parse src/main.mf', desc: () => t().pipeline.steps.parse },
+    { cmd: 'resolve + typecheck', desc: () => t().pipeline.steps.typecheck },
+    { cmd: 'evaluate main()', desc: () => t().pipeline.steps.evaluate },
+    { cmd: 'normalize IR', desc: () => t().pipeline.steps.normalize },
+    { cmd: 'emit score.json', desc: () => t().pipeline.steps.emit },
+    { cmd: 'render via profile', desc: () => t().pipeline.steps.render },
   ]
 
   const stdlibModules = [
+    { name: 'core', desc: () => t().stdlib.modules.core },
+    { name: 'time', desc: () => t().stdlib.modules.time },
+    { name: 'random', desc: () => t().stdlib.modules.random },
+    { name: 'transform', desc: () => t().stdlib.modules.transform },
+    { name: 'curves', desc: () => t().stdlib.modules.curves },
     { name: 'theory', desc: () => t().stdlib.modules.theory },
-    { name: 'patterns', desc: () => t().stdlib.modules.patterns },
-    { name: 'rhythm', desc: () => t().stdlib.modules.rhythm },
-    { name: 'dynamics', desc: () => t().stdlib.modules.dynamics },
-    { name: 'expression', desc: () => t().stdlib.modules.expression },
-    { name: 'genres', desc: () => t().stdlib.modules.genres },
+    { name: 'drums', desc: () => t().stdlib.modules.drums },
+    { name: 'vocal', desc: () => t().stdlib.modules.vocal },
+    { name: 'analysis', desc: () => t().stdlib.modules.analysis },
   ]
 
   return (
@@ -185,26 +198,26 @@ function App() {
         <div class="flex flex-wrap justify-center gap-4 mt-8">
           <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
             <span class="text-slate-400">{t().example.output}:</span>
-            <span class="ml-2 text-sky-400">vocal.vsqx</span>
+            <span class="ml-2 text-sky-400">score.json</span>
           </div>
           <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
             <span class="text-slate-400">{t().example.output}:</span>
-            <span class="ml-2 text-sky-400">vocal.musicxml</span>
+            <span class="ml-2 text-sky-400">render.mid</span>
           </div>
           <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
             <span class="text-slate-400">{t().example.output}:</span>
-            <span class="ml-2 text-sky-400">band.mid</span>
+            <span class="ml-2 text-sky-400">render.musicxml</span>
           </div>
         </div>
       </section>
 
-      {/* CLI Section */}
+      {/* Pipeline Section */}
       <section class="container mx-auto px-6 py-24">
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">
-          {t().cli.title}
+          {t().pipeline.title}
         </h2>
         <div class="max-w-2xl mx-auto space-y-4">
-          <For each={cliCommands}>
+          <For each={pipelineSteps}>
             {(item) => (
               <div class="flex items-center gap-4 bg-slate-800/50 rounded-lg px-6 py-4 border border-slate-700">
                 <code class="font-mono text-sky-400 flex-1">{item.cmd}</code>
