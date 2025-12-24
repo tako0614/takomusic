@@ -1,0 +1,288 @@
+{
+  "tako": {
+    "irVersion": 3,
+    "generator": "tako-compiler 0.1.0"
+  },
+  "meta": {
+    "title": "Demo v3",
+    "ext": {}
+  },
+  "tempoMap": [
+    {
+      "at": {
+        "n": 0,
+        "d": 1
+      },
+      "bpm": 120.0,
+      "unit": {
+        "n": 1,
+        "d": 4
+      }
+    }
+  ],
+  "meterMap": [
+    {
+      "at": {
+        "n": 0,
+        "d": 1
+      },
+      "numerator": 4,
+      "denominator": 4
+    }
+  ],
+  "sounds": [
+    {
+      "id": "piano",
+      "kind": "instrument",
+      "family": "keyboard",
+      "range": {
+        "low": {
+          "midi": 21,
+          "cents": 0
+        },
+        "high": {
+          "midi": 108,
+          "cents": 0
+        }
+      }
+    },
+    {
+      "id": "kit_standard",
+      "kind": "drumKit",
+      "drumKeys": [
+        {
+          "key": "kick"
+        },
+        {
+          "key": "snare"
+        }
+      ]
+    },
+    {
+      "id": "lead_vocal",
+      "kind": "vocal",
+      "vocal": {
+        "lang": "ja-JP"
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "name": "Piano",
+      "role": "Instrument",
+      "sound": "piano",
+      "placements": [
+        {
+          "at": {
+            "n": 0,
+            "d": 1
+          },
+          "clip": {
+            "events": [
+              {
+                "type": "chord",
+                "start": {
+                  "n": 0,
+                  "d": 1
+                },
+                "dur": {
+                  "n": 1,
+                  "d": 4
+                },
+                "pitches": [
+                  {
+                    "midi": 60,
+                    "cents": 0
+                  },
+                  {
+                    "midi": 64,
+                    "cents": 0
+                  },
+                  {
+                    "midi": 67,
+                    "cents": 0
+                  }
+                ],
+                "velocity": 0.6
+              },
+              {
+                "type": "chord",
+                "start": {
+                  "n": 1,
+                  "d": 2
+                },
+                "dur": {
+                  "n": 1,
+                  "d": 4
+                },
+                "pitches": [
+                  {
+                    "midi": 65,
+                    "cents": 0
+                  },
+                  {
+                    "midi": 69,
+                    "cents": 0
+                  },
+                  {
+                    "midi": 72,
+                    "cents": 0
+                  }
+                ],
+                "velocity": 0.6
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Drums",
+      "role": "Drums",
+      "sound": "kit_standard",
+      "placements": [
+        {
+          "at": {
+            "n": 0,
+            "d": 1
+          },
+          "clip": {
+            "events": [
+              {
+                "type": "drumHit",
+                "start": {
+                  "n": 0,
+                  "d": 1
+                },
+                "dur": {
+                  "n": 1,
+                  "d": 4
+                },
+                "key": "kick",
+                "velocity": 0.9
+              },
+              {
+                "type": "drumHit",
+                "start": {
+                  "n": 1,
+                  "d": 4
+                },
+                "dur": {
+                  "n": 1,
+                  "d": 4
+                },
+                "key": "snare",
+                "velocity": 0.8
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vocal",
+      "role": "Vocal",
+      "sound": "lead_vocal",
+      "placements": [
+        {
+          "at": {
+            "n": 0,
+            "d": 1
+          },
+          "clip": {
+            "events": [
+              {
+                "type": "note",
+                "start": {
+                  "n": 0,
+                  "d": 1
+                },
+                "dur": {
+                  "n": 1,
+                  "d": 4
+                },
+                "pitch": {
+                  "midi": 60,
+                  "cents": 0
+                },
+                "velocity": 0.75,
+                "lyric": {
+                  "kind": "syllable",
+                  "text": "は",
+                  "wordPos": "single"
+                }
+              },
+              {
+                "type": "note",
+                "start": {
+                  "n": 1,
+                  "d": 4
+                },
+                "dur": {
+                  "n": 1,
+                  "d": 4
+                },
+                "pitch": {
+                  "midi": 62,
+                  "cents": 0
+                },
+                "velocity": 0.75,
+                "lyric": {
+                  "kind": "syllable",
+                  "text": "じ",
+                  "wordPos": "single"
+                }
+              },
+              {
+                "type": "note",
+                "start": {
+                  "n": 1,
+                  "d": 2
+                },
+                "dur": {
+                  "n": 1,
+                  "d": 2
+                },
+                "pitch": {
+                  "midi": 64,
+                  "cents": 0
+                },
+                "velocity": 0.78,
+                "lyric": {
+                  "kind": "syllable",
+                  "text": "め",
+                  "wordPos": "single"
+                }
+              },
+              {
+                "type": "automation",
+                "param": "vocal:vibratoDepth",
+                "start": {
+                  "n": 0,
+                  "d": 1
+                },
+                "end": {
+                  "n": 1,
+                  "d": 1
+                },
+                "curve": {
+                  "kind": "piecewiseLinear",
+                  "points": [
+                    {
+                      "t": 0.0,
+                      "v": 0.25
+                    },
+                    {
+                      "t": 1.0,
+                      "v": 0.25
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
