@@ -1,6 +1,6 @@
 // Error definitions for MFS language
 
-import type { Position } from './types/token.js';
+import type { Position } from './token.js';
 
 export class MFError extends Error {
   public suggestion?: string;

@@ -20,7 +20,7 @@ The v3 design keeps the language core backend-agnostic and pushes sound binding 
 
 ## Status
 
-The v3 specification is defined in `tako_v3_spec/`. Implementation work is planned and tracked in `PLAN.md`.
+The v3 core compiler/evaluator and IR normalization are implemented. Renderer plugins and profile-based rendering are still pending. See `PLAN.md` for the roadmap.
 
 ## Example (.mf)
 
@@ -35,8 +35,8 @@ fn lead() -> Clip {
     note(E4, h, vel: 0.78);
   };
 
-  const lyr = vocal.text("hello", lang:"en-US");
-  c = vocal.align(c, lyr, policy: BestEffort);
+  const lyr = vocal.text("hello", "en-US");
+  c = vocal.align(c, lyr);
 
   return c;
 }

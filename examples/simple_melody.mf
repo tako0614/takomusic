@@ -1,47 +1,32 @@
-// TakoScore v2.0 - Simple Vocal Demo
-// Demonstrates the phrase-first vocal synthesis model
+// TakoMusic v3 - Simple Melody
 
-score "はじめまして" {
-  backend neutrino {
-    singer "KIRITAN"
-    lang ja
-  }
-
-  tempo 120
-  time 4/4
-  key C major
-
-  part Vocal {
-    // First phrase - greeting
-    phrase {
-      notes:
-        | C4 q  D4 q  E4 q  F4 q |
-        | G4 h         A4 h     |;
-
-      lyrics mora:
-        は じ め ま し て;
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Simple Melody";
+    }
+    tempo {
+      1:1 -> 110bpm;
+    }
+    meter {
+      1:1 -> 4/4;
     }
 
-    rest q    // Phrase boundary
-
-    // Second phrase - with melisma
-    phrase {
-      notes:
-        | G4 q  A4 q  B4 q  C5 q |
-        | D5 h~        D5 h     |;   // Tied notes
-
-      lyrics mora:
-        よ ろ し く ね _;   // _ extends "ね" across the tie
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
     }
-  }
 
-  // Piano accompaniment
-  part Piano {
-    midi ch:1 program:0
-
-    | [C4 E4 G4] w |
-    | [F4 A4 C5] w |
-    | [G4 B4 D5] w |
-    | [C4 E4 G4] w |
-  }
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        note(C4, q);
+        note(D4, q);
+        note(E4, q);
+        note(F4, q);
+        note(G4, h);
+        rest(e);
+        note(G4, e);
+      };
+    }
+  };
 }

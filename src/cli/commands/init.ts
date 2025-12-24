@@ -10,58 +10,73 @@ interface Template {
   name: string;
   description: string;
   main: string;
-  phrases?: Record<string, string>;
 }
 
 const TEMPLATES: Record<string, Template> = {
   default: {
     name: 'Default',
-    description: 'Basic template with vocal and piano tracks',
-    main: `// TakoScore v2.0 entry point
+    description: 'Starter project with vocal and piano tracks',
+    main: `// TakoMusic v3 - Starter
 
-score "My Song" {
-  backend neutrino {
-    singer "KIRITAN"
-    lang ja
-  }
+import { repeat } from "std:core";
+import * as vocal from "std:vocal";
 
-  tempo 120
-  time 4/4
-  key C major
+fn pianoPart() -> Clip {
+  return clip {
+    chord([C4, E4, G4], q);
+    chord([D4, F4, A4], q);
+    chord([E4, G4, B4], q);
+    chord([F4, A4, C5], q);
+  };
+}
 
-  part Vocal {
-    phrase {
-      notes:
-        | C4 q  D4 q  E4 q  F4 q |;
+fn vocalPart() -> Clip {
+  const melody = clip {
+    note(C4, q);
+    note(D4, q);
+    note(E4, q);
+    note(F4, q);
+  };
+  const lyric = vocal.text("hello world", "en-US");
+  return vocal.align(melody, lyric);
+}
 
-      lyrics mora:
-        は じ め ま;
+export fn main() -> Score {
+  const piano = repeat(pianoPart(), 2);
+  const vocalClip = vocalPart();
+
+  return score {
+    meta {
+      title "My Song";
+      artist "Anonymous";
+    }
+    tempo {
+      1:1 -> 120bpm;
+    }
+    meter {
+      1:1 -> 4/4;
     }
 
-    rest q
-
-    phrase {
-      notes:
-        | G4 q  A4 q  B4 q  C5 q |;
-
-      lyrics mora:
-        し て ね ー;
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
     }
-  }
 
-  part Piano {
-    midi ch:1 program:0
+    sound "lead_vocal" kind vocal {
+      vocal {
+        lang "en-US";
+        range A3..E5;
+      }
+    }
 
-    | [C4 E4 G4] w |
-    | [F4 A4 C5] w |
-  }
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 piano;
+    }
 
-  part Drums {
-    midi ch:10
-
-    | kick q  hhc q  snare q  hhc q |
-    | kick q  hhc q  snare q  hhc q |
-  }
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 1:1 vocalClip;
+    }
+  };
 }
 `,
   },
@@ -69,83 +84,82 @@ score "My Song" {
   piano: {
     name: 'Piano',
     description: 'Piano solo template',
-    main: `// TakoScore v2.0 - Piano Solo
+    main: `// TakoMusic v3 - Piano Solo
 
-score "Piano Piece" {
-  tempo 100
-  time 4/4
-  key C major
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Piano Sketch";
+    }
+    tempo {
+      1:1 -> 96bpm;
+    }
+    meter {
+      1:1 -> 4/4;
+    }
 
-  part RightHand {
-    midi ch:1 program:0
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
+    }
 
-    | E5 q  D5 q  C5 q  D5 q |
-    | E5 q  E5 q  E5 h       |
-    | D5 q  D5 q  D5 h       |
-    | E5 q  G5 q  G5 h       |
-  }
-
-  part LeftHand {
-    midi ch:2 program:0
-
-    | [C3 E3 G3] h  [C3 E3 G3] h |
-    | [C3 E3 G3] h  [C3 E3 G3] h |
-    | [G2 B2 D3] h  [G2 B2 D3] h |
-    | [C3 E3 G3] h  [C3 E3 G3] h |
-  }
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        chord([C4, E4, G4], h);
+        chord([F4, A4, C5], h);
+        chord([G4, B4, D5], h);
+        chord([C4, E4, G4], h);
+      };
+    }
+  };
 }
 `,
   },
 
   vocaloid: {
     name: 'Vocaloid',
-    description: 'NEUTRINO vocal synthesis template',
-    main: `// TakoScore v2.0 - Vocal Synthesis
+    description: 'Vocal synthesis template',
+    main: `// TakoMusic v3 - Vocal Demo
 
-score "ボーカル曲" {
-  backend neutrino {
-    singer "KIRITAN"
-    lang ja
-    phonemeBudgetPerOnset 8
-    maxPhraseSeconds 10
-  }
+import * as vocal from "std:vocal";
 
-  tempo 120
-  time 4/4
-  key C major
+fn vocalLine() -> Clip {
+  const melody = clip {
+    note(C4, q);
+    note(D4, q);
+    note(E4, q);
+    note(F4, q);
+    note(G4, h);
+  };
+  const lyric = vocal.text("la la la la la", "en-US");
+  return vocal.align(melody, lyric);
+}
 
-  part Vocal {
-    // Verse 1
-    phrase {
-      notes:
-        | C4 q  D4 q  E4 q  F4 q |
-        | G4 h         A4 h     |;
+export fn main() -> Score {
+  const line = vocalLine();
 
-      lyrics mora:
-        き ら き ら ひ か る;
+  return score {
+    meta {
+      title "Vocal Demo";
+    }
+    tempo {
+      1:1 -> 120bpm;
+    }
+    meter {
+      1:1 -> 4/4;
     }
 
-    rest h
-
-    // Verse 2 with melisma
-    phrase {
-      notes:
-        | G4 q  A4 q  B4 q  C5 q |
-        | D5 h~        D5 h     |;
-
-      lyrics mora:
-        お そ ら の ほ _;
+    sound "lead_vocal" kind vocal {
+      vocal {
+        lang "en-US";
+        range A3..E5;
+      }
     }
-  }
 
-  part Piano {
-    midi ch:1 program:0
-
-    | [C3 E3 G3] w |
-    | [F3 A3 C4] w |
-    | [G3 B3 D4] w |
-    | [C3 E3 G3] w |
-  }
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 1:1 line;
+    }
+  };
 }
 `,
   },
@@ -153,21 +167,27 @@ score "ボーカル曲" {
   minimal: {
     name: 'Minimal',
     description: 'Minimal starting template',
-    main: `// TakoScore v2.0 - Minimal
+    main: `// TakoMusic v3 - Minimal
 
-score "Untitled" {
-  tempo 120
-  time 4/4
-
-  part Vocal {
-    phrase {
-      notes:
-        | C4 q |;
-
-      lyrics mora:
-        あ;
+export fn main() -> Score {
+  return score {
+    tempo {
+      1:1 -> 120bpm;
     }
-  }
+    meter {
+      1:1 -> 4/4;
+    }
+
+    sound "piano" kind instrument {
+      label "Piano";
+    }
+
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        note(C4, q);
+      };
+    }
+  };
 }
 `,
   },
@@ -247,7 +267,7 @@ Examples:
   console.log('');
 
   // Create directories
-  const dirs = ['src', 'src/phrases', 'dist', 'out'];
+  const dirs = ['src', 'dist', 'out'];
   for (const dir of dirs) {
     const dirPath = path.join(absoluteDir, dir);
     if (!fs.existsSync(dirPath)) {
@@ -265,15 +285,6 @@ Examples:
   if (!fs.existsSync(mainPath)) {
     fs.writeFileSync(mainPath, template.main);
     console.log('Created: src/main.mf');
-  }
-
-  // Write template phrases if any
-  if (template.phrases) {
-    for (const [name, content] of Object.entries(template.phrases)) {
-      const phrasePath = path.join(absoluteDir, 'src', 'phrases', `${name}.mf`);
-      fs.writeFileSync(phrasePath, content);
-      console.log(`Created: src/phrases/${name}.mf`);
-    }
   }
 
   // Write .gitignore
@@ -304,8 +315,6 @@ Thumbs.db
   console.log('Next steps:');
   console.log('  mf check        Check for errors');
   console.log('  mf build        Build the project');
-  console.log('  mf play         Preview with FluidSynth');
-  console.log('  mf render -p cli  Render to audio');
 
   return ExitCodes.SUCCESS;
 }

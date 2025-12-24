@@ -1,43 +1,41 @@
-// Generative Music Demo
-// Demonstrates ambient/generative style in v2.0
+// TakoMusic v3 - Generative Texture
 
-score "Generative Ambient" {
-  tempo 80
-  time 4/4
+import { rng } from "std:random";
+import * as transform from "std:transform";
 
-  // Ambient strings with long sustains
-  part Strings {
-    midi ch:1 program:48
+fn seedPattern() -> Clip {
+  return clip {
+    note(C4, e);
+    note(E4, e);
+    note(G4, e);
+    rest(e);
+    note(D4, e);
+    note(F4, e);
+    note(A4, e);
+    rest(e);
+  };
+}
 
-    | [C3 E3 G3] w |
-    | [D3 F3 A3] w |
-    | [E3 G3 B3] w |
-    | [C3 E3 G3] w |
-  }
+export fn main() -> Score {
+  const base = seedPattern();
+  const swung = transform.swing(base, e, 0.6);
+  const loose = transform.humanize(swung, rng(42), 0.02, 0.1);
 
-  // Simple piano melody (pentatonic-inspired)
-  part Piano {
-    midi ch:2 program:0
+  return score {
+    tempo {
+      1:1 -> 100bpm;
+    }
+    meter {
+      1:1 -> 4/4;
+    }
 
-    | C4 e  D4 e  E4 e  G4 e  A4 e  G4 e  E4 e  D4 e |
-    | C4 e  E4 e  G4 e  A4 e  G4 e  E4 e  D4 e  C4 e |
-    | D4 e  E4 e  G4 e  A4 e  C5 e  A4 e  G4 e  E4 e |
-    | G4 e  E4 e  D4 e  C4 e  D4 e  E4 e  G4 e  A4 e |
-  }
+    sound "synth" kind instrument {
+      label "Synth";
+      range C2..C7;
+    }
 
-  // Vibraphone layer
-  part Vibraphone {
-    midi ch:3 program:11
-
-    | C4 s  D4 s  E4 s  G4 s  A4 s  G4 s  E4 s  D4 s  C4 s  E4 s  G4 s  A4 s  G4 s  E4 s  D4 s  C4 s |
-    | A4 s  G4 s  E4 s  D4 s  C4 s  D4 s  E4 s  G4 s  A4 s  G4 s  E4 s  D4 s  C4 s  E4 s  G4 s  A4 s |
-  }
-
-  // Light percussion
-  part Perc {
-    midi ch:10 program:0
-
-    | hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs |
-    | rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s  rs  hhc s |
-  }
+    track "Synth" role Instrument sound "synth" {
+      place 1:1 loose;
+    }
+  };
 }

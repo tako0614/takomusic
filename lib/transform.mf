@@ -1,0 +1,6 @@
+// std:transform (v3)
+export const transpose = __transform.transpose;
+export const stretch = __transform.stretch;
+export const quantize = __transform.quantize;
+export const swing = __transform.swing;
+export const humanize = __transform.humanize;

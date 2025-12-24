@@ -1,49 +1,34 @@
-// Jazz Progression Demo
-// Demonstrates chord voicings and walking bass in v2.0
+// TakoMusic v3 - Jazz Progression
 
-score "Jazz Progression" {
-  tempo 100
-  time 4/4
+import { majorTriad, minorTriad } from "std:theory";
 
-  // Piano comping with jazz voicings
-  part Piano {
-    midi ch:1 program:0
+fn chords() -> Clip {
+  return clip {
+    chord(majorTriad(C4), h);
+    chord(minorTriad(A3), h);
+    chord(majorTriad(D4), h);
+    chord(majorTriad(G3), h);
+  };
+}
 
-    // II-V-I in C major
-    // Dm7 (D F A C) - first bar
-    | [D3 F3 A3 C4] w |
+export fn main() -> Score {
+  const part = chords();
 
-    // G7 (G B D F) - second bar
-    | [G3 B3 D4 F4] w |
+  return score {
+    tempo {
+      1:1 -> 96bpm;
+    }
+    meter {
+      1:1 -> 4/4;
+    }
 
-    // Cmaj7 (C E G B) - bars 3-4
-    | [C3 E3 G3 B3] w |
-    | [C3 E3 G3 B3] w |
-  }
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
+    }
 
-  // Walking bass line
-  part Bass {
-    midi ch:2 program:32
-
-    // Bar 1 - Dm7 walk
-    | D2 q  E2 q  F2 q  A2 q |
-
-    // Bar 2 - G7 walk
-    | G2 q  A2 q  B2 q  D3 q |
-
-    // Bar 3-4 - Cmaj7 resolution
-    | C2 h  G2 q  C2 q |
-    | C2 w |
-  }
-
-  // Light drums (brushes style)
-  part Drums {
-    midi ch:10 program:0
-
-    // Swing feel on ride
-    | ride q  ride q  ride q  ride q |
-    | ride q  ride q  ride q  ride q |
-    | ride q  ride q  ride q  ride q |
-    | ride q  ride q  ride q  ride q |
-  }
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 part;
+    }
+  };
 }

@@ -1,0 +1,12 @@
+// std:time (v3)
+export const barBeat = __time.barBeat;
+export const resolvePos = __time.resolvePos;
+export const dur = __time.dur;
+export const dot = __time.dot;
+export const w = __time.w;
+export const h = __time.h;
+export const q = __time.q;
+export const e = __time.e;
+export const s = __time.s;
+export const t = __time.t;
+export const x = __time.x;

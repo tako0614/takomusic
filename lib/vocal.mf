@@ -1,0 +1,15 @@
+// std:vocal (v3)
+export const Strict = __vocal.Strict;
+export const BestEffort = __vocal.BestEffort;
+export const MelismaHeuristic = __vocal.MelismaHeuristic;
+
+export const text = __vocal.text;
+export const syllables = __vocal.syllables;
+export const phonemes = __vocal.phonemes;
+export const ext = __vocal.ext;
+export const align = __vocal.align;
+
+export const vibrato = __vocal.vibrato;
+export const portamento = __vocal.portamento;
+export const breathiness = __vocal.breathiness;
+export const loudness = __vocal.loudness;

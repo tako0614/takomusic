@@ -1,12 +1,14 @@
 // TakoMusic - Music composition with MFS language
 
-export { Lexer } from './lexer/index.js';
-export { Parser } from './parser/index.js';
-export { Interpreter } from './interpreter/index.js';
-export { Compiler } from './compiler/index.js';
-export { Formatter } from './formatter/index.js';
-export { Checker } from './checker/index.js';
-export * from './types/index.js';
 export * from './config/index.js';
-export * from './generators/index.js';
 export * from './errors.js';
+export { V3Lexer } from './lexer.js';
+export { V3Parser } from './parser.js';
+export { V3Compiler } from './compiler.js';
+export { V3Evaluator } from './evaluator.js';
+export { normalizeScore } from './normalize.js';
+export * from './runtime.js';
+export * from './ir.js';
+export * from './rat.js';
+export * from './pitch.js';
+export * from './diagnostics.js';

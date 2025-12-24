@@ -1,0 +1,109 @@
+﻿export interface Position {
+  line: number;
+  column: number;
+  offset: number;
+}
+
+export enum TokenType {
+  NUMBER = 'NUMBER',
+  STRING = 'STRING',
+  IDENT = 'IDENT',
+  PITCH = 'PITCH',
+  DUR = 'DUR',
+  POSREF = 'POSREF',
+  BPM = 'BPM',
+
+  IMPORT = 'IMPORT',
+  EXPORT = 'EXPORT',
+  FROM = 'FROM',
+  FN = 'FN',
+  CONST = 'CONST',
+  LET = 'LET',
+  RETURN = 'RETURN',
+  IF = 'IF',
+  ELSE = 'ELSE',
+  FOR = 'FOR',
+  IN = 'IN',
+  MATCH = 'MATCH',
+  TRUE = 'TRUE',
+  FALSE = 'FALSE',
+  NULL = 'NULL',
+  SCORE = 'SCORE',
+  CLIP = 'CLIP',
+  TRACK = 'TRACK',
+  SOUND = 'SOUND',
+  META = 'META',
+  TEMPO = 'TEMPO',
+  METER = 'METER',
+  PLACE = 'PLACE',
+  ROLE = 'ROLE',
+  KIND = 'KIND',
+  AS = 'AS',
+
+  PLUS = 'PLUS',
+  MINUS = 'MINUS',
+  STAR = 'STAR',
+  SLASH = 'SLASH',
+  PERCENT = 'PERCENT',
+  EQ = 'EQ',
+  EQEQ = 'EQEQ',
+  NEQ = 'NEQ',
+  LT = 'LT',
+  LTE = 'LTE',
+  GT = 'GT',
+  GTE = 'GTE',
+  AND = 'AND',
+  OR = 'OR',
+  NOT = 'NOT',
+  DOT = 'DOT',
+  COMMA = 'COMMA',
+  SEMI = 'SEMI',
+  COLON = 'COLON',
+  ARROW = 'ARROW',
+  AT = 'AT',
+  DOTDOT = 'DOTDOT',
+
+  LPAREN = 'LPAREN',
+  RPAREN = 'RPAREN',
+  LBRACE = 'LBRACE',
+  RBRACE = 'RBRACE',
+  LBRACKET = 'LBRACKET',
+  RBRACKET = 'RBRACKET',
+
+  EOF = 'EOF',
+}
+
+export interface Token {
+  type: TokenType;
+  value?: string | number;
+  position: Position;
+}
+
+export const KEYWORDS: Record<string, TokenType> = {
+  import: TokenType.IMPORT,
+  export: TokenType.EXPORT,
+  from: TokenType.FROM,
+  fn: TokenType.FN,
+  const: TokenType.CONST,
+  let: TokenType.LET,
+  return: TokenType.RETURN,
+  if: TokenType.IF,
+  else: TokenType.ELSE,
+  for: TokenType.FOR,
+  in: TokenType.IN,
+  match: TokenType.MATCH,
+  true: TokenType.TRUE,
+  false: TokenType.FALSE,
+  null: TokenType.NULL,
+  score: TokenType.SCORE,
+  clip: TokenType.CLIP,
+  track: TokenType.TRACK,
+  sound: TokenType.SOUND,
+  meta: TokenType.META,
+  tempo: TokenType.TEMPO,
+  meter: TokenType.METER,
+  place: TokenType.PLACE,
+  role: TokenType.ROLE,
+  kind: TokenType.KIND,
+  as: TokenType.AS,
+};

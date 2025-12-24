@@ -2,28 +2,28 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { Lexer } from '../../lexer/index.js';
-import { Parser } from '../../parser/index.js';
-import { Checker } from '../../checker/checker.js';
+import { V3Compiler } from '../../compiler.js';
+import { formatDiagnostic } from '../../diagnostics.js';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 import { handleCliError } from '../errorHandler.js';
 
 export async function checkCommand(args: string[]): Promise<number> {
   // Parse arguments
-  let profile: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
-      if (i + 1 >= args.length) {
-        console.error('--profile requires a value');
-        return ExitCodes.STATIC_ERROR;
-      }
-      profile = args[i + 1];
-      i++;
+      console.error('Profiles are not supported in v3 check.');
+      return ExitCodes.STATIC_ERROR;
+    }
+    if (args[i] === '-h' || args[i] === '--help') {
+      console.log(`Usage: mf check
+
+Options:
+  -h, --help  Show this help message
+`);
+      return ExitCodes.SUCCESS;
     }
   }
-  // Suppress unused variable warning
-  void profile;
 
   // Find config
   const configPath = findConfigPath(process.cwd());
@@ -43,23 +43,15 @@ export async function checkCommand(args: string[]): Promise<number> {
   }
 
   try {
-    // Read and parse
-    const source = fs.readFileSync(entryPath, 'utf-8');
-    const lexer = new Lexer(source, entryPath);
-    const tokens = lexer.tokenize();
-    const parser = new Parser(tokens, entryPath);
-    const ast = parser.parse();
-
-    // Run checker
-    const checker = new Checker(baseDir);
-    const diagnostics = checker.check(ast, entryPath);
+    const compiler = new V3Compiler(baseDir);
+    const diagnostics = compiler.check(entryPath);
 
     // Report diagnostics
     let errorCount = 0;
     let warningCount = 0;
 
     for (const diag of diagnostics) {
-      console.log(Checker.formatDiagnostic(diag));
+      console.log(formatDiagnostic(diag));
       if (diag.severity === 'error') {
         errorCount++;
       } else {

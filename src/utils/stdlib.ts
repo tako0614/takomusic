@@ -10,18 +10,14 @@ const packageRoot = path.resolve(__dirname, '..', '..');
 
 // Available standard library modules
 export const STDLIB_MODULES = [
-  'theory',
-  'patterns',
-  'rhythm',
-  'dynamics',
-  'expression',
-  'articulation',
-  'ornaments',
-  'notation',
-  'genres',
-  'composition',
+  'core',
+  'time',
+  'random',
+  'transform',
   'curves',
-  'utils',
+  'theory',
+  'drums',
+  'vocal',
 ] as const;
 
 export type StdlibModule = typeof STDLIB_MODULES[number];

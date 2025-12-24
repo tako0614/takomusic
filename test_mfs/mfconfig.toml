@@ -1,7 +1,0 @@
-[project]
-name = "lib_test"
-version = "1.0.0"
-
-[build]
-entry = "lib_test.mf"
-outDir = "out"

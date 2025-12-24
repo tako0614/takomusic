@@ -1,98 +1,59 @@
-// TakoScore v2.0 - Full Song Demo
-// Demonstrates phrase-based vocal composition with MIDI backing
+// TakoMusic v3 - Full Song Sketch
 
-score "きらきらぼし" {
-  backend neutrino {
-    singer "KIRITAN"
-    lang ja
-    phonemeBudgetPerOnset 8
-    maxPhraseSeconds 10
-  }
+import { repeat } from "std:core";
+import { fourOnFloor } from "std:drums";
+import { majorTriad } from "std:theory";
 
-  tempo 100
-  time 4/4
-  key C major
+fn pianoPart() -> Clip {
+  return clip {
+    chord(majorTriad(C4), h);
+    chord(majorTriad(F4), h);
+    chord(majorTriad(G3), h);
+    chord(majorTriad(C4), h);
+  };
+}
 
-  part Vocal {
-    // Verse 1 - Line 1
-    phrase {
-      notes:
-        | C4 q  C4 q  G4 q  G4 q |
-        | A4 q  A4 q  G4 h       |;
+fn bassPart() -> Clip {
+  return clip {
+    note(C2, h);
+    note(F2, h);
+    note(G2, h);
+    note(C2, h);
+  };
+}
 
-      lyrics mora:
-        き ら き ら ひ か る;
+export fn main() -> Score {
+  const pianoLoop = repeat(pianoPart(), 2);
+  const bassLoop = repeat(bassPart(), 2);
+  const drums = fourOnFloor(4, q);
+
+  return score {
+    meta {
+      title "Full Song Sketch";
+    }
+    tempo {
+      1:1 -> 120bpm;
+    }
+    meter {
+      1:1 -> 4/4;
     }
 
-    rest q
-
-    // Verse 1 - Line 2
-    phrase {
-      notes:
-        | F4 q  F4 q  E4 q  E4 q |
-        | D4 q  D4 q  C4 h       |;
-
-      lyrics mora:
-        お そ ら の ほ し よ;
+    sound "piano" kind instrument { label "Piano"; range A0..C8; }
+    sound "bass" kind instrument { label "Bass"; range E1..C4; }
+    sound "kit_standard" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; }
     }
 
-    rest h
-
-    // Verse 2 - Line 1 (with melisma)
-    phrase {
-      notes:
-        | G4 q  G4 q  F4 q  F4 q |
-        | E4 h~        E4 h      |;
-
-      lyrics mora:
-        ま ば た き し て は _;
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 pianoLoop;
     }
 
-    rest q
-
-    // Verse 2 - Line 2
-    phrase {
-      notes:
-        | G4 q  G4 q  F4 q  F4 q |
-        | E4 q  E4 q  D4 h       |;
-
-      lyrics mora:
-        み ん な を み て る;
+    track "Bass" role Instrument sound "bass" {
+      place 1:1 bassLoop;
     }
-  }
 
-  // Piano accompaniment
-  part Piano {
-    midi ch:1 program:0
-
-    // Measure 1-2
-    | [C3 E3 G3] h  [C3 E3 G3] h |
-    | [C3 E3 G3] w               |
-
-    // Measure 3-4
-    | [F3 A3 C4] h  [C3 E3 G3] h |
-    | [G3 B3 D4] h  [C3 E3 G3] h |
-
-    // Measure 5-6
-    | [C3 E3 G3] h  [C3 E3 G3] h |
-    | [C3 E3 G3] w               |
-
-    // Measure 7-8
-    | [F3 A3 C4] h  [C3 E3 G3] h |
-    | [G3 B3 D4] h  [C3 E3 G3] h |
-  }
-
-  // Bass line
-  part Bass {
-    midi ch:2 program:32
-
-    | C2 h  C2 h |
-    | C2 w       |
-    | F2 h  C2 h |
-    | G2 h  C2 h |
-    | C2 h  C2 h |
-    | C2 w       |
-    | F2 h  C2 h |
-    | G2 h  C2 h |
-  }
+    track "Drums" role Drums sound "kit_standard" {
+      place 1:1 drums;
+    }
+  };
 }
