@@ -8,7 +8,7 @@ import {
   ratToNumber,
   subRat,
 } from './rat.js';
-import { parsePitchLiteral } from './pitch.js';
+import { parsePitchLiteral, transposePitch } from './pitch.js';
 import { Scope } from './scope.js';
 import type { Diagnostic } from './diagnostics.js';
 import type { LyricSpan } from './ir.js';
@@ -37,8 +37,10 @@ import {
   FunctionValue,
   MarkerEventValue,
   NoteEventValue,
+  ObjectValue,
   PlacementValue,
   PosAtom,
+  PosRef,
   PosValue,
   RangeValue,
   RatValue,
@@ -51,7 +53,6 @@ import {
   VocalDeclValue,
   makeArray,
   makeBool,
-  makeClip,
   makeNull,
   makeNumber,
   makeObject,
@@ -60,13 +61,12 @@ import {
   makePosRef,
   makePosValue,
   makeRatValue,
-  makeScore,
   makeString,
   isPosExpr,
   isPosRef,
   isRat,
-  type LyricToken,
 } from './runtime.js';
+import { clipToObject, scoreToObject, coerceClip, coerceCurve, coerceLyricSpan } from './value-codec.js';
 
 class ReturnSignal {
   value: RuntimeValue;
@@ -131,17 +131,10 @@ export class V3Evaluator {
         }
         return makeObject(props);
       }
-      case 'MemberExpr': {
-        const obj = this.evaluateExpr(expr.object, scope);
-        if (obj.type !== 'object') {
-          throw this.error(`Member access on non-object`, expr.position);
-        }
-        const value = obj.props.get(expr.property);
-        if (!value) {
-          throw this.error(`Unknown property '${expr.property}'`, expr.position);
-        }
-        return value;
-      }
+      case 'MemberExpr':
+        return this.evaluateMember(expr.object, expr.property, scope, expr.position);
+      case 'IndexExpr':
+        return this.evaluateIndex(expr.object, expr.index, scope, expr.position);
       case 'CallExpr':
         return this.evaluateCall(expr.callee, expr.args, scope);
       case 'UnaryExpr':
@@ -149,12 +142,96 @@ export class V3Evaluator {
       case 'BinaryExpr':
         return this.evaluateBinary(expr.operator, expr.left, expr.right, scope, expr.position);
       case 'ScoreExpr':
-        return makeScore(this.evaluateScore(expr, scope));
+        return scoreToObject(this.evaluateScore(expr, scope));
       case 'ClipExpr':
-        return makeClip(this.evaluateClip(expr, scope));
+        return clipToObject(this.evaluateClip(expr, scope));
       default:
         throw this.error('Unsupported expression', (expr as any).position);
     }
+  }
+
+  private evaluateMember(objectExpr: Expr, property: string, scope: Scope, position: any): RuntimeValue {
+    const obj = this.evaluateExpr(objectExpr, scope);
+    if (obj.type === 'object') {
+      return obj.props.get(property) ?? makeNull();
+    }
+    if (obj.type === 'array') {
+      if (property === 'length') {
+        return makeNumber(obj.elements.length);
+      }
+      return makeNull();
+    }
+    if (obj.type === 'string') {
+      if (property === 'length') {
+        return makeNumber(obj.value.length);
+      }
+      return makeNull();
+    }
+    if (obj.type === 'rat') {
+      if (property === 'n') return makeNumber(obj.value.n);
+      if (property === 'd') return makeNumber(obj.value.d);
+      return makeNull();
+    }
+    if (obj.type === 'pitch') {
+      if (property === 'midi') return makeNumber(obj.value.midi);
+      if (property === 'cents') return makeNumber(obj.value.cents);
+      return makeNull();
+    }
+    if (obj.type === 'range') {
+      if (property === 'start') return obj.start;
+      if (property === 'end') return obj.end;
+      return makeNull();
+    }
+    if (obj.type === 'pos') {
+      if (property === 'kind') {
+        if (isRat(obj.value)) return makeString('rat');
+        if (isPosRef(obj.value)) return makeString('posref');
+        if (isPosExpr(obj.value)) return makeString('posexpr');
+        return makeString('pos');
+      }
+      if (property === 'bar' && isPosRef(obj.value)) {
+        return makeNumber(obj.value.bar);
+      }
+      if (property === 'beat' && isPosRef(obj.value)) {
+        return makeNumber(obj.value.beat);
+      }
+      if (property === 'base' && isPosExpr(obj.value)) {
+        return makePosValue(obj.value.base);
+      }
+      if (property === 'offset' && isPosExpr(obj.value)) {
+        return makeRatValue(obj.value.offset);
+      }
+      if (property === 'rat' && isRat(obj.value)) {
+        return makeRatValue(obj.value);
+      }
+      return makeNull();
+    }
+    if (obj.type === 'rng') {
+      if (property === 'state') return makeNumber(obj.state);
+      return makeNull();
+    }
+    throw this.error('Member access on non-object', position);
+  }
+
+  private evaluateIndex(objectExpr: Expr, indexExpr: Expr, scope: Scope, position: any): RuntimeValue {
+    const obj = this.evaluateExpr(objectExpr, scope);
+    const indexValue = this.evaluateExpr(indexExpr, scope);
+
+    if (obj.type === 'array') {
+      const index = this.expectIndex(indexValue, position);
+      if (index < 0 || index >= obj.elements.length) return makeNull();
+      return obj.elements[index] ?? makeNull();
+    }
+    if (obj.type === 'string') {
+      const index = this.expectIndex(indexValue, position);
+      if (index < 0 || index >= obj.value.length) return makeNull();
+      return makeString(obj.value.charAt(index));
+    }
+    if (obj.type === 'object') {
+      const key = this.expectIndexKey(indexValue, position);
+      return obj.props.get(key) ?? makeNull();
+    }
+    throw this.error('Index access on non-indexable value', position);
   }
 
   evaluateStatement(stmt: Statement, scope: Scope): RuntimeValue | null {
@@ -237,14 +314,26 @@ export class V3Evaluator {
 
   private evaluateFor(stmt: ForStmt, scope: Scope): RuntimeValue | null {
     const iterable = this.evaluateExpr(stmt.iterable, scope);
-    if (iterable.type !== 'array') {
-      throw this.error('for-in expects an array', stmt.position);
+    if (iterable.type === 'array') {
+      for (const item of iterable.elements) {
+        const iterScope = new Scope(scope);
+        iterScope.define(stmt.iterator, item, true);
+        this.evaluateBlock(stmt.body, iterScope);
+      }
+      return null;
     }
-    for (const item of iterable.elements) {
-      const iterScope = new Scope(scope);
-      iterScope.define(stmt.iterator, item, true);
-      this.evaluateBlock(stmt.body, iterScope);
+    if (iterable.type === 'range') {
+      const start = this.expectIndex(iterable.start, stmt.position);
+      const end = this.expectIndex(iterable.end, stmt.position);
+      if (start > end) return null;
+      for (let i = start; i <= end; i++) {
+        const iterScope = new Scope(scope);
+        iterScope.define(stmt.iterator, makeNumber(i), true);
+        this.evaluateBlock(stmt.body, iterScope);
+      }
+      return null;
     }
+    throw this.error('for-in expects an array or numeric range', stmt.position);
     return null;
   }
 
@@ -262,6 +351,32 @@ export class V3Evaluator {
       const value = this.evaluateExpr(stmt.value, scope);
       obj.props.set(stmt.target.property, value);
       return;
+    }
+    if (stmt.target.kind === 'IndexExpr') {
+      const obj = this.evaluateExpr(stmt.target.object, scope);
+      const indexValue = this.evaluateExpr(stmt.target.index, scope);
+      const value = this.evaluateExpr(stmt.value, scope);
+      if (obj.type === 'array') {
+        const index = this.expectIndex(indexValue, stmt.target.position);
+        if (index < 0) {
+          throw this.error('Array index out of range', stmt.target.position);
+        }
+        while (obj.elements.length < index) {
+          obj.elements.push(makeNull());
+        }
+        if (index === obj.elements.length) {
+          obj.elements.push(value);
+        } else {
+          obj.elements[index] = value;
+        }
+        return;
+      }
+      if (obj.type === 'object') {
+        const key = this.expectIndexKey(indexValue, stmt.target.position);
+        obj.props.set(key, value);
+        return;
+      }
+      throw this.error('Assignment target must be array or object', stmt.target.position);
     }
     throw this.error('Invalid assignment target', stmt.target.position);
   }
@@ -557,10 +672,12 @@ export class V3Evaluator {
     for (const stmt of decl.body) {
       const at = this.expectPos(this.evaluateExpr(stmt.at, scope), stmt.position);
       const clipValue = this.evaluateExpr(stmt.clip, scope);
-      if (clipValue.type !== 'clip') {
-        throw this.error('place expects a clip', stmt.position);
+      try {
+        const clip = coerceClip(clipValue);
+        placements.push({ at, clip });
+      } catch (err) {
+        throw this.error((err as Error).message, stmt.position);
       }
-      placements.push({ at, clip: clipValue.clip });
     }
     const track: TrackValueData = {
       name: decl.name,
@@ -730,6 +847,27 @@ export class V3Evaluator {
     }
   }
 
+  private expectIndex(value: RuntimeValue, position: any): number {
+    if (value.type === 'number' && isIntegerNumber(value.value)) {
+      return value.value;
+    }
+    if (value.type === 'rat' && value.value.n % value.value.d === 0) {
+      return value.value.n / value.value.d;
+    }
+    throw this.error('Expected integer index', position);
+  }
+
+  private expectIndexKey(value: RuntimeValue, position: any): string {
+    if (value.type === 'string') return value.value;
+    if (value.type === 'number' && isIntegerNumber(value.value)) {
+      return String(value.value);
+    }
+    if (value.type === 'rat' && value.value.n % value.value.d === 0) {
+      return String(value.value.n / value.value.d);
+    }
+    throw this.error('Expected string key', position);
+  }
+
   private expectNumber(value: RuntimeValue, position: any): number {
     if (value.type === 'number') return value.value;
     if (value.type === 'rat') return ratToNumber(value.value);
@@ -745,11 +883,8 @@ export class V3Evaluator {
   }
 
   private expectPos(value: RuntimeValue, position: any): PosValue {
-    if (value.type === 'pos') return value;
-    if (value.type === 'rat') return makePosValue(value.value);
-    if (value.type === 'number' && isIntegerNumber(value.value)) {
-      return makePosValue(ratFromInt(value.value));
-    }
+    const pos = coercePosValue(value);
+    if (pos) return pos;
     throw this.error('Expected position', position);
   }
 
@@ -793,18 +928,19 @@ export class V3Evaluator {
   }
 
   private expectCurve(value: RuntimeValue, position: any) {
-    if (value.type === 'curve') return value.curve;
-    throw this.error('Expected curve', position);
+    try {
+      return coerceCurve(value);
+    } catch (err) {
+      throw this.error((err as Error).message, position);
+    }
   }
 
   private expectLyricSpan(value: RuntimeValue, position: any): LyricSpan {
-    if (value.type === 'lyricToken') {
-      return lyricTokenToSpan(value.token);
+    try {
+      return coerceLyricSpan(value);
+    } catch (err) {
+      throw this.error((err as Error).message, position);
     }
-    if (value.type === 'string') {
-      return { kind: 'syllable' as const, text: value.value };
-    }
-    throw this.error('Expected lyric span', position);
   }
 
   private toPlainValue(value: RuntimeValue): unknown {
@@ -849,6 +985,86 @@ export class V3Evaluator {
     const loc = position ? ` at ${this.filePath ?? 'unknown'}:${position.line}:${position.column}` : '';
     return new Error(`[v3 eval] ${message}${loc}`);
   }
+}
+
+function coerceIntValue(value: RuntimeValue | undefined): number | null {
+  if (!value) return null;
+  if (value.type === 'number' && isIntegerNumber(value.value)) return value.value;
+  if (value.type === 'rat' && value.value.n % value.value.d === 0) {
+    return value.value.n / value.value.d;
+  }
+  return null;
+}
+
+function coerceRatValue(value: RuntimeValue | undefined): RatValue['value'] | null {
+  if (!value) return null;
+  if (value.type === 'rat') return value.value;
+  if (value.type === 'number' && isIntegerNumber(value.value)) return ratFromInt(value.value);
+  if (value.type === 'object') {
+    const nValue = value.props.get('n');
+    const dValue = value.props.get('d');
+    const n = coerceIntValue(nValue);
+    const d = coerceIntValue(dValue);
+    if (n !== null && d !== null) {
+      return makeRat(n, d);
+    }
+  }
+  return null;
+}
+
+function coercePosRefValue(value: RuntimeValue | undefined): PosRef | null {
+  if (!value) return null;
+  if (value.type === 'pos' && isPosRef(value.value)) {
+    return value.value;
+  }
+  if (value.type === 'object') {
+    const kindValue = value.props.get('kind');
+    if (kindValue && kindValue.type === 'string' && kindValue.value === 'posref') {
+      const bar = coerceIntValue(value.props.get('bar'));
+      const beat = coerceIntValue(value.props.get('beat'));
+      if (bar !== null && beat !== null) {
+        return makePosRef(bar, beat);
+      }
+    }
+  }
+  return null;
+}
+
+function coercePosValue(value: RuntimeValue): PosValue | null {
+  if (value.type === 'pos') return value;
+  if (value.type === 'rat') return makePosValue(value.value);
+  if (value.type === 'number' && isIntegerNumber(value.value)) {
+    return makePosValue(ratFromInt(value.value));
+  }
+  if (value.type === 'object') {
+    const kindValue = value.props.get('kind');
+    if (!kindValue || kindValue.type !== 'string') return null;
+    const kind = kindValue.value;
+    if (kind === 'posref') {
+      const bar = coerceIntValue(value.props.get('bar'));
+      const beat = coerceIntValue(value.props.get('beat'));
+      if (bar !== null && beat !== null) {
+        return makePosValue(makePosRef(bar, beat));
+      }
+      return null;
+    }
+    if (kind === 'posexpr') {
+      const baseRef = coercePosRefValue(value.props.get('base'));
+      const offset = coerceRatValue(value.props.get('offset'));
+      if (baseRef && offset) {
+        return makePosValue(makePosExpr(baseRef, offset));
+      }
+      return null;
+    }
+    if (kind === 'pos') {
+      const rat = coerceRatValue(value.props.get('rat'));
+      if (rat) {
+        return makePosValue(rat);
+      }
+      return null;
+    }
+  }
+  return null;
 }
 
 function parseDurLiteral(text: string) {
@@ -914,11 +1130,41 @@ function compareValues(a: RuntimeValue, b: RuntimeValue, position: any): number 
 }
 
 function addValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValue {
+  if (a.type === 'pitch' && b.type === 'number') {
+    return makePitchValue(transposePitch(a.value, Math.floor(b.value)));
+  }
+  if (b.type === 'pitch' && a.type === 'number') {
+    return makePitchValue(transposePitch(b.value, Math.floor(a.value)));
+  }
+  if (a.type === 'pitch' && b.type === 'rat' && b.value.n % b.value.d === 0) {
+    return makePitchValue(transposePitch(a.value, b.value.n / b.value.d));
+  }
+  if (b.type === 'pitch' && a.type === 'rat' && a.value.n % a.value.d === 0) {
+    return makePitchValue(transposePitch(b.value, a.value.n / a.value.d));
+  }
   if (a.type === 'number' && b.type === 'number') {
     return makeNumber(a.value + b.value);
   }
   if (a.type === 'string' && b.type === 'string') {
     return makeString(a.value + b.value);
+  }
+  if (a.type === 'object') {
+    const pos = coercePosValue(a);
+    if (pos && b.type === 'rat') {
+      return makePosValue(addPosAtom(pos.value, b.value));
+    }
+    if (pos && b.type === 'number' && isIntegerNumber(b.value)) {
+      return makePosValue(addPosAtom(pos.value, ratFromInt(b.value)));
+    }
+  }
+  if (b.type === 'object') {
+    const pos = coercePosValue(b);
+    if (pos && a.type === 'rat') {
+      return makePosValue(addPosAtom(pos.value, a.value));
+    }
+    if (pos && a.type === 'number' && isIntegerNumber(a.value)) {
+      return makePosValue(addPosAtom(pos.value, ratFromInt(a.value)));
+    }
   }
   if (a.type === 'rat' && b.type === 'rat') {
     return makeRatValue(addRat(a.value, b.value));
@@ -936,8 +1182,23 @@ function addValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValu
 }
 
 function subValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValue {
+  if (a.type === 'pitch' && b.type === 'number') {
+    return makePitchValue(transposePitch(a.value, -Math.floor(b.value)));
+  }
+  if (a.type === 'pitch' && b.type === 'rat' && b.value.n % b.value.d === 0) {
+    return makePitchValue(transposePitch(a.value, -(b.value.n / b.value.d)));
+  }
   if (a.type === 'number' && b.type === 'number') {
     return makeNumber(a.value - b.value);
+  }
+  if (a.type === 'object') {
+    const pos = coercePosValue(a);
+    if (pos && b.type === 'rat') {
+      return makePosValue(subPosAtom(pos.value, b.value));
+    }
+    if (pos && b.type === 'number' && isIntegerNumber(b.value)) {
+      return makePosValue(subPosAtom(pos.value, ratFromInt(b.value)));
+    }
   }
   if (a.type === 'rat' && b.type === 'rat') {
     return makeRatValue(subRat(a.value, b.value));
@@ -1022,7 +1283,7 @@ function bindParams(params: Param[], args: RuntimeValue[], named: Map<string, Ru
       assigned.add(param.name);
       continue;
     }
-    throw new Error(`Missing argument: ${param.name}`);
+    scope.define(param.name, makeNull(), true);
   }
   for (const name of named.keys()) {
     if (!assigned.has(name)) {
@@ -1061,13 +1322,6 @@ function extractRat(pos: PosAtom): RatValue['value'] {
   if (isRat(pos)) return pos;
   if (isPosExpr(pos)) return pos.offset;
   return ratFromInt(0);
-}
-
-function lyricTokenToSpan(token: LyricToken) {
-  if (token.kind === 'extend') {
-    return { kind: 'extend' as const };
-  }
-  return { kind: 'syllable' as const, text: token.text };
 }
 
 function isSoundKind(kind: string): kind is SoundDeclValue['kind'] {

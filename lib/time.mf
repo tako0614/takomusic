@@ -1,12 +1,92 @@
 // std:time (v3)
-export const barBeat = __time.barBeat;
-export const resolvePos = __time.resolvePos;
-export const dur = __time.dur;
-export const dot = __time.dot;
-export const w = __time.w;
-export const h = __time.h;
-export const q = __time.q;
-export const e = __time.e;
-export const s = __time.s;
-export const t = __time.t;
-export const x = __time.x;
+
+export fn barBeat(bar, beat) {
+  return { kind: "posref", bar: bar, beat: beat };
+}
+
+fn parseMeterMap(value) {
+  if (value == null) {
+    return [];
+  }
+  if (value.meterMap != null) {
+    return value.meterMap;
+  }
+  return value;
+}
+
+fn resolveMeterMap(events) {
+  let resolved = [];
+  for (ev in events) {
+    const at = resolvePosAgainst(ev.at, resolved);
+    resolved[resolved.length] = {
+      at: at,
+      numerator: ev.numerator,
+      denominator: ev.denominator
+    };
+  }
+  return resolved;
+}
+
+fn resolvePosAgainst(pos, meterMap) {
+  if (pos.kind == "rat") {
+    return pos.rat;
+  }
+  if (pos.kind == "posexpr") {
+    return resolvePosAgainst(pos.base, meterMap) + pos.offset;
+  }
+  if (pos.kind == "posref") {
+    return resolvePosRef(pos, meterMap);
+  }
+  if (pos.n != null && pos.d != null) {
+    return pos;
+  }
+  return 0 / 1;
+}
+
+fn resolvePosRef(ref, meterMap) {
+  if (meterMap.length == 0) {
+    if (ref.bar == 1 && ref.beat == 1) {
+      return 0 / 1;
+    }
+    return 0 / 1;
+  }
+  let current = meterMap[0];
+  let currentPos = 0 / 1;
+  let idx = 0;
+  const bars = ref.bar - 1;
+  for (step in 0..(bars - 1)) {
+    const barLen = current.numerator / current.denominator;
+    currentPos = currentPos + barLen;
+    for (scan in 0..(meterMap.length - 1)) {
+      if (idx + 1 < meterMap.length && meterMap[idx + 1].at == currentPos) {
+        idx = idx + 1;
+        current = meterMap[idx];
+      }
+    }
+  }
+  const beatLen = 1 / current.denominator;
+  const offset = beatLen * (ref.beat - 1);
+  return currentPos + offset;
+}
+
+export fn resolvePos(pos, meterMap) {
+  const events = parseMeterMap(meterMap);
+  const resolved = resolveMeterMap(events);
+  return resolvePosAgainst(pos, resolved);
+}
+
+export fn dur(n, d) {
+  return n / d;
+}
+
+export fn dot(d) {
+  return d + (d / 2);
+}
+
+export const whole = 1 / 1;
+export const half = 1 / 2;
+export const quarter = 1 / 4;
+export const eighth = 1 / 8;
+export const sixteenth = 1 / 16;
+export const thirtySecond = 1 / 32;
+export const sixtyFourth = 1 / 64;

@@ -115,6 +115,7 @@ export type Expr =
   | ArrayLiteral
   | ObjectLiteral
   | MemberExpr
+  | IndexExpr
   | CallExpr
   | UnaryExpr
   | BinaryExpr
@@ -181,6 +182,12 @@ export interface MemberExpr extends BaseNode {
   kind: 'MemberExpr';
   object: Expr;
   property: string;
+}
+
+export interface IndexExpr extends BaseNode {
+  kind: 'IndexExpr';
+  object: Expr;
+  index: Expr;
 }
 
 export interface CallExpr extends BaseNode {
