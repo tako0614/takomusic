@@ -193,6 +193,28 @@ export fn main() -> Score {
   },
 };
 
+const DEFAULT_PROFILE = `{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "default",
+  "renderer": "midi.smf",
+  "output": {
+    "path": "out/song.mid"
+  },
+  "bindings": [
+    {
+      "selector": { "sound": "piano" },
+      "config": { "ch": 1, "program": 0 }
+    },
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": { "ch": 2, "program": 81 }
+    }
+  ]
+}
+`;
+
 export async function initCommand(args: string[]): Promise<number> {
   let targetDir = '.';
   let templateName = 'default';
@@ -267,7 +289,7 @@ Examples:
   console.log('');
 
   // Create directories
-  const dirs = ['src', 'dist', 'out'];
+  const dirs = ['src', 'dist', 'out', 'profiles'];
   for (const dir of dirs) {
     const dirPath = path.join(absoluteDir, dir);
     if (!fs.existsSync(dirPath)) {
@@ -285,6 +307,13 @@ Examples:
   if (!fs.existsSync(mainPath)) {
     fs.writeFileSync(mainPath, template.main);
     console.log('Created: src/main.mf');
+  }
+
+  // Write default render profile
+  const profilePath = path.join(absoluteDir, 'profiles', 'default.mf.profile.json');
+  if (!fs.existsSync(profilePath)) {
+    fs.writeFileSync(profilePath, DEFAULT_PROFILE);
+    console.log('Created: profiles/default.mf.profile.json');
   }
 
   // Write .gitignore
@@ -315,6 +344,7 @@ Thumbs.db
   console.log('Next steps:');
   console.log('  mf check        Check for errors');
   console.log('  mf build        Build the project');
+  console.log('  mf render       Render with the default profile');
 
   return ExitCodes.SUCCESS;
 }

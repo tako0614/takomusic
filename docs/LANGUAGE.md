@@ -69,6 +69,21 @@ Tako v3 uses rational numbers for time. There are no ticks.
 - `Dur + Dur -> Dur`
 - `Pos + Pos` is invalid
 
+## Match Expression
+
+`match` compares a value against patterns and returns the first matching arm.
+
+```
+const label = match (mode) {
+  0 -> "intro";
+  1 -> "verse";
+  else -> "other";
+};
+```
+
+- Patterns are expressions evaluated and compared with `==` semantics.
+- `else` is optional; if omitted and no arm matches, the result is `null`.
+
 ## Score DSL (`score { ... }`)
 
 `score { ... }` returns a `Score` value.
@@ -149,6 +164,14 @@ track "Piano" role Instrument sound "piano" {
 - `place`: `PosRef` + `Clip`
 
 Undefined `SoundId` is a compile error.
+
+### Score Markers
+
+Score markers annotate absolute positions in the score (not per-clip).
+
+```
+marker(1:1, "section", "Intro");
+```
 
 ## Clip DSL (`clip { ... }`)
 

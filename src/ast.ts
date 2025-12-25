@@ -119,6 +119,7 @@ export type Expr =
   | CallExpr
   | UnaryExpr
   | BinaryExpr
+  | MatchExpr
   | ScoreExpr
   | ClipExpr;
 
@@ -215,6 +216,19 @@ export interface BinaryExpr extends BaseNode {
   right: Expr;
 }
 
+export interface MatchExpr extends BaseNode {
+  kind: 'MatchExpr';
+  value: Expr;
+  arms: MatchArm[];
+}
+
+export interface MatchArm extends BaseNode {
+  kind: 'MatchArm';
+  pattern?: Expr;
+  value: Expr;
+  isDefault: boolean;
+}
+
 export interface ScoreExpr extends BaseNode {
   kind: 'ScoreExpr';
   items: ScoreItem[];
@@ -225,7 +239,8 @@ export type ScoreItem =
   | TempoBlock
   | MeterBlock
   | SoundDecl
-  | TrackDecl;
+  | TrackDecl
+  | ScoreMarker;
 
 export interface MetaBlock extends BaseNode {
   kind: 'MetaBlock';
@@ -296,6 +311,13 @@ export interface TrackDecl extends BaseNode {
   role: string;
   sound: string;
   body: TrackStmt[];
+}
+
+export interface ScoreMarker extends BaseNode {
+  kind: 'ScoreMarker';
+  pos: Expr;
+  markerKind: Expr;
+  label: Expr;
 }
 
 export type TrackStmt = PlaceStmt;

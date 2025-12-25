@@ -12,7 +12,7 @@ export async function checkCommand(args: string[]): Promise<number> {
   // Parse arguments
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
-      console.error('Profiles are not supported in v3 check.');
+      console.error('Profiles are used by "mf render", not "mf check".');
       return ExitCodes.STATIC_ERROR;
     }
     if (args[i] === '-h' || args[i] === '--help') {

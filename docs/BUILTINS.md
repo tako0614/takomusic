@@ -79,6 +79,14 @@ track "Piano" role Instrument sound "piano" {
 - `sound`: `SoundId` declared by `sound`
 - `place`: `PosRef` + `Clip`
 
+## score markers
+
+Score markers annotate absolute positions in the score.
+
+```
+marker(1:1, "section", "Intro");
+```
+
 ## `clip { ... }`
 
 `clip { ... }` returns a `Clip` with a local cursor starting at 0.

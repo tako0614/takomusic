@@ -83,10 +83,18 @@ export fn dot(d) {
   return d + (d / 2);
 }
 
-export const whole = 1 / 1;
-export const half = 1 / 2;
-export const quarter = 1 / 4;
-export const eighth = 1 / 8;
-export const sixteenth = 1 / 16;
-export const thirtySecond = 1 / 32;
-export const sixtyFourth = 1 / 64;
+export const w = 1 / 1;
+export const h = 1 / 2;
+export const q = 1 / 4;
+export const e = 1 / 8;
+export const s = 1 / 16;
+export const t = 1 / 32;
+export const x = 1 / 64;
+
+export const whole = w;
+export const half = h;
+export const quarter = q;
+export const eighth = e;
+export const sixteenth = s;
+export const thirtySecond = t;
+export const sixtyFourth = x;

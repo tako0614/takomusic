@@ -8,9 +8,15 @@ fn syllable(text) {
   return { kind: "syllable", text: text };
 }
 
+export fn S(text) {
+  return syllable(text);
+}
+
 export fn ext() {
   return { kind: "extend" };
 }
+
+export const Ext = ext();
 
 fn containsSpace(text) {
   for (i in 0..(text.length - 1)) {
@@ -55,7 +61,7 @@ export fn text(text, lang) {
   return { kind: "text", tokens: tokens, lang: useLang };
 }
 
-export fn syllables(tokens, lang) {
+export fn syllables(tokens, lang, words) {
   let useLang = lang;
   if (useLang == null) {
     useLang = "und";
@@ -74,7 +80,11 @@ export fn syllables(tokens, lang) {
       out[out.length] = syllable(item);
     }
   }
-  return { kind: "syllables", tokens: out, lang: useLang };
+  let result = { kind: "syllables", tokens: out, lang: useLang };
+  if (words != null) {
+    result.words = words;
+  }
+  return result;
 }
 
 fn joinGroup(group) {
@@ -91,7 +101,7 @@ fn joinGroup(group) {
   return out;
 }
 
-export fn phonemes(groups, lang, alphabet) {
+export fn phonemes(groups, lang, alphabet, words) {
   let useLang = lang;
   if (useLang == null) {
     useLang = "und";
@@ -107,6 +117,9 @@ export fn phonemes(groups, lang, alphabet) {
   let result = { kind: "phonemes", tokens: out, lang: useLang };
   if (alphabet != null) {
     result.alphabet = alphabet;
+  }
+  if (words != null) {
+    result.words = words;
   }
   return result;
 }
@@ -302,16 +315,20 @@ fn addAutomation(c, param, amount, start, end) {
   return { events: events, length: c.length };
 }
 
-export fn vibrato(c, amount, start, end) {
-  return addAutomation(c, "vocal.vibrato", amount, start, end);
+export fn vibrato(c, depth, rate, start, end) {
+  let out = addAutomation(c, "vocal:vibratoDepth", depth, start, end);
+  if (rate != null) {
+    out = addAutomation(out, "vocal:vibratoRate", rate, start, end);
+  }
+  return out;
 }
 
 export fn portamento(c, amount, start, end) {
-  return addAutomation(c, "vocal.portamento", amount, start, end);
+  return addAutomation(c, "vocal:portamento", amount, start, end);
 }
 
 export fn breathiness(c, amount, start, end) {
-  return addAutomation(c, "vocal.breathiness", amount, start, end);
+  return addAutomation(c, "vocal:breathiness", amount, start, end);
 }
 
 export fn loudness(c, curve, start, end) {
@@ -329,7 +346,7 @@ export fn loudness(c, curve, start, end) {
   }
   events[events.length] = {
     type: "automation",
-    param: "vocal.loudness",
+    param: "vocal:loudness",
     start: startPos,
     end: endPos,
     curve: curve
