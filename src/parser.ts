@@ -33,6 +33,7 @@ import type {
   ObjectLiteral,
   ObjectProperty,
   MemberExpr,
+  IndexExpr,
   CallExpr,
   CallArg,
   UnaryExpr,
@@ -246,17 +247,17 @@ export class V3Parser {
       return this.parseFor();
     }
 
-    if (this.check(TokenType.IDENT) && this.checkNext(TokenType.EQ)) {
-      const pos = this.peek().position;
-      const target = this.parsePrimary();
-      this.expect(TokenType.EQ, "Expected '='");
+    const expr = this.parseExpression();
+    if (this.match(TokenType.EQ)) {
+      if (!this.isAssignable(expr)) {
+        throw this.error('Invalid assignment target', expr.position);
+      }
       const value = this.parseExpression();
       this.expect(TokenType.SEMI, "Expected ';'");
-      const stmt: AssignmentStmt = { kind: 'AssignmentStmt', position: pos, target, value };
+      const stmt: AssignmentStmt = { kind: 'AssignmentStmt', position: expr.position, target: expr, value };
       return stmt;
     }
 
-    const expr = this.parseExpression();
     this.expect(TokenType.SEMI, "Expected ';'");
     const stmt: ExprStmt = { kind: 'ExprStmt', position: expr.position, expr };
     return stmt;
@@ -332,8 +333,15 @@ export class V3Parser {
     let expr = this.parsePrimary();
     while (true) {
       if (this.match(TokenType.DOT)) {
-        const name = this.expect(TokenType.IDENT, 'Expected property').value as string;
+        const name = this.parsePropertyName();
         expr = { kind: 'MemberExpr', position: expr.position, object: expr, property: name };
+        continue;
+      }
+      if (this.match(TokenType.LBRACKET)) {
+        const index = this.parseExpression();
+        this.expect(TokenType.RBRACKET, "Expected ']'");
+        const node: IndexExpr = { kind: 'IndexExpr', position: expr.position, object: expr, index };
+        expr = node;
         continue;
       }
       if (this.match(TokenType.LPAREN)) {
@@ -439,10 +447,19 @@ export class V3Parser {
     const properties: ObjectProperty[] = [];
     if (!this.check(TokenType.RBRACE)) {
       do {
-        const keyToken = this.expect(TokenType.IDENT, 'Expected key');
+        const keyToken = this.peek();
+        if (!this.isPropertyToken(keyToken.type)) {
+          throw this.error('Expected key', keyToken.position);
+        }
+        this.advance();
         this.expect(TokenType.COLON, "Expected ':'");
         const value = this.parseExpression();
-        properties.push({ kind: 'ObjectProperty', position: keyToken.position, key: keyToken.value as string, value });
+        properties.push({
+          kind: 'ObjectProperty',
+          position: keyToken.position,
+          key: keyToken.value as string,
+          value,
+        });
       } while (this.match(TokenType.COMMA));
     }
     this.expect(TokenType.RBRACE, "Expected '}'");
@@ -531,9 +548,9 @@ export class V3Parser {
       const itemPos = this.peek().position;
       const at = this.parseExpression();
       this.expect(TokenType.ARROW, "Expected '->'");
-      const numerator = this.parseExpression();
+      const numerator = this.parsePrimary();
       this.expect(TokenType.SLASH, "Expected '/'");
-      const denominator = this.parseExpression();
+      const denominator = this.parsePrimary();
       this.expect(TokenType.SEMI, "Expected ';'");
       items.push({ kind: 'MeterItem', position: itemPos, at, numerator, denominator });
     }
@@ -835,6 +852,55 @@ export class V3Parser {
   private parseStringLiteral(): StringLiteral {
     const token = this.expect(TokenType.STRING, 'Expected string literal');
     return { kind: 'StringLiteral', position: token.position, value: token.value as string };
+  }
+
+  private parsePropertyName(): string {
+    const token = this.peek();
+    if (this.isPropertyToken(token.type)) {
+      this.advance();
+      return token.value as string;
+    }
+    throw this.error('Expected property', token.position);
+  }
+
+  private isPropertyToken(type: TokenType): boolean {
+      switch (type) {
+        case TokenType.IDENT:
+        case TokenType.DUR:
+        case TokenType.KIND:
+        case TokenType.ROLE:
+        case TokenType.SOUND:
+      case TokenType.TRACK:
+      case TokenType.META:
+      case TokenType.TEMPO:
+      case TokenType.METER:
+      case TokenType.PLACE:
+      case TokenType.SCORE:
+      case TokenType.CLIP:
+      case TokenType.IMPORT:
+      case TokenType.EXPORT:
+      case TokenType.FROM:
+      case TokenType.FN:
+      case TokenType.CONST:
+      case TokenType.LET:
+      case TokenType.RETURN:
+      case TokenType.IF:
+      case TokenType.ELSE:
+      case TokenType.FOR:
+      case TokenType.IN:
+      case TokenType.MATCH:
+      case TokenType.TRUE:
+      case TokenType.FALSE:
+      case TokenType.NULL:
+      case TokenType.AS:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private isAssignable(expr: Expr): expr is Identifier | MemberExpr | IndexExpr {
+    return expr.kind === 'Identifier' || expr.kind === 'MemberExpr' || expr.kind === 'IndexExpr';
   }
 
   private error(message: string, position: Position): Error {

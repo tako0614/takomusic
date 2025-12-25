@@ -1,17 +1,187 @@
 // std:drums (v3)
-export const kick = __drums.kick;
-export const snare = __drums.snare;
-export const hhc = __drums.hhc;
-export const hho = __drums.hho;
-export const crash = __drums.crash;
-export const ride = __drums.ride;
-export const tom1 = __drums.tom1;
-export const tom2 = __drums.tom2;
-export const tom3 = __drums.tom3;
-export const clap = __drums.clap;
-export const perc1 = __drums.perc1;
 
-export const fourOnFloor = __drums.fourOnFloor;
-export const basicRock = __drums.basicRock;
-export const fill = __drums.fill;
-export const ghost = __drums.ghost;
+export const kick = "kick";
+export const snare = "snare";
+export const hhc = "hhc";
+export const hho = "hho";
+export const crash = "crash";
+export const ride = "ride";
+export const tom1 = "tom1";
+export const tom2 = "tom2";
+export const tom3 = "tom3";
+export const clap = "clap";
+export const perc1 = "perc1";
+
+fn cloneEvent(ev) {
+  if (ev.type == "note") {
+    return {
+      type: "note",
+      start: ev.start,
+      dur: ev.dur,
+      pitch: ev.pitch,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      lyric: ev.lyric,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "chord") {
+    return {
+      type: "chord",
+      start: ev.start,
+      dur: ev.dur,
+      pitches: ev.pitches,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "drumHit") {
+    return {
+      type: "drumHit",
+      start: ev.start,
+      dur: ev.dur,
+      key: ev.key,
+      velocity: ev.velocity,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "control") {
+    return {
+      type: "control",
+      start: ev.start,
+      kind: ev.kind,
+      data: ev.data,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "automation") {
+    return {
+      type: "automation",
+      param: ev.param,
+      start: ev.start,
+      end: ev.end,
+      curve: ev.curve,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "marker") {
+    return {
+      type: "marker",
+      pos: ev.pos,
+      kind: ev.kind,
+      label: ev.label
+    };
+  }
+  return ev;
+}
+
+export fn fourOnFloor(bars, unit) {
+  let count = bars;
+  if (count < 1) {
+    count = 1;
+  }
+  const beats = count * 4;
+  let events = [];
+  for (i in 0..(beats - 1)) {
+    events[events.length] = {
+      type: "drumHit",
+      start: unit * i,
+      dur: unit,
+      key: "kick",
+      velocity: 0.9
+    };
+  }
+  return { events: events, length: unit * beats };
+}
+
+export fn basicRock(bars, unit) {
+  let count = bars;
+  if (count < 1) {
+    count = 1;
+  }
+  let events = [];
+  for (bar in 0..(count - 1)) {
+    const base = unit * (bar * 4);
+    const beats = [0, 1, 2, 3];
+    for (b in beats) {
+      events[events.length] = {
+        type: "drumHit",
+        start: base + unit * b,
+        dur: unit,
+        key: "hhc",
+        velocity: 0.5
+      };
+    }
+    events[events.length] = {
+      type: "drumHit",
+      start: base + (0 / 1),
+      dur: unit,
+      key: "kick",
+      velocity: 0.9
+    };
+    events[events.length] = {
+      type: "drumHit",
+      start: base + unit,
+      dur: unit,
+      key: "snare",
+      velocity: 0.8
+    };
+    events[events.length] = {
+      type: "drumHit",
+      start: base + unit * 2,
+      dur: unit,
+      key: "kick",
+      velocity: 0.9
+    };
+    events[events.length] = {
+      type: "drumHit",
+      start: base + unit * 3,
+      dur: unit,
+      key: "snare",
+      velocity: 0.8
+    };
+  }
+  return { events: events, length: unit * (count * 4) };
+}
+
+export fn fill(drumKey, length) {
+  let key = drumKey;
+  if (key == null) {
+    key = "snare";
+  }
+  const hits = 4;
+  const unit = length / hits;
+  let events = [];
+  for (i in 0..(hits - 1)) {
+    events[events.length] = {
+      type: "drumHit",
+      start: unit * i,
+      dur: unit,
+      key: key,
+      velocity: 0.7
+    };
+  }
+  return { events: events, length: length };
+}
+
+export fn ghost(c, amount) {
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "drumHit" || ev.type == "note" || ev.type == "chord") {
+      let out = cloneEvent(ev);
+      let vel = out.velocity;
+      if (vel == null) {
+        vel = 1;
+      }
+      out.velocity = vel * amount;
+      events[events.length] = out;
+    } else {
+      events[events.length] = cloneEvent(ev);
+    }
+  }
+  return { events: events, length: c.length };
+}

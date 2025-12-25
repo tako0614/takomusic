@@ -1,4 +1,33 @@
 // std:random (v3)
-export const rng = __random.rng;
-export const nextFloat = __random.nextFloat;
-export const nextInt = __random.nextInt;
+
+const RNG_A = 1664525;
+const RNG_C = 1013904223;
+const RNG_M = 4294967296;
+
+fn nextState(state) {
+  return (state * RNG_A + RNG_C) % RNG_M;
+}
+
+export fn rng(seed) {
+  let state = seed % RNG_M;
+  if (state < 0) {
+    state = state + RNG_M;
+  }
+  return { state: state };
+}
+
+export fn nextFloat(r) {
+  const next = nextState(r.state);
+  const value = next / 4294967295;
+  return [{ state: next }, value];
+}
+
+export fn nextInt(r, lo, hi) {
+  const span = hi - lo;
+  if (span <= 0) {
+    return [{ state: r.state }, lo];
+  }
+  const next = nextState(r.state);
+  const value = lo + (next % span);
+  return [{ state: next }, value];
+}

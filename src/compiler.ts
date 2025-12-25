@@ -6,11 +6,11 @@ import { V3Evaluator } from './evaluator.js';
 import { Scope } from './scope.js';
 import { normalizeScore } from './normalize.js';
 import { resolveStdlibPath } from './utils/stdlib.js';
-import { applyIntrinsics } from './intrinsics.js';
+import { coerceScore } from './value-codec.js';
 import type { Program, ImportDecl, ImportSpec } from './ast.js';
 import type { Diagnostic } from './diagnostics.js';
 import type { ScoreIR } from './ir.js';
-import type { RuntimeValue } from './runtime.js';
+import type { RuntimeValue, ScoreValueData } from './runtime.js';
 import { makeObject } from './runtime.js';
 
 interface Module {
@@ -42,12 +42,14 @@ export class V3Compiler {
 
     const evaluator = new V3Evaluator(this.diagnostics, module.path);
     const result = evaluator.callFunction(main as any, [], new Map());
-    if (!result || result.type !== 'score') {
-      this.pushError('main() must return Score');
-      throw new Error('main() must return Score');
+    let score: ScoreValueData;
+    try {
+      score = coerceScore(result);
+    } catch (err) {
+      this.pushError((err as Error).message);
+      throw err;
     }
-
-    const ir = normalizeScore(result.score, this.diagnostics);
+    const ir = normalizeScore(score, this.diagnostics);
     this.throwIfErrors();
     return ir;
   }
@@ -96,7 +98,6 @@ export class V3Compiler {
 
     const evaluator = new V3Evaluator(this.diagnostics, module.path);
     const scope = new Scope();
-    applyIntrinsics(scope);
     const exports = new Map<string, RuntimeValue>();
 
     for (const importDecl of module.program.imports) {

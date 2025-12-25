@@ -1,8 +1,260 @@
 // std:core (v3)
-export const concat = __core.concat;
-export const overlay = __core.overlay;
-export const repeat = __core.repeat;
-export const slice = __core.slice;
-export const mapEvents = __core.mapEvents;
-export const withTrack = __core.withTrack;
-export const mapTracks = __core.mapTracks;
+
+fn posToRat(pos) {
+  if (pos == null) {
+    return null;
+  }
+  if (pos.kind == "rat") {
+    return pos.rat;
+  }
+  if (pos.kind != null) {
+    return null;
+  }
+  if (pos.n != null && pos.d != null) {
+    return pos;
+  }
+  return null;
+}
+
+fn eventStartRat(ev) {
+  if (ev.type == "marker") {
+    return posToRat(ev.pos);
+  }
+  if (ev.type == "automation") {
+    return posToRat(ev.start);
+  }
+  return posToRat(ev.start);
+}
+
+fn eventEndRat(ev) {
+  if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+    const start = posToRat(ev.start);
+    if (start == null) {
+      return null;
+    }
+    return start + ev.dur;
+  }
+  if (ev.type == "control") {
+    return posToRat(ev.start);
+  }
+  if (ev.type == "automation") {
+    return posToRat(ev.end);
+  }
+  if (ev.type == "marker") {
+    return posToRat(ev.pos);
+  }
+  return null;
+}
+
+fn clipLength(c) {
+  if (c.length != null) {
+    return c.length;
+  }
+  let max = null;
+  for (ev in c.events) {
+    const end = eventEndRat(ev);
+    if (end == null) {
+      return null;
+    }
+    if (max == null || end > max) {
+      max = end;
+    }
+  }
+  if (max == null) {
+    return 0 / 1;
+  }
+  return max;
+}
+
+fn shiftPos(pos, offset) {
+  if (pos == null) {
+    return pos;
+  }
+  return pos + offset;
+}
+
+fn shiftEvent(ev, offset) {
+  if (ev.type == "note") {
+    return {
+      type: "note",
+      start: shiftPos(ev.start, offset),
+      dur: ev.dur,
+      pitch: ev.pitch,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      lyric: ev.lyric,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "chord") {
+    return {
+      type: "chord",
+      start: shiftPos(ev.start, offset),
+      dur: ev.dur,
+      pitches: ev.pitches,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "drumHit") {
+    return {
+      type: "drumHit",
+      start: shiftPos(ev.start, offset),
+      dur: ev.dur,
+      key: ev.key,
+      velocity: ev.velocity,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "control") {
+    return {
+      type: "control",
+      start: shiftPos(ev.start, offset),
+      kind: ev.kind,
+      data: ev.data,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "automation") {
+    return {
+      type: "automation",
+      param: ev.param,
+      start: shiftPos(ev.start, offset),
+      end: shiftPos(ev.end, offset),
+      curve: ev.curve,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "marker") {
+    return {
+      type: "marker",
+      pos: shiftPos(ev.pos, offset),
+      kind: ev.kind,
+      label: ev.label
+    };
+  }
+  return ev;
+}
+
+export fn concat(a, b) {
+  const offset = clipLength(a);
+  const zero = 0 / 1;
+  let events = [];
+  for (ev in a.events) {
+    events[events.length] = shiftEvent(ev, zero);
+  }
+  for (ev in b.events) {
+    events[events.length] = shiftEvent(ev, offset);
+  }
+  const length = clipLength({ events: events });
+  return { events: events, length: length };
+}
+
+export fn overlay(a, b) {
+  const zero = 0 / 1;
+  let events = [];
+  for (ev in a.events) {
+    events[events.length] = shiftEvent(ev, zero);
+  }
+  for (ev in b.events) {
+    events[events.length] = shiftEvent(ev, zero);
+  }
+  let length = null;
+  if (a.length != null && b.length != null) {
+    length = a.length;
+    if (b.length > a.length) {
+      length = b.length;
+    }
+  } else if (a.length != null) {
+    length = a.length;
+  } else if (b.length != null) {
+    length = b.length;
+  } else {
+    length = clipLength({ events: events });
+  }
+  return { events: events, length: length };
+}
+
+export fn repeat(c, count) {
+  if (count <= 0) {
+    return { events: [], length: 0 / 1 };
+  }
+  const len = clipLength(c);
+  let events = [];
+  for (i in 0..(count - 1)) {
+    const offset = len * i;
+    for (ev in c.events) {
+      events[events.length] = shiftEvent(ev, offset);
+    }
+  }
+  return { events: events, length: len * count };
+}
+
+export fn slice(c, startPos, endPos) {
+  const start = posToRat(startPos);
+  const end = posToRat(endPos);
+  let events = [];
+  for (ev in c.events) {
+    const pos = eventStartRat(ev);
+    if (pos == null) {
+      continue;
+    }
+    if (pos < start || pos > end) {
+      continue;
+    }
+    events[events.length] = shiftEvent(ev, 0 / 1 - start);
+  }
+  return { events: events, length: end - start };
+}
+
+export fn mapEvents(c, f) {
+  let events = [];
+  for (ev in c.events) {
+    const mapped = f(ev);
+    if (mapped != null) {
+      events[events.length] = mapped;
+    }
+  }
+  const length = clipLength({ events: events });
+  return { events: events, length: length };
+}
+
+fn copyTracks(tracks) {
+  let out = [];
+  for (trk in tracks) {
+    out[out.length] = trk;
+  }
+  return out;
+}
+
+export fn withTrack(sc, trk) {
+  const tracks = copyTracks(sc.tracks);
+  tracks[tracks.length] = trk;
+  return {
+    meta: sc.meta,
+    tempoMap: sc.tempoMap,
+    meterMap: sc.meterMap,
+    sounds: sc.sounds,
+    tracks: tracks,
+    markers: sc.markers
+  };
+}
+
+export fn mapTracks(sc, f) {
+  let tracks = [];
+  for (trk in sc.tracks) {
+    tracks[tracks.length] = f(trk);
+  }
+  return {
+    meta: sc.meta,
+    tempoMap: sc.tempoMap,
+    meterMap: sc.meterMap,
+    sounds: sc.sounds,
+    tracks: tracks,
+    markers: sc.markers
+  };
+}

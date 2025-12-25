@@ -1,5 +1,25 @@
 // std:theory (v3)
-export const majorTriad = __theory.majorTriad;
-export const minorTriad = __theory.minorTriad;
-export const scaleMajor = __theory.scaleMajor;
-export const scaleMinor = __theory.scaleMinor;
+
+fn applyIntervals(root, intervals) {
+  let out = [];
+  for (step in intervals) {
+    out[out.length] = root + step;
+  }
+  return out;
+}
+
+export fn majorTriad(root) {
+  return [root, root + 4, root + 7];
+}
+
+export fn minorTriad(root) {
+  return [root, root + 3, root + 7];
+}
+
+export fn scaleMajor(root) {
+  return applyIntervals(root, [0, 2, 4, 5, 7, 9, 11, 12]);
+}
+
+export fn scaleMinor(root) {
+  return applyIntervals(root, [0, 2, 3, 5, 7, 8, 10, 12]);
+}

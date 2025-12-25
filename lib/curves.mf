@@ -1,4 +1,48 @@
 // std:curves (v3)
-export const linear = __curves.linear;
-export const easeInOut = __curves.easeInOut;
-export const piecewise = __curves.piecewise;
+
+fn makeCurve(points) {
+  return { kind: "piecewiseLinear", points: points };
+}
+
+export fn linear(a, b, steps) {
+  let count = steps;
+  if (count < 2) {
+    count = 2;
+  }
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    const v = a + (b - a) * ratio;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+export fn easeInOut(a, b, steps) {
+  let count = steps;
+  if (count < 2) {
+    count = 2;
+  }
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    const eased = ratio * ratio * (3 - 2 * ratio);
+    const v = a + (b - a) * eased;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+export fn piecewise(points) {
+  let out = [];
+  for (p in points) {
+    if (p.length != null) {
+      const ratio = p[0];
+      const v = p[1];
+      out[out.length] = { t: ratio, v: v };
+    } else if (p.t != null && p.v != null) {
+      out[out.length] = { t: p.t, v: p.v };
+    }
+  }
+  return makeCurve(out);
+}
