@@ -20,6 +20,7 @@ import type {
   FnDecl,
   ForStmt,
   IfStmt,
+  MatchExpr,
   Param,
   ReturnStmt,
   ScoreExpr,
@@ -139,12 +140,14 @@ export class V3Evaluator {
         return this.evaluateCall(expr.callee, expr.args, scope);
       case 'UnaryExpr':
         return this.evaluateUnary(expr.operator, expr.operand, scope, expr.position);
-      case 'BinaryExpr':
-        return this.evaluateBinary(expr.operator, expr.left, expr.right, scope, expr.position);
-      case 'ScoreExpr':
-        return scoreToObject(this.evaluateScore(expr, scope));
-      case 'ClipExpr':
-        return clipToObject(this.evaluateClip(expr, scope));
+        case 'BinaryExpr':
+          return this.evaluateBinary(expr.operator, expr.left, expr.right, scope, expr.position);
+        case 'MatchExpr':
+          return this.evaluateMatch(expr, scope);
+        case 'ScoreExpr':
+          return scoreToObject(this.evaluateScore(expr, scope));
+        case 'ClipExpr':
+          return clipToObject(this.evaluateClip(expr, scope));
       default:
         throw this.error('Unsupported expression', (expr as any).position);
     }
@@ -444,9 +447,9 @@ export class V3Evaluator {
     const left = this.evaluateExpr(leftExpr, scope);
     const right = this.evaluateExpr(rightExpr, scope);
 
-    switch (operator) {
-      case '+':
-        return addValues(left, right, position);
+      switch (operator) {
+        case '+':
+          return addValues(left, right, position);
       case '-':
         return subValues(left, right, position);
       case '*':
@@ -467,10 +470,30 @@ export class V3Evaluator {
         return makeBool(compareValues(left, right, position) > 0);
       case '>=':
         return makeBool(compareValues(left, right, position) >= 0);
-      default:
-        throw this.error(`Unknown binary operator: ${operator}`, position);
+        default:
+          throw this.error(`Unknown binary operator: ${operator}`, position);
+      }
     }
-  }
+
+    private evaluateMatch(expr: MatchExpr, scope: Scope): RuntimeValue {
+      const value = this.evaluateExpr(expr.value, scope);
+      let fallback: Expr | null = null;
+      for (const arm of expr.arms) {
+        if (arm.isDefault) {
+          fallback = arm.value;
+          continue;
+        }
+        if (!arm.pattern) continue;
+        const patternValue = this.evaluateExpr(arm.pattern, scope);
+        if (valuesEqual(value, patternValue)) {
+          return this.evaluateExpr(arm.value, scope);
+        }
+      }
+      if (fallback) {
+        return this.evaluateExpr(fallback, scope);
+      }
+      return makeNull();
+    }
 
   private evaluateScore(expr: ScoreExpr, scope: Scope): ScoreValueData {
     const meta: ScoreValueData['meta'] = {};
@@ -506,6 +529,13 @@ export class V3Evaluator {
         case 'TrackDecl':
           trackNodes.push(item);
           break;
+        case 'ScoreMarker': {
+          const pos = this.expectPos(this.evaluateExpr(item.pos, scope), item.position);
+          const kind = this.expectStringLike(this.evaluateExpr(item.markerKind, scope), item.position);
+          const label = this.expectStringLike(this.evaluateExpr(item.label, scope), item.position);
+          markers.push({ type: 'marker', pos, kind, label });
+          break;
+        }
         default:
           throw this.error('Unknown score item', (item as any).position);
       }

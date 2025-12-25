@@ -92,6 +92,114 @@ describe('V3 compiler', () => {
     expect(ir.tracks[0].placements.length).toBe(1);
     expect(ir.tracks[0].placements[0].clip.events.length).toBe(4);
   });
+
+  it('supports score markers', () => {
+    const mainPath = writeFile('with-marker.mf', `
+      export fn main() -> Score {
+        return score {
+          tempo { 1:1 -> 120bpm; }
+          meter { 1:1 -> 4/4; }
+          marker(1:1, "section", "Intro");
+
+          sound "piano" kind instrument { label "Piano"; }
+          track "Piano" role Instrument sound "piano" {
+            place 1:1 clip { note(C4, q); };
+          }
+        };
+      }
+    `);
+
+    const compiler = new V3Compiler(tmpDir);
+    const ir = compiler.compile(mainPath);
+
+    expect(ir.markers?.length ?? 0).toBe(1);
+    expect(ir.markers?.[0].kind).toBe('section');
+    expect(ir.markers?.[0].label).toBe('Intro');
+  });
+
+  it('emits vocal vibrato depth and rate automation', () => {
+    const mainPath = writeFile('with-vibrato.mf', `
+      import * as vocal from "std:vocal";
+
+      fn part() -> Clip {
+        let c = clip {
+          note(C4, q);
+        };
+        return vocal.vibrato(c, depth: 0.25, rate: 5.5);
+      }
+
+      export fn main() -> Score {
+        return score {
+          tempo { 1:1 -> 120bpm; }
+          meter { 1:1 -> 4/4; }
+          sound "lead_vocal" kind vocal { vocal { lang "en-US"; range A3..E5; } }
+          track "Vocal" role Vocal sound "lead_vocal" {
+            place 1:1 part();
+          }
+        };
+      }
+    `);
+
+    const compiler = new V3Compiler(tmpDir);
+    const ir = compiler.compile(mainPath);
+
+    const events = ir.tracks[0].placements[0].clip.events;
+    const params = events
+      .filter((ev) => ev.type === 'automation')
+      .map((ev) => (ev as any).param);
+
+    expect(params).toContain('vocal:vibratoDepth');
+    expect(params).toContain('vocal:vibratoRate');
+  });
+
+  it('evaluates match expressions', () => {
+    const mainPath = writeFile('with-match.mf', `
+      export fn main() -> Score {
+        const label = match (2) {
+          1 -> "One";
+          2 -> "Two";
+          else -> "Other";
+        };
+        return score {
+          meta { title label; }
+          tempo { 1:1 -> 120bpm; }
+          meter { 1:1 -> 4/4; }
+          sound "piano" kind instrument { label "Piano"; }
+          track "Piano" role Instrument sound "piano" {
+            place 1:1 clip { note(C4, q); };
+          }
+        };
+      }
+    `);
+
+    const compiler = new V3Compiler(tmpDir);
+    const ir = compiler.compile(mainPath);
+
+    expect(ir.meta.title).toBe('Two');
+  });
+
+  it('reports Pos/Dur mismatches', () => {
+    const mainPath = writeFile('bad-pos-dur.mf', `
+      export fn main() -> Score {
+        return score {
+          tempo { 1:1 -> 120bpm; }
+          meter { 1:1 -> 4/4; }
+
+          sound "piano" kind instrument { label "Piano"; }
+          track "Piano" role Instrument sound "piano" {
+            place 1:1 clip {
+              rest(1:1);
+            };
+          }
+        };
+      }
+    `);
+
+    const compiler = new V3Compiler(tmpDir);
+    const diagnostics = compiler.check(mainPath);
+    const messages = diagnostics.map((d) => d.message);
+    expect(messages.some((m) => m.includes('Expected duration'))).toBe(true);
+  });
 });
 
 describe('V3 stdlib registry', () => {

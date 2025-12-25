@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { createHash } from 'crypto';
 import { V3Lexer } from './lexer.js';
 import { V3Parser } from './parser.js';
 import { V3Evaluator } from './evaluator.js';
@@ -7,6 +8,8 @@ import { Scope } from './scope.js';
 import { normalizeScore } from './normalize.js';
 import { resolveStdlibPath } from './utils/stdlib.js';
 import { coerceScore } from './value-codec.js';
+import { typeCheckProgram } from './typecheck.js';
+import { validateScoreIR } from './schema/validator.js';
 import type { Program, ImportDecl, ImportSpec } from './ast.js';
 import type { Diagnostic } from './diagnostics.js';
 import type { ScoreIR } from './ir.js';
@@ -19,6 +22,7 @@ interface Module {
   exports: Map<string, RuntimeValue>;
   scope: Scope;
   evaluated: boolean;
+  source: string;
 }
 
 export class V3Compiler {
@@ -32,6 +36,7 @@ export class V3Compiler {
 
   compile(entryPath: string): ScoreIR {
     this.diagnostics = [];
+    this.modules.clear();
     const module = this.loadModule(entryPath);
     this.evaluateModule(module);
 
@@ -50,6 +55,19 @@ export class V3Compiler {
       throw err;
     }
     const ir = normalizeScore(score, this.diagnostics);
+    ir.tako.sourceHash = this.computeSourceHash();
+    try {
+      const schemaErrors = validateScoreIR(ir);
+      for (const message of schemaErrors) {
+        this.diagnostics.push({ severity: 'error', message, filePath: module.path });
+      }
+    } catch (err) {
+      this.diagnostics.push({
+        severity: 'error',
+        message: `IR schema validation failed: ${(err as Error).message}`,
+        filePath: module.path,
+      });
+    }
     this.throwIfErrors();
     return ir;
   }
@@ -81,6 +99,7 @@ export class V3Compiler {
     const tokens = lexer.tokenize();
     const parser = new V3Parser(tokens, absolutePath);
     const program = parser.parseProgram();
+    typeCheckProgram(program, this.diagnostics, absolutePath);
 
     const module: Module = {
       path: absolutePath,
@@ -88,6 +107,7 @@ export class V3Compiler {
       exports: new Map(),
       scope: new Scope(),
       evaluated: false,
+      source,
     };
     this.modules.set(absolutePath, module);
     return module;
@@ -199,6 +219,22 @@ export class V3Compiler {
     if (errors.length > 0) {
       throw new Error(errors[0].message);
     }
+  }
+
+  private computeSourceHash(): string {
+    const entries = Array.from(this.modules.values()).map((mod) => ({
+      path: mod.path,
+      source: mod.source,
+    }));
+    entries.sort((a, b) => a.path.localeCompare(b.path));
+    const hash = createHash('sha256');
+    for (const entry of entries) {
+      hash.update(entry.path);
+      hash.update('\n');
+      hash.update(entry.source);
+      hash.update('\n');
+    }
+    return hash.digest('hex');
   }
 }
 

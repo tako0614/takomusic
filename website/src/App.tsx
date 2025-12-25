@@ -4,6 +4,7 @@ import { LanguageSwitcher } from './components/LanguageSwitcher'
 
 const codeExample = `import { repeat } from "std:core";
 import * as vocal from "std:vocal";
+import * as drums from "std:drums";
 
 fn vocalPart() -> Clip {
   let c = clip {
@@ -15,22 +16,37 @@ fn vocalPart() -> Clip {
   const lyr = vocal.text("hello", "en-US");
   c = vocal.align(c, lyr);
 
-  return c;
+  return vocal.vibrato(c, depth: 0.2, rate: 5.5);
 }
 
 export fn main() -> Score {
+  const section = match (2) {
+    1 -> "Intro";
+    2 -> "Verse";
+    else -> "Outro";
+  };
+
   return score {
     meta { title "Demo v3"; }
 
     meter { 1:1 -> 4/4; }
     tempo { 1:1 -> 120bpm; }
+    marker(1:1, "section", section);
 
     sound "lead_vocal" kind vocal {
       vocal { lang "en-US"; range A3..E5; }
     }
 
+    sound "kit_standard" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; }
+    }
+
     track "Vocal" role Vocal sound "lead_vocal" {
-      place 1:1 repeat(vocalPart(), 4);
+      place 1:1 repeat(vocalPart(), 2);
+    }
+
+    track "Drums" role Drums sound "kit_standard" {
+      place 1:1 drums.basicRock(2, q);
     }
   };
 }`
@@ -196,7 +212,7 @@ function App() {
         <div class="flex flex-wrap justify-center gap-4 mt-8">
           <div class="bg-slate-800 rounded-lg px-4 py-2 text-sm">
             <span class="text-slate-400">{t().example.output}:</span>
-            <span class="ml-2 text-sky-400">score.json</span>
+            <span class="ml-2 text-sky-400">score.json + artifacts</span>
           </div>
         </div>
       </section>
@@ -293,6 +309,5 @@ function App() {
 }
 
 export default App
-
 
 

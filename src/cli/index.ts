@@ -5,6 +5,7 @@ import { createRequire } from 'module';
 import { initCommand } from './commands/init.js';
 import { checkCommand } from './commands/check.js';
 import { buildCommand } from './commands/build.js';
+import { renderCommand } from './commands/render.js';
 import { ExitCodes } from '../errors.js';
 
 // Read version from package.json
@@ -21,6 +22,7 @@ Commands:
   init              Initialize a new TakoMusic v3 project
   check             Check v3 source for errors
   build             Build v3 IR (.mf.score.json)
+  render            Render via profile + renderer plugin
 
 Options:
   -h, --help        Show this help message
@@ -30,6 +32,7 @@ Examples:
   mf init
   mf check
   mf build
+  mf render --profile profiles/default.mf.profile.json
 `;
 
 async function main(): Promise<number> {
@@ -59,11 +62,10 @@ async function main(): Promise<number> {
       case 'build':
         return await buildCommand(commandArgs);
 
+      case 'render':
+        return await renderCommand(commandArgs);
+
       default:
-        if (isV2Command(command)) {
-          console.error(`Command "${command}" is not available in v3 yet.`);
-          return ExitCodes.STATIC_ERROR;
-        }
         console.error(`Unknown command: ${command}`);
         console.log('Run "mf --help" for usage information.');
         return ExitCodes.STATIC_ERROR;
@@ -86,14 +88,3 @@ main()
     console.error('Unhandled error:', err instanceof Error ? err.message : String(err));
     process.exit(ExitCodes.STATIC_ERROR);
   });
-
-function isV2Command(command: string): boolean {
-  return [
-    'fmt',
-    'render',
-    'play',
-    'import',
-    'record',
-    'doctor',
-  ].includes(command);
-}

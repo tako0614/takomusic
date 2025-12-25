@@ -38,6 +38,8 @@ import type {
   CallArg,
   UnaryExpr,
   BinaryExpr,
+  MatchExpr,
+  MatchArm,
   ScoreExpr,
   ScoreItem,
   MetaBlock,
@@ -52,6 +54,7 @@ import type {
   DrumKeysBlock,
   VocalBlock,
   TrackDecl,
+  ScoreMarker,
   TrackStmt,
   PlaceStmt,
   ClipExpr,
@@ -128,7 +131,7 @@ export class V3Parser {
     this.expect(TokenType.LBRACE, "Expected '{' in import spec");
     const names: string[] = [];
     do {
-      const name = this.expect(TokenType.IDENT, 'Expected import name').value as string;
+      const name = this.expectIdentLike('Expected import name');
       names.push(name);
     } while (this.match(TokenType.COMMA));
     this.expect(TokenType.RBRACE, "Expected '}' after import spec");
@@ -188,7 +191,7 @@ export class V3Parser {
 
   private parseConstDecl(exported: boolean, mutable: boolean): ConstDecl {
     const pos = this.previous().position;
-    const name = this.expect(TokenType.IDENT, 'Expected identifier').value as string;
+    const name = this.expectIdentLike('Expected identifier');
     let type: TypeRef | undefined;
     if (this.match(TokenType.COLON)) {
       type = this.parseTypeRef();
@@ -423,9 +426,43 @@ export class V3Parser {
         return this.parseScoreExpr();
       case TokenType.CLIP:
         return this.parseClipExpr();
+      case TokenType.MATCH:
+        return this.parseMatchExpr();
       default:
         throw this.error('Unexpected token in expression', token.position);
     }
+  }
+
+  private parseMatchExpr(): MatchExpr {
+    const pos = this.peek().position;
+    this.expect(TokenType.MATCH, "Expected 'match'");
+    this.expect(TokenType.LPAREN, "Expected '(' after match");
+    const value = this.parseExpression();
+    this.expect(TokenType.RPAREN, "Expected ')'");
+    this.expect(TokenType.LBRACE, "Expected '{' after match");
+    const arms: MatchArm[] = [];
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      const armPos = this.peek().position;
+      let pattern: Expr | undefined;
+      let isDefault = false;
+      if (this.match(TokenType.ELSE)) {
+        isDefault = true;
+      } else {
+        pattern = this.parseExpression();
+      }
+      this.expect(TokenType.ARROW, "Expected '->' in match arm");
+      const valueExpr = this.parseExpression();
+      this.expect(TokenType.SEMI, "Expected ';' after match arm");
+      arms.push({
+        kind: 'MatchArm',
+        position: armPos,
+        pattern,
+        value: valueExpr,
+        isDefault,
+      });
+    }
+    this.expect(TokenType.RBRACE, "Expected '}' after match");
+    return { kind: 'MatchExpr', position: pos, value, arms };
   }
 
   private parseArrayLiteral(): ArrayLiteral {
@@ -494,7 +531,24 @@ export class V3Parser {
     if (this.match(TokenType.TRACK)) {
       return this.parseTrackDecl();
     }
+    if (this.check(TokenType.IDENT) && (this.peek().value as string) === 'marker') {
+      this.advance();
+      return this.parseScoreMarker();
+    }
     throw this.error('Unexpected score item', this.peek().position);
+  }
+
+  private parseScoreMarker(): ScoreMarker {
+    const pos = this.previous().position;
+    this.expect(TokenType.LPAREN, "Expected '(' after marker");
+    const markerPos = this.parseExpression();
+    this.expect(TokenType.COMMA, "Expected ',' after marker position");
+    const markerKind = this.parseExpression();
+    this.expect(TokenType.COMMA, "Expected ',' after marker kind");
+    const label = this.parseExpression();
+    this.expect(TokenType.RPAREN, "Expected ')'");
+    this.expect(TokenType.SEMI, "Expected ';'");
+    return { kind: 'ScoreMarker', position: pos, pos: markerPos, markerKind, label };
   }
 
   private parseMetaBlock(): MetaBlock {
@@ -852,6 +906,15 @@ export class V3Parser {
   private parseStringLiteral(): StringLiteral {
     const token = this.expect(TokenType.STRING, 'Expected string literal');
     return { kind: 'StringLiteral', position: token.position, value: token.value as string };
+  }
+
+  private expectIdentLike(message: string): string {
+    const token = this.peek();
+    if (token.type === TokenType.IDENT || token.type === TokenType.DUR) {
+      this.advance();
+      return token.value as string;
+    }
+    throw this.error(message, token.position);
   }
 
   private parsePropertyName(): string {

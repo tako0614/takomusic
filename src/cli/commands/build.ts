@@ -1,4 +1,4 @@
-// mf build command - compile MFS to IR and profile outputs
+// mf build command - compile MFS to IR
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,7 +14,7 @@ export async function buildCommand(args: string[]): Promise<number> {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
-      console.error('Profiles are not supported in v3 build yet.');
+      console.error('Profiles are used by "mf render", not "mf build".');
       return ExitCodes.STATIC_ERROR;
     } else if (args[i] === '-w' || args[i] === '--watch') {
       watchMode = true;

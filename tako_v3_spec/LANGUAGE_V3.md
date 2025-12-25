@@ -320,6 +320,7 @@ Expr        ::= ScoreExpr
               | CallExpr
               | PrimaryExpr
               | BinaryExpr
+              | MatchExpr
               ;
 
 ScoreExpr   ::= "score" BlockScore ;
@@ -360,6 +361,9 @@ ClipStmt    ::= "at" "(" DurExpr ")" ";"
               | "automation" "(" StringLit "," DurExpr "," DurExpr "," Expr ")" ";"
               | "marker" "(" StringLit "," StringLit ")" ";"
               ;
+
+MatchExpr   ::= "match" "(" Expr ")" "{" { MatchArm } "}" ;
+MatchArm    ::= ( "else" | Expr ) "->" Expr ";" ;
 ```
 
 > 実装者メモ: `PosRef` と `DurExpr` の区別は型検査で行う。`bar:beat` は PosRef として lex/parse する。

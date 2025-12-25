@@ -11,35 +11,8 @@ export interface ProjectConfig {
   defaultProfile: string;
 }
 
-export interface MikuProfile {
-  backend: 'miku-daw';
-  importStrategy: 'manual';
-  dawExe?: string;
-  dawArgs?: string[];
-  dawProject?: string;
-  vsqxOut: string;
-  tempoMidOut: string;
-  renderOut: string;
-}
-
-export interface CliProfile {
-  backend: 'headless';
-  vocalCmd?: string[];
-  midiCmd?: string[];
-  mixCmd?: string[];
-  musicxmlOut: string;
-  bandMidOut: string;
-  renderOut: string;
-}
-
-export type Profile = MikuProfile | CliProfile;
-
 export interface MFConfig {
   project: ProjectConfig;
-  profiles: {
-    miku?: MikuProfile;
-    cli?: CliProfile;
-  };
 }
 
 const DEFAULT_CONFIG: MFConfig = {
@@ -47,22 +20,7 @@ const DEFAULT_CONFIG: MFConfig = {
     entry: 'src/main.mf',
     dist: 'dist',
     out: 'out',
-    defaultProfile: 'cli',
-  },
-  profiles: {
-    miku: {
-      backend: 'miku-daw',
-      importStrategy: 'manual',
-      vsqxOut: 'dist/vocal.vsqx',
-      tempoMidOut: 'dist/tempo.mid',
-      renderOut: 'out/mix.wav',
-    },
-    cli: {
-      backend: 'headless',
-      musicxmlOut: 'dist/vocal.musicxml',
-      bandMidOut: 'dist/band.mid',
-      renderOut: 'out/mix.wav',
-    },
+    defaultProfile: 'profiles/default.mf.profile.json',
   },
 };
 
@@ -96,50 +54,20 @@ export function loadConfig(configPath: string): MFConfig {
 function validateLoadedConfig(config: MFConfig, configPath: string): void {
   const errors: string[] = [];
 
-  // Validate project section
   if (!config.project) {
     errors.push('Missing [project] section');
   } else {
-    if (typeof config.project.entry !== 'string' || config.project.entry.trim() === '') {
+    if (!isNonEmptyString(config.project.entry)) {
       errors.push('project.entry must be a non-empty string');
     }
-    if (typeof config.project.dist !== 'string' || config.project.dist.trim() === '') {
+    if (!isNonEmptyString(config.project.dist)) {
       errors.push('project.dist must be a non-empty string');
     }
-    if (typeof config.project.out !== 'string' || config.project.out.trim() === '') {
+    if (!isNonEmptyString(config.project.out)) {
       errors.push('project.out must be a non-empty string');
     }
-    if (typeof config.project.defaultProfile !== 'string') {
-      errors.push('project.defaultProfile must be a string');
-    }
-  }
-
-  // Validate profiles section
-  if (config.profiles) {
-    if (config.profiles.cli) {
-      const cli = config.profiles.cli;
-      if (cli.backend !== 'headless') {
-        errors.push('profiles.cli.backend must be "headless"');
-      }
-      if (cli.vocalCmd !== undefined && !Array.isArray(cli.vocalCmd)) {
-        errors.push('profiles.cli.vocalCmd must be an array of strings');
-      }
-      if (cli.midiCmd !== undefined && !Array.isArray(cli.midiCmd)) {
-        errors.push('profiles.cli.midiCmd must be an array of strings');
-      }
-      if (cli.mixCmd !== undefined && !Array.isArray(cli.mixCmd)) {
-        errors.push('profiles.cli.mixCmd must be an array of strings');
-      }
-    }
-
-    if (config.profiles.miku) {
-      const miku = config.profiles.miku;
-      if (miku.backend !== 'miku-daw') {
-        errors.push('profiles.miku.backend must be "miku-daw"');
-      }
-      if (miku.importStrategy !== 'manual') {
-        errors.push('profiles.miku.importStrategy must be "manual"');
-      }
+    if (!isNonEmptyString(config.project.defaultProfile)) {
+      errors.push('project.defaultProfile must be a non-empty string');
     }
   }
 
@@ -157,15 +85,13 @@ export function validateConfig(configPath: string): ConfigValidationResult {
     const content = fs.readFileSync(configPath, 'utf-8');
     const parsed = TOML.parse(content);
 
-    // Check for unknown top-level keys
-    const validTopKeys = ['project', 'profiles'];
+    const validTopKeys = ['project'];
     for (const key of Object.keys(parsed)) {
       if (!validTopKeys.includes(key)) {
         warnings.push(`Unknown config key: "${key}". Valid keys are: ${validTopKeys.join(', ')}`);
       }
     }
 
-    // Validate [project] section
     if (parsed.project) {
       const validProjectKeys = ['entry', 'dist', 'out', 'default_profile', 'name', 'version'];
       for (const key of Object.keys(parsed.project)) {
@@ -174,7 +100,6 @@ export function validateConfig(configPath: string): ConfigValidationResult {
         }
       }
 
-      // Check entry file exists
       if (parsed.project.entry) {
         const entryPath = path.join(baseDir, parsed.project.entry);
         if (!fs.existsSync(entryPath)) {
@@ -183,44 +108,6 @@ export function validateConfig(configPath: string): ConfigValidationResult {
       }
     } else {
       warnings.push('Missing [project] section, using defaults');
-    }
-
-    // Validate [profiles] section
-    if (parsed.profiles) {
-      const validProfileNames = ['cli', 'miku'];
-      for (const profileName of Object.keys(parsed.profiles)) {
-        if (!validProfileNames.includes(profileName)) {
-          warnings.push(`Unknown profile: "${profileName}". Valid profiles are: ${validProfileNames.join(', ')}`);
-        }
-      }
-
-      // Validate [profiles.cli]
-      if (parsed.profiles.cli) {
-        const validCliKeys = ['backend', 'vocal_cmd', 'midi_cmd', 'mix_cmd', 'musicxml_out', 'band_mid_out', 'render_out'];
-        for (const key of Object.keys(parsed.profiles.cli)) {
-          if (!validCliKeys.includes(key)) {
-            warnings.push(`Unknown profiles.cli key: "${key}". Valid keys are: ${validCliKeys.join(', ')}`);
-          }
-        }
-
-        // Check command arrays
-        for (const cmdKey of ['vocal_cmd', 'midi_cmd', 'mix_cmd']) {
-          const cmd = parsed.profiles.cli[cmdKey];
-          if (cmd && !Array.isArray(cmd)) {
-            errors.push(`profiles.cli.${cmdKey} must be an array of strings`);
-          }
-        }
-      }
-
-      // Validate [profiles.miku]
-      if (parsed.profiles.miku) {
-        const validMikuKeys = ['backend', 'import_strategy', 'daw_exe', 'daw_args', 'daw_project', 'vsqx_out', 'tempo_mid_out', 'render_out', 'engine'];
-        for (const key of Object.keys(parsed.profiles.miku)) {
-          if (!validMikuKeys.includes(key)) {
-            warnings.push(`Unknown profiles.miku key: "${key}". Valid keys are: ${validMikuKeys.join(', ')}`);
-          }
-        }
-      }
     }
 
     return {
@@ -239,7 +126,6 @@ export function validateConfig(configPath: string): ConfigValidationResult {
 export function findConfigPath(startDir: string): string | null {
   let currentDir = startDir;
 
-  // Safety limit to prevent infinite loops (max 100 directory levels)
   const MAX_DEPTH = 100;
   let depth = 0;
 
@@ -257,7 +143,6 @@ export function findConfigPath(startDir: string): string | null {
     currentDir = parentDir;
   }
 
-  // Reached max depth without finding config or root
   return null;
 }
 
@@ -269,31 +154,6 @@ function mergeConfig(defaults: MFConfig, parsed: any): MFConfig {
       out: parsed.project?.out ?? defaults.project.out,
       defaultProfile: parsed.project?.default_profile ?? defaults.project.defaultProfile,
     },
-    profiles: {
-      miku: parsed.profiles?.miku
-        ? {
-            backend: 'miku-daw',
-            importStrategy: parsed.profiles.miku.import_strategy ?? 'manual',
-            dawExe: parsed.profiles.miku.daw_exe,
-            dawArgs: parsed.profiles.miku.daw_args,
-            dawProject: parsed.profiles.miku.daw_project,
-            vsqxOut: parsed.profiles.miku.vsqx_out ?? defaults.profiles.miku!.vsqxOut,
-            tempoMidOut: parsed.profiles.miku.tempo_mid_out ?? defaults.profiles.miku!.tempoMidOut,
-            renderOut: parsed.profiles.miku.render_out ?? defaults.profiles.miku!.renderOut,
-          }
-        : defaults.profiles.miku,
-      cli: parsed.profiles?.cli
-        ? {
-            backend: 'headless',
-            vocalCmd: parsed.profiles.cli.vocal_cmd,
-            midiCmd: parsed.profiles.cli.midi_cmd,
-            mixCmd: parsed.profiles.cli.mix_cmd,
-            musicxmlOut: parsed.profiles.cli.musicxml_out ?? defaults.profiles.cli!.musicxmlOut,
-            bandMidOut: parsed.profiles.cli.band_mid_out ?? defaults.profiles.cli!.bandMidOut,
-            renderOut: parsed.profiles.cli.render_out ?? defaults.profiles.cli!.renderOut,
-          }
-        : defaults.profiles.cli,
-    },
   };
 }
 
@@ -302,25 +162,10 @@ export function generateDefaultConfig(): string {
 entry = "src/main.mf"
 dist  = "dist"
 out   = "out"
-default_profile = "cli"
-
-[profiles.miku]
-backend = "miku-daw"
-import_strategy = "manual"
-# daw_exe  = "reaper"
-# daw_args = ["-renderproject", "{project}"]
-# daw_project = "reaper/song.rpp"
-vsqx_out     = "dist/vocal.vsqx"
-tempo_mid_out= "dist/tempo.mid"
-render_out   = "out/mix.wav"
-
-[profiles.cli]
-backend = "headless"
-# vocal_cmd = ["neutrino-run", "{musicxml}", "{vocal_wav}"]
-# midi_cmd  = ["fluidsynth-run", "{mid}", "{band_wav}"]
-# mix_cmd   = ["ffmpeg", "-i", "{vocal_wav}", "-i", "{band_wav}", "{mix_wav}"]
-musicxml_out = "dist/vocal.musicxml"
-band_mid_out = "dist/band.mid"
-render_out   = "out/mix.wav"
+default_profile = "profiles/default.mf.profile.json"
 `;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }

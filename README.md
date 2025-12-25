@@ -20,7 +20,7 @@ The v3 design keeps the language core backend-agnostic and pushes sound binding 
 
 ## Status
 
-The v3 core compiler/evaluator and IR normalization are implemented. Renderer plugins and profile-based rendering are still pending. See `PLAN.md` for the roadmap.
+The v3 core compiler/evaluator, IR normalization, and renderer plugin host are implemented. `mf render` requires an external renderer plugin to be installed.
 
 ## Example (.mf)
 
@@ -67,6 +67,14 @@ export fn main() -> Score {
 4. Normalize IR (bar:beat -> absolute Pos)
 5. Emit `score.json` (IR v3)
 6. Render via profile + renderer plugin
+
+## CLI
+
+- `mf check` checks the entry `.mf`
+- `mf build` writes `.mf.score.json` into `dist`
+- `mf render` runs validate + render using `profiles/default.mf.profile.json` (or `--profile`)
+
+Renderer plugins are external executables; use `--plugin` to override the resolver if needed.
 
 ## Versioning
 

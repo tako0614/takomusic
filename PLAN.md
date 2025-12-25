@@ -64,28 +64,24 @@
 - `Clip.events` の安定ソート
 - JSON Schema 適合のスナップショット生成
 
-### M5: Renderer Plugin Host
-- CLI plugin 実行（capabilities/validate/render）
-- Profile binding 解決
-- degradePolicy による挙動
+### M5: Renderer Plugin Host（完了）
+- [x] CLI plugin 実行（capabilities/validate/render）
+- [x] Profile/Score の引き渡しと JSON 解析
+- [x] Diagnostic/Artifact の出力
 
-### M6: CLI（最小）
-- `check` / `build` / `render` の最小コマンド
-- 入力 `.mf` と Profile 指定
-- 出力先の指定（score.json / artifacts）
+### M6: CLI（最小）（完了）
+- [x] `check` / `build` / `render` の最小コマンド
+- [x] 入力 `.mf` と Profile 指定
+- [x] 出力先の指定（score.json / artifacts）
 
 ### M7: ツール整備（任意）
 - formatter
 - LSP/VSCode 拡張
 
-## 6. 版選択（未決事項）
+## 6. 版選択
 
-`.mf` 拡張子は将来のバージョンでも共有される可能性があるため、言語バージョンは明示的に選択する。
-
-候補:
-- CLI フラグ（例: `--lang v3`）
-- プロジェクト設定ファイルで `languageVersion = 3`
-- 自動判定は MVP では行わない
+言語バージョンは npm パッケージのメジャーバージョンで管理する。
+CLI/設定ファイルでの言語バージョン選択は行わない。
 
 ## 7. テスト方針
 
