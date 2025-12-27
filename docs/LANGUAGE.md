@@ -85,8 +85,15 @@ Imports are either std modules or local files:
 
 ```tako
 import { repeat } from "std:core";
+import * as vocal from "std:vocal";
 import { foo } from "./foo.mf";
 ```
+
+## Comments and Strings
+
+- Line comments: `// ...`
+- Block comments: `/* ... */` (not nested)
+- Strings use double quotes with `\n`, `\t`, `\r`, `\\`, `\"` escapes.
 
 ## Time Model and Literals
 
@@ -117,6 +124,23 @@ const label = match (mode) {
 
 - Patterns are expressions evaluated and compared with `==` semantics.
 - `else` is optional; if omitted and no arm matches, the result is `null`.
+
+## Statements and Expressions
+
+Core statements:
+
+- `const` / `let` declarations
+- `return` statements
+- `if (...) { ... } else { ... }`
+- `for (name in expr) { ... }` (arrays or numeric ranges)
+
+Core expressions:
+
+- Arrays: `[a, b, c]`
+- Objects: `{ key: value }`
+- Member access: `obj.key`
+- Index access: `arr[i]`
+- Ranges: `a..b` (used for numeric ranges and pitch ranges like `C2..C6`)
 
 ## Score DSL (`score { ... }`)
 
@@ -185,6 +209,30 @@ sound "lead_vocal" kind vocal {
 }
 ```
 
+Sound kinds:
+
+- `instrument`
+- `drumKit`
+- `vocal`
+- `fx` (renderer-specific or automation-focused sounds)
+
+Common sound fields:
+
+- `label: String`
+- `family: String`
+- `tags: [String]`
+- `range: PitchRange` (e.g., `A0..C8`)
+- `transposition: Int` (semitones)
+- `hints: Object` (renderer-specific)
+
+`vocal { ... }` fields:
+
+- `lang: String`
+- `range: PitchRange`
+- `defaultLyricMode: "text" | "syllables" | "phonemes"`
+- `preferredAlphabet: String`
+- `tags: [String]`
+
 ### Track Declarations
 
 ```
@@ -215,7 +263,7 @@ Statements:
 
 - `at(pos)` -> set cursor
 - `rest(dur)` -> cursor += dur
-- `breath(dur, intensity?)` -> add breath event; cursor += dur (vocal tracks only)
+- `breath(dur, intensity?)` -> add breath event; cursor += dur (intended for vocal tracks)
 - `note(pitch, dur, opts?)` -> add note; cursor += dur
 - `chord([pitch...], dur, opts?)` -> add chord; cursor += dur
 - `hit(key, dur, opts?)` -> add drum hit; cursor += dur
@@ -255,8 +303,13 @@ c = vocal.align(c, lyr);
 
 `main()` is pure. Randomness must flow through `std:random` (`rng(seed)`).
 
-## Related Specs
+## Additional Examples
 
-- IR schema: `tako_v3_spec/IR_V3.schema.json`
-- Render Profile schema: `tako_v3_spec/PROFILE_V3.schema.json`
-- Renderer Plugin protocol: `tako_v3_spec/PLUGIN_V3.md`
+- `docs/examples/v3/demo_v3.mf`
+- `docs/examples/v3/ir/demo_v3.mf.score.json`
+- `docs/examples/v3/profiles/*.mf.profile.json`
+
+## Related Docs
+
+- Schemas: `docs/SCHEMAS.md`
+- Rendering and plugins: `docs/RENDERING.md`

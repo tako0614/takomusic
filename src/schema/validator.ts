@@ -6,7 +6,7 @@ import AjvModule, { type ErrorObject, type ValidateFunction } from 'ajv/dist/202
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packageRoot = path.resolve(__dirname, '..', '..');
-const specDir = path.join(packageRoot, 'tako_v3_spec');
+const schemaDir = path.join(packageRoot, 'docs', 'schemas');
 
 type AjvInstance = import('ajv/dist/2020.js').default;
 const AjvCtor = AjvModule as unknown as { new (options?: Record<string, unknown>): AjvInstance };
@@ -48,7 +48,7 @@ function getValidator(schemaName: string): ValidateFunction {
 }
 
 function loadSchema(schemaName: string): Record<string, unknown> {
-  const schemaPath = path.join(specDir, schemaName);
+  const schemaPath = path.join(schemaDir, schemaName);
   if (!fs.existsSync(schemaPath)) {
     throw new Error(`Schema not found: ${schemaPath}`);
   }

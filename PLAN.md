@@ -1,6 +1,6 @@
 ﻿# Tako v3 実装計画
 
-本書は v3 実装のロードマップ。規範仕様は `tako_v3_spec/` を唯一の仕様ソースとする。
+本書は v3 実装のロードマップ。規範仕様は `docs/` を唯一の仕様ソースとする。
 実装は段階的に進め、CLI/ツールは後追いで整備する。
 
 ## 0. 目的
@@ -16,11 +16,11 @@
 
 ## 2. 仕様ソース（参照）
 
-- `tako_v3_spec/LANGUAGE_V3.md`
-- `tako_v3_spec/IR_V3.schema.json`
-- `tako_v3_spec/PROFILE_V3.schema.json`
-- `tako_v3_spec/PLUGIN_V3.md`
-- `tako_v3_spec/STDLIB_V3.md`
+- `docs/LANGUAGE.md`
+- `docs/schemas/IR_V3.schema.json`
+- `docs/schemas/PROFILE_V3.schema.json`
+- `docs/RENDERING.md`
+- `docs/STDLIB.md`
 
 ## 3. ファイル規約
 
@@ -86,10 +86,10 @@ CLI/設定ファイルでの言語バージョン選択は行わない。
 ## 7. テスト方針
 
 - parser/evaluator のゴールデンテスト
-- `IR_V3.schema.json` での検証
+- `docs/schemas/IR_V3.schema.json` での検証
 - Renderer Plugin のモックテスト
 
 ## 8. ドキュメント
 
 - README/website/docs を v3 に合わせて更新
-- 仕様変更は `tako_v3_spec/` を正とする
+- 仕様変更は `docs/` を正とする

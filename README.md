@@ -15,7 +15,8 @@ The v3 design keeps the language core backend-agnostic and pushes sound binding 
 - Language spec: `docs/LANGUAGE.md`
 - Core DSL & built-ins: `docs/BUILTINS.md`
 - Standard library: `docs/STDLIB.md`
-- v3 spec package: `tako_v3_spec/README.md`
+- Rendering and plugins: `docs/RENDERING.md`
+- Schemas: `docs/SCHEMAS.md`
 - Plan: `PLAN.md`
 
 ## Status
