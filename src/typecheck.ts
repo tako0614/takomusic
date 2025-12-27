@@ -53,6 +53,7 @@ type TypeKind =
   | 'clip'
   | 'score'
   | 'array'
+  | 'tuple'
   | 'object'
   | 'range'
   | 'curve'
@@ -64,6 +65,7 @@ type TypeKind =
 interface TypeInfo {
   kind: TypeKind;
   element?: TypeInfo;
+  elements?: TypeInfo[];
   returns?: TypeInfo;
 }
 
@@ -114,8 +116,8 @@ const STD_EXPORTS: Record<string, Record<string, TypeInfo>> = {
   },
   'std:random': {
     rng: fnType(RNG),
-    nextFloat: fnType(UNKNOWN),
-    nextInt: fnType(UNKNOWN),
+    nextFloat: fnType(tupleType([RNG, NUMBER])),
+    nextInt: fnType(tupleType([RNG, NUMBER])),
   },
   'std:transform': {
     transpose: fnType(CLIP),
@@ -167,6 +169,7 @@ const STD_EXPORTS: Record<string, Record<string, TypeInfo>> = {
     portamento: fnType(CLIP),
     breathiness: fnType(CLIP),
     loudness: fnType(CLIP),
+    autoBreath: fnType(CLIP),
   },
 };
 
@@ -410,8 +413,9 @@ class TypeChecker {
     const types = expr.elements.map((el) => this.inferExpr(el, env, moduleAliases));
     const base = types.find((t) => t.kind !== 'unknown');
     if (!base) return arrayType(UNKNOWN);
-    const same = types.every((t) => t.kind === 'unknown' || t.kind === base.kind);
-    return same ? arrayType(base) : arrayType(UNKNOWN);
+    const hasDifferent = types.some((t) => t.kind !== 'unknown' && t.kind !== base.kind);
+    if (!hasDifferent) return arrayType(base);
+    return tupleType(types);
   }
 
   private inferObject(expr: ObjectLiteral, env: TypeEnv, moduleAliases: Map<string, string>): TypeInfo {
@@ -435,7 +439,7 @@ class TypeChecker {
       }
     }
     const objectType = this.inferExpr(expr.object, env, moduleAliases);
-    if (objectType.kind === 'array' && expr.property === 'length') return NUMBER;
+    if ((objectType.kind === 'array' || objectType.kind === 'tuple') && expr.property === 'length') return NUMBER;
     return UNKNOWN;
   }
 
@@ -444,7 +448,19 @@ class TypeChecker {
     if (objectType.kind === 'array' && objectType.element) {
       return objectType.element;
     }
+    if (objectType.kind === 'tuple' && objectType.elements) {
+      const index = this.literalTupleIndex(expr.index);
+      if (index !== null && index >= 0 && index < objectType.elements.length) {
+        return objectType.elements[index];
+      }
+    }
     return UNKNOWN;
+  }
+
+  private literalTupleIndex(expr: Expr): number | null {
+    if (expr.kind !== 'NumberLiteral') return null;
+    if (!Number.isInteger(expr.value)) return null;
+    return expr.value;
   }
 
   private inferCall(expr: CallExpr, env: TypeEnv, moduleAliases: Map<string, string>): TypeInfo {
@@ -889,6 +905,10 @@ function arrayType(element: TypeInfo): TypeInfo {
   return { kind: 'array', element };
 }
 
+function tupleType(elements: TypeInfo[]): TypeInfo {
+  return { kind: 'tuple', elements };
+}
+
 function rangeType(element: TypeInfo): TypeInfo {
   return { kind: 'range', element };
 }
@@ -896,6 +916,11 @@ function rangeType(element: TypeInfo): TypeInfo {
 function unifyTypes(a: TypeInfo, b: TypeInfo): TypeInfo {
   if (a.kind === 'unknown') return b;
   if (b.kind === 'unknown') return a;
+  if (a.kind === 'tuple' && b.kind === 'tuple') {
+    if (!a.elements || !b.elements || a.elements.length !== b.elements.length) return UNKNOWN;
+    const elements = a.elements.map((el, idx) => unifyTypes(el, b.elements![idx]));
+    return tupleType(elements);
+  }
   if (a.kind === b.kind) return a;
   return UNKNOWN;
 }

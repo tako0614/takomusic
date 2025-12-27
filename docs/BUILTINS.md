@@ -67,6 +67,30 @@ sound "lead_vocal" kind vocal {
 }
 ```
 
+Sound kinds:
+
+- `instrument`
+- `drumKit`
+- `vocal`
+- `fx` (renderer-specific or automation-focused sounds)
+
+Common sound fields:
+
+- `label: String`
+- `family: String`
+- `tags: [String]`
+- `range: PitchRange` (e.g., `A0..C8`)
+- `transposition: Int` (semitones)
+- `hints: Object` (renderer-specific)
+
+`vocal { ... }` fields:
+
+- `lang: String`
+- `range: PitchRange`
+- `defaultLyricMode: "text" | "syllables" | "phonemes"`
+- `preferredAlphabet: String`
+- `tags: [String]`
+
 ## track declarations
 
 ```
@@ -95,7 +119,7 @@ Statements:
 
 - `at(pos)` -> set cursor
 - `rest(dur)` -> cursor += dur
-- `breath(dur, intensity?)` -> add breath event; cursor += dur (vocal tracks only)
+- `breath(dur, intensity?)` -> add breath event; cursor += dur (intended for vocal tracks)
 - `note(pitch, dur, opts?)` -> add note; cursor += dur
 - `chord([pitch...], dur, opts?)` -> add chord; cursor += dur
 - `hit(key, dur, opts?)` -> add drum hit; cursor += dur

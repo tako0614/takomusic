@@ -98,8 +98,8 @@ This document describes the v3 standard library modules. All std functions are b
 ### Lyric creation
 
 - `text(text: String, lang?: String) -> Lyric`
-- `syllables(tokens: [String|LyricToken], lang?: String) -> Lyric`
-- `phonemes(groups: [[String]], lang?: String, alphabet?: String) -> Lyric`
+- `syllables(tokens: [String|LyricToken], lang?: String, words?: [String]) -> Lyric`
+- `phonemes(groups: [[String]], lang?: String, alphabet?: String, words?: [String]) -> Lyric`
 - `ext() -> LyricToken`
 
 LyricToken:
@@ -109,7 +109,7 @@ LyricToken:
 
 ### Underlay
 
-- `align(c: Clip, lyric: Lyric) -> Clip`
+- `align(c: Clip, lyric: Lyric, policy?: AlignPolicy) -> Clip`
 
 AlignPolicy (reserved):
 
