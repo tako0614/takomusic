@@ -148,8 +148,8 @@ export fn basicRock(bars, unit) {
   return { events: events, length: unit * (count * 4) };
 }
 
-export fn fill(drumKey, length) {
-  let key = drumKey;
+export fn fill(kind, length) {
+  let key = kind;
   if (key == null) {
     key = "snare";
   }

@@ -33,10 +33,19 @@ Unknown fields may be stored in `meta.ext`.
 tempo {
   1:1 -> 120bpm;
   9:1 -> 90bpm @ q;
+  17:1 -> 60bpm @ h;
 }
 ```
 
-`@ unit` defaults to `q`.
+**Tempo Definition:**
+
+`X bpm @ unit` means the specified `unit` duration occurs `X` times per minute.
+
+- `120bpm` = 120 quarter notes per minute (unit defaults to `q`)
+- `60bpm @ h` = 60 half notes per minute = 120 quarter notes per minute
+- `90bpm @ e` = 90 eighth notes per minute = 45 quarter notes per minute
+
+If `@ unit` is omitted, the unit defaults to `q` (quarter note).
 
 ### meter
 
@@ -105,11 +114,22 @@ track "Piano" role Instrument sound "piano" {
 
 ## score markers
 
-Score markers annotate absolute positions in the score.
+Score markers annotate absolute positions in the score. They use a distinct syntax from clip markers:
+
+```
+marker(posRef, kind, label);
+```
+
+Example:
 
 ```
 marker(1:1, "section", "Intro");
+marker(9:1, "cue", "Bridge");
 ```
+
+**Note**: Score `marker` and clip `marker` are distinct constructs:
+- Score marker: `marker(posRef, kind, label)` — three arguments, first is PosRef
+- Clip marker: `marker(kind, label)` — two arguments, placed at current cursor
 
 ## `clip { ... }`
 
@@ -122,7 +142,7 @@ Statements:
 - `breath(dur, intensity?)` -> add breath event; cursor += dur (intended for vocal tracks)
 - `note(pitch, dur, opts?)` -> add note; cursor += dur
 - `chord([pitch...], dur, opts?)` -> add chord; cursor += dur
-- `hit(key, dur, opts?)` -> add drum hit; cursor += dur
+- `hit(key: DrumKey, dur, opts?)` -> add drum hit; cursor += dur (DrumKey is an identifier, not a string)
 - `cc(num, value)` -> control event (cursor unchanged)
 - `automation(param, start, end, curve)` -> automation event (cursor unchanged)
 - `marker(kind, label)` -> marker event (cursor unchanged)
