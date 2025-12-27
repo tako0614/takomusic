@@ -97,7 +97,10 @@ function resolvePosRef(ref: { bar: number; beat: number }, meterMap: ResolvedMet
   }
 
   if (ref.beat < 1 || ref.beat > current.numerator) {
-    diagnostics.push({ severity: 'error', message: `beat ${ref.beat} out of range` });
+    diagnostics.push({
+      severity: 'error',
+      message: `Beat ${ref.beat} is out of range for bar ${ref.bar} with meter ${current.numerator}/${current.denominator}. Valid beats: 1-${current.numerator}`,
+    });
   }
 
   const beatLen = makeRat(1, current.denominator);
@@ -232,15 +235,79 @@ function stableSort<T>(items: T[], compare: (a: T, b: T) => number): T[] {
 
 function validateMaps(ir: ScoreIR, diagnostics: Diagnostic[]): void {
   if (ir.meterMap.length === 0) {
-    diagnostics.push({ severity: 'error', message: 'meterMap is empty' });
+    diagnostics.push({
+      severity: 'error',
+      message: 'No meter events defined. Add at least one meter block, e.g.: meter { 1:1 -> 4/4; }',
+    });
   }
   if (ir.tempoMap.length === 0) {
-    diagnostics.push({ severity: 'error', message: 'tempoMap is empty' });
+    diagnostics.push({
+      severity: 'error',
+      message: 'No tempo events defined. Add at least one tempo block, e.g.: tempo { 1:1 -> 120bpm; }',
+    });
   }
-  if (!ir.meterMap.some((m) => m.at.n === 0)) {
-    diagnostics.push({ severity: 'warning', message: 'meterMap missing at 0' });
+  if (ir.meterMap.length > 0 && !ir.meterMap.some((m) => m.at.n === 0)) {
+    diagnostics.push({
+      severity: 'warning',
+      message: 'Meter map should start at position 0 (1:1). First meter event is at a later position.',
+    });
   }
-  if (!ir.tempoMap.some((t) => t.at.n === 0)) {
-    diagnostics.push({ severity: 'warning', message: 'tempoMap missing at 0' });
+  if (ir.tempoMap.length > 0 && !ir.tempoMap.some((t) => t.at.n === 0)) {
+    diagnostics.push({
+      severity: 'warning',
+      message: 'Tempo map should start at position 0 (1:1). First tempo event is at a later position.',
+    });
+  }
+
+  // Check for duplicate positions in meter map
+  const meterPositions = new Set<string>();
+  for (const m of ir.meterMap) {
+    const key = `${m.at.n}/${m.at.d}`;
+    if (meterPositions.has(key)) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `Duplicate meter event at position ${m.at.n}/${m.at.d}. Later event will be used.`,
+      });
+    }
+    meterPositions.add(key);
+  }
+
+  // Check for duplicate positions in tempo map
+  const tempoPositions = new Set<string>();
+  for (const t of ir.tempoMap) {
+    const key = `${t.at.n}/${t.at.d}`;
+    if (tempoPositions.has(key)) {
+      diagnostics.push({
+        severity: 'warning',
+        message: `Duplicate tempo event at position ${t.at.n}/${t.at.d}. Later event will be used.`,
+      });
+    }
+    tempoPositions.add(key);
+  }
+
+  // Validate tempo values
+  for (const t of ir.tempoMap) {
+    if (t.bpm <= 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Invalid BPM value ${t.bpm} at position ${t.at.n}/${t.at.d}. BPM must be positive.`,
+      });
+    }
+  }
+
+  // Validate meter values
+  for (const m of ir.meterMap) {
+    if (m.numerator <= 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Invalid meter numerator ${m.numerator} at position ${m.at.n}/${m.at.d}. Must be positive.`,
+      });
+    }
+    if (m.denominator <= 0) {
+      diagnostics.push({
+        severity: 'error',
+        message: `Invalid meter denominator ${m.denominator} at position ${m.at.n}/${m.at.d}. Must be positive.`,
+      });
+    }
   }
 }

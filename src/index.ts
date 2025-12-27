@@ -7,6 +7,7 @@ export { V3Parser } from './parser.js';
 export { V3Compiler } from './compiler.js';
 export { V3Evaluator } from './evaluator.js';
 export { normalizeScore } from './normalize.js';
+export { validateProgram, type ValidationContext } from './validation.js';
 export * from './runtime.js';
 export * from './ir.js';
 export * from './rat.js';

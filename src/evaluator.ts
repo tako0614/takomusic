@@ -31,6 +31,7 @@ import type {
   TrackDecl,
 } from './ast.js';
 import {
+  ArrayValue,
   AutomationEventValue,
   BreathEventValue,
   ClipEventValue,
@@ -273,7 +274,7 @@ export class V3Evaluator {
     this.callDepth++;
 
     const callScope = new Scope(fn.closure);
-    bindParams(fn.params, args, named, callScope);
+    bindParams(fn.params, args, named, callScope, fn.name);
     try {
       this.evaluateBlock(fn.body, callScope);
       this.callDepth--;
@@ -918,7 +919,7 @@ export class V3Evaluator {
   private expectNumber(value: RuntimeValue, position: any): number {
     if (value.type === 'number') return value.value;
     if (value.type === 'rat') return ratToNumber(value.value);
-    throw this.error('Expected number', position);
+    throw this.typeError('number', value, position);
   }
 
   private expectRat(value: RuntimeValue, position: any) {
@@ -926,23 +927,23 @@ export class V3Evaluator {
     if (value.type === 'number' && isIntegerNumber(value.value)) {
       return ratFromInt(value.value);
     }
-    throw this.error('Expected rational (Rat)', position);
+    throw this.typeError('duration (rational)', value, position);
   }
 
   private expectPos(value: RuntimeValue, position: any): PosValue {
     const pos = coercePosValue(value);
     if (pos) return pos;
-    throw this.error('Expected position', position);
+    throw this.typeError('position', value, position);
   }
 
   private expectString(value: RuntimeValue, position: any): string {
     if (value.type === 'string') return value.value;
-    throw this.error('Expected string', position);
+    throw this.typeError('string', value, position);
   }
 
   private expectStringLike(value: RuntimeValue, position: any): string {
     if (value.type === 'string') return value.value;
-    throw this.error('Expected string', position);
+    throw this.typeError('string', value, position);
   }
 
   private expectStringArray(value: RuntimeValue, position: any): string[] {
@@ -950,19 +951,19 @@ export class V3Evaluator {
       return value.elements.map((el) => this.expectString(el, position));
     }
     if (value.type === 'string') return [value.value];
-    throw this.error('Expected string array', position);
+    throw this.typeError('string array', value, position);
   }
 
   private expectPitch(value: RuntimeValue, position: any) {
     if (value.type === 'pitch') return value.value;
-    throw this.error('Expected pitch', position);
+    throw this.typeError('pitch', value, position);
   }
 
   private expectPitchArray(value: RuntimeValue, position: any): Array<{ midi: number; cents: number }> {
     if (value.type === 'array') {
       return value.elements.map((el) => this.expectPitch(el, position));
     }
-    throw this.error('Expected pitch array', position);
+    throw this.typeError('pitch array', value, position);
   }
 
   private expectPitchRange(value: RuntimeValue, position: any) {
@@ -1029,8 +1030,59 @@ export class V3Evaluator {
   }
 
   private error(message: string, position?: any): Error {
-    const loc = position ? ` at ${this.filePath ?? 'unknown'}:${position.line}:${position.column}` : '';
+    const loc = position
+      ? ` at ${this.filePath ?? 'unknown'}:${position.line}:${position.column}`
+      : '';
     return new Error(`[v3 eval] ${message}${loc}`);
+  }
+
+  private typeError(expected: string, got: RuntimeValue, position?: any): Error {
+    const gotType = this.describeType(got);
+    return this.error(`Expected ${expected}, got ${gotType}`, position);
+  }
+
+  private describeType(value: RuntimeValue): string {
+    switch (value.type) {
+      case 'number':
+        return `number (${value.value})`;
+      case 'string':
+        return `string ("${value.value.length > 20 ? value.value.slice(0, 20) + '...' : value.value}")`;
+      case 'bool':
+        return `boolean (${value.value})`;
+      case 'null':
+        return 'null';
+      case 'rat':
+        return `rational (${value.value.n}/${value.value.d})`;
+      case 'pos':
+        if (isRat(value.value)) return `position (rational ${value.value.n}/${value.value.d})`;
+        if (isPosRef(value.value)) return `position (${value.value.bar}:${value.value.beat})`;
+        if (isPosExpr(value.value)) return `position (${value.value.base.bar}:${value.value.base.beat} + offset)`;
+        return 'position';
+      case 'pitch':
+        return `pitch (midi ${value.value.midi})`;
+      case 'array':
+        return `array (length ${value.elements.length})`;
+      case 'object':
+        return `object (${value.props.size} properties)`;
+      case 'function':
+        return value.name ? `function '${value.name}'` : 'function';
+      case 'range':
+        return 'range';
+      case 'clip':
+        return 'clip';
+      case 'score':
+        return 'score';
+      case 'curve':
+        return 'curve';
+      case 'lyric':
+        return 'lyric';
+      case 'lyricToken':
+        return 'lyricToken';
+      case 'rng':
+        return 'rng';
+      default:
+        return (value as RuntimeValue).type;
+    }
   }
 }
 
@@ -1161,6 +1213,45 @@ function valuesEqual(a: RuntimeValue, b: RuntimeValue): boolean {
       return a.value.n === (b as typeof a).value.n && a.value.d === (b as typeof a).value.d;
     case 'pitch':
       return a.value.midi === (b as typeof a).value.midi && a.value.cents === (b as typeof a).value.cents;
+    case 'array': {
+      const bArr = b as ArrayValue;
+      if (a.elements.length !== bArr.elements.length) return false;
+      for (let i = 0; i < a.elements.length; i++) {
+        if (!valuesEqual(a.elements[i], bArr.elements[i])) return false;
+      }
+      return true;
+    }
+    case 'object': {
+      const bObj = b as ObjectValue;
+      if (a.props.size !== bObj.props.size) return false;
+      for (const [key, val] of a.props) {
+        if (!bObj.props.has(key)) return false;
+        if (!valuesEqual(val, bObj.props.get(key)!)) return false;
+      }
+      return true;
+    }
+    case 'range': {
+      const bRange = b as RangeValue;
+      return valuesEqual(a.start, bRange.start) && valuesEqual(a.end, bRange.end);
+    }
+    case 'pos': {
+      const bPos = b as PosValue;
+      if (isRat(a.value) && isRat(bPos.value)) {
+        return a.value.n === bPos.value.n && a.value.d === bPos.value.d;
+      }
+      if (isPosRef(a.value) && isPosRef(bPos.value)) {
+        return a.value.bar === bPos.value.bar && a.value.beat === bPos.value.beat;
+      }
+      if (isPosExpr(a.value) && isPosExpr(bPos.value)) {
+        return (
+          a.value.base.bar === bPos.value.base.bar &&
+          a.value.base.beat === bPos.value.base.beat &&
+          a.value.offset.n === bPos.value.offset.n &&
+          a.value.offset.d === bPos.value.offset.d
+        );
+      }
+      return false;
+    }
     default:
       return a === b;
   }
@@ -1313,11 +1404,16 @@ function isTruthy(value: RuntimeValue): boolean {
   }
 }
 
-function bindParams(params: Param[], args: RuntimeValue[], named: Map<string, RuntimeValue>, scope: Scope): void {
+function bindParams(params: Param[], args: RuntimeValue[], named: Map<string, RuntimeValue>, scope: Scope, fnName?: string): void {
+  const fnLabel = fnName ? `function '${fnName}'` : 'function';
+
   if (args.length > params.length) {
-    throw new Error('Too many arguments');
+    throw new Error(`${fnLabel} expects ${params.length} argument(s) but got ${args.length}`);
   }
+
   const assigned = new Set<string>();
+  const missing: string[] = [];
+
   for (let i = 0; i < params.length; i++) {
     const param = params[i];
     if (i < args.length) {
@@ -1330,11 +1426,21 @@ function bindParams(params: Param[], args: RuntimeValue[], named: Map<string, Ru
       assigned.add(param.name);
       continue;
     }
+    // Track missing required parameters
+    missing.push(param.name);
     scope.define(param.name, makeNull(), true);
   }
+
+  // Warn about missing parameters (they get null)
+  if (missing.length > 0) {
+    // Note: In a stricter mode, this could be an error
+    // For now, we allow it for backwards compatibility
+  }
+
   for (const name of named.keys()) {
     if (!assigned.has(name)) {
-      throw new Error(`Unknown named argument: ${name}`);
+      const paramNames = params.map(p => p.name).join(', ');
+      throw new Error(`${fnLabel} has no parameter named '${name}'. Available parameters: ${paramNames}`);
     }
   }
 }
