@@ -1,0 +1,22 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "domo_demo_neutrino",
+  "renderer": "neutrino.v3",
+  "output": {
+    "path": "out/demo_neutrino.wav",
+    "musicxmlPath": "out/neutrino/demo_neutrino.musicxml",
+    "workDir": "out/neutrino",
+    "neutrinoRoot": "C:/Users/shout/NEUTRINO",
+    "model": "MERROW",
+    "threads": 4,
+    "transpose": 0
+  },
+  "bindings": [
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": {}
+    }
+  ]
+}

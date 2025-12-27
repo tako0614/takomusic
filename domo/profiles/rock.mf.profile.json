@@ -1,0 +1,40 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "rock_demo_audio",
+  "renderer": "audio.simple",
+  "output": {
+    "path": "out/rock.mp3",
+    "wavPath": "out/rock.wav",
+    "sampleRate": 44100,
+    "bitrate": 192,
+    "neutrinoRoot": "C:/Users/shout/NEUTRINO",
+    "neutrinoModel": "MERROW",
+    "neutrinoThreads": 4,
+    "neutrinoTranspose": 0,
+    "neutrinoGain": 0.8
+  },
+  "bindings": [
+    {
+      "selector": { "sound": "dist_guitar" },
+      "config": { "preset": "guitar", "gain": 0.55, "pan": -0.3 }
+    },
+    {
+      "selector": { "sound": "lead_guitar" },
+      "config": { "preset": "guitar", "gain": 0.45, "pan": 0.3 }
+    },
+    {
+      "selector": { "sound": "bass" },
+      "config": { "preset": "bass", "gain": 0.6, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": { "preset": "vocal", "gain": 0.65, "pan": 0, "vibratoDepth": 0.015, "vibratoRate": 5.5 }
+    },
+    {
+      "selector": { "sound": "kit_rock" },
+      "config": { "preset": "drums", "gain": 0.95, "pan": 0 }
+    }
+  ]
+}

@@ -401,6 +401,9 @@
           "$ref": "#/$defs/DrumHitEvent"
         },
         {
+          "$ref": "#/$defs/BreathEvent"
+        },
+        {
           "$ref": "#/$defs/ControlEvent"
         },
         {
@@ -533,6 +536,37 @@
         }
       },
       "additionalProperties": false
+    },
+    "BreathEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "dur"
+      ],
+      "properties": {
+        "type": {
+          "const": "breath"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "dur": {
+          "$ref": "#/$defs/Rat"
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Breath intensity (0=silent, 1=full audible breath)"
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "Vocal breath/inhalation event for natural phrasing"
     },
     "ControlEvent": {
       "type": "object",

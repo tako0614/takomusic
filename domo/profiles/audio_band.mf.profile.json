@@ -1,0 +1,39 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "domo_demo_band",
+  "renderer": "audio.simple",
+  "output": {
+    "path": "out/demo_band.mp3",
+    "wavPath": "out/demo_band.wav",
+    "sampleRate": 48000,
+    "bitrate": 192
+  },
+  "bindings": [
+    {
+      "selector": { "sound": "pad" },
+      "config": { "preset": "pad", "gain": 0.35, "pan": -0.2 }
+    },
+    {
+      "selector": { "sound": "keys" },
+      "config": { "preset": "keys", "gain": 0.45, "pan": 0.1 }
+    },
+    {
+      "selector": { "sound": "guitar" },
+      "config": { "preset": "guitar", "gain": 0.35, "pan": 0.25 }
+    },
+    {
+      "selector": { "sound": "bass" },
+      "config": { "preset": "bass", "gain": 0.55, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": { "preset": "vocal", "gain": 0 }
+    },
+    {
+      "selector": { "sound": "kit_standard" },
+      "config": { "preset": "drums", "gain": 0.9, "pan": 0 }
+    }
+  ]
+}

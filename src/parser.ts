@@ -61,6 +61,7 @@ import type {
   ClipStmt,
   AtStmt,
   RestStmt,
+  BreathStmt,
   NoteStmt,
   ChordStmt,
   HitStmt,
@@ -737,6 +738,18 @@ export class V3Parser {
         this.expect(TokenType.RPAREN, "Expected ')'");
         this.expect(TokenType.SEMI, "Expected ';'");
         const stmt: RestStmt = { kind: 'RestStmt', position: pos, dur: expr };
+        return stmt;
+      }
+      case 'breath': {
+        const dur = this.parseExpression();
+        let intensity: Expr | null = null;
+        if (this.check(TokenType.COMMA)) {
+          this.advance();
+          intensity = this.parseExpression();
+        }
+        this.expect(TokenType.RPAREN, "Expected ')'");
+        this.expect(TokenType.SEMI, "Expected ';'");
+        const stmt: BreathStmt = { kind: 'BreathStmt', position: pos, dur, intensity };
         return stmt;
       }
       case 'note': {

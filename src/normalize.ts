@@ -150,6 +150,11 @@ function normalizeEvent(event: ClipEventValue, meterMap: ResolvedMeterEvent[], d
         ...event,
         start: resolvePosValue(event.start, meterMap, diagnostics),
       };
+    case 'breath':
+      return {
+        ...event,
+        start: resolvePosValue(event.start, meterMap, diagnostics),
+      };
     case 'control':
       return {
         ...event,
@@ -192,7 +197,8 @@ function eventEnd(event: Event, diagnostics: Diagnostic[]): Rat | null {
   switch (event.type) {
     case 'note':
     case 'chord':
-    case 'drumHit': {
+    case 'drumHit':
+    case 'breath': {
       if (event.dur.n < 0) diagnostics.push({ severity: 'error', message: 'Negative duration' });
       return addRat(event.start, event.dur);
     }

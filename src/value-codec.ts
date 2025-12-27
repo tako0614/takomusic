@@ -125,6 +125,9 @@ function eventToObject(event: ClipEventValue): ObjectValue {
   if (event.type === 'drumHit') {
     props.set('key', makeString(event.key));
   }
+  if (event.type === 'breath') {
+    props.set('intensity', makeNumber(event.intensity));
+  }
   if ((event as any).velocity !== undefined) {
     props.set('velocity', makeNumber((event as any).velocity as number));
   }
@@ -454,6 +457,14 @@ function coerceEvent(obj: ObjectValue): ClipEventValue {
     const key = expectString(obj.props.get('key'));
     const event: any = { type: 'drumHit', start, dur, key };
     applyEventExtras(event, obj);
+    return event;
+  }
+  if (type === 'breath') {
+    const intensityValue = obj.props.get('intensity');
+    const intensity = intensityValue && intensityValue.type === 'number' ? intensityValue.value : 0.6;
+    const event: ClipEventValue = { type: 'breath', start, dur, intensity };
+    const ext = obj.props.get('ext');
+    if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
     return event;
   }
   if (type === 'control') {

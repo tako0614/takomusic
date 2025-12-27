@@ -27,7 +27,7 @@ fn eventStartRat(ev) {
 }
 
 fn eventEndRat(ev) {
-  if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+  if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit" || ev.type == "breath") {
     const start = posToRat(ev.start);
     if (start == null) {
       return null;
@@ -135,6 +135,15 @@ fn shiftEvent(ev, offset) {
       pos: shiftPos(ev.pos, offset),
       kind: ev.kind,
       label: ev.label
+    };
+  }
+  if (ev.type == "breath") {
+    return {
+      type: "breath",
+      start: shiftPos(ev.start, offset),
+      dur: ev.dur,
+      intensity: ev.intensity,
+      ext: ev.ext
     };
   }
   return ev;

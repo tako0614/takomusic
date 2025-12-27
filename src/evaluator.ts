@@ -32,6 +32,7 @@ import type {
 } from './ast.js';
 import {
   AutomationEventValue,
+  BreathEventValue,
   ClipEventValue,
   ClipValueData,
   DrumHitEventValue,
@@ -729,6 +730,22 @@ export class V3Evaluator {
           break;
         case 'RestStmt': {
           const dur = this.expectRat(this.evaluateExpr(stmt.dur, scope), stmt.position);
+          cursor = addPos(cursor, dur);
+          break;
+        }
+        case 'BreathStmt': {
+          const dur = this.expectRat(this.evaluateExpr(stmt.dur, scope), stmt.position);
+          let intensity = 0.6; // default
+          if (stmt.intensity) {
+            intensity = this.expectNumber(this.evaluateExpr(stmt.intensity, scope), stmt.position);
+          }
+          const event: BreathEventValue = {
+            type: 'breath',
+            start: cursor,
+            dur,
+            intensity,
+          };
+          events.push(event);
           cursor = addPos(cursor, dur);
           break;
         }

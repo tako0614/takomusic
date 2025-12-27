@@ -1,19 +1,18 @@
-import { repeat } from "std:core";
-import * as vocal from "std:vocal";
+﻿import * as vocal from "std:vocal";
 
 fn pianoPart() -> Clip {
   return clip {
-    chord([C4,E4,G4], q, vel: 0.6); rest(q);
-    chord([F4,A4,C5], q, vel: 0.6); rest(q);
+    chord([C4, E4, G4], q, vel: 0.6);
+    rest(q);
+    chord([F4, A4, C5], q, vel: 0.6);
+    rest(q);
   };
 }
 
 fn drumPart() -> Clip {
   return clip {
-    hit("kick", q, vel: 0.90);
-    hit("snare", q, vel: 0.80);
-    hit("kick", q, vel: 0.88);
-    hit("snare", q, vel: 0.82);
+    hit("kick", q, vel: 0.9);
+    hit("snare", q, vel: 0.8);
   };
 }
 
@@ -24,18 +23,10 @@ fn vocalPart() -> Clip {
     note(E4, h, vel: 0.78);
   };
 
-  // 歌詞: text で投入して align（BestEffort）
-  const lyr = vocal.text("はじめまして", lang:"ja-JP");
-  c = vocal.align(c, lyr, policy: BestEffort);
-
-  // メリーシマ例（別のフレーズ）
-  // const lyr2 = vocal.syllables(["ま", vocal.ext(), vocal.ext(), "ま"], lang:"ja-JP");
-  // c = vocal.align(c, lyr2, policy: Strict);
-
-  c = vocal.vibrato(c, depth: 0.25, rate: 5.5);
-  c = vocal.breathiness(c, amount: 0.15);
-
-  return c;
+  const lyr = vocal.text("hey you now", "en-US");
+  c = vocal.align(c, lyr);
+  c = vocal.autoBreath(c);
+  return vocal.vibrato(c, depth: 0.25);
 }
 
 export fn main() -> Score {
@@ -46,19 +37,19 @@ export fn main() -> Score {
     tempo { 1:1 -> 120bpm; }
 
     sound "piano" kind instrument { family "keyboard"; range A0..C8; }
-    sound "kit_standard" kind drumKit { drumKeys { kick; snare; hhc; hho; crash; ride; } }
-    sound "lead_vocal" kind vocal { vocal { lang "ja-JP"; range A3..E5; } }
+    sound "kit_standard" kind drumKit { drumKeys { kick; snare; } }
+    sound "lead_vocal" kind vocal { vocal { lang "en-US"; } }
 
     track "Piano" role Instrument sound "piano" {
-      place 1:1 repeat(pianoPart(), 4);
+      place 1:1 pianoPart();
     }
 
     track "Drums" role Drums sound "kit_standard" {
-      place 1:1 repeat(drumPart(), 4);
+      place 1:1 drumPart();
     }
 
     track "Vocal" role Vocal sound "lead_vocal" {
-      place 1:1 repeat(vocalPart(), 4);
+      place 1:1 vocalPart();
     }
   };
 }

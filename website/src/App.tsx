@@ -2,21 +2,36 @@
 import { useI18n } from './i18n'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 
-const codeExample = `import { repeat } from "std:core";
+const codeExample = `import { concat, repeat } from "std:core";
+import * as transform from "std:transform";
+import * as curves from "std:curves";
 import * as vocal from "std:vocal";
 import * as drums from "std:drums";
 
+fn motif() -> Clip {
+  return clip {
+    note(C4, q, vel: 0.7);
+    note(E4, q, vel: 0.72);
+    note(G4, h, vel: 0.75);
+  };
+}
+
+fn synthPart() -> Clip {
+  const up = transform.transpose(motif(), 12);
+  return concat(motif(), up);
+}
+
 fn vocalPart() -> Clip {
   let c = clip {
-    note(C4, q, vel: 0.75);
-    note(D4, q, vel: 0.75);
-    note(E4, h, vel: 0.78);
+    note(A3, q, vel: 0.75);
+    note(B3, q, vel: 0.76);
+    note(C4, h, vel: 0.78);
   };
 
-  const lyr = vocal.text("hello", "en-US");
+  const lyr = vocal.syllables(["star", "light", vocal.Ext], "en-US");
   c = vocal.align(c, lyr);
-
-  return vocal.vibrato(c, depth: 0.2, rate: 5.5);
+  c = vocal.vibrato(c, depth: 0.2, rate: 5.5);
+  return vocal.loudness(c, curves.easeInOut(0.2, 0.8, 4), start: 0 / 1, end: q * 4);
 }
 
 export fn main() -> Score {
@@ -27,26 +42,28 @@ export fn main() -> Score {
   };
 
   return score {
-    meta { title "Demo v3"; }
+    meta { title "Starlight"; }
 
     meter { 1:1 -> 4/4; }
-    tempo { 1:1 -> 120bpm; }
+    tempo { 1:1 -> 110bpm; }
     marker(1:1, "section", section);
 
-    sound "lead_vocal" kind vocal {
-      vocal { lang "en-US"; range A3..E5; }
-    }
-
+    sound "synth" kind instrument { label "Synth"; range C2..C6; }
+    sound "lead_vocal" kind vocal { vocal { lang "en-US"; range A3..E5; } }
     sound "kit_standard" kind drumKit {
       drumKeys { kick; snare; hhc; hho; crash; ride; }
     }
 
-    track "Vocal" role Vocal sound "lead_vocal" {
-      place 1:1 repeat(vocalPart(), 2);
+    track "Synth" role Instrument sound "synth" {
+      place 1:1 repeat(synthPart(), 2);
     }
 
     track "Drums" role Drums sound "kit_standard" {
       place 1:1 drums.basicRock(2, q);
+    }
+
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 1:1 vocalPart();
     }
   };
 }`
@@ -309,5 +326,4 @@ function App() {
 }
 
 export default App
-
 
