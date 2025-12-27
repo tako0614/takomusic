@@ -1,0 +1,525 @@
+// TakoMusic v3 - Domo Demo Song
+
+import { concat, repeat } from "std:core";
+import { majorTriad, minorTriad } from "std:theory";
+import * as drums from "std:drums";
+import * as vocal from "std:vocal";
+
+fn chain4(a, b, c, d) -> Clip {
+  return concat(concat(a, b), concat(c, d));
+}
+
+fn padBar(triad, vel) -> Clip {
+  return clip {
+    chord(triad, w, vel: vel);
+  };
+}
+
+fn keysBar(triad, vel) -> Clip {
+  return clip {
+    chord(triad, h, vel: vel);
+    chord(triad, h, vel: vel * 0.9);
+  };
+}
+
+fn guitarBar(triad, vel) -> Clip {
+  return repeat(clip {
+    chord(triad, e, vel: vel);
+  }, 8);
+}
+
+fn bassBar(root, vel) -> Clip {
+  return clip {
+    note(root, q, vel: vel);
+    note(root, e, vel: vel * 0.9);
+    note(root + 7, e, vel: vel * 0.8);
+    note(root, q, vel: vel);
+    note(root, q, vel: vel * 0.9);
+  };
+}
+
+fn padProg1(vel) -> Clip {
+  return chain4(
+    padBar(majorTriad(C2), vel),
+    padBar(majorTriad(G2), vel),
+    padBar(minorTriad(A2), vel),
+    padBar(majorTriad(F2), vel)
+  );
+}
+
+fn padProg2(vel) -> Clip {
+  return chain4(
+    padBar(majorTriad(F2), vel),
+    padBar(majorTriad(G2), vel),
+    padBar(majorTriad(C2), vel),
+    padBar(minorTriad(A2), vel)
+  );
+}
+
+fn padProgOutro(vel) -> Clip {
+  return chain4(
+    padBar(majorTriad(F2), vel),
+    padBar(majorTriad(C2), vel),
+    padBar(majorTriad(G2), vel),
+    padBar(majorTriad(C2), vel)
+  );
+}
+
+fn keysProg1(vel) -> Clip {
+  return chain4(
+    keysBar(majorTriad(C3), vel),
+    keysBar(majorTriad(G3), vel),
+    keysBar(minorTriad(A3), vel),
+    keysBar(majorTriad(F3), vel)
+  );
+}
+
+fn keysProg2(vel) -> Clip {
+  return chain4(
+    keysBar(majorTriad(F3), vel),
+    keysBar(majorTriad(G3), vel),
+    keysBar(majorTriad(C3), vel),
+    keysBar(minorTriad(A3), vel)
+  );
+}
+
+fn keysProgOutro(vel) -> Clip {
+  return chain4(
+    keysBar(majorTriad(F3), vel),
+    keysBar(majorTriad(C3), vel),
+    keysBar(majorTriad(G3), vel),
+    keysBar(majorTriad(C3), vel)
+  );
+}
+
+fn guitarProg1(vel) -> Clip {
+  return chain4(
+    guitarBar(majorTriad(C4), vel),
+    guitarBar(majorTriad(G3), vel),
+    guitarBar(minorTriad(A3), vel),
+    guitarBar(majorTriad(F3), vel)
+  );
+}
+
+fn guitarProg2(vel) -> Clip {
+  return chain4(
+    guitarBar(majorTriad(F3), vel),
+    guitarBar(majorTriad(G3), vel),
+    guitarBar(majorTriad(C4), vel),
+    guitarBar(minorTriad(A3), vel)
+  );
+}
+
+fn guitarProgOutro(vel) -> Clip {
+  return chain4(
+    guitarBar(majorTriad(F3), vel),
+    guitarBar(majorTriad(C4), vel),
+    guitarBar(majorTriad(G3), vel),
+    guitarBar(majorTriad(C4), vel)
+  );
+}
+
+fn bassProg1(vel) -> Clip {
+  return chain4(
+    bassBar(C2, vel),
+    bassBar(G1, vel),
+    bassBar(A1, vel),
+    bassBar(F1, vel)
+  );
+}
+
+fn bassProg2(vel) -> Clip {
+  return chain4(
+    bassBar(F1, vel),
+    bassBar(G1, vel),
+    bassBar(C2, vel),
+    bassBar(A1, vel)
+  );
+}
+
+fn bassProgOutro(vel) -> Clip {
+  return chain4(
+    bassBar(F1, vel),
+    bassBar(C2, vel),
+    bassBar(G1, vel),
+    bassBar(C2, vel)
+  );
+}
+
+fn padIntro() -> Clip {
+  return padProg1(0.4);
+}
+
+fn padVerse() -> Clip {
+  return repeat(padProg1(0.45), 2);
+}
+
+fn padChorus() -> Clip {
+  return repeat(padProg2(0.5), 2);
+}
+
+fn padOutro() -> Clip {
+  return padProgOutro(0.35);
+}
+
+fn keysIntro() -> Clip {
+  return keysProg1(0.5);
+}
+
+fn keysVerse() -> Clip {
+  return repeat(keysProg1(0.6), 2);
+}
+
+fn keysChorus() -> Clip {
+  return repeat(keysProg2(0.7), 2);
+}
+
+fn keysOutro() -> Clip {
+  return keysProgOutro(0.45);
+}
+
+fn guitarIntro() -> Clip {
+  return guitarProg1(0.4);
+}
+
+fn guitarVerse() -> Clip {
+  return repeat(guitarProg1(0.5), 2);
+}
+
+fn guitarChorus() -> Clip {
+  return repeat(guitarProg2(0.6), 2);
+}
+
+fn guitarOutro() -> Clip {
+  return guitarProgOutro(0.45);
+}
+
+fn bassVerse() -> Clip {
+  return repeat(bassProg1(0.85), 2);
+}
+
+fn bassChorus() -> Clip {
+  return repeat(bassProg2(0.9), 2);
+}
+
+fn bassOutro() -> Clip {
+  return bassProgOutro(0.8);
+}
+
+// Verse フレーズA (2小節) - 前半: よるのまちにひかり (9文字 = 9ノート)
+fn vocalVerseA() -> Clip {
+  let c = clip {
+    note(C4, q, vel: 0.75);   // よ
+    note(D4, q, vel: 0.75);   // る
+    note(E4, q, vel: 0.78);   // の
+    note(G4, q, vel: 0.8);    // ま
+    note(E4, q, vel: 0.74);   // ち
+    note(D4, q, vel: 0.74);   // に
+    note(E4, q, vel: 0.76);   // ひ
+    note(G4, q, vel: 0.78);   // か
+    note(A4, h, vel: 0.8);    // り (長め)
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["よ", "る", "の", "ま", "ち", "に", "ひ", "か", "り"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// Verse フレーズB (2小節) - 後半: がふりそそぐよ (7文字 = 7ノート)
+fn vocalVerseB() -> Clip {
+  let c = clip {
+    note(G4, q, vel: 0.78);   // が
+    note(E4, q, vel: 0.76);   // ふ
+    note(D4, q, vel: 0.74);   // り
+    note(E4, q, vel: 0.76);   // そ
+    note(G4, q, vel: 0.78);   // そ
+    note(E4, q, vel: 0.75);   // ぐ
+    note(C4, w, vel: 0.72);   // よ (長め)
+    rest(w);
+  };
+
+  const lyr = vocal.syllables(
+    ["が", "ふ", "り", "そ", "そ", "ぐ", "よ"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn vocalVerseBase() -> Clip {
+  return concat(vocalVerseA(), vocalVerseB());
+}
+
+fn vocalVerse() -> Clip {
+  // 4小節歌う（後半4小節は楽器の間奏）
+  return vocalVerseBase();
+}
+
+// Chorus フレーズA (2小節): うたおとどけよそら (9文字 = 9ノート)
+fn vocalChorusA() -> Clip {
+  let c = clip {
+    note(A4, q, vel: 0.85);   // う
+    note(G4, q, vel: 0.82);   // た
+    note(F4, q, vel: 0.8);    // お
+    note(A4, q, vel: 0.85);   // と
+    note(B4, q, vel: 0.85);   // ど
+    note(A4, q, vel: 0.82);   // け
+    note(G4, q, vel: 0.83);   // よ
+    note(A4, q, vel: 0.85);   // そ
+    note(B4, h, vel: 0.88);   // ら (長め)
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["う", "た", "お", "と", "ど", "け", "よ", "そ", "ら"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.2, rate: 5.2);
+  return c;
+}
+
+// Chorus フレーズB (2小節): にひびけこころ (7文字 = 7ノート)
+fn vocalChorusB() -> Clip {
+  let c = clip {
+    note(C5, q, vel: 0.88);   // に
+    note(B4, q, vel: 0.85);   // ひ
+    note(A4, q, vel: 0.82);   // び
+    note(G4, q, vel: 0.8);    // け
+    note(A4, q, vel: 0.85);   // こ
+    note(G4, q, vel: 0.82);   // こ
+    note(E4, w, vel: 0.8);    // ろ (長め)
+    rest(w);
+  };
+
+  const lyr = vocal.syllables(
+    ["に", "ひ", "び", "け", "こ", "こ", "ろ"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.2, rate: 5.2);
+  return c;
+}
+
+fn vocalChorusBase() -> Clip {
+  return concat(vocalChorusA(), vocalChorusB());
+}
+
+fn vocalChorus() -> Clip {
+  return vocalChorusBase();
+}
+
+// Verse 2 フレーズA: かぜがはこぶきみの (9文字 = 9ノート)
+fn vocalVerse2A() -> Clip {
+  let c = clip {
+    note(C4, q, vel: 0.76);   // か
+    note(D4, q, vel: 0.76);   // ぜ
+    note(E4, q, vel: 0.79);   // が
+    note(G4, q, vel: 0.81);   // は
+    note(E4, q, vel: 0.78);   // こ
+    note(D4, q, vel: 0.76);   // ぶ
+    note(E4, q, vel: 0.78);   // き
+    note(G4, q, vel: 0.8);    // み
+    note(A4, h, vel: 0.82);   // の (長め)
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["か", "ぜ", "が", "は", "こ", "ぶ", "き", "み", "の"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// Verse 2 フレーズB: こえをきいてる (7文字 = 7ノート)
+fn vocalVerse2B() -> Clip {
+  let c = clip {
+    note(G4, q, vel: 0.79);   // こ
+    note(E4, q, vel: 0.76);   // え
+    note(D4, q, vel: 0.74);   // を
+    note(E4, q, vel: 0.76);   // き
+    note(G4, q, vel: 0.78);   // い
+    note(E4, q, vel: 0.75);   // て
+    note(C4, w, vel: 0.73);   // る (長め)
+    rest(w);
+  };
+
+  const lyr = vocal.syllables(
+    ["こ", "え", "を", "き", "い", "て", "る"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn vocalVerse2() -> Clip {
+  return concat(vocalVerse2A(), vocalVerse2B());
+}
+
+// Chorus 2 フレーズA: ずっとつづくよこの (9文字 = 9ノート)
+fn vocalChorus2A() -> Clip {
+  let c = clip {
+    note(A4, q, vel: 0.88);   // ず
+    note(G4, q, vel: 0.85);   // っ
+    note(F4, q, vel: 0.83);   // と
+    note(A4, q, vel: 0.88);   // つ
+    note(B4, q, vel: 0.88);   // づ
+    note(A4, q, vel: 0.85);   // く
+    note(G4, q, vel: 0.85);   // よ
+    note(A4, q, vel: 0.88);   // こ
+    note(B4, h, vel: 0.9);    // の (長め)
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["ず", "っ", "と", "つ", "づ", "く", "よ", "こ", "の"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.25, rate: 5.5);
+  return c;
+}
+
+// Chorus 2 フレーズB: うたがとどくよ (7文字 = 7ノート)
+fn vocalChorus2B() -> Clip {
+  let c = clip {
+    note(C5, q, vel: 0.92);   // う
+    note(B4, q, vel: 0.88);   // た
+    note(A4, q, vel: 0.85);   // が
+    note(G4, q, vel: 0.83);   // と
+    note(A4, q, vel: 0.88);   // ど
+    note(G4, q, vel: 0.85);   // く
+    note(C4, w, vel: 0.82);   // よ (長め)
+    rest(w);
+  };
+
+  const lyr = vocal.syllables(
+    ["う", "た", "が", "と", "ど", "く", "よ"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.25, rate: 5.5);
+  return c;
+}
+
+fn vocalChorus2() -> Clip {
+  return concat(vocalChorus2A(), vocalChorus2B());
+}
+
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Domo Demo";
+      artist "TakoMusic";
+    }
+
+    tempo {
+      1:1 -> 118bpm;
+    }
+
+    meter {
+      1:1 -> 4/4;
+    }
+
+    marker(1:1, "section", "Intro");
+    marker(5:1, "section", "Verse 1");
+    marker(13:1, "section", "Chorus 1");
+    marker(21:1, "section", "Verse 2");
+    marker(29:1, "section", "Chorus 2");
+    marker(37:1, "section", "Outro");
+
+    sound "pad" kind instrument {
+      label "Pad";
+      range C2..C6;
+    }
+
+    sound "keys" kind instrument {
+      label "Keys";
+      range A0..C7;
+    }
+
+    sound "guitar" kind instrument {
+      label "Guitar";
+      range E3..E6;
+    }
+
+    sound "bass" kind instrument {
+      label "Bass";
+      range E1..C4;
+    }
+
+    sound "lead_vocal" kind vocal {
+      vocal {
+        lang "ja-JP";
+        range A3..E5;
+      }
+    }
+
+    sound "kit_standard" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; tom1; tom2; tom3; clap; perc1; }
+    }
+
+    track "Pad" role Instrument sound "pad" {
+      place 1:1 padIntro();
+      place 5:1 padVerse();
+      place 13:1 padChorus();
+      place 21:1 padVerse();
+      place 29:1 padChorus();
+      place 37:1 padOutro();
+    }
+
+    track "Keys" role Instrument sound "keys" {
+      place 1:1 keysIntro();
+      place 5:1 keysVerse();
+      place 13:1 keysChorus();
+      place 21:1 keysVerse();
+      place 29:1 keysChorus();
+      place 37:1 keysOutro();
+    }
+
+    track "Guitar" role Instrument sound "guitar" {
+      place 1:1 guitarIntro();
+      place 5:1 guitarVerse();
+      place 13:1 guitarChorus();
+      place 21:1 guitarVerse();
+      place 29:1 guitarChorus();
+      place 37:1 guitarOutro();
+    }
+
+    track "Bass" role Instrument sound "bass" {
+      place 5:1 bassVerse();
+      place 13:1 bassChorus();
+      place 21:1 bassVerse();
+      place 29:1 bassChorus();
+      place 37:1 bassOutro();
+    }
+
+    track "Drums" role Drums sound "kit_standard" {
+      place 5:1 drums.basicRock(8, q);
+      place 13:1 drums.basicRock(8, q);
+      place 21:1 drums.basicRock(8, q);
+      place 29:1 drums.basicRock(8, q);
+      place 37:1 drums.basicRock(4, q);
+    }
+
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 5:1 vocalVerse();
+      place 13:1 vocalChorus();
+      place 21:1 vocalVerse2();
+      place 29:1 vocalChorus2();
+    }
+  };
+}

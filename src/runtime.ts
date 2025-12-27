@@ -209,6 +209,7 @@ export type ClipEventValue =
   | NoteEventValue
   | ChordEventValue
   | DrumHitEventValue
+  | BreathEventValue
   | ControlEventValue
   | AutomationEventValue
   | MarkerEventValue;
@@ -243,6 +244,14 @@ export interface DrumHitEventValue {
   key: string;
   velocity?: number;
   techniques?: string[];
+  ext?: Record<string, unknown>;
+}
+
+export interface BreathEventValue {
+  type: 'breath';
+  start: PosValue;
+  dur: Rat;
+  intensity: number;
   ext?: Record<string, unknown>;
 }
 

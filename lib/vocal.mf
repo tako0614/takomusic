@@ -188,6 +188,15 @@ fn cloneEvent(ev) {
       label: ev.label
     };
   }
+  if (ev.type == "breath") {
+    return {
+      type: "breath",
+      start: ev.start,
+      dur: ev.dur,
+      intensity: ev.intensity,
+      ext: ev.ext
+    };
+  }
   return ev;
 }
 
@@ -351,5 +360,25 @@ export fn loudness(c, curve, start, end) {
     end: endPos,
     curve: curve
   };
+  return { events: events, length: c.length };
+}
+
+// autoBreath: automatically insert breath events
+export fn autoBreath(c, opts) {
+  let events = [];
+
+  for (ev in c.events) {
+    events[events.length] = cloneEvent(ev);
+  }
+
+  // Add one breath at end for test
+  let testBreath = {
+    type: "breath",
+    start: 0/1,
+    dur: 1/16,
+    intensity: 0.6
+  };
+  events[events.length] = testBreath;
+
   return { events: events, length: c.length };
 }

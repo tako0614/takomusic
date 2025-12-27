@@ -58,7 +58,9 @@
       "Bash(git stash:*)",
       "Bash(git stash pop:*)",
       "Bash(do echo \"Parsing $f...\")",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(binneutrino.exe:*)",
+      "Bash(bin/neutrino.exe:*)"
     ]
   }
 }

@@ -126,6 +126,24 @@ Current implementations may ignore `policy` values.
 - `breathiness(c: Clip, amount: Float, start?: Pos, end?: Pos) -> Clip`
 - `loudness(c: Clip, curve: Curve, start: Pos, end: Pos) -> Clip`
 
+### Breath insertion
+
+- `autoBreath(c: Clip, opts?) -> Clip`
+
+Automatically inserts breath events before phrases for natural vocal phrasing.
+
+Options:
+- `minGap: Dur` - minimum gap between notes to insert breath (default: `s`)
+- `breathDur: Dur` - duration of inserted breath (default: `s`)
+- `intensity: Float` - breath intensity 0..1 (default: 0.6)
+- `shortenPrev: Bool` - shorten previous note to make room for breath (default: true)
+
+The algorithm:
+1. Scans notes sequentially
+2. When gap >= `minGap` is found, inserts breath before the next note
+3. If `shortenPrev` is true, trims the previous note's end to create space
+4. First note of the clip gets a breath if there's room at the start
+
 ---
 
 ## Example

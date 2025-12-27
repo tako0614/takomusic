@@ -97,6 +97,7 @@ export type Event =
   | NoteEvent
   | ChordEvent
   | DrumHitEvent
+  | BreathEvent
   | ControlEvent
   | AutomationEvent
   | MarkerEvent;
@@ -131,6 +132,14 @@ export interface DrumHitEvent {
   key: string;
   velocity?: number;
   techniques?: string[];
+  ext?: Record<string, unknown>;
+}
+
+export interface BreathEvent {
+  type: 'breath';
+  start: Rat;
+  dur: Rat;
+  intensity?: number;
   ext?: Record<string, unknown>;
 }
 

@@ -1,0 +1,443 @@
+// TakoMusic v3 - Rock Demo Song
+// "Burning Heart" - アグレッシブなロックナンバー
+
+import { concat, repeat } from "std:core";
+import { majorTriad, minorTriad } from "std:theory";
+
+// パワーコード (ルート + 5度)
+fn powerChord(root) {
+  return [root, root + 7];
+}
+import * as drums from "std:drums";
+import * as vocal from "std:vocal";
+
+fn chain4(a, b, c, d) -> Clip {
+  return concat(concat(a, b), concat(c, d));
+}
+
+// パワーコードでのギターリフ (ロックらしいアグレッシブさ)
+fn powerRiffBar(root, vel) -> Clip {
+  return clip {
+    chord(powerChord(root), e, vel: vel);
+    rest(e);
+    chord(powerChord(root), e, vel: vel * 0.95);
+    chord(powerChord(root), e, vel: vel);
+    rest(e);
+    chord(powerChord(root), e, vel: vel * 0.9);
+    chord(powerChord(root), q, vel: vel);
+  };
+}
+
+// ディストーションギターのリフ
+fn distGuitarBar(root, vel) -> Clip {
+  return clip {
+    chord(powerChord(root), s, vel: vel);
+    chord(powerChord(root), s, vel: vel * 0.85);
+    chord(powerChord(root), s, vel: vel * 0.9);
+    chord(powerChord(root), s, vel: vel);
+    chord(powerChord(root + 2), e, vel: vel);
+    chord(powerChord(root), e, vel: vel * 0.95);
+    chord(powerChord(root), q, vel: vel);
+    rest(q);
+  };
+}
+
+// ヘビーなベースライン
+fn heavyBassBar(root, vel) -> Clip {
+  return clip {
+    note(root, e, vel: vel);
+    note(root, s, vel: vel * 0.9);
+    note(root, s, vel: vel * 0.85);
+    note(root + 12, e, vel: vel * 0.8);
+    note(root, e, vel: vel);
+    note(root + 7, e, vel: vel * 0.9);
+    note(root, q, vel: vel);
+  };
+}
+
+// イントロリフ (E-G-A-E のパワーコード進行)
+fn introRiff(vel) -> Clip {
+  return chain4(
+    powerRiffBar(E2, vel),
+    powerRiffBar(G2, vel),
+    powerRiffBar(A2, vel),
+    powerRiffBar(E2, vel)
+  );
+}
+
+// ヴァース進行 (Em-C-G-D)
+fn verseGuitarProg(vel) -> Clip {
+  return chain4(
+    distGuitarBar(E2, vel),
+    distGuitarBar(C2, vel),
+    distGuitarBar(G2, vel),
+    distGuitarBar(D2, vel)
+  );
+}
+
+// サビ進行 (A-E-B-F#m)
+fn chorusGuitarProg(vel) -> Clip {
+  return chain4(
+    powerRiffBar(A2, vel),
+    powerRiffBar(E2, vel),
+    powerRiffBar(B2, vel),
+    powerRiffBar(Gb2, vel)
+  );
+}
+
+fn verseBass(vel) -> Clip {
+  return chain4(
+    heavyBassBar(E1, vel),
+    heavyBassBar(C1, vel),
+    heavyBassBar(G1, vel),
+    heavyBassBar(D1, vel)
+  );
+}
+
+fn chorusBass(vel) -> Clip {
+  return chain4(
+    heavyBassBar(A1, vel),
+    heavyBassBar(E1, vel),
+    heavyBassBar(B1, vel),
+    heavyBassBar(Gb1, vel)
+  );
+}
+
+// ブリッジ進行
+fn bridgeGuitarProg(vel) -> Clip {
+  return chain4(
+    powerRiffBar(D2, vel),
+    powerRiffBar(A2, vel),
+    powerRiffBar(E2, vel),
+    powerRiffBar(B2, vel)
+  );
+}
+
+fn bridgeBass(vel) -> Clip {
+  return chain4(
+    heavyBassBar(D1, vel),
+    heavyBassBar(A1, vel),
+    heavyBassBar(E1, vel),
+    heavyBassBar(B1, vel)
+  );
+}
+
+// ボーカル: Verse A「もえあがるこころ」
+fn vocalVerseA() -> Clip {
+  let c = clip {
+    note(E4, e, vel: 0.85);   // も
+    note(E4, e, vel: 0.85);   // え
+    note(Gb4, q, vel: 0.88);  // あ
+    note(G4, q, vel: 0.9);    // が
+    note(A4, e, vel: 0.88);   // る
+    note(G4, e, vel: 0.85);   // こ
+    note(Gb4, e, vel: 0.85);  // こ
+    note(E4, h, vel: 0.9);   // ろ
+    rest(q);
+  };
+
+  const lyr = vocal.syllables(
+    ["も", "え", "あ", "が", "る", "こ", "こ", "ろ"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// ボーカル: Verse B「とめられない」
+fn vocalVerseB() -> Clip {
+  let c = clip {
+    note(G4, e, vel: 0.88);   // と
+    note(A4, e, vel: 0.88);   // め
+    note(B4, q, vel: 0.92);   // ら
+    note(A4, e, vel: 0.88);   // れ
+    note(G4, e, vel: 0.85);   // な
+    note(E4, h, vel: 0.9);    // い
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["と", "め", "ら", "れ", "な", "い"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn vocalVerse() -> Clip {
+  return concat(vocalVerseA(), vocalVerseB());
+}
+
+// ボーカル: Chorus A「さけべもっとつよく」
+fn vocalChorusA() -> Clip {
+  let c = clip {
+    note(A4, e, vel: 0.95);   // さ
+    note(B4, e, vel: 0.95);   // け
+    note(Db5, q, vel: 1.0);   // べ
+    note(B4, e, vel: 0.92);   // も
+    note(A4, e, vel: 0.9);    // っ
+    note(B4, q, vel: 0.95);   // と
+    note(Db5, e, vel: 0.95);  // つ
+    note(B4, e, vel: 0.92);   // よ
+    note(A4, h, vel: 0.98);   // く
+    rest(q);
+  };
+
+  const lyr = vocal.syllables(
+    ["さ", "け", "べ", "も", "っ", "と", "つ", "よ", "く"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.35, rate: 6.0);
+  return c;
+}
+
+// ボーカル: Chorus B「ひびけこのこえ」
+fn vocalChorusB() -> Clip {
+  let c = clip {
+    note(Db5, e, vel: 0.98);  // ひ
+    note(B4, e, vel: 0.95);   // び
+    note(A4, q, vel: 0.92);   // け
+    note(B4, e, vel: 0.95);   // こ
+    note(A4, e, vel: 0.92);   // の
+    note(Gb4, e, vel: 0.88);  // こ
+    note(E4, w, vel: 0.95);  // え
+    rest(q);
+  };
+
+  const lyr = vocal.syllables(
+    ["ひ", "び", "け", "こ", "の", "こ", "え"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.35, rate: 6.0);
+  return c;
+}
+
+fn vocalChorus() -> Clip {
+  return concat(vocalChorusA(), vocalChorusB());
+}
+
+// ボーカル: Verse 2 A「よるをきりさいて」
+fn vocalVerse2A() -> Clip {
+  let c = clip {
+    note(E4, e, vel: 0.86);   // よ
+    note(E4, e, vel: 0.86);   // る
+    note(Gb4, q, vel: 0.88);  // を
+    note(G4, q, vel: 0.9);    // き
+    note(A4, e, vel: 0.88);   // り
+    note(G4, e, vel: 0.85);   // さ
+    note(Gb4, e, vel: 0.85);  // い
+    note(E4, h, vel: 0.9);   // て
+    rest(q);
+  };
+
+  const lyr = vocal.syllables(
+    ["よ", "る", "を", "き", "り", "さ", "い", "て"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// ボーカル: Verse 2 B「はしりだせ」
+fn vocalVerse2B() -> Clip {
+  let c = clip {
+    note(G4, e, vel: 0.9);    // は
+    note(A4, e, vel: 0.9);    // し
+    note(B4, q, vel: 0.95);   // り
+    note(A4, e, vel: 0.88);   // だ
+    note(E4, w, vel: 0.92);  // せ
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["は", "し", "り", "だ", "せ"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn vocalVerse2() -> Clip {
+  return concat(vocalVerse2A(), vocalVerse2B());
+}
+
+// ボーカル: Chorus 2 A「われろかべを」
+fn vocalChorus2A() -> Clip {
+  let c = clip {
+    note(A4, e, vel: 0.98);   // わ
+    note(B4, e, vel: 0.98);   // れ
+    note(Db5, q, vel: 1.0);   // ろ
+    note(B4, e, vel: 0.95);   // か
+    note(A4, e, vel: 0.92);   // べ
+    note(Gb4, h, vel: 0.95);  // を
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["わ", "れ", "ろ", "か", "べ", "を"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.4, rate: 6.5);
+  return c;
+}
+
+// ボーカル: Chorus 2 B「こえてゆけ」
+fn vocalChorus2B() -> Clip {
+  let c = clip {
+    note(Db5, e, vel: 1.0);   // こ
+    note(B4, e, vel: 0.98);   // え
+    note(A4, q, vel: 0.95);   // て
+    note(Gb4, e, vel: 0.9);   // ゆ
+    note(E4, w, vel: 0.98);   // け
+    rest(q);
+  };
+
+  const lyr = vocal.syllables(
+    ["こ", "え", "て", "ゆ", "け"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.4, rate: 6.5);
+  return c;
+}
+
+fn vocalChorus2() -> Clip {
+  return concat(vocalChorus2A(), vocalChorus2B());
+}
+
+// ブリッジ ボーカル「なにもこわくない」
+fn vocalBridge() -> Clip {
+  let c = clip {
+    note(D4, q, vel: 0.85);   // な
+    note(E4, q, vel: 0.88);   // に
+    note(Gb4, q, vel: 0.9);   // も
+    note(A4, q, vel: 0.92);   // こ
+    note(B4, q, vel: 0.95);   // わ
+    note(A4, q, vel: 0.92);   // く
+    note(Gb4, h, vel: 0.95);  // な
+    note(E4, w, vel: 1.0);    // い
+    rest(w);
+  };
+
+  const lyr = vocal.syllables(
+    ["な", "に", "も", "こ", "わ", "く", "な", "い"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.5, rate: 5.5);
+  return c;
+}
+
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Burning Heart";
+      artist "TakoMusic";
+    }
+
+    tempo {
+      1:1 -> 140bpm;
+    }
+
+    meter {
+      1:1 -> 4/4;
+    }
+
+    marker(1:1, "section", "Intro");
+    marker(5:1, "section", "Verse 1");
+    marker(13:1, "section", "Chorus 1");
+    marker(21:1, "section", "Verse 2");
+    marker(29:1, "section", "Chorus 2");
+    marker(37:1, "section", "Bridge");
+    marker(41:1, "section", "Final Chorus");
+    marker(49:1, "section", "Outro");
+
+    sound "dist_guitar" kind instrument {
+      label "Distortion Guitar";
+      range E2..E6;
+    }
+
+    sound "lead_guitar" kind instrument {
+      label "Lead Guitar";
+      range E3..E6;
+    }
+
+    sound "bass" kind instrument {
+      label "Bass";
+      range E1..C4;
+    }
+
+    sound "lead_vocal" kind vocal {
+      vocal {
+        lang "ja-JP";
+        range E3..E5;
+      }
+    }
+
+    sound "kit_rock" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; tom1; tom2; tom3; clap; }
+    }
+
+    track "Rhythm Guitar" role Instrument sound "dist_guitar" {
+      place 1:1 introRiff(0.85);
+      place 5:1 repeat(verseGuitarProg(0.8), 2);
+      place 13:1 repeat(chorusGuitarProg(0.95), 2);
+      place 21:1 repeat(verseGuitarProg(0.82), 2);
+      place 29:1 repeat(chorusGuitarProg(0.98), 2);
+      place 37:1 bridgeGuitarProg(0.75);
+      place 41:1 repeat(chorusGuitarProg(1.0), 2);
+      place 49:1 introRiff(0.9);
+    }
+
+    track "Lead Guitar" role Instrument sound "lead_guitar" {
+      place 1:1 introRiff(0.7);
+      place 13:1 repeat(chorusGuitarProg(0.75), 2);
+      place 29:1 repeat(chorusGuitarProg(0.78), 2);
+      place 41:1 repeat(chorusGuitarProg(0.85), 2);
+      place 49:1 introRiff(0.75);
+    }
+
+    track "Bass" role Instrument sound "bass" {
+      place 1:1 repeat(heavyBassBar(E1, 0.85), 4);
+      place 5:1 repeat(verseBass(0.9), 2);
+      place 13:1 repeat(chorusBass(0.95), 2);
+      place 21:1 repeat(verseBass(0.92), 2);
+      place 29:1 repeat(chorusBass(0.98), 2);
+      place 37:1 bridgeBass(0.85);
+      place 41:1 repeat(chorusBass(1.0), 2);
+      place 49:1 repeat(heavyBassBar(E1, 0.9), 4);
+    }
+
+    track "Drums" role Drums sound "kit_rock" {
+      place 1:1 drums.basicRock(4, q);
+      place 5:1 drums.basicRock(8, q);
+      place 13:1 drums.basicRock(8, q);
+      place 21:1 drums.basicRock(8, q);
+      place 29:1 drums.basicRock(8, q);
+      place 37:1 drums.basicRock(4, q);
+      place 41:1 drums.basicRock(8, q);
+      place 49:1 drums.basicRock(4, q);
+    }
+
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 5:1 vocalVerse();
+      place 13:1 vocalChorus();
+      place 21:1 vocalVerse2();
+      place 29:1 vocalChorus2();
+      place 37:1 vocalBridge();
+      place 41:1 vocalChorus();
+    }
+  };
+}

@@ -1,11 +1,10 @@
-{
+﻿{
   "tako": {
     "irVersion": 3,
-    "generator": "tako-compiler 0.1.0"
+    "generator": "takomusic"
   },
   "meta": {
-    "title": "Demo v3",
-    "ext": {}
+    "title": "Demo v3"
   },
   "tempoMap": [
     {
@@ -62,7 +61,7 @@
       "id": "lead_vocal",
       "kind": "vocal",
       "vocal": {
-        "lang": "ja-JP"
+        "lang": "en-US"
       }
     }
   ],
@@ -131,7 +130,11 @@
                 ],
                 "velocity": 0.6
               }
-            ]
+            ],
+            "length": {
+              "n": 3,
+              "d": 4
+            }
           }
         }
       ]
@@ -174,7 +177,11 @@
                 "key": "snare",
                 "velocity": 0.8
               }
-            ]
+            ],
+            "length": {
+              "n": 1,
+              "d": 2
+            }
           }
         }
       ]
@@ -208,8 +215,7 @@
                 "velocity": 0.75,
                 "lyric": {
                   "kind": "syllable",
-                  "text": "は",
-                  "wordPos": "single"
+                  "text": "hey"
                 }
               },
               {
@@ -229,8 +235,7 @@
                 "velocity": 0.75,
                 "lyric": {
                   "kind": "syllable",
-                  "text": "じ",
-                  "wordPos": "single"
+                  "text": "you"
                 }
               },
               {
@@ -250,8 +255,7 @@
                 "velocity": 0.78,
                 "lyric": {
                   "kind": "syllable",
-                  "text": "め",
-                  "wordPos": "single"
+                  "text": "now"
                 }
               },
               {
@@ -279,10 +283,15 @@
                   ]
                 }
               }
-            ]
+            ],
+            "length": {
+              "n": 1,
+              "d": 1
+            }
           }
         }
       ]
     }
-  ]
+  ],
+  "markers": []
 }

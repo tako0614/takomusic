@@ -95,6 +95,7 @@ Statements:
 
 - `at(pos)` -> set cursor
 - `rest(dur)` -> cursor += dur
+- `breath(dur, intensity?)` -> add breath event; cursor += dur (vocal tracks only)
 - `note(pitch, dur, opts?)` -> add note; cursor += dur
 - `chord([pitch...], dur, opts?)` -> add chord; cursor += dur
 - `hit(key, dur, opts?)` -> add drum hit; cursor += dur
@@ -114,6 +115,7 @@ Options (`opts`):
 - `note` -> `NoteEvent`
 - `chord` -> `ChordEvent`
 - `hit` -> `DrumHitEvent`
+- `breath` -> `BreathEvent`
 - `cc` -> `ControlEvent`
 - `automation` -> `AutomationEvent`
 - `marker` -> `MarkerEvent`

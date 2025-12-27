@@ -1,0 +1,12 @@
+# TakoMusic outputs
+dist/
+out/
+
+# Editor
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

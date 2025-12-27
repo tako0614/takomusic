@@ -336,6 +336,7 @@ export interface ClipExpr extends BaseNode {
 export type ClipStmt =
   | AtStmt
   | RestStmt
+  | BreathStmt
   | NoteStmt
   | ChordStmt
   | HitStmt
@@ -351,6 +352,12 @@ export interface AtStmt extends BaseNode {
 export interface RestStmt extends BaseNode {
   kind: 'RestStmt';
   dur: Expr;
+}
+
+export interface BreathStmt extends BaseNode {
+  kind: 'BreathStmt';
+  dur: Expr;
+  intensity: Expr | null;
 }
 
 export interface NoteStmt extends BaseNode {
