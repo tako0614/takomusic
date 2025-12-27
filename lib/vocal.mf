@@ -363,22 +363,128 @@ export fn loudness(c, curve, start, end) {
   return { events: events, length: c.length };
 }
 
-// autoBreath: automatically insert breath events
+// autoBreath: automatically insert breath events before phrases
+// Options:
+//   minGap: Dur - minimum gap between notes to insert breath (default: s = 1/16)
+//   breathDur: Dur - duration of inserted breath (default: s = 1/16)
+//   intensity: Float - breath intensity 0..1 (default: 0.6)
+//   shortenPrev: Bool - shorten previous note to make room for breath (default: true)
 export fn autoBreath(c, opts) {
-  let events = [];
+  // Parse options with defaults
+  let minGap = 1 / 16;
+  let breathDur = 1 / 16;
+  let intensity = 0.6;
+  let shortenPrev = true;
 
-  for (ev in c.events) {
-    events[events.length] = cloneEvent(ev);
+  if (opts != null) {
+    if (opts.minGap != null) {
+      minGap = opts.minGap;
+    }
+    if (opts.breathDur != null) {
+      breathDur = opts.breathDur;
+    }
+    if (opts.intensity != null) {
+      intensity = opts.intensity;
+    }
+    if (opts.shortenPrev != null) {
+      shortenPrev = opts.shortenPrev;
+    }
   }
 
-  // Add one breath at end for test
-  let testBreath = {
-    type: "breath",
-    start: 0/1,
-    dur: 1/16,
-    intensity: 0.6
-  };
-  events[events.length] = testBreath;
+  // Collect note events with their indices, sorted by start time
+  let notes = [];
+  let otherEvents = [];
 
-  return { events: events, length: c.length };
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const start = posToRat(ev.start);
+      if (start != null) {
+        notes[notes.length] = {
+          event: cloneEvent(ev),
+          start: start,
+          end: start + ev.dur
+        };
+      } else {
+        otherEvents[otherEvents.length] = cloneEvent(ev);
+      }
+    } else {
+      otherEvents[otherEvents.length] = cloneEvent(ev);
+    }
+  }
+
+  // Sort notes by start time (simple bubble sort)
+  for (i in 0..(notes.length - 1)) {
+    for (j in 0..(notes.length - i - 2)) {
+      if (notes[j].start > notes[j + 1].start) {
+        const tmp = notes[j];
+        notes[j] = notes[j + 1];
+        notes[j + 1] = tmp;
+      }
+    }
+  }
+
+  // Build result with breaths inserted
+  let result = [];
+  let breaths = [];
+
+  // Check if we should add breath at the very beginning
+  if (notes.length > 0) {
+    const firstStart = notes[0].start;
+    if (firstStart >= breathDur) {
+      // There's room for a breath before the first note
+      breaths[breaths.length] = {
+        type: "breath",
+        start: firstStart - breathDur,
+        dur: breathDur,
+        intensity: intensity
+      };
+    }
+  }
+
+  // Scan through notes and insert breaths where gaps are large enough
+  for (i in 0..(notes.length - 2)) {
+    const current = notes[i];
+    const next = notes[i + 1];
+    const gap = next.start - current.end;
+
+    if (gap >= minGap) {
+      // Gap is large enough, insert breath before next note
+      let breathStart = next.start - breathDur;
+
+      // If shortenPrev and breath would start before current note ends,
+      // shorten the current note
+      if (shortenPrev && breathStart < current.end) {
+        const newEnd = breathStart;
+        const newDur = newEnd - current.start;
+        if (newDur > 0 / 1) {
+          current.event.dur = newDur;
+          current.end = newEnd;
+          breathStart = newEnd;
+        }
+      }
+
+      // Only add breath if it fits
+      if (breathStart >= current.end && breathStart + breathDur <= next.start) {
+        breaths[breaths.length] = {
+          type: "breath",
+          start: breathStart,
+          dur: breathDur,
+          intensity: intensity
+        };
+      }
+    }
+  }
+
+  // Collect all events: other events, modified notes, and breaths
+  for (ev in otherEvents) {
+    result[result.length] = ev;
+  }
+  for (n in notes) {
+    result[result.length] = n.event;
+  }
+  for (b in breaths) {
+    result[result.length] = b;
+  }
+
+  return { events: result, length: c.length };
 }
