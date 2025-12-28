@@ -307,5 +307,13 @@ export fn humanize(c, rng, timing, velocity) {
     events[events.length] = humanizeEvent(ev, rng, timingAmount, v, idx);
     idx = idx + 1;
   }
-  return { events: events, length: c.length };
+  // Update rng state based on number of events processed
+  let newState = 123456789;
+  if (rng != null && rng.state != null) {
+    newState = rng.state;
+  }
+  const finalState = (newState + idx * 2654435761) % 4294967296;
+  const newRng = { state: finalState };
+  const clip = { events: events, length: c.length };
+  return [newRng, clip];
 }

@@ -212,7 +212,8 @@ export fn slice(c, startPos, endPos) {
     if (pos == null) {
       continue;
     }
-    if (pos < start || pos > end) {
+    // Range is [start, end) - end is exclusive per STDLIB.md
+    if (pos < start || pos >= end) {
       continue;
     }
     events[events.length] = shiftEvent(ev, 0 / 1 - start);
@@ -266,4 +267,179 @@ export fn mapTracks(sc, f) {
     tracks: tracks,
     markers: sc.markers
   };
+}
+
+// getTracks - extract all tracks from a score
+export fn getTracks(sc) {
+  if (sc == null) {
+    return [];
+  }
+  if (sc.tracks != null) {
+    return sc.tracks;
+  }
+  return [];
+}
+
+// shift - shift all event positions by offset
+export fn shift(c, offset) {
+  let events = [];
+  for (ev in c.events) {
+    events[events.length] = shiftEvent(ev, offset);
+  }
+  let length = null;
+  if (c.length != null) {
+    length = c.length;
+  }
+  return { events: events, length: length };
+}
+
+// padTo - extend clip length to at least endPos
+export fn padTo(c, endPos) {
+  const currentLen = clipLength(c);
+  const target = posToRat(endPos);
+  let newLength = currentLen;
+  if (target != null && (currentLen == null || target > currentLen)) {
+    newLength = target;
+  }
+  return { events: c.events, length: newLength };
+}
+
+// updateEvent - create modified copy of event with updated fields
+// Usage: updateEvent(event, { start: newStart, dur: newDur, velocity: 0.8, ... })
+fn getOrDefault(newVal, oldVal) {
+  if (newVal != null) {
+    return newVal;
+  }
+  return oldVal;
+}
+
+export fn updateEvent(ev, upd) {
+  if (ev.type == "note") {
+    return {
+      type: "note",
+      start: getOrDefault(upd.start, ev.start),
+      dur: getOrDefault(upd.dur, ev.dur),
+      pitch: getOrDefault(upd.pitch, ev.pitch),
+      velocity: getOrDefault(upd.velocity, ev.velocity),
+      voice: getOrDefault(upd.voice, ev.voice),
+      techniques: getOrDefault(upd.techniques, ev.techniques),
+      lyric: getOrDefault(upd.lyric, ev.lyric),
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "chord") {
+    return {
+      type: "chord",
+      start: getOrDefault(upd.start, ev.start),
+      dur: getOrDefault(upd.dur, ev.dur),
+      pitches: getOrDefault(upd.pitches, ev.pitches),
+      velocity: getOrDefault(upd.velocity, ev.velocity),
+      voice: getOrDefault(upd.voice, ev.voice),
+      techniques: getOrDefault(upd.techniques, ev.techniques),
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "drumHit") {
+    return {
+      type: "drumHit",
+      start: getOrDefault(upd.start, ev.start),
+      dur: getOrDefault(upd.dur, ev.dur),
+      key: getOrDefault(upd.key, ev.key),
+      velocity: getOrDefault(upd.velocity, ev.velocity),
+      techniques: getOrDefault(upd.techniques, ev.techniques),
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "breath") {
+    return {
+      type: "breath",
+      start: getOrDefault(upd.start, ev.start),
+      dur: getOrDefault(upd.dur, ev.dur),
+      intensity: getOrDefault(upd.intensity, ev.intensity),
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "control") {
+    return {
+      type: "control",
+      start: getOrDefault(upd.start, ev.start),
+      kind: getOrDefault(upd.kind, ev.kind),
+      data: getOrDefault(upd.data, ev.data),
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "automation") {
+    return {
+      type: "automation",
+      param: getOrDefault(upd.param, ev.param),
+      start: getOrDefault(upd.start, ev.start),
+      end: getOrDefault(upd.end, ev.end),
+      curve: getOrDefault(upd.curve, ev.curve),
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "marker") {
+    return {
+      type: "marker",
+      pos: getOrDefault(upd.start, ev.pos),
+      kind: getOrDefault(upd.kind, ev.kind),
+      label: getOrDefault(upd.label, ev.label)
+    };
+  }
+  return ev;
+}
+
+// Utility functions
+
+export fn max(a, b) {
+  if (a > b) {
+    return a;
+  }
+  return b;
+}
+
+export fn min(a, b) {
+  if (a < b) {
+    return a;
+  }
+  return b;
+}
+
+export fn abs(a) {
+  if (a < 0) {
+    return 0 - a;
+  }
+  return a;
+}
+
+fn floorNum(value) {
+  return value - (value % 1);
+}
+
+export fn floor(a) {
+  if (a.n != null && a.d != null) {
+    const num = a.n / a.d;
+    return floorNum(num);
+  }
+  return floorNum(a);
+}
+
+export fn ceil(a) {
+  const f = floor(a);
+  if (a.n != null && a.d != null) {
+    const num = a.n / a.d;
+    if (num > f) {
+      return f + 1;
+    }
+    return f;
+  }
+  if (a > f) {
+    return f + 1;
+  }
+  return f;
+}
+
+// length - returns the length of a clip
+export fn length(c) {
+  return clipLength(c);
 }

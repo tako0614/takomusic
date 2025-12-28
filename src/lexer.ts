@@ -172,6 +172,9 @@ export class V3Lexer {
       case '|':
         if (this.match('|')) return { type: TokenType.OR, position: pos };
         break;
+      case '?':
+        if (this.match('?')) return { type: TokenType.NULLISH, position: pos };
+        break;
       case '.':
         if (this.match('.')) return { type: TokenType.DOTDOT, position: pos };
         return { type: TokenType.DOT, position: pos };

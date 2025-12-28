@@ -439,6 +439,11 @@ export class V3Evaluator {
       if (isTruthy(left)) return left;
       return this.evaluateExpr(rightExpr, scope);
     }
+    if (operator === '??') {
+      const left = this.evaluateExpr(leftExpr, scope);
+      if (left.type !== 'null') return left;
+      return this.evaluateExpr(rightExpr, scope);
+    }
     if (operator === '..') {
       const start = this.evaluateExpr(leftExpr, scope);
       const end = this.evaluateExpr(rightExpr, scope);

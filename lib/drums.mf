@@ -11,6 +11,7 @@ export const tom2 = "tom2";
 export const tom3 = "tom3";
 export const clap = "clap";
 export const perc1 = "perc1";
+export const perc2 = "perc2";
 
 fn cloneEvent(ev) {
   if (ev.type == "note") {
@@ -148,13 +149,13 @@ export fn basicRock(bars, unit) {
   return { events: events, length: unit * (count * 4) };
 }
 
-export fn fill(kind, length) {
-  let key = kind;
+export fn fill(drumKind, len) {
+  let key = drumKind;
   if (key == null) {
     key = "snare";
   }
   const hits = 4;
-  const unit = length / hits;
+  const unit = len / hits;
   let events = [];
   for (i in 0..(hits - 1)) {
     events[events.length] = {
@@ -165,7 +166,7 @@ export fn fill(kind, length) {
       velocity: 0.7
     };
   }
-  return { events: events, length: length };
+  return { events: events, length: len };
 }
 
 export fn ghost(c, amount) {
