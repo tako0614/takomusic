@@ -2,7 +2,7 @@
   "name": "takomusic",
   "displayName": "TakoMusic",
   "description": "Language support for TakoMusic v3 (.mf files)",
-  "version": "1.1.0",
+  "version": "3.1.0",
   "publisher": "tako0614",
   "icon": "icon.png",
   "engines": {
