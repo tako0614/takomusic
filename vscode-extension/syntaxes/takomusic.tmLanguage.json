@@ -75,7 +75,7 @@
       "patterns": [
         {
           "name": "keyword.other.takomusic",
-          "match": "\\b(score|clip|sound|track|meta|tempo|meter|place|role|kind|vocal|drumKeys)\\b"
+          "match": "\\b(score|clip|sound|track|meta|tempo|meter|place|role|kind|vocal|drumKeys|marker)\\b"
         }
       ]
     },
@@ -147,7 +147,7 @@
       "patterns": [
         {
           "name": "keyword.operator.takomusic",
-          "match": "(\\+|-|\\*|/|%|==|!=|<=|>=|<|>|&&|\\|\\||!|=|\\.\\.)"
+          "match": "(\\+|-|\\*|/|%|==|!=|<=|>=|<|>|&&|\\|\\||!|\\?\\?|=|\\.\\.)"
         }
       ]
     },

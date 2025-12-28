@@ -140,7 +140,7 @@ const c = padTo(clip { note(C4, q); }, h);
 
 1. If an event starts before `start`: **dropped** (not trimmed)
 2. If an event starts within range but extends past `end`: duration is shortened to `end - event.pos`
-3. If an automation event overlaps: both start and end are clamped to `[start, end]`, and curve is proportionally scaled
+3. If an automation event overlaps: both start and end are clamped to `[start, end]`. **Note:** The standard `slice()` does NOT automatically rescale curves; for correct automation behavior, use custom logic (see `std:curves` documentation)
 
 **Important:** Rule 1 means that notes starting before the slice range are completely excluded, even if they would still be sounding within the range. This is a simplification for clip-based editing. If you need to preserve "sounding" notes that started earlier, consider using `overlay` with adjusted positions instead.
 
@@ -698,11 +698,13 @@ Curve functions create `Curve` values for use in automation events.
 
 When using `automation(param, start, end, curve)`:
 
-| Constraint | Error |
-|------------|-------|
-| `start < end` | Compile error: automation range must be positive |
-| `start >= 0` | Compile error: start cannot be negative |
-| `param` non-empty | Compile error: param name required |
+| Constraint | Status |
+|------------|--------|
+| `start < end` | Recommended (not currently enforced by compiler) |
+| `start >= 0` | Recommended (not currently enforced by compiler) |
+| `param` non-empty | Recommended (not currently enforced by compiler) |
+
+**Note:** These constraints are recommended for correct behavior but are not currently enforced at compile time. Future versions may add validation. Violating these constraints may produce undefined behavior in renderers.
 
 **Curve scaling in slice operations:**
 

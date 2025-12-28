@@ -311,11 +311,11 @@ note(C4, q, vel: 0.7, tech: [legato, staccato], voice: 1);
 
 ```tako
 mapEvents(c, fn(e: Event) -> Event? {
-  return match (e) {
-    n: NoteEvent -> {
-      const v = n.velocity ?? 0.7;  // Correct: velocity
-      // const v = n.vel;           // ERROR: vel is not a field
-      updateEvent(n, velocity: v * 0.8);
+  return match (e.type) {
+    "note" -> {
+      const v = e.velocity ?? 0.7;  // Correct: velocity
+      // const v = e.vel;           // ERROR: vel is not a field
+      updateEvent(e, { velocity: v * 0.8 });
     };
     else -> e;
   };
