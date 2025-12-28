@@ -1,4 +1,5 @@
 ﻿import * as vocal from "std:vocal";
+import { kick, snare } from "std:drums";
 
 fn pianoPart() -> Clip {
   return clip {
@@ -11,8 +12,8 @@ fn pianoPart() -> Clip {
 
 fn drumPart() -> Clip {
   return clip {
-    hit("kick", q, vel: 0.9);
-    hit("snare", q, vel: 0.8);
+    hit(kick, q, vel: 0.9);
+    hit(snare, q, vel: 0.8);
   };
 }
 

@@ -240,7 +240,7 @@ fn posToRat(pos) {
 }
 
 fn eventEndRat(ev) {
-  if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+  if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit" || ev.type == "breath") {
     const start = posToRat(ev.start);
     if (start == null) {
       return null;
