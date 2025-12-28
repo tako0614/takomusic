@@ -55,6 +55,7 @@ export enum TokenType {
   AND = 'AND',
   OR = 'OR',
   NOT = 'NOT',
+  NULLISH = 'NULLISH',
   DOT = 'DOT',
   COMMA = 'COMMA',
   SEMI = 'SEMI',

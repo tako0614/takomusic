@@ -117,7 +117,7 @@ Tako v3 supports the following operators:
 | `*` | `Float * Float` | `Float` | |
 | `*` | `Rat * Rat` | `Rat` | |
 | `*` | `Dur * Int` | `Dur` | e.g., `q * 4` |
-| `*` | `Dur * Rat` | `Dur` | e.g., `q * 3/2` |
+| `*` | `Dur * Rat` | `Dur` | e.g., `q * (3 / 2)` — parentheses recommended |
 | `/` | `Int / Int` | `Rat` | Always produces rational |
 | `/` | `Float / Float` | `Float` | |
 | `/` | `Rat / Rat` | `Rat` | |
@@ -132,15 +132,32 @@ Tako v3 supports the following operators:
 
 `&&`, `||`, `!` — short-circuit evaluation.
 
+### Null-Coalescing Operator
+
+`??` — returns left operand if non-null, otherwise right operand:
+
+```tako
+const vel = note.velocity ?? 0.7;  // Use 0.7 if velocity is null
+const name = user.nickname ?? user.name ?? "Anonymous";
+```
+
+The `??` operator has lower precedence than comparison operators but higher than `&&`:
+
+```tako
+const x = a ?? b && c;  // Parsed as: (a ?? b) && c
+```
+
 ### Operator Precedence (high to low)
 
-1. `!` (unary)
-2. `*`, `/`
-3. `+`, `-`
-4. `<`, `<=`, `>`, `>=`
-5. `==`, `!=`
-6. `&&`
-7. `||`
+1. `!`, `-` (unary)
+2. `..` (range)
+3. `*`, `/`, `%`
+4. `+`, `-`
+5. `<`, `<=`, `>`, `>=`
+6. `==`, `!=`
+7. `??`
+8. `&&`
+9. `||`
 
 ### Invalid Operations
 
@@ -155,24 +172,46 @@ Tako v3 uses rational numbers for time. There are no ticks.
 ### Duration Literals
 
 - Named: `w h q e s t x` (whole, half, quarter, eighth, 16th, 32nd, 64th)
-- Dotted: `q.` (= `q * 3/2`)
-- Fraction: `1/4` — NO spaces allowed (spaces make it a division expression)
+- Dotted: `q.` (= `q * 1.5` = `q + e`)
 
 ```tako
 const a = q;      // quarter note
 const b = q.;     // dotted quarter
-const c = 1/4;    // fraction literal (= q)
-const d = 1 / 4;  // division expression: Int / Int -> Rat (NOT a Dur!)
-const e = q * 4;  // quarter * 4 = whole
+const c = q * 4;  // quarter * 4 = whole
+const d = 1 / 4;  // division expression: Int / Int -> Rat
 ```
 
-**Important**: `1/4` (no spaces) is a `Dur` literal. `1 / 4` (with spaces) is parsed as division, yielding a `Rat`. Use `dur(1, 4)` from `std:time` when you need an explicit duration from integers.
+**Note**: There is no special fraction literal syntax for durations. `1 / 4` is always parsed as integer division, yielding a `Rat`. Since `Rat` and `Dur` are the same underlying type (rational numbers), this works correctly in most contexts.
+
+To create durations programmatically, use the `dur()` function from `std:time`:
+
+```tako
+import { dur } from "std:time";
+
+const d1 = dur(1, 4);     // quarter note (1/4)
+const d2 = dur(3, 8);     // 3 eighths
+const d3 = e * 3;         // 3 eighths via multiplication
+const d4 = q + e;         // quarter + eighth = 3 eighths
+```
+
+**Best Practice:** Prefer named duration literals (`q`, `e`, etc.) or `dur(n, d)` from `std:time` for clarity.
 
 ### Position Literals
 
 - PosRef literals: `bar:beat` (1-indexed), e.g. `1:1`, `2:3`
 - Tick form (`bar:beat:tick`) is NOT allowed
+- **PosRef literals are compile-time constants.** The `:` is NOT an operator.
+- To construct PosRef from computed values, use `std:time.barBeat(bar, beat)`
 - Use `std:time.resolvePos(posRef, meterMap)` to convert `PosRef` to absolute `Pos`
+
+```tako
+// Correct usage:
+place 1:1 myClip();           // Literal PosRef
+place barBeat(n, 1) myClip(); // Computed PosRef via function
+
+// INVALID:
+place (n + 1):1 myClip();     // ERROR: : is not an operator
+```
 
 ### Pitch Literals
 
@@ -180,20 +219,23 @@ const e = q * 4;  // quarter * 4 = whole
 
 ### DrumKey Literals
 
-`DrumKey` is a distinct type representing abstract drum/percussion keys. DrumKeys are written as bare identifiers (not strings):
+`DrumKey` represents abstract drum/percussion keys. In the DSL, DrumKeys are written as bare identifiers, which are resolved to string constants from `std:drums`:
 
 ```tako
-hit(kick, q, vel: 0.9);    // Correct: identifier
-hit(snare, e);             // Correct: identifier
-hit("kick", q);            // Error: strings are not DrumKeys!
+import { kick, snare } from "std:drums";
+
+hit(kick, q, vel: 0.9);    // Correct: identifier from std:drums
+hit(snare, e);             // Correct: identifier from std:drums
 ```
 
-Standard abstract keys (defined in `std:drums`):
+Standard abstract keys (defined in `std:drums` as string constants):
 - `kick`, `snare`, `hhc` (hi-hat closed), `hho` (hi-hat open)
 - `crash`, `ride`, `tom1`, `tom2`, `tom3`
 - `clap`, `perc1`, `perc2`, ...
 
 Custom keys can be declared in `sound ... kind drumKit { drumKeys { ... } }`.
+
+**Implementation note:** The `std:drums` module exports these keys as string constants (e.g., `export const kick = "kick";`). This allows them to be used as identifiers in code while being stored as strings in the IR.
 
 ### Type Arithmetic Rules
 
@@ -204,11 +246,37 @@ Custom keys can be declared in `sound ... kind drumKit { drumKeys { ... } }`.
 - `Pos - Pos -> Dur`
 - `Pos + Pos` is invalid (compile error)
 
+### Implicit Type Conversions
+
+The following implicit conversions are allowed in contexts expecting `Pos`:
+
+| From | To | Rule |
+|------|-----|------|
+| `Int` | `Pos` | Integer `n` becomes position `n` (in quarter notes) |
+| `Dur` | `Pos` | Duration `d` becomes position with same rational value |
+
+```tako
+clip {
+  at(0);    // Int -> Pos: position 0
+  at(q);    // Dur -> Pos: position 1 (one quarter note)
+  at(h);    // Dur -> Pos: position 2 (one half note)
+  at(q + e); // Dur -> Pos: position 1.5
+}
+```
+
+**Note:** These conversions are one-way. `Pos` does not implicitly convert to `Dur` or `Int`. Use explicit arithmetic when needed:
+
+```tako
+const pos: Pos = h;           // OK: Dur -> Pos
+const dur: Dur = pos;         // ERROR: Pos does not convert to Dur
+const dur: Dur = pos - 0;     // OK: Pos - Pos -> Dur (using 0 as Pos)
+```
+
 ## Match Expression
 
 `match` compares a value against patterns and returns the first matching arm.
 
-```
+```tako
 const label = match (mode) {
   0 -> "intro";
   1 -> "verse";
@@ -216,8 +284,78 @@ const label = match (mode) {
 };
 ```
 
-- Patterns are expressions evaluated and compared with `==` semantics.
-- `else` is optional; if omitted and no arm matches, the result is `null`.
+### Pattern Types
+
+Tako currently supports the following pattern forms:
+
+| Pattern | Syntax | Description |
+|---------|--------|-------------|
+| Literal | `0`, `"foo"`, `true` | Matches if value `== pattern` |
+| Wildcard | `else` | Always matches (must be last) |
+
+### Value Patterns
+
+Value patterns are expressions evaluated and compared with `==` semantics:
+
+```tako
+const result = match (n) {
+  0 -> "zero";
+  1 -> "one";
+  else -> "many";
+};
+```
+
+### Type Patterns with Binding (Future Feature)
+
+> **Note:** Type patterns with binding (`name: Type`) are planned for a future version but not yet implemented. Currently, use `else` with runtime type checking via the `type` field for event types.
+
+The following syntax is reserved for future use:
+
+```tako
+// FUTURE SYNTAX - not yet implemented
+fn process(token: String | LyricToken) -> String {
+  return match (token) {
+    s: String -> "text: " + s;
+    t: LyricToken -> "token: " + t.text;
+  };
+}
+```
+
+**Current workaround for event types:**
+
+```tako
+fn processEvent(ev) {
+  return match (ev.type) {
+    "note" -> "It's a note";
+    "chord" -> "It's a chord";
+    else -> "Other event";
+  };
+}
+```
+
+### Match Rules
+
+- Patterns are evaluated top-to-bottom; first match wins
+- `else` is optional; if omitted and no arm matches, the result is `null`
+- All arms must return the same type (or compatible types for union result)
+
+### Match and Null Typing
+
+When `else` is omitted, the match expression may return `null`. The result type is automatically widened to nullable:
+
+```tako
+// With else: result type is String
+const a: String = match (n) {
+  0 -> "zero";
+  else -> "other";
+};
+
+// Without else: result type is String? (nullable)
+const b: String? = match (n) {
+  0 -> "zero";
+  1 -> "one";
+};  // Returns null if n is 2, 3, etc.
+```
 
 ## Function Calls and Named Arguments
 
@@ -307,21 +445,41 @@ Rules:
 Tuples are fixed-length, heterogeneous sequences. They are written as `(T1, T2, ...)`:
 
 ```tako
-fn split(s: String) -> (String, String) { ... }
+fn split(s: String) -> [String] { ... }
 
 const pair = split("hello:world");
-const first = pair.0;   // String
-const second = pair.1;  // String
-
-// Destructuring assignment
-const (a, b) = split("foo:bar");
+const first = pair[0];   // String
+const second = pair[1];  // String
 ```
 
-Array syntax `[T1, T2]` in function signatures denotes a 2-element tuple when types differ, but prefer explicit tuple syntax `(T1, T2)` for clarity.
+> **Note:** Tuple destructuring (`const (a, b) = ...`) is planned for a future version but not yet implemented. Currently, use array index access to retrieve individual elements.
+
+**Tuple vs Array syntax:**
+
+| Syntax | Meaning | Example |
+|--------|---------|---------|
+| `[T]` | Array of any length | `[Int]` — zero or more Ints |
+
+**Note:** Tako v3 currently uses arrays for multi-value returns instead of tuples. Access elements by index:
+
+```tako
+// Array types:
+fn items() -> [Int] { ... }           // Array of Ints
+fn nested() -> [[String]] { ... }     // Array of String arrays
+
+// Multi-value return uses arrays:
+fn divmod(a: Int, b: Int) -> [Int] {
+  return [a / b, a % b];
+}
+
+const result = divmod(10, 3);
+const quotient = result[0];   // 3
+const remainder = result[1];  // 1
+```
 
 ### Union Types
 
-Union types are written as `T1 | T2`:
+Union types are written as `T1 | T2` in type annotations:
 
 ```tako
 fn process(token: String | LyricToken) -> Lyric { ... }
@@ -330,12 +488,14 @@ fn process(token: String | LyricToken) -> Lyric { ... }
 Rules:
 
 - Union types are used primarily in stdlib API signatures
-- Type narrowing via `match` or type guards:
+- Type narrowing via `match` on a discriminator field:
 
 ```tako
-const result = match (token) {
-  s: String -> handleString(s);
-  t: LyricToken -> handleToken(t);
+// Current approach: match on type field
+const result = match (token.kind) {
+  "syllable" -> handleSyllable(token);
+  "extend" -> handleExtend(token);
+  else -> handleOther(token);
 };
 ```
 
@@ -373,6 +533,28 @@ Core expressions:
 - Index access: `arr[i]`
 - Tuple index: `tuple.0`, `tuple.1`
 - Ranges: `a..b` (used for numeric ranges and pitch ranges like `C2..C6`)
+
+### Range Semantics
+
+Ranges use **closed interval** `[a, b]` semantics (both endpoints inclusive):
+
+```tako
+for (i in 0..3) { ... }  // i = 0, 1, 2, 3 (4 iterations)
+for (i in 1..n) { ... }  // i = 1, 2, ..., n
+
+// Common pattern for array iteration:
+for (i in 0..(arr.length - 1)) {
+  const elem = arr[i];  // Valid indices: 0 to length-1
+}
+```
+
+For pitch ranges (e.g., `C2..C6`), both endpoints are also **inclusive**:
+
+```tako
+sound "piano" kind instrument {
+  range C2..C6;  // Includes both C2 and C6
+}
+```
 
 ## Score DSL (`score { ... }`)
 
@@ -438,6 +620,26 @@ meter {
   17:1 -> 3/4;
 }
 ```
+
+**Meter Literal Syntax:**
+
+Meter values use the syntax `numerator/denominator` (e.g., `4/4`, `6/8`, `3/4`). This is a **distinct construct** from duration literals and division expressions:
+
+| Context | Syntax | Type | Notes |
+|---------|--------|------|-------|
+| `meter { }` block | `4/4` | Meter literal | Parsed as meter signature |
+| Duration literal | `1/4` | `Dur` | Only numerator=1 allowed |
+| Division expression | `1 / 4` | `Rat` | Spaces trigger division |
+
+**Important:** The meter literal `4/4` is ONLY valid inside a `meter { }` block. Outside this context, `4/4` would be parsed as integer division (yielding `Rat`).
+
+```tako
+meter { 1:1 -> 4/4; }   // Valid: meter literal
+const m = 4/4;          // Parsed as 4 / 4 -> Rat (value 1)
+const d = 1/4;          // Valid: Dur literal (quarter note)
+```
+
+**Meter change constraints:** See `std:time` in STDLIB.md for rules on when meter changes are allowed (must be at bar boundaries).
 
 ### Sound Declarations (Abstract)
 

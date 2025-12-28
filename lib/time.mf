@@ -98,3 +98,14 @@ export const eighth = e;
 export const sixteenth = s;
 export const thirtySecond = t;
 export const sixtyFourth = x;
+
+// getMeterMap - extract meter events from a score
+export fn getMeterMap(score) {
+  if (score == null) {
+    return [];
+  }
+  if (score.meterMap != null) {
+    return score.meterMap;
+  }
+  return [];
+}

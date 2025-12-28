@@ -832,21 +832,24 @@ export class V3Parser {
   }
 
   private getPrecedence(type: TokenType): number {
+    // Precedence (high number = binds tighter):
+    // || < && < ?? < == != < < <= > >= < + - < * / % < ..
     switch (type) {
       case TokenType.OR: return 1;
       case TokenType.AND: return 2;
+      case TokenType.NULLISH: return 3;
       case TokenType.EQEQ:
-      case TokenType.NEQ: return 3;
+      case TokenType.NEQ: return 4;
       case TokenType.LT:
       case TokenType.LTE:
       case TokenType.GT:
-      case TokenType.GTE: return 4;
+      case TokenType.GTE: return 5;
       case TokenType.PLUS:
-      case TokenType.MINUS: return 5;
+      case TokenType.MINUS: return 6;
       case TokenType.STAR:
       case TokenType.SLASH:
-      case TokenType.PERCENT: return 6;
-      case TokenType.DOTDOT: return 7;
+      case TokenType.PERCENT: return 7;
+      case TokenType.DOTDOT: return 8;
       default: return -1;
     }
   }
@@ -867,6 +870,7 @@ export class V3Parser {
       case TokenType.AND: return '&&';
       case TokenType.OR: return '||';
       case TokenType.NOT: return '!';
+      case TokenType.NULLISH: return '??';
       case TokenType.DOTDOT: return '..';
       default: return token.value ? String(token.value) : token.type;
     }

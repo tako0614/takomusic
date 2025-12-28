@@ -64,6 +64,45 @@ function matches(track, selector):
 3. Omitted fields match any value (wildcard)
 4. More specific selectors should appear earlier in the array
 
+### Default/Fallback Bindings
+
+Since selectors require at least one field, a true "catch-all" binding isn't possible. Use role-based fallbacks instead:
+
+**Recommended pattern — role-based defaults at the end:**
+
+```json
+{
+  "bindings": [
+    { "selector": { "trackName": "Lead Vocal" }, "config": { ... } },
+    { "selector": { "sound": "piano" }, "config": { ... } },
+    { "selector": { "role": "Instrument" }, "config": { "defaultInstrument": true } },
+    { "selector": { "role": "Drums" }, "config": { "defaultDrums": true } },
+    { "selector": { "role": "Vocal" }, "config": { "defaultVocal": true } },
+    { "selector": { "role": "Automation" }, "config": { "defaultAutomation": true } }
+  ]
+}
+```
+
+This pattern:
+- Specific bindings (by name or sound) match first
+- Role-based fallbacks catch remaining tracks
+- All standard roles are covered, preventing unbound tracks
+
+**Alternative — use `degradePolicy: "Approx"` for unbound tracks:**
+
+If the plugin supports `Approx` for unbound tracks, it will use internal defaults:
+
+```json
+{
+  "degradePolicy": "Approx",
+  "bindings": [
+    { "selector": { "sound": "piano" }, "config": { ... } }
+  ]
+}
+```
+
+Tracks not matching any binding will use the plugin's default configuration.
+
 ### Unbound Track Handling
 
 When a track has no matching binding:
@@ -183,3 +222,187 @@ When `kind: "stream"` is returned:
 - `Error`: fail on unsupported data
 - `Drop`: omit unsupported data with warnings
 - `Approx`: approximate unsupported data with warnings
+
+### Policy Priority and Scope
+
+Degrade policies are resolved in the following order (highest priority first):
+
+1. **Profile-level `degradePolicy`** — applies to all categories unless overridden
+2. **Plugin `degradeDefaults`** — per-category defaults from plugin capabilities
+3. **Built-in default** — `Error` if nothing else specified
+
+**Resolution table:**
+
+| Scenario | Policy Source |
+|----------|---------------|
+| Unknown technique | Profile `degradePolicy` > Plugin `degradeDefaults.unknownTechnique` > `Error` |
+| Unknown automation param | Profile `degradePolicy` > Plugin `degradeDefaults.unknownParam` > `Error` |
+| Unbound track | Profile `degradePolicy` > Plugin `degradeDefaults.unboundTrack` > `Error` |
+| Unsupported event type | Profile `degradePolicy` > `Error` |
+| Out-of-range pitch/time | Profile `degradePolicy` > `Error` |
+
+**Example:**
+
+```json
+{
+  "profileName": "MyProfile",
+  "renderer": "example-renderer",
+  "degradePolicy": "Drop",
+  "bindings": [...]
+}
+```
+
+With this profile:
+- Unknown techniques → `Drop` (from profile)
+- Unbound tracks → `Drop` (from profile)
+- All unsupported data → `Drop` (profile overrides everything)
+
+If the profile omits `degradePolicy`, the plugin's `degradeDefaults` are used per-category.
+
+## Plugin Protocol JSON Schemas
+
+### Capabilities Response Schema
+
+```json
+{
+  "type": "object",
+  "required": ["protocolVersion", "id"],
+  "properties": {
+    "protocolVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string" },
+    "version": { "type": "string" },
+    "supportedRoles": {
+      "type": "array",
+      "items": { "enum": ["Instrument", "Drums", "Vocal", "Automation"] }
+    },
+    "supportedEvents": {
+      "type": "array",
+      "items": { "enum": ["note", "chord", "drumHit", "breath", "control", "automation", "marker"] }
+    },
+    "lyricSupport": {
+      "type": "object",
+      "properties": {
+        "modes": { "type": "array", "items": { "enum": ["text", "syllables", "phonemes"] } },
+        "languages": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "paramSupport": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of supported automation param names"
+    },
+    "techniqueSupport": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of supported TechniqueId values"
+    },
+    "degradeDefaults": {
+      "type": "object",
+      "properties": {
+        "unknownParam": { "enum": ["Error", "Drop", "Approx"] },
+        "unknownTechnique": { "enum": ["Error", "Drop", "Approx"] },
+        "unboundTrack": { "enum": ["Error", "Drop", "Approx"] }
+      }
+    }
+  }
+}
+```
+
+### Diagnostic Schema
+
+```json
+{
+  "type": "object",
+  "required": ["level", "message"],
+  "properties": {
+    "level": { "enum": ["error", "warning", "info"] },
+    "code": { "type": "string" },
+    "message": { "type": "string" },
+    "location": {
+      "type": "object",
+      "properties": {
+        "trackName": { "type": "string" },
+        "placementIndex": { "type": "integer" },
+        "eventIndex": { "type": "integer" },
+        "pos": { "$ref": "IR_V3.schema.json#/$defs/Rat" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Additional context for the diagnostic"
+    }
+  }
+}
+```
+
+### Artifact Schema
+
+```json
+{
+  "type": "object",
+  "required": ["kind"],
+  "properties": {
+    "kind": { "enum": ["file", "dir", "bundle", "stream"] },
+    "path": { "type": "string" },
+    "mediaType": { "type": "string" },
+    "description": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "enum": ["file", "dir", "bundle"] } } },
+      "then": { "required": ["path"] }
+    }
+  ]
+}
+```
+
+### Validate Response
+
+Array of Diagnostic objects:
+
+```json
+[
+  {
+    "level": "warning",
+    "code": "UNSUPPORTED_TECHNIQUE",
+    "message": "Technique 'harmonics' not supported, will be ignored",
+    "location": { "trackName": "Guitar", "eventIndex": 42 }
+  },
+  {
+    "level": "error",
+    "code": "UNBOUND_TRACK",
+    "message": "No binding found for track 'Strings'"
+  }
+]
+```
+
+### Render Response
+
+Array of Artifact objects:
+
+```json
+[
+  {
+    "kind": "file",
+    "path": "/absolute/path/to/output.mid",
+    "mediaType": "audio/midi",
+    "description": "Standard MIDI file"
+  }
+]
+```
+
+## Known Limitations
+
+The following are explicit design limitations of Tako v3:
+
+1. **Score composition is not supported.** Each `score { ... }` is standalone; merging scores or reusing sound declarations across scores requires manual refactoring to shared Clip functions.
+
+2. **Tracks cannot be dynamically constructed.** The number and configuration of tracks must be known at compile time within the `score { ... }` DSL block.
+
+3. **Sub-beat tempo/marker positions require workarounds.** Score-level `tempo` and `marker` only accept `PosRef` (bar:beat), not absolute `Pos`. Use finer meter granularity or clip-based offsets.
+
+4. **std:drums patterns assume 4/4.** Pattern generators like `basicRock(bars, q)` produce fixed durations that may not align with non-4/4 meters. Manual `stretch`/`slice` is required for other meters.
+
+5. **Technique and automation portability is limited.** The interpretation of `TechniqueId` and `automation(param, ...)` depends on renderer capabilities. Use `degradePolicy` to control fallback behavior.
