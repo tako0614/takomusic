@@ -79,9 +79,9 @@
   "Hit": {
     "prefix": "hit",
     "body": [
-      "hit(\"${1:kick}\", ${2:q});"
+      "hit(${1|kick,snare,hhc,hho,crash,ride,tom1,tom2,tom3|}, ${2:q});"
     ],
-    "description": "Drum hit"
+    "description": "Drum hit (DrumKey is an identifier, not a string)"
   },
   "Rest": {
     "prefix": "rest",
@@ -121,5 +121,89 @@
       "}"
     ],
     "description": "Meter block"
+  },
+  "Match Expression": {
+    "prefix": "match",
+    "body": [
+      "match (${1:value}) {",
+      "\t${2:pattern} -> ${3:result};",
+      "\telse -> ${4:default};",
+      "}"
+    ],
+    "description": "Match expression with patterns"
+  },
+  "Match Event Type": {
+    "prefix": "match-event",
+    "body": [
+      "match (${1:e}.type) {",
+      "\t\"note\" -> ${2:handleNote};",
+      "\t\"chord\" -> ${3:handleChord};",
+      "\telse -> ${4:e};",
+      "}"
+    ],
+    "description": "Match on event type field (use e.type, not type patterns)"
+  },
+  "MapEvents": {
+    "prefix": "mapEvents",
+    "body": [
+      "mapEvents(${1:c}, fn(e) {",
+      "\treturn match (e.type) {",
+      "\t\t\"note\" -> {",
+      "\t\t\tconst vel = e.velocity ?? ${2:0.7};",
+      "\t\t\treturn updateEvent(e, { velocity: vel * ${3:0.8} });",
+      "\t\t};",
+      "\t\telse -> e;",
+      "\t};",
+      "})"
+    ],
+    "description": "Map events with type matching"
+  },
+  "Null Coalescing": {
+    "prefix": "??",
+    "body": [
+      "${1:value} ?? ${2:default}"
+    ],
+    "description": "Null coalescing operator"
+  },
+  "Function Definition": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}(${2:params}) -> ${3:Clip} {",
+      "\treturn ${4:clip {",
+      "\t\t$0",
+      "\t}};",
+      "}"
+    ],
+    "description": "Function definition"
+  },
+  "Automation": {
+    "prefix": "automation",
+    "body": [
+      "automation(\"${1:param}\", ${2:0}, ${3:q * 4}, ${4:linear(0.0, 1.0, 16)});"
+    ],
+    "description": "Automation event"
+  },
+  "Vocal Part": {
+    "prefix": "vocal-part",
+    "body": [
+      "fn ${1:vocalPart}() -> Clip {",
+      "\tlet c = clip {",
+      "\t\tnote(${2:C4}, q, vel: 0.75);",
+      "\t\t$0",
+      "\t};",
+      "\tconst lyr = vocal.text(\"${3:lyrics}\", \"${4:en-US}\");",
+      "\tc = vocal.align(c, lyr);",
+      "\tc = vocal.autoBreath(c);",
+      "\treturn vocal.vibrato(c, depth: ${5:0.2});",
+      "}"
+    ],
+    "description": "Vocal part with lyrics and expression"
+  },
+  "Import All Std": {
+    "prefix": "imp-std-all",
+    "body": [
+      "import * as ${1:module} from \"std:${2|core,time,random,transform,curves,theory,drums,vocal|}\";"
+    ],
+    "description": "Import all from std module"
   }
 }
