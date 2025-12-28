@@ -60,7 +60,8 @@
       "Bash(do echo \"Parsing $f...\")",
       "Bash(pkill:*)",
       "Bash(binneutrino.exe:*)",
-      "Bash(bin/neutrino.exe:*)"
+      "Bash(bin/neutrino.exe:*)",
+      "Bash(npx vsce package)"
     ]
   }
 }

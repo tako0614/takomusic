@@ -18,7 +18,7 @@ export fn rng(seed) {
 
 export fn nextFloat(r) {
   const next = nextState(r.state);
-  const value = next / 4294967295;
+  const value = next / RNG_M;
   return [{ state: next }, value];
 }
 

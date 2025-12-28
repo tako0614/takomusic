@@ -682,15 +682,17 @@ Curve functions create `Curve` values for use in automation events.
 - `easeInOut(a: Float, b: Float, steps: Int) -> Curve`
 - `piecewise(points: [(Float t, Float v)]) -> Curve` (t in 0..1)
 
-**Validation constraints:**
+**Validation behavior:**
 
-| Function | Constraint | Error |
-|----------|------------|-------|
-| `linear(a, b, steps)` | `steps >= 2` | Compile error: need at least 2 points |
-| `easeInOut(a, b, steps)` | `steps >= 2` | Compile error |
-| `piecewise(points)` | `points.length >= 2` | Compile error |
-| `piecewise(points)` | `points[0].t == 0`, `points[last].t == 1` | Compile error: must span [0, 1] |
-| `piecewise(points)` | Points sorted by `t` | Compile error if not monotonically increasing |
+| Function | Constraint | Behavior |
+|----------|------------|----------|
+| `linear(a, b, steps)` | `steps < 2` | Automatically adjusted to 2 |
+| `easeInOut(a, b, steps)` | `steps < 2` | Automatically adjusted to 2 |
+| `piecewise(points)` | Any points array | Points are used as-is (no validation) |
+
+**Note:** The implementation is lenient and does not enforce strict validation. For best results, ensure:
+- `steps >= 2` for `linear` and `easeInOut`
+- `piecewise` points should span `[0, 1]` with `t` values monotonically increasing
 
 **Automation constraints (in clips):**
 
@@ -897,7 +899,7 @@ Current implementations may ignore `policy` values.
 
 ### Expression (vocal:* automation)
 
-- `vibrato(c: Clip, depth: Float, rate: Float, start?: Pos, end?: Pos) -> Clip`
+- `vibrato(c: Clip, depth: Float, rate?: Float, start?: Pos, end?: Pos) -> Clip`
 - `portamento(c: Clip, amount: Float, start?: Pos, end?: Pos) -> Clip`
 - `breathiness(c: Clip, amount: Float, start?: Pos, end?: Pos) -> Clip`
 - `loudness(c: Clip, curve: Curve, start: Pos, end: Pos) -> Clip`

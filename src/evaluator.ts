@@ -799,13 +799,13 @@ export class V3Evaluator {
           break;
         }
         case 'CCStmt': {
-          const num = this.expectNumber(this.evaluateExpr(stmt.num, scope), stmt.position);
+          const number = this.expectNumber(this.evaluateExpr(stmt.num, scope), stmt.position);
           const value = this.expectNumber(this.evaluateExpr(stmt.value, scope), stmt.position);
           events.push({
             type: 'control',
             start: cursor,
             kind: 'cc',
-            data: { num, value },
+            data: { number, value },
           });
           break;
         }

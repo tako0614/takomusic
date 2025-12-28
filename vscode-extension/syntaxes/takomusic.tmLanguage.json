@@ -127,11 +127,11 @@
       "patterns": [
         {
           "name": "support.function.stdlib.takomusic",
-          "match": "\\b(concat|overlay|repeat|slice|mapEvents|withTrack|mapTracks|barBeat|resolvePos|dur|dot|rng|nextFloat|nextInt|transpose|stretch|quantize|swing|humanize|linear|easeInOut|piecewise|majorTriad|minorTriad|scaleMajor|scaleMinor|fourOnFloor|basicRock|fill|ghost|text|syllables|phonemes|ext|align|vibrato|portamento|breathiness|loudness)\\b"
+          "match": "\\b(length|concat|overlay|repeat|slice|shift|padTo|mapEvents|updateEvent|getTracks|withTrack|mapTracks|max|min|abs|floor|ceil|barBeat|resolvePos|getMeterMap|dur|dot|rng|nextFloat|nextInt|transpose|stretch|quantize|swing|humanize|linear|easeInOut|piecewise|majorTriad|minorTriad|scaleMajor|scaleMinor|fourOnFloor|basicRock|fill|ghost|text|syllables|phonemes|S|align|vibrato|portamento|breathiness|loudness|autoBreath)\\b"
         },
         {
           "name": "support.constant.stdlib.takomusic",
-          "match": "\\b(Strict|BestEffort|MelismaHeuristic)\\b"
+          "match": "\\b(Strict|BestEffort|MelismaHeuristic|Ext)\\b"
         }
       ]
     },
@@ -139,7 +139,7 @@
       "patterns": [
         {
           "name": "constant.other.drum.takomusic",
-          "match": "\\b(kick|snare|hhc|hho|crash|ride|tom1|tom2|tom3|clap|perc1)\\b"
+          "match": "\\b(kick|snare|hhc|hho|crash|ride|tom1|tom2|tom3|clap|perc1|perc2)\\b"
         }
       ]
     },
