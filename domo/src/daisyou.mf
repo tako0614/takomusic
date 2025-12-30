@@ -1,0 +1,997 @@
+// 「代償」- Tako v3 フルソング
+// Theme: 代償 = 選択の領収書 / 失う覚悟で前へ進む
+//
+// 構成 (4/4, 160bpm):
+//  1-4   Intro (4bars)
+//  5-12  Verse 1 (8bars)
+// 13-16  Pre 1 (4bars)
+// 17-24  Chorus 1 (8bars)
+// 25-32  Verse 2 (8bars)
+// 33-36  Pre 2 (4bars)
+// 37-44  Chorus 2 (8bars)
+// 45-52  Bridge (8bars)
+// 53-60  Final Chorus (8bars)
+// 61-64  Outro (4bars)
+
+import { concat, overlay, repeat, padTo } from "std:core";
+import * as drums from "std:drums";
+import * as vocal from "std:vocal";
+import * as curves from "std:curves";
+
+// Technique identifiers
+const accent = "accent";
+const tenuto = "tenuto";
+const marcato = "marcato";
+const staccato = "staccato";
+
+// ========================================
+// Chord voicings
+// ========================================
+const EM = [E3, B3, E4];
+const C  = [C3, G3, C4];
+const G  = [G2, D3, G3];
+const D  = [D3, A3, D4];
+const AM = [A2, E3, A3];
+const Bsev = [B2, D#3, F#3];
+
+// ========================================
+// Helper functions
+// ========================================
+fn bar(c: Clip) -> Clip {
+  return padTo(c, w);
+}
+
+fn restBar() -> Clip {
+  return bar(clip {});
+}
+
+// ========================================
+// Guitar patterns
+// ========================================
+fn chugBar(p) -> Clip {
+  return bar(clip {
+    chord(p, e, vel: 0.95, tech: [accent]);
+    chord(p, e, vel: 0.78);
+    chord(p, e, vel: 0.82);
+    chord(p, e, vel: 0.78);
+    chord(p, e, vel: 0.90, tech: [accent]);
+    chord(p, e, vel: 0.78);
+    chord(p, e, vel: 0.82);
+    chord(p, e, vel: 0.78);
+  });
+}
+
+fn softChugBar(p) -> Clip {
+  return bar(clip {
+    chord(p, e, vel: 0.72);
+    chord(p, e, vel: 0.62);
+    chord(p, e, vel: 0.68);
+    chord(p, e, vel: 0.62);
+    chord(p, e, vel: 0.70);
+    chord(p, e, vel: 0.62);
+    chord(p, e, vel: 0.68);
+    chord(p, e, vel: 0.62);
+  });
+}
+
+fn arpBar(p) -> Clip {
+  return bar(clip {
+    note(p[0], e, vel: 0.75);
+    note(p[1], e, vel: 0.70);
+    note(p[2], e, vel: 0.72);
+    note(p[1], e, vel: 0.68);
+    note(p[0], e, vel: 0.72);
+    note(p[1], e, vel: 0.68);
+    note(p[2], e, vel: 0.70);
+    note(p[1], e, vel: 0.65);
+  });
+}
+
+// ========================================
+// Bass patterns
+// ========================================
+fn bassBar(root) -> Clip {
+  return bar(clip {
+    note(root, e, vel: 0.92);
+    note(root, e, vel: 0.78);
+    note(root, e, vel: 0.85);
+    note(root, e, vel: 0.78);
+    note(root, e, vel: 0.88);
+    note(root, e, vel: 0.78);
+    note(root, e, vel: 0.85);
+    note(root, e, vel: 0.78);
+  });
+}
+
+fn softBassBar(root) -> Clip {
+  return bar(clip {
+    note(root, q, vel: 0.72);
+    note(root, q, vel: 0.68);
+    note(root, q, vel: 0.70);
+    note(root, q, vel: 0.68);
+  });
+}
+
+// ========================================
+// INTRO (4 bars) - 短い独白
+// ========================================
+fn introLyrics() {
+  return vocal.syllables([
+    // Bar 3-4: レシートみたいに折り曲げた夢 まだポケットの底で温い
+    "れ","しー","と","み","た","い","に",
+    "お","り","ま","げ","た","ゆ","め",
+    "ま","だ","ぽ","けっ","と","の","そ","こ","で",
+    "ぬ","る","い"
+  ], "ja-JP");
+}
+
+fn introVocal() -> Clip {
+  let c = clip {
+    // 2小節休み
+    rest(w * 2);
+    // Bar 3: レシートみたいに折り曲げた夢
+    note(E4, e, vel: 0.65); // れ
+    note(E4, e, vel: 0.62); // しー
+    note(E4, e, vel: 0.60); // と
+    note(F#4, e, vel: 0.62); // み
+    note(G4, e, vel: 0.65); // た
+    note(F#4, e, vel: 0.62); // い
+    note(E4, q, vel: 0.68); // に
+    // Bar 4: 折り曲げた夢
+    note(G4, e, vel: 0.68); // お
+    note(F#4, e, vel: 0.65); // り
+    note(E4, e, vel: 0.62); // ま
+    note(F#4, e, vel: 0.65); // げ
+    note(G4, e, vel: 0.68); // た
+    note(A4, e, vel: 0.72); // ゆ
+    note(G4, q, vel: 0.75, tech: [tenuto]); // め
+  };
+  // Bar 5-6に続く（まだポケットの底で温い）を次のverseへ流す
+  c = vocal.align(c, vocal.syllables([
+    "れ","しー","と","み","た","い","に",
+    "お","り","ま","げ","た","ゆ","め"
+  ], "ja-JP"));
+  return c;
+}
+
+fn introGuitar() -> Clip {
+  let c = arpBar(EM);
+  c = concat(c, arpBar(C));
+  c = concat(c, arpBar(G));
+  c = concat(c, arpBar(D));
+  return c;
+}
+
+fn introBass() -> Clip {
+  let c = softBassBar(E2);
+  c = concat(c, softBassBar(C2));
+  c = concat(c, softBassBar(G1));
+  c = concat(c, softBassBar(D2));
+  return c;
+}
+
+fn introDrums() -> Clip {
+  return drums.basicRock(4, q);
+}
+
+// ========================================
+// VERSE (8 bars)
+// ========================================
+fn verse1Lyrics() {
+  // Total: 71 notes
+  return vocal.syllables([
+    // Bar 1 (8 notes): 満員電車の息の
+    "まん","いん","でん","しゃ","の","い","き","の",
+    // Bar 2 (8 notes): 中「正解」だけ増えてく
+    "な","か","せい","かい","だ","け","ふ","え",
+    // Bar 3 (8 notes): 笑い方まで無難に
+    "わ","ら","い","か","た","む","なん","に",
+    // Bar 4 (9 notes): なって本音だけ置いてきた
+    "なっ","て","ほん","ね","だ","け","お","い","た",
+    // Bar 5 (12 notes): 守るためって言い訳して失くした
+    "ま","も","る","た","め","っ","て","い","い","わ","け","し",
+    // Bar 6 (11 notes): て失くしたものがあるだろ
+    "て","な","く","し","た","も","の","が","あ","る","ろ",
+    // Bar 7 (9 notes): 安全って札束が首に
+    "あん","ぜん","っ","て","さつ","た","ば","が","くび",
+    // Bar 8 (6 notes): に回ってる
+    "に","ま","わっ","て","る","ー"
+  ], "ja-JP");
+}
+
+fn verseVocal(lyrics) -> Clip {
+  let c = clip {
+    // Bar 1: 満員電車の息の中
+    note(B3, e, vel: 0.72); note(B3, e, vel: 0.70);
+    note(D4, e, vel: 0.72); note(D4, e, vel: 0.70);
+    note(E4, e, vel: 0.74); note(E4, e, vel: 0.72);
+    note(D4, e, vel: 0.70); note(D4, e, vel: 0.68);
+    // Bar 2
+    note(E4, e, vel: 0.74); note(E4, e, vel: 0.72);
+    note(D4, e, vel: 0.70); note(D4, e, vel: 0.68);
+    note(B3, e, vel: 0.68); note(B3, e, vel: 0.66);
+    note(A3, e, vel: 0.66); note(B3, q, vel: 0.72);
+    rest(e);
+    // Bar 3
+    note(B3, e, vel: 0.72); note(D4, e, vel: 0.74);
+    note(E4, e, vel: 0.76); note(D4, e, vel: 0.72);
+    note(E4, e, vel: 0.74); note(D4, e, vel: 0.70);
+    note(B3, e, vel: 0.68); note(D4, e, vel: 0.72);
+    // Bar 4
+    note(E4, e, vel: 0.74); note(D4, e, vel: 0.70);
+    note(B3, e, vel: 0.68); note(A3, e, vel: 0.66);
+    note(B3, e, vel: 0.70); note(D4, e, vel: 0.74);
+    note(E4, e, vel: 0.76); note(D4, e, vel: 0.72);
+    note(B3, q, vel: 0.75, tech: [tenuto]);
+    rest(e);
+    // Bar 5
+    note(B3, e, vel: 0.74); note(D4, e, vel: 0.76);
+    note(E4, e, vel: 0.78); note(D4, e, vel: 0.74);
+    note(E4, s, vel: 0.76); note(D4, s, vel: 0.72);
+    note(B3, e, vel: 0.70); note(D4, e, vel: 0.74);
+    note(E4, e, vel: 0.78); note(D4, e, vel: 0.74);
+    note(B3, e, vel: 0.70); note(A3, e, vel: 0.68);
+    rest(e);
+    // Bar 6
+    note(B3, e, vel: 0.74); note(D4, e, vel: 0.76);
+    note(E4, e, vel: 0.78); note(D4, e, vel: 0.74);
+    note(E4, e, vel: 0.78); note(D4, e, vel: 0.74);
+    note(B3, e, vel: 0.70); note(D4, e, vel: 0.74);
+    note(E4, e, vel: 0.80); note(D4, e, vel: 0.76);
+    note(B3, q, vel: 0.78, tech: [tenuto]);
+    rest(e);
+    // Bar 7
+    note(E4, e, vel: 0.78); note(E4, e, vel: 0.76);
+    note(D4, s, vel: 0.74); note(E4, s, vel: 0.76);
+    note(D4, e, vel: 0.72); note(B3, e, vel: 0.70);
+    note(D4, e, vel: 0.74); note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.74);
+    // Bar 8
+    note(B3, e, vel: 0.72); note(D4, e, vel: 0.76);
+    note(E4, e, vel: 0.80); note(D4, e, vel: 0.76);
+    note(E4, e, vel: 0.82); note(D4, q, vel: 0.80, tech: [tenuto]);
+  };
+  c = vocal.align(c, lyrics);
+  c = vocal.autoBreath(c, { minGap: e, breathDur: s, intensity: 0.50 });
+  c = vocal.loudness(c, curves.easeInOut(0.55, 0.78, 10), 0/1, w * 8);
+  return c;
+}
+
+fn verse2Lyrics() {
+  // Total: 71 notes (same as verseVocal)
+  return vocal.syllables([
+    // Bar 1 (8 notes): 優しさの形をし
+    "や","さ","し","さ","の","か","た","ち",
+    // Bar 2 (8 notes): たやめとけが刺さって
+    "を","し","た","や","め","と","け","が",
+    // Bar 3 (8 notes): 責任放棄だと呼ぶ
+    "せ","き","にん","ほう","き","だ","と","よ",
+    // Bar 4 (9 notes): なら好きに言えばいい
+    "ぶ","な","ら","す","き","に","い","え","ば",
+    // Bar 5 (12 notes): 逃げるんじゃない引き受ける
+    "に","げ","る","ん","じゃ","な","い","ひ","き","う","け","る",
+    // Bar 6 (11 notes): んだこの人生の舵を俺
+    "ん","だ","こ","の","じん","せい","の","か","じ","を","お",
+    // Bar 7 (9 notes): 俺の手に戻すんだ
+    "れ","の","て","に","も","ど","す","ん","だ",
+    // Bar 8 (6 notes):
+    "ー","ー","ー","ー","ー","ー"
+  ], "ja-JP");
+}
+
+fn verseGuitar() -> Clip {
+  let c = softChugBar(EM);
+  c = concat(c, softChugBar(C));
+  c = concat(c, softChugBar(G));
+  c = concat(c, softChugBar(D));
+  c = concat(c, softChugBar(EM));
+  c = concat(c, softChugBar(C));
+  c = concat(c, softChugBar(G));
+  c = concat(c, softChugBar(D));
+  return c;
+}
+
+fn verseBass() -> Clip {
+  let c = softBassBar(E2);
+  c = concat(c, softBassBar(C2));
+  c = concat(c, softBassBar(G1));
+  c = concat(c, softBassBar(D2));
+  c = concat(c, softBassBar(E2));
+  c = concat(c, softBassBar(C2));
+  c = concat(c, softBassBar(G1));
+  c = concat(c, softBassBar(D2));
+  return c;
+}
+
+fn verseDrums() -> Clip {
+  return drums.basicRock(8, q);
+}
+
+// ========================================
+// PRE-CHORUS (4 bars)
+// ========================================
+fn pre1Lyrics() {
+  // Total: 29 notes
+  return vocal.syllables([
+    // Bar 1 (8 notes): 怖いのは失うこと
+    "こ","わ","い","の","は","う","し","な",
+    // Bar 2 (8 notes): じゃなくて失わずに
+    "う","こ","と","じゃ","な","く","て","う",
+    // Bar 3 (8 notes): 失わずに死んでいく
+    "し","な","わ","ず","に","し","ん","で",
+    // Bar 4 (5 notes): いくこと
+    "い","く","こ","と","ー"
+  ], "ja-JP");
+}
+
+fn pre2Lyrics() {
+  // Total: 29 notes
+  return vocal.syllables([
+    // Bar 1 (8 notes): 失う肩書き失う
+    "う","し","な","う","か","た","が","き",
+    // Bar 2 (8 notes): 関係でもそれ以上
+    "かん","けい","で","も","そ","れ","い","じょ",
+    // Bar 3 (8 notes): うに失いたくない
+    "う","に","う","し","な","い","た","く",
+    // Bar 4 (5 notes): ないものがある
+    "な","い","も","の","ー"
+  ], "ja-JP");
+}
+
+fn preVocal(lyrics) -> Clip {
+  let c = clip {
+    // Bar 1: 怖いのは"失うこと"じゃなくて
+    note(C4, e, vel: 0.80, tech: [accent]);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.80);
+    note(F#4, e, vel: 0.82);
+    note(G4, e, vel: 0.84);
+    note(A4, e, vel: 0.86);
+    note(B4, e, vel: 0.88);
+    note(A4, e, vel: 0.84);
+    // Bar 2
+    note(G4, e, vel: 0.82);
+    note(A4, e, vel: 0.84);
+    note(B4, e, vel: 0.88);
+    note(A4, s, vel: 0.84);
+    note(G4, s, vel: 0.82);
+    note(F#4, e, vel: 0.80);
+    note(E4, q, vel: 0.82, tech: [tenuto]);
+    // Bar 3: 失わずに死んでいくこと
+    note(C4, e, vel: 0.82, tech: [accent]);
+    note(D4, e, vel: 0.80);
+    note(E4, e, vel: 0.82);
+    note(F#4, e, vel: 0.84);
+    note(G4, e, vel: 0.86);
+    note(A4, e, vel: 0.88);
+    note(B4, e, vel: 0.90);
+    note(C5, e, vel: 0.92, tech: [marcato]);
+    // Bar 4
+    note(B4, e, vel: 0.88);
+    note(A4, e, vel: 0.86);
+    note(G4, e, vel: 0.84);
+    note(F#4, e, vel: 0.82);
+    note(E4, h, vel: 0.85, tech: [tenuto]);
+  };
+  c = vocal.align(c, lyrics);
+  c = vocal.autoBreath(c, { minGap: e, breathDur: s, intensity: 0.48 });
+  c = vocal.loudness(c, curves.easeInOut(0.68, 0.88, 8), 0/1, w * 4);
+  return c;
+}
+
+fn preGuitar() -> Clip {
+  let c = chugBar(C);
+  c = concat(c, chugBar(D));
+  c = concat(c, chugBar(EM));
+  c = concat(c, chugBar(Bsev));
+  return c;
+}
+
+fn preBass() -> Clip {
+  let c = bassBar(C2);
+  c = concat(c, bassBar(D2));
+  c = concat(c, bassBar(E2));
+  c = concat(c, bassBar(B1));
+  return c;
+}
+
+fn preDrums() -> Clip {
+  let base = drums.basicRock(4, q);
+  // 4小節目にフィル
+  const fill = clip {
+    at(w * 3);
+    hit(drums.snare, e, vel: 0.75);
+    hit(drums.snare, e, vel: 0.80);
+    hit(drums.snare, e, vel: 0.85);
+    hit(drums.snare, e, vel: 0.90);
+    hit(drums.snare, e, vel: 0.92);
+    hit(drums.snare, e, vel: 0.94);
+    hit(drums.snare, e, vel: 0.96);
+    hit(drums.snare, e, vel: 0.98);
+  };
+  return overlay(base, fill);
+}
+
+// ========================================
+// CHORUS (8 bars)
+// ========================================
+fn chorus1Lyrics() {
+  return vocal.syllables([
+    // 代償なら払う
+    "だい","しょう","な","ら","は","ら","う",
+    // 夢の領収書に
+    "ゆ","め","の","りょう","しゅう","しょ","に",
+    // 俺の名前を書いて
+    "お","れ","の","な","ま","え","を","か","い","て",
+    // 火をつけるだけ
+    "ひ","を","つ","け","る","だ","け",
+    // 安定の値札を
+    "あん","てい","の","ね","ふ","だ","を",
+    // 剥がしたその瞬間
+    "は","が","し","た","そ","の","しゅん","かん",
+    // 痛みは釣り銭だ
+    "い","た","み","は","つ","り","せん","だ",
+    // 笑って受け取れ
+    "わ","らっ","て","う","け","と","れ"
+  ], "ja-JP");
+}
+
+fn chorus2Lyrics() {
+  // Total: 61 notes (same as chorusVocal)
+  return vocal.syllables([
+    // Bar 1 (7 notes): 代償なら払う
+    "だい","しょう","な","ら","は","ら","う",
+    // Bar 2 (7 notes): 夢の領収書に
+    "ゆ","め","の","りょう","しゅう","しょ","に",
+    // Bar 3 (10 notes): 震える手でサインし
+    "ふ","る","え","る","て","で","さ","い","ん","し",
+    // Bar 4 (7 notes): て前へ進むだけ
+    "て","ま","え","へ","す","す","む",
+    // Bar 5 (7 notes): だけ安定の檻
+    "だ","け","あん","てい","の","お","り",
+    // Bar 6 (8 notes): から飛び出したその
+    "か","ら","と","び","だ","し","た","そ",
+    // Bar 7 (8 notes): 瞬間痛みは証明
+    "の","しゅん","かん","い","た","み","しょう","めい",
+    // Bar 8 (7 notes): だ俺は俺で行け
+    "だ","お","れ","は","お","れ","で"
+  ], "ja-JP");
+}
+
+fn chorusVocal(lyrics) -> Clip {
+  let c = clip {
+    // Bar 1: 代償なら払う
+    note(G4, e, vel: 0.95, tech: [accent]);
+    note(A4, e, vel: 0.88);
+    note(B4, e, vel: 0.90);
+    note(A4, e, vel: 0.86);
+    note(G4, e, vel: 0.86);
+    note(A4, e, vel: 0.88);
+    note(B4, q, vel: 0.92, tech: [tenuto]);
+    // Bar 2: 夢の領収書に
+    note(A4, e, vel: 0.92, tech: [accent]);
+    note(G4, e, vel: 0.84);
+    note(E4, e, vel: 0.82);
+    note(G4, e, vel: 0.86);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.84);
+    note(B4, q, vel: 0.90, tech: [tenuto]);
+    // Bar 3: 俺の名前を書いて
+    note(B4, e, vel: 0.94, tech: [accent]);
+    note(A4, e, vel: 0.86);
+    note(G4, e, vel: 0.84);
+    note(A4, s, vel: 0.86);
+    note(B4, s, vel: 0.88);
+    note(D5, e, vel: 0.95, tech: [marcato]);
+    note(B4, e, vel: 0.88);
+    note(A4, s, vel: 0.86);
+    note(B4, s, vel: 0.88);
+    note(G4, e, vel: 0.86);
+    // Bar 4: 火をつけるだけ
+    note(A4, e, vel: 0.94, tech: [accent]);
+    note(F#4, e, vel: 0.84);
+    note(A4, e, vel: 0.88);
+    note(D5, e, vel: 0.95, tech: [marcato]);
+    note(A4, e, vel: 0.86);
+    note(G4, e, vel: 0.84);
+    note(F#4, q, vel: 0.90, tech: [tenuto]);
+    // Bar 5: 安定の値札を
+    note(G4, e, vel: 0.94, tech: [accent]);
+    note(A4, e, vel: 0.86);
+    note(B4, e, vel: 0.88);
+    note(A4, e, vel: 0.84);
+    note(G4, e, vel: 0.84);
+    note(E4, e, vel: 0.82);
+    note(G4, q, vel: 0.88, tech: [tenuto]);
+    // Bar 6: 剥がしたその瞬間
+    note(E4, e, vel: 0.92, tech: [accent]);
+    note(G4, e, vel: 0.86);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.84);
+    note(E4, e, vel: 0.82);
+    note(G4, e, vel: 0.84);
+    note(A4, e, vel: 0.88);
+    note(B4, e, vel: 0.92, tech: [marcato]);
+    // Bar 7: 痛みは釣り銭だ
+    note(B4, e, vel: 0.94, tech: [accent]);
+    note(A4, e, vel: 0.86);
+    note(G4, e, vel: 0.84);
+    note(A4, e, vel: 0.86);
+    note(B4, s, vel: 0.88);
+    note(D5, s, vel: 0.95, tech: [marcato]);
+    note(B4, e, vel: 0.88);
+    note(A4, q, vel: 0.90, tech: [tenuto]);
+    // Bar 8: 笑って受け取れ
+    note(A4, e, vel: 0.94, tech: [accent]);
+    note(F#4, e, vel: 0.86);
+    note(A4, e, vel: 0.88);
+    note(D5, e, vel: 0.96, tech: [marcato]);
+    note(A4, e, vel: 0.88);
+    note(F#4, e, vel: 0.84);
+    note(D5, q, vel: 0.98, tech: [tenuto]);
+  };
+  c = vocal.align(c, lyrics);
+  c = vocal.autoBreath(c, { minGap: e, breathDur: s, intensity: 0.45 });
+  c = vocal.vibrato(c, 0.12, 5.5, null, null);
+  c = vocal.loudness(c, curves.easeInOut(0.75, 0.95, 10), 0/1, w * 8);
+  return c;
+}
+
+fn chorusGuitar() -> Clip {
+  let c = chugBar(EM);
+  c = concat(c, chugBar(C));
+  c = concat(c, chugBar(G));
+  c = concat(c, chugBar(D));
+  c = concat(c, chugBar(EM));
+  c = concat(c, chugBar(C));
+  c = concat(c, chugBar(G));
+  c = concat(c, chugBar(D));
+  return c;
+}
+
+fn chorusBass() -> Clip {
+  let c = bassBar(E2);
+  c = concat(c, bassBar(C2));
+  c = concat(c, bassBar(G1));
+  c = concat(c, bassBar(D2));
+  c = concat(c, bassBar(E2));
+  c = concat(c, bassBar(C2));
+  c = concat(c, bassBar(G1));
+  c = concat(c, bassBar(D2));
+  return c;
+}
+
+fn chorusDrums() -> Clip {
+  let base = drums.basicRock(8, q);
+  const crash = clip {
+    at(0);
+    hit(drums.crash, q, vel: 0.95);
+    at(w * 4);
+    hit(drums.crash, q, vel: 0.95);
+  };
+  return overlay(base, crash);
+}
+
+// ========================================
+// BRIDGE (8 bars) - 落として哲学を言い切る
+// ========================================
+fn bridgeLyrics() {
+  // Total: 82 notes
+  return vocal.syllables([
+    // Bar 1 (10 notes): ねぇ正しさって何だ
+    "ねえ","た","だ","し","さ","っ","て","な","ん","だ",
+    // Bar 2 (10 notes): 誰のためのルールだ
+    "だ","れ","の","た","め","の","るー","る","だ","ー",
+    // Bar 3 (11 notes): 守ってきたものの中に
+    "ま","もっ","て","き","た","も","の","の","な","か","に",
+    // Bar 4 (12 notes): 守られてない俺がいた
+    "ま","も","ら","れ","て","な","い","お","れ","が","い","た",
+    // Bar 5 (13 notes): 失った数を数えるより
+    "う","し","なっ","た","か","ず","を","か","ぞ","え","る","よ","り",
+    // Bar 6 (12 notes): 取り戻す数を数えろ
+    "と","り","も","ど","す","か","ず","を","か","ぞ","え","ろ",
+    // Bar 7 (8 notes): 選んだ代償は
+    "え","ら","ん","だ","だい","しょう","は","ー",
+    // Bar 8 (6 notes): 俺の誇りになる
+    "お","れ","の","ほこ","り","ー"
+  ], "ja-JP");
+}
+
+fn bridgeVocal() -> Clip {
+  let c = clip {
+    // Bar 1: ねぇ「正しさ」って何だ
+    note(E4, e, vel: 0.72, tech: [accent]);
+    note(E4, e, vel: 0.68);
+    note(F#4, e, vel: 0.70);
+    note(G4, e, vel: 0.72);
+    note(F#4, s, vel: 0.70);
+    note(E4, s, vel: 0.68);
+    note(D4, e, vel: 0.66);
+    note(E4, e, vel: 0.70);
+    note(F#4, e, vel: 0.72);
+    note(E4, e, vel: 0.70);
+    // Bar 2: 誰のためのルールだ
+    note(D4, e, vel: 0.70);
+    note(E4, e, vel: 0.72);
+    note(F#4, e, vel: 0.74);
+    note(G4, e, vel: 0.76);
+    note(F#4, e, vel: 0.74);
+    note(E4, e, vel: 0.72);
+    note(D4, e, vel: 0.70);
+    note(E4, e, vel: 0.72);
+    note(F#4, e, vel: 0.74);
+    note(E4, q, vel: 0.76, tech: [tenuto]);
+    rest(e);
+    // Bar 3: 守ってきたものの中に
+    note(E4, e, vel: 0.74);
+    note(F#4, e, vel: 0.76);
+    note(G4, s, vel: 0.78);
+    note(F#4, s, vel: 0.76);
+    note(E4, e, vel: 0.74);
+    note(D4, e, vel: 0.72);
+    note(E4, e, vel: 0.74);
+    note(F#4, e, vel: 0.76);
+    note(G4, e, vel: 0.78);
+    note(A4, e, vel: 0.80);
+    note(G4, e, vel: 0.78);
+    // Bar 4: 守られてない俺がいた
+    note(F#4, e, vel: 0.76);
+    note(E4, e, vel: 0.74);
+    note(D4, e, vel: 0.72);
+    note(E4, e, vel: 0.74);
+    note(F#4, e, vel: 0.76);
+    note(G4, e, vel: 0.78);
+    note(A4, e, vel: 0.80);
+    note(G4, e, vel: 0.78);
+    note(F#4, e, vel: 0.76);
+    note(E4, e, vel: 0.74);
+    note(D4, e, vel: 0.72);
+    note(E4, q, vel: 0.78, tech: [tenuto]);
+    rest(e);
+    // Bar 5: 失った数を数えるより
+    note(G4, e, vel: 0.80, tech: [accent]);
+    note(A4, e, vel: 0.82);
+    note(B4, e, vel: 0.84);
+    note(A4, s, vel: 0.82);
+    note(G4, s, vel: 0.80);
+    note(F#4, e, vel: 0.78);
+    note(E4, e, vel: 0.76);
+    note(F#4, e, vel: 0.78);
+    note(G4, e, vel: 0.80);
+    note(A4, e, vel: 0.82);
+    note(B4, e, vel: 0.84);
+    note(A4, e, vel: 0.82);
+    note(G4, e, vel: 0.80);
+    // Bar 6: 取り戻す数を数えろ
+    note(A4, e, vel: 0.84, tech: [accent]);
+    note(B4, e, vel: 0.86);
+    note(A4, e, vel: 0.84);
+    note(G4, e, vel: 0.82);
+    note(F#4, e, vel: 0.80);
+    note(G4, e, vel: 0.82);
+    note(A4, e, vel: 0.84);
+    note(B4, e, vel: 0.86);
+    note(A4, e, vel: 0.84);
+    note(G4, e, vel: 0.82);
+    note(F#4, e, vel: 0.80);
+    note(E4, q, vel: 0.82, tech: [tenuto]);
+    // Bar 7: 選んだ代償は
+    note(E4, e, vel: 0.78, tech: [accent]);
+    note(F#4, e, vel: 0.80);
+    note(G4, e, vel: 0.82);
+    note(A4, e, vel: 0.84);
+    note(B4, e, vel: 0.86);
+    note(A4, e, vel: 0.84);
+    note(G4, e, vel: 0.86);
+    note(F#4, q, vel: 0.88, tech: [tenuto]);
+    // Bar 8: 俺の誇りになる
+    note(G4, e, vel: 0.86, tech: [accent]);
+    note(A4, e, vel: 0.88);
+    note(B4, e, vel: 0.90);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.86);
+    note(F#4, e, vel: 0.84);
+    note(E4, h, vel: 0.90, tech: [tenuto]);
+  };
+  c = vocal.align(c, bridgeLyrics());
+  c = vocal.autoBreath(c, { minGap: e, breathDur: s, intensity: 0.55 });
+  c = vocal.breathiness(c, 0.15, 0/1, w * 8);
+  c = vocal.loudness(c, curves.easeInOut(0.58, 0.82, 10), 0/1, w * 8);
+  return c;
+}
+
+fn bridgeGuitar() -> Clip {
+  let c = arpBar(EM);
+  c = concat(c, arpBar(C));
+  c = concat(c, arpBar(G));
+  c = concat(c, arpBar(D));
+  c = concat(c, softChugBar(EM));
+  c = concat(c, softChugBar(C));
+  c = concat(c, chugBar(G));
+  c = concat(c, chugBar(D));
+  return c;
+}
+
+fn bridgeBass() -> Clip {
+  let c = softBassBar(E2);
+  c = concat(c, softBassBar(C2));
+  c = concat(c, softBassBar(G1));
+  c = concat(c, softBassBar(D2));
+  c = concat(c, bassBar(E2));
+  c = concat(c, bassBar(C2));
+  c = concat(c, bassBar(G1));
+  c = concat(c, bassBar(D2));
+  return c;
+}
+
+fn bridgeDrums() -> Clip {
+  // 前半は静かに、後半でビルドアップ
+  let base = drums.basicRock(8, q);
+  const fill = clip {
+    at(w * 7);
+    hit(drums.snare, e, vel: 0.80);
+    hit(drums.snare, e, vel: 0.85);
+    hit(drums.snare, e, vel: 0.88);
+    hit(drums.snare, e, vel: 0.90);
+    hit(drums.snare, e, vel: 0.92);
+    hit(drums.snare, e, vel: 0.94);
+    hit(drums.snare, e, vel: 0.96);
+    hit(drums.crash, e, vel: 0.98);
+  };
+  return overlay(base, fill);
+}
+
+// ========================================
+// FINAL CHORUS (8 bars) - 解放感・上に抜ける
+// ========================================
+fn finalChorusLyrics() {
+  // Total: 66 notes
+  return vocal.syllables([
+    // Bar 1 (7 notes): 代償なら払う
+    "だい","しょう","な","ら","は","ら","う",
+    // Bar 2 (7 notes): 夢の領収書に
+    "ゆ","め","の","りょう","しゅう","しょ","に",
+    // Bar 3 (10 notes): 俺の名前を書いて
+    "お","れ","の","な","ま","え","を","か","い","て",
+    // Bar 4 (7 notes): 世界を変えていけ
+    "せ","かい","を","か","え","て","け",
+    // Bar 5 (7 notes): 安定の値札を
+    "あん","てい","の","ね","ふ","だ","を",
+    // Bar 6 (9 notes): 剥がしたこの両手で
+    "は","が","し","た","こ","の","りょう","て","で",
+    // Bar 7 (9 notes): 痛みを抱いたまま
+    "い","た","み","を","だ","い","た","ま","ま",
+    // Bar 8 (10 notes): 未来を掴みに行け
+    "み","ら","い","を","つ","か","み","に","い","け"
+  ], "ja-JP");
+}
+
+fn finalChorusVocal() -> Clip {
+  let c = clip {
+    // Bar 1: 代償なら払う
+    note(G4, e, vel: 0.96, tech: [accent]);
+    note(A4, e, vel: 0.90);
+    note(B4, e, vel: 0.92);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.90);
+    note(B4, q, vel: 0.94, tech: [tenuto]);
+    // Bar 2: 夢の領収書に
+    note(A4, e, vel: 0.94, tech: [accent]);
+    note(G4, e, vel: 0.86);
+    note(E4, e, vel: 0.84);
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.90);
+    note(G4, e, vel: 0.86);
+    note(B4, q, vel: 0.92, tech: [tenuto]);
+    // Bar 3: 俺の名前を書いて
+    note(B4, e, vel: 0.96, tech: [accent]);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.86);
+    note(A4, s, vel: 0.88);
+    note(B4, s, vel: 0.90);
+    note(D5, e, vel: 0.96, tech: [marcato]);
+    note(B4, e, vel: 0.90);
+    note(A4, s, vel: 0.88);
+    note(B4, s, vel: 0.90);
+    note(G4, e, vel: 0.88);
+    // Bar 4: 世界を変えていけ (高く上げる)
+    note(B4, e, vel: 0.96, tech: [accent]);
+    note(D5, e, vel: 0.94);
+    note(E5, e, vel: 0.96, tech: [marcato]);
+    note(D5, e, vel: 0.92);
+    note(B4, e, vel: 0.90);
+    note(D5, e, vel: 0.94);
+    note(E5, q, vel: 0.98, tech: [tenuto]);
+    // Bar 5: 安定の値札を
+    note(G4, e, vel: 0.96, tech: [accent]);
+    note(A4, e, vel: 0.88);
+    note(B4, e, vel: 0.90);
+    note(A4, e, vel: 0.86);
+    note(G4, e, vel: 0.86);
+    note(E4, e, vel: 0.84);
+    note(G4, q, vel: 0.90, tech: [tenuto]);
+    // Bar 6: 剥がしたこの両手で
+    note(E4, e, vel: 0.94, tech: [accent]);
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.90);
+    note(G4, e, vel: 0.86);
+    note(A4, e, vel: 0.88);
+    note(B4, e, vel: 0.92);
+    note(D5, e, vel: 0.94, tech: [marcato]);
+    note(B4, e, vel: 0.90);
+    note(A4, e, vel: 0.88);
+    // Bar 7: 痛みを抱いたまま
+    note(B4, e, vel: 0.96, tech: [accent]);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.86);
+    note(A4, e, vel: 0.88);
+    note(B4, e, vel: 0.90);
+    note(D5, e, vel: 0.94, tech: [marcato]);
+    note(B4, e, vel: 0.90);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.86);
+    // Bar 8: 未来を掴みに行け (最高音で締める)
+    note(B4, e, vel: 0.96, tech: [accent]);
+    note(D5, e, vel: 0.94);
+    note(E5, e, vel: 0.98, tech: [marcato]);
+    note(D5, e, vel: 0.94);
+    note(E5, e, vel: 0.98, tech: [marcato]);
+    note(D5, e, vel: 0.94);
+    note(B4, e, vel: 0.92);
+    note(D5, e, vel: 0.96);
+    note(E5, e, vel: 0.98, tech: [marcato]);
+    note(E5, q, vel: 1.0, tech: [tenuto]);
+  };
+  c = vocal.align(c, finalChorusLyrics());
+  c = vocal.autoBreath(c, { minGap: e, breathDur: s, intensity: 0.42 });
+  c = vocal.vibrato(c, 0.15, 5.2, null, null);
+  c = vocal.loudness(c, curves.easeInOut(0.80, 0.98, 10), 0/1, w * 8);
+  return c;
+}
+
+// ========================================
+// OUTRO (4 bars)
+// ========================================
+fn outroGuitar() -> Clip {
+  let c = chugBar(EM);
+  c = concat(c, chugBar(C));
+  c = concat(c, arpBar(G));
+  c = concat(c, bar(clip {
+    chord(EM, w, vel: 0.75, tech: [tenuto]);
+  }));
+  return c;
+}
+
+fn outroBass() -> Clip {
+  let c = bassBar(E2);
+  c = concat(c, bassBar(C2));
+  c = concat(c, softBassBar(G1));
+  c = concat(c, bar(clip {
+    note(E2, w, vel: 0.70, tech: [tenuto]);
+  }));
+  return c;
+}
+
+fn outroDrums() -> Clip {
+  let base = drums.basicRock(3, q);
+  const ending = bar(clip {
+    hit(drums.crash, w, vel: 0.95);
+  });
+  return concat(base, ending);
+}
+
+// ========================================
+// TRACK BUILDERS
+// ========================================
+fn vocalTrack() -> Clip {
+  let c = introVocal();
+  c = concat(c, verseVocal(verse1Lyrics()));
+  c = concat(c, preVocal(pre1Lyrics()));
+  c = concat(c, chorusVocal(chorus1Lyrics()));
+  c = concat(c, verseVocal(verse2Lyrics()));
+  c = concat(c, preVocal(pre2Lyrics()));
+  c = concat(c, chorusVocal(chorus2Lyrics()));
+  c = concat(c, bridgeVocal());
+  c = concat(c, finalChorusVocal());
+  c = concat(c, restBar());
+  c = concat(c, restBar());
+  c = concat(c, restBar());
+  c = concat(c, restBar());
+  return c;
+}
+
+fn guitarTrack() -> Clip {
+  let c = introGuitar();
+  c = concat(c, verseGuitar());
+  c = concat(c, preGuitar());
+  c = concat(c, chorusGuitar());
+  c = concat(c, verseGuitar());
+  c = concat(c, preGuitar());
+  c = concat(c, chorusGuitar());
+  c = concat(c, bridgeGuitar());
+  c = concat(c, chorusGuitar());
+  c = concat(c, outroGuitar());
+  return c;
+}
+
+fn bassTrack() -> Clip {
+  let c = introBass();
+  c = concat(c, verseBass());
+  c = concat(c, preBass());
+  c = concat(c, chorusBass());
+  c = concat(c, verseBass());
+  c = concat(c, preBass());
+  c = concat(c, chorusBass());
+  c = concat(c, bridgeBass());
+  c = concat(c, chorusBass());
+  c = concat(c, outroBass());
+  return c;
+}
+
+fn drumsTrack() -> Clip {
+  let c = introDrums();
+  c = concat(c, verseDrums());
+  c = concat(c, preDrums());
+  c = concat(c, chorusDrums());
+  c = concat(c, verseDrums());
+  c = concat(c, preDrums());
+  c = concat(c, chorusDrums());
+  c = concat(c, bridgeDrums());
+  c = concat(c, chorusDrums());
+  c = concat(c, outroDrums());
+  return c;
+}
+
+// ========================================
+// MAIN
+// ========================================
+export fn main() -> Score {
+  return score {
+    meta {
+      title "代償";
+      artist "you";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 160bpm; }
+
+    sound "guitar" kind instrument {
+      label "Guitar";
+      family "guitar";
+      tags ["rock", "distortion"];
+      range E2..E6;
+    }
+
+    sound "bass" kind instrument {
+      label "Bass";
+      family "bass";
+      tags ["rock"];
+      range E1..C4;
+    }
+
+    sound "lead_vocal" kind vocal {
+      vocal { lang "ja-JP"; range A3..E5; }
+    }
+
+    sound "kit_standard" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; }
+    }
+
+    track "Drums" role Drums sound "kit_standard" {
+      place 1:1 drumsTrack();
+    }
+
+    track "Guitar" role Instrument sound "guitar" {
+      place 1:1 guitarTrack();
+    }
+
+    track "Bass" role Instrument sound "bass" {
+      place 1:1 bassTrack();
+    }
+
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 1:1 vocalTrack();
+    }
+  };
+}

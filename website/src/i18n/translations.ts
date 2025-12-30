@@ -4,6 +4,7 @@ export const translations = {
     nav: {
       features: '機能',
       example: '例',
+      playground: 'Playground',
       docs: 'ドキュメント',
       github: 'GitHub',
     },
@@ -92,12 +93,22 @@ export const translations = {
       madeWith: '音楽とコードへの愛を込めて作りました',
       copyright: 'AGPL-3.0ライセンス',
     },
+    // Playground
+    playground: {
+      title: 'Playground',
+      description: 'ブラウザでTakoMusicを試せます。コードを書いて生成されるIRを確認しましょう。',
+      compile: 'コンパイル',
+      compiling: 'コンパイル中...',
+      clickCompile: '「コンパイル」をクリックして出力を確認',
+      note: '注意: これはデモPlaygroundです。全機能を使うにはTakoMusicをローカルにインストールしてください。',
+    },
   },
   en: {
     // Navigation
     nav: {
       features: 'Features',
       example: 'Example',
+      playground: 'Playground',
       docs: 'Docs',
       github: 'GitHub',
     },
@@ -185,6 +196,15 @@ export const translations = {
     footer: {
       madeWith: 'Made with love for music and code.',
       copyright: 'AGPL-3.0 License',
+    },
+    // Playground
+    playground: {
+      title: 'Playground',
+      description: 'Try TakoMusic in your browser. Write code and see the generated IR.',
+      compile: 'Compile',
+      compiling: 'Compiling...',
+      clickCompile: 'Click "Compile" to see the output',
+      note: 'Note: This is a demo playground. For full functionality, install TakoMusic locally.',
     },
   },
 } as const

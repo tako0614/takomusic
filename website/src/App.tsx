@@ -1,6 +1,7 @@
 ﻿import { createSignal, For } from 'solid-js'
 import { useI18n } from './i18n'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { Playground } from './components/Playground'
 
 const codeExample = `import { concat, repeat } from "std:core";
 import * as transform from "std:transform";
@@ -142,6 +143,7 @@ function App() {
           </div>
           <div class="flex items-center gap-6">
             <a href="#features" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.features}</a>
+            <a href="#playground" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.playground}</a>
             <a href="#stdlib" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.docs}</a>
             <a href="https://github.com/tako0614/takomusic" target="_blank" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.github}</a>
             <LanguageSwitcher />
@@ -250,6 +252,9 @@ function App() {
           </For>
         </div>
       </section>
+
+      {/* Playground Section */}
+      <Playground />
 
       {/* Standard Library Section */}
       <section id="stdlib" class="container mx-auto px-6 py-24">

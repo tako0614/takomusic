@@ -1312,6 +1312,13 @@ function addValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValu
   if (a.type === 'rat' && b.type === 'rat') {
     return makeRatValue(addRat(a.value, b.value));
   }
+  // Support mixed number-rat addition (convert to float)
+  if (a.type === 'number' && b.type === 'rat') {
+    return makeNumber(a.value + ratToNumber(b.value));
+  }
+  if (a.type === 'rat' && b.type === 'number') {
+    return makeNumber(ratToNumber(a.value) + b.value);
+  }
   if (a.type === 'pos' && b.type === 'rat') {
     return makePosValue(addPosAtom(a.value, b.value));
   }
@@ -1346,6 +1353,13 @@ function subValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValu
   if (a.type === 'rat' && b.type === 'rat') {
     return makeRatValue(subRat(a.value, b.value));
   }
+  // Support mixed number-rat subtraction (convert to float)
+  if (a.type === 'number' && b.type === 'rat') {
+    return makeNumber(a.value - ratToNumber(b.value));
+  }
+  if (a.type === 'rat' && b.type === 'number') {
+    return makeNumber(ratToNumber(a.value) - b.value);
+  }
   if (a.type === 'pos' && b.type === 'rat') {
     return makePosValue(subPosAtom(a.value, b.value));
   }
@@ -1367,6 +1381,13 @@ function mulValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValu
   }
   if (b.type === 'rat' && a.type === 'number' && isIntegerNumber(a.value)) {
     return makeRatValue(mulRat(b.value, ratFromInt(a.value)));
+  }
+  // Support mixed number-rat multiplication (convert to float for non-integer numbers)
+  if (a.type === 'number' && b.type === 'rat') {
+    return makeNumber(a.value * ratToNumber(b.value));
+  }
+  if (a.type === 'rat' && b.type === 'number') {
+    return makeNumber(ratToNumber(a.value) * b.value);
   }
   throw new Error(`Unsupported * operands at ${position?.line ?? 0}:${position?.column ?? 0}`);
 }

@@ -5,8 +5,8 @@
   "profileName": "domo_demo_audio",
   "renderer": "audio.simple",
   "output": {
-    "path": "out/demo.mp3",
-    "wavPath": "out/demo.wav",
+    "path": "out/daisyou.mp3",
+    "wavPath": "out/daisyou.wav",
     "sampleRate": 44100,
     "bitrate": 192,
     "neutrinoRoot": "C:/Users/shout/NEUTRINO",
@@ -17,28 +17,20 @@
   },
   "bindings": [
     {
-      "selector": { "sound": "pad" },
-      "config": { "preset": "pad", "gain": 0.35, "pan": -0.2 }
-    },
-    {
-      "selector": { "sound": "keys" },
-      "config": { "preset": "keys", "gain": 0.45, "pan": 0.1 }
-    },
-    {
       "selector": { "sound": "guitar" },
-      "config": { "preset": "guitar", "gain": 0.35, "pan": 0.25 }
+      "config": { "preset": "guitar", "gain": 0.45, "pan": 0.15 }
     },
     {
       "selector": { "sound": "bass" },
       "config": { "preset": "bass", "gain": 0.55, "pan": 0 }
     },
     {
-      "selector": { "sound": "lead_vocal" },
-      "config": { "preset": "vocal", "gain": 0.6, "pan": 0, "vibratoDepth": 0.01, "vibratoRate": 5.2 }
-    },
-    {
       "selector": { "sound": "kit_standard" },
       "config": { "preset": "drums", "gain": 0.9, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": { "preset": "vocal", "gain": 0.6, "pan": 0, "vibratoDepth": 0.01, "vibratoRate": 5.2 }
     }
   ]
 }

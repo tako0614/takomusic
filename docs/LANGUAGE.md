@@ -5,7 +5,7 @@ Rendering is performed by backend plugins via Render Profiles, keeping the langu
 
 ## Quick Example
 
-```tako
+```mf
 import { concat, repeat } from "std:core";
 import * as transform from "std:transform";
 import * as curves from "std:curves";
@@ -83,7 +83,7 @@ export fn main() -> Score {
 
 Imports are either std modules or local files:
 
-```tako
+```mf
 import { repeat } from "std:core";
 import * as vocal from "std:vocal";
 import { foo } from "./foo.mf";
@@ -136,14 +136,14 @@ Tako v3 supports the following operators:
 
 `??` — returns left operand if non-null, otherwise right operand:
 
-```tako
+```mf
 const vel = note.velocity ?? 0.7;  // Use 0.7 if velocity is null
 const name = user.nickname ?? user.name ?? "Anonymous";
 ```
 
 The `??` operator has lower precedence than comparison operators but higher than `&&`:
 
-```tako
+```mf
 const x = a ?? b && c;  // Parsed as: (a ?? b) && c
 ```
 
@@ -174,7 +174,7 @@ Tako v3 uses rational numbers for time. There are no ticks.
 - Named: `w h q e s t x` (whole, half, quarter, eighth, 16th, 32nd, 64th)
 - Dotted: `q.` (= `q * 1.5` = `q + e`)
 
-```tako
+```mf
 const a = q;      // quarter note
 const b = q.;     // dotted quarter
 const c = q * 4;  // quarter * 4 = whole
@@ -185,7 +185,7 @@ const d = 1 / 4;  // division expression: Int / Int -> Rat
 
 To create durations programmatically, use the `dur()` function from `std:time`:
 
-```tako
+```mf
 import { dur } from "std:time";
 
 const d1 = dur(1, 4);     // quarter note (1/4)
@@ -204,7 +204,7 @@ const d4 = q + e;         // quarter + eighth = 3 eighths
 - To construct PosRef from computed values, use `std:time.barBeat(bar, beat)`
 - Use `std:time.resolvePos(posRef, meterMap)` to convert `PosRef` to absolute `Pos`
 
-```tako
+```mf
 // Correct usage:
 place 1:1 myClip();           // Literal PosRef
 place barBeat(n, 1) myClip(); // Computed PosRef via function
@@ -221,7 +221,7 @@ place (n + 1):1 myClip();     // ERROR: : is not an operator
 
 `DrumKey` represents abstract drum/percussion keys. In the DSL, DrumKeys are written as bare identifiers, which are resolved to string constants from `std:drums`:
 
-```tako
+```mf
 import { kick, snare } from "std:drums";
 
 hit(kick, q, vel: 0.9);    // Correct: identifier from std:drums
@@ -255,7 +255,7 @@ The following implicit conversions are allowed in contexts expecting `Pos`:
 | `Int` | `Pos` | Integer `n` becomes position `n` (in quarter notes) |
 | `Dur` | `Pos` | Duration `d` becomes position with same rational value |
 
-```tako
+```mf
 clip {
   at(0);    // Int -> Pos: position 0
   at(q);    // Dur -> Pos: position 1 (one quarter note)
@@ -266,7 +266,7 @@ clip {
 
 **Note:** These conversions are one-way. `Pos` does not implicitly convert to `Dur` or `Int`. Use explicit arithmetic when needed:
 
-```tako
+```mf
 const pos: Pos = h;           // OK: Dur -> Pos
 const dur: Dur = pos;         // ERROR: Pos does not convert to Dur
 const dur: Dur = pos - 0;     // OK: Pos - Pos -> Dur (using 0 as Pos)
@@ -276,7 +276,7 @@ const dur: Dur = pos - 0;     // OK: Pos - Pos -> Dur (using 0 as Pos)
 
 `match` compares a value against patterns and returns the first matching arm.
 
-```tako
+```mf
 const label = match (mode) {
   0 -> "intro";
   1 -> "verse";
@@ -297,7 +297,7 @@ Tako currently supports the following pattern forms:
 
 Value patterns are expressions evaluated and compared with `==` semantics:
 
-```tako
+```mf
 const result = match (n) {
   0 -> "zero";
   1 -> "one";
@@ -311,7 +311,7 @@ const result = match (n) {
 
 The following syntax is reserved for future use:
 
-```tako
+```mf
 // FUTURE SYNTAX - not yet implemented
 fn process(token: String | LyricToken) -> String {
   return match (token) {
@@ -323,7 +323,7 @@ fn process(token: String | LyricToken) -> String {
 
 **Current workaround for event types:**
 
-```tako
+```mf
 fn processEvent(ev) {
   return match (ev.type) {
     "note" -> "It's a note";
@@ -343,7 +343,7 @@ fn processEvent(ev) {
 
 When `else` is omitted, the match expression may return `null`. The result type is automatically widened to nullable:
 
-```tako
+```mf
 // With else: result type is String
 const a: String = match (n) {
   0 -> "zero";
@@ -361,7 +361,7 @@ const b: String? = match (n) {
 
 Tako v3 supports named arguments using a trailing options syntax:
 
-```tako
+```mf
 note(C4, q, vel: 0.7, tech: [legato]);
 vocal.vibrato(c, depth: 0.2, rate: 5.5);
 ```
@@ -378,7 +378,7 @@ Rules:
 
 Examples:
 
-```tako
+```mf
 // Function with optional parameters
 fn example(a: Int, b: Int, opts?) -> Int { ... }
 
@@ -421,7 +421,7 @@ Tako v3 has a static type system with the following features.
 
 The `T?` syntax denotes a nullable type, meaning the value can be either `T` or `null`.
 
-```tako
+```mf
 fn findNote(c: Clip, index: Int) -> Event? {
   // Returns Event or null
 }
@@ -444,7 +444,7 @@ Rules:
 
 Tuples are fixed-length, heterogeneous sequences. They are written as `(T1, T2, ...)`:
 
-```tako
+```mf
 fn split(s: String) -> [String] { ... }
 
 const pair = split("hello:world");
@@ -462,7 +462,7 @@ const second = pair[1];  // String
 
 **Note:** Tako v3 currently uses arrays for multi-value returns instead of tuples. Access elements by index:
 
-```tako
+```mf
 // Array types:
 fn items() -> [Int] { ... }           // Array of Ints
 fn nested() -> [[String]] { ... }     // Array of String arrays
@@ -481,7 +481,7 @@ const remainder = result[1];  // 1
 
 Union types are written as `T1 | T2` in type annotations:
 
-```tako
+```mf
 fn process(token: String | LyricToken) -> Lyric { ... }
 ```
 
@@ -490,7 +490,7 @@ Rules:
 - Union types are used primarily in stdlib API signatures
 - Type narrowing via `match` on a discriminator field:
 
-```tako
+```mf
 // Current approach: match on type field
 const result = match (token.kind) {
   "syllable" -> handleSyllable(token);
@@ -503,7 +503,7 @@ const result = match (token.kind) {
 
 Arrays are written as `[T]`:
 
-```tako
+```mf
 const notes: [Pitch] = [C4, E4, G4];
 const mixed: [String | Int] = ["hello", 42];
 ```
@@ -512,7 +512,7 @@ const mixed: [String | Int] = ["hello", 42];
 
 Objects have string keys and typed values:
 
-```tako
+```mf
 const opts: { vel: Float, voice: Int } = { vel: 0.8, voice: 1 };
 ```
 
@@ -538,7 +538,7 @@ Core expressions:
 
 Ranges use **closed interval** `[a, b]` semantics (both endpoints inclusive):
 
-```tako
+```mf
 for (i in 0..3) { ... }  // i = 0, 1, 2, 3 (4 iterations)
 for (i in 1..n) { ... }  // i = 1, 2, ..., n
 
@@ -550,7 +550,7 @@ for (i in 0..(arr.length - 1)) {
 
 For pitch ranges (e.g., `C2..C6`), both endpoints are also **inclusive**:
 
-```tako
+```mf
 sound "piano" kind instrument {
   range C2..C6;  // Includes both C2 and C6
 }
@@ -633,7 +633,7 @@ Meter values use the syntax `numerator/denominator` (e.g., `4/4`, `6/8`, `3/4`).
 
 **Important:** The meter literal `4/4` is ONLY valid inside a `meter { }` block. Outside this context, `4/4` would be parsed as integer division (yielding `Rat`).
 
-```tako
+```mf
 meter { 1:1 -> 4/4; }   // Valid: meter literal
 const m = 4/4;          // Parsed as 4 / 4 -> Rat (value 1)
 const d = 1/4;          // Valid: Dur literal (quarter note)
@@ -741,7 +741,7 @@ marker(9:1, "section", "Verse");
   - Arithmetic: `q + e` (= 1.5), `w * 2` (= 8)
   - `std:time.dur(n, d)` for explicit rationals
 
-```tako
+```mf
 clip {
   at(0);        // Start of clip
   note(C4, q);
@@ -788,7 +788,7 @@ Each statement generates events with positions as follows:
 
 ### Example
 
-```tako
+```mf
 clip {
   note(C4, q, vel: 0.7);
   rest(e);

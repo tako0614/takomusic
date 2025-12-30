@@ -314,6 +314,6 @@ export fn humanize(c, rng, timing, velocity) {
   }
   const finalState = (newState + idx * 2654435761) % 4294967296;
   const newRng = { state: finalState };
-  const clip = { events: events, length: c.length };
-  return [newRng, clip];
+  const result = { events: events, length: c.length };
+  return [newRng, result];
 }
