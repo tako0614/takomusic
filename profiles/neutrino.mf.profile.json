@@ -1,0 +1,22 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "neon_edge_neutrino",
+  "renderer": "neutrino.v3",
+  "output": {
+    "path": "out/neon_edge_vocal.wav",
+    "sampleRate": 44100,
+    "neutrinoRoot": "C:/Users/shout/NEUTRINO",
+    "neutrinoModel": "MERROW",
+    "neutrinoThreads": 4,
+    "neutrinoTranspose": 0,
+    "neutrinoGain": 0.8
+  },
+  "bindings": [
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": { "gain": 0.8 }
+    }
+  ]
+}

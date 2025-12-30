@@ -1,7 +1,7 @@
 [project]
 name = "domo"
 version = "0.1.0"
-entry = "src/rock.mf"
+entry = "src/daisyou.mf"
 dist  = "dist"
 out   = "out"
 default_profile = "profiles/audio.mf.profile.json"

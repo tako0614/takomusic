@@ -1,0 +1,7 @@
+[project]
+name = "neon_edge"
+version = "0.1.0"
+entry = "temp_render.tako"
+dist  = "dist"
+out   = "out"
+default_profile = "profiles/audio.mf.profile.json"

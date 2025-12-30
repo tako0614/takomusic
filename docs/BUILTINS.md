@@ -55,7 +55,7 @@ Each tempo entry defines an instant tempo change at the specified position. Ther
 
 For ritardando or accelerando effects, use multiple tempo points:
 
-```tako
+```mf
 tempo {
   1:1 -> 120bpm;
   // Gradual rit. over 4 bars (8 points for smoothness)
@@ -76,7 +76,7 @@ tempo {
 - For half-beat precision in 4/4, use 8/8 meter temporarily
 - Consider helper functions to generate tempo ramps programmatically
 
-```tako
+```mf
 // Helper to generate tempo ramp (conceptual)
 fn tempoRamp(startBar: Int, endBar: Int, startBpm: Int, endBpm: Int, pointsPerBar: Int) -> [TempoEvent] {
   // Generate intermediate tempo points
@@ -226,7 +226,7 @@ Velocity values are normalized to the range `[0.0, 1.0]`:
 
 Renderers convert to target format (e.g., MIDI velocity 0-127).
 
-```tako
+```mf
 note(C4, q, vel: 0.7);   // Moderately strong
 note(C4, q, vel: 0.3);   // Soft
 note(C4, q, vel: 1.0);   // Maximum force
@@ -236,7 +236,7 @@ note(C4, q, vel: 1.0);   // Maximum force
 
 `TechniqueId` values are identifiers (not strings) that describe playing techniques:
 
-```tako
+```mf
 note(C4, q, tech: [legato]);
 note(C4, q, tech: [staccato, accent]);
 chord([C4, E4, G4], h, tech: [arpeggiate]);
@@ -289,7 +289,7 @@ The clip DSL uses abbreviated option names for conciseness. These map to full fi
 
 **Example:**
 
-```tako
+```mf
 // DSL
 note(C4, q, vel: 0.7, tech: [legato, staccato], voice: 1);
 ```
@@ -309,7 +309,7 @@ note(C4, q, vel: 0.7, tech: [legato, staccato], voice: 1);
 
 **Important for `mapEvents` users:** When accessing event fields in `mapEvents`, use the IR field names (`velocity`, `techniques`), not the DSL option names (`vel`, `tech`):
 
-```tako
+```mf
 mapEvents(c, fn(e: Event) -> Event? {
   return match (e.type) {
     "note" -> {
@@ -326,7 +326,7 @@ mapEvents(c, fn(e: Event) -> Event? {
 
 The `cc(num, value)` statement maps to a `ControlEvent` in the IR:
 
-```tako
+```mf
 cc(1, 0.75);  // Modulation wheel at 75%
 ```
 
@@ -377,7 +377,7 @@ Tako v3 uses 1-indexed bars, so there is no built-in "bar 0" concept for pickups
 
 Use `shift()` with a negative offset to create a pickup:
 
-```tako
+```mf
 import { concat, shift } from "std:core";
 
 fn withPickup() -> Clip {
@@ -439,7 +439,7 @@ Renderers should handle negative positions by:
 
 For complex pickups, use a short initial meter:
 
-```tako
+```mf
 meter {
   1:1 -> 1/4;  // Bar 1 is just one quarter note (the pickup)
   2:1 -> 4/4;  // Bar 2 onward is normal 4/4

@@ -61,7 +61,14 @@
       "Bash(pkill:*)",
       "Bash(binneutrino.exe:*)",
       "Bash(bin/neutrino.exe:*)",
-      "Bash(npx vsce package)"
+      "Bash(npx vsce package)",
+      "Bash(dir \"C:\\\\Users\\\\shout\\\\Desktop\\\\github\\\\takomusic\\\\dist\\\\*.json\")",
+      "Bash(bin/musicXMLtoLabel.exe:*)",
+      "Bash(python3:*)",
+      "Bash(echo \")",
+      "Bash(./tako-render-audio-simple.cmd:*)",
+      "Bash(./bin/NEUTRINO.exe:*)",
+      "Bash(./tako-render-audio-simple.cmd render:*)"
     ]
   }
 }

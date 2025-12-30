@@ -70,7 +70,7 @@ These also work with `Pos` and `Dur` types (which are `Rat`-based internally).
 
 **Important:** `rest(dur)` advances the cursor but does NOT create an event. Therefore, trailing rests do not contribute to `length(clip)`:
 
-```tako
+```mf
 const c = clip {
   note(C4, q);  // Note at 0, dur 1
   rest(q);      // Cursor moves to 2, but no event created
@@ -80,7 +80,7 @@ length(c);  // Returns 1 (not 2!) — length is max event end, not cursor
 
 This affects `concat` and `repeat`, which use `length` for shifting:
 
-```tako
+```mf
 const pattern = clip {
   note(C4, q);
   rest(q);  // Intended 1-beat gap
@@ -92,7 +92,7 @@ repeat(pattern, 2);
 
 **Solution: Use `padTo` to explicitly set clip length:**
 
-```tako
+```mf
 const pattern = padTo(clip {
   note(C4, q);
 }, h);  // Explicitly set length to 2 quarters
@@ -118,7 +118,7 @@ When `padTo` is used, this `length` field is set to the specified value. If omit
 
 **Example:**
 
-```tako
+```mf
 const c = padTo(clip { note(C4, q); }, h);
 // IR: { "events": [...], "length": { "n": 2, "d": 1 } }
 // length(c) returns h (2 quarters), not q (1 quarter)
@@ -144,7 +144,7 @@ const c = padTo(clip { note(C4, q); }, h);
 
 **Important:** Rule 1 means that notes starting before the slice range are completely excluded, even if they would still be sounding within the range. This is a simplification for clip-based editing. If you need to preserve "sounding" notes that started earlier, consider using `overlay` with adjusted positions instead.
 
-```tako
+```mf
 // Example: note starts at 0, extends to position 2
 const c = clip { note(C4, h); };  // h = 2 quarters
 
@@ -158,7 +158,7 @@ const s = slice(c, q, h);  // Range [1, 2)
 
 **Workaround for preserving ongoing notes:**
 
-```tako
+```mf
 import { max, min, mapEvents, updateEvent } from "std:core";
 
 // To keep notes that are still sounding, manually check and include them:
@@ -257,7 +257,7 @@ Event = NoteEvent | ChordEvent | DrumHitEvent | BreathEvent
 
 Use `match` on the `type` field to handle different event types:
 
-```tako
+```mf
 mapEvents(c, fn(e) {
   return match (e.type) {
     "note" -> {
@@ -278,7 +278,7 @@ mapEvents(c, fn(e) {
 
 The `??` operator returns the left operand if non-null, otherwise the right operand:
 
-```tako
+```mf
 const vel = note.velocity ?? 0.7;  // Use 0.7 if velocity is null
 const voice = note.voice ?? 1;     // Default voice 1
 ```
@@ -289,7 +289,7 @@ const voice = note.voice ?? 1;     // Default voice 1
 
 Creates a copy of the event with specified fields updated. The `updates` parameter is an object containing the fields to update. Only fields valid for the event type can be updated:
 
-```tako
+```mf
 // Update note timing
 updateEvent(note, { start: q, dur: h });
 
@@ -306,7 +306,7 @@ updateEvent(note, { start: 0, dur: q, velocity: 0.7 });
 
 All positions in the resulting clip are shifted so that `start` becomes `0`:
 
-```tako
+```mf
 const c = clip { note(C4, w); };  // Note at pos 0, dur w (4 quarters)
 const s = slice(c, q, h + q);     // Extract [1, 3)
 // Result: note at pos 0, dur h (2 quarters)
@@ -318,7 +318,7 @@ const s = slice(c, q, h + q);     // Extract [1, 3)
 
 Currently, `Track` values can only be extracted from existing scores, not constructed independently:
 
-```tako
+```mf
 const tracks = getTracks(score);  // -> [Track]
 const t = tracks[0];              // -> Track
 ```
@@ -355,7 +355,7 @@ If you need to share logic across scores, use functions that return `Clip` value
 
 **Workaround for dynamic scores:**
 
-```tako
+```mf
 import { barBeat } from "std:time";
 
 fn buildScore(parts: [Clip]) -> Score {
@@ -392,7 +392,7 @@ The `meterMap` parameter required by `resolvePos` can be obtained in several way
 
 3. **Within score context:** The host provides `meterMap` implicitly in certain contexts.
 
-```tako
+```mf
 import { getMeterMap, resolvePos, barBeat } from "std:time";
 
 // Method 1: Extract from score
@@ -410,7 +410,7 @@ const pos = resolvePos(3:2, simpleMeterMap);
 
 **MeterEvent structure:**
 
-```tako
+```mf
 type MeterEvent = {
   bar: Int,           // Bar number (1-indexed)
   meter: { n: Int, d: Int }  // Numerator and denominator
@@ -468,7 +468,7 @@ bar_duration_in_quarters = numerator * (4 / denominator)
 
 Meter changes MUST occur at bar boundaries (beat 1). The PosRef in `meter { ... }` declarations must have beat = 1:
 
-```tako
+```mf
 meter {
   1:1 -> 4/4;   // Valid: bar 1, beat 1
   17:1 -> 3/4;  // Valid: bar 17, beat 1
@@ -480,7 +480,7 @@ This constraint ensures unambiguous bar duration calculation. Mid-bar meter chan
 
 **Example:**
 
-```tako
+```mf
 // With meter 6/8 starting at bar 1
 // 1:1 = start of bar 1
 // 1:4 = fourth eighth note in bar 1
@@ -504,7 +504,7 @@ const pos = resolvePos(2:3, meterMap);
 
 Place a clip with leading rest to offset the actual content:
 
-```tako
+```mf
 import { overlay, shift } from "std:core";
 
 fn offsetClip(offset: Dur, content: Clip) -> Clip {
@@ -520,14 +520,14 @@ track "Lead" role Instrument sound "synth" {
 
 **Approach 2: Use 8-based meter for finer granularity**
 
-```tako
+```mf
 meter { 1:1 -> 8/8; }  // 8 beats per bar, each an eighth note
 tempo { 1:5 -> 100bpm; }  // Tempo change at beat 5 (= beat 2.5 in 4/4 terms)
 ```
 
 **Approach 3: Resolve to absolute Pos (for internal calculations)**
 
-```tako
+```mf
 const meterMap = [...];  // from score context
 const basePos = resolvePos(2:1, meterMap);
 const subBeatPos = basePos + e;  // Add eighth note offset
@@ -546,7 +546,7 @@ const subBeatPos = basePos + e;  // Add eighth note offset
 
 **Usage pattern:**
 
-```tako
+```mf
 let r = rng(42);
 const result1 = nextFloat(r);
 const r2 = result1[0];
@@ -592,7 +592,7 @@ Snaps event start positions to the specified grid.
 - `strength`: 0.0 = no change, 1.0 = fully quantized, values in between interpolate
 - **Duration behavior:** Duration is preserved; only start position is quantized
 
-```tako
+```mf
 // Quantize to sixteenth notes, 50% strength
 const q = quantize(c, s, 0.5);
 ```
@@ -620,7 +620,7 @@ Adds random variations to timing and velocity for a more human feel.
 - `velocity`: Maximum velocity deviation (e.g., 0.1 = ±10% of velocity)
 - **Returns:** `[Rng, Clip]` array — updated Rng state and humanized clip
 
-```tako
+```mf
 let r = rng(42);
 const result1 = humanize(clip1, r, timing: 0.01, velocity: 0.05);
 const r2 = result1[0];
@@ -655,7 +655,7 @@ Timing values are converted using a maximum denominator of 960 (common PPQN in M
 
 **Example:**
 
-```tako
+```mf
 // timing: 0.02 quarters ≈ 1/50 quarter
 // Converted to Rat: 19/960 (closest rational ≤ 960 denominator)
 humanize(c, r, timing: 0.02, velocity: 0.05);
@@ -663,7 +663,7 @@ humanize(c, r, timing: 0.02, velocity: 0.05);
 
 **Recommendation:** For maximum determinism in generated code, prefer rational-friendly values:
 
-```tako
+```mf
 // Preferred: values that convert cleanly
 quantize(c, e, strength: 0.5);   // 1/2
 swing(c, e, amount: 0.333);      // ≈1/3 -> 320/960
@@ -710,7 +710,7 @@ When using `automation(param, start, end, curve)`:
 
 When `slice()` or custom clip editing operations trim an automation event, the curve must be proportionally scaled:
 
-```tako
+```mf
 // Original automation: start=0, end=4, curve spans [0, 1]
 // After slice(c, 1, 3): new automation: start=0, end=2
 // Curve must be rescaled: original t=0.25 becomes t=0, t=0.75 becomes t=1
@@ -730,7 +730,7 @@ fn scaleCurve(curve: Curve, originalStart: Pos, originalEnd: Pos,
 
 All curves are converted to `piecewiseLinear` format in the IR. Higher-level functions like `easeInOut` generate approximation points:
 
-```tako
+```mf
 // Source
 const c = easeInOut(0.0, 1.0, 4);
 
@@ -782,7 +782,7 @@ Abstract drum keys are exposed as constants (identifiers, not strings):
 
 Usage in clips:
 
-```tako
+```mf
 import * as drums from "std:drums";
 
 clip {
@@ -816,7 +816,7 @@ Drum pattern generators are **meter-agnostic**. They generate clips based on fix
 
 **Example with meter changes:**
 
-```tako
+```mf
 // 4/4 section: pattern aligns perfectly
 track "Drums" role Drums sound "kit" {
   place 1:1 drums.basicRock(4, q);  // 4 bars of 4/4
@@ -849,7 +849,7 @@ LyricToken values:
 
 Note: `vocal.Ext` is a constant value, not a function call. Use it directly in arrays:
 
-```tako
+```mf
 const lyr = vocal.syllables(["star", "light", vocal.Ext], "en-US");
 ```
 
@@ -876,7 +876,7 @@ Attaches lyric syllables to notes in the clip. Each note receives a `LyricSpan` 
 3. `vocal.Ext` tokens map to notes with `kind: "extend"` (melisma continuation)
 4. `wordPos` indicates syllable position within a word (derived from `words` parameter or heuristics)
 
-```tako
+```mf
 const lyr = vocal.syllables(["hel", "lo", vocal.Ext], "en-US", words: ["hello"]);
 let c = clip {
   note(C4, q);  // -> LyricSpan { kind: "syllable", text: "hel", wordPos: "begin" }
@@ -933,7 +933,7 @@ Automatically inserts breath events before phrases for natural vocal phrasing.
 - **Overlapping notes:** When notes overlap, only the gap after ALL overlapping notes end is considered
 - **Voice separation:** If `voice` attribute is used, each voice is processed independently
 
-```tako
+```mf
 // Example: overlapping notes
 clip {
   note(C4, h);      // 0 to 2
@@ -946,7 +946,7 @@ clip {
 
 **Recommended usage:**
 
-```tako
+```mf
 // Ensure monophonic input for best results
 let c = vocal.align(clip { ... }, lyrics);
 c = vocal.autoBreath(c, minGap: e, breathDur: s, intensity: 0.5);
@@ -958,7 +958,7 @@ c = vocal.autoBreath(c, minGap: e, breathDur: s, intensity: 0.5);
 
 ## Example
 
-```tako
+```mf
 import { repeat } from "std:core";
 import { majorTriad } from "std:theory";
 

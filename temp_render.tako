@@ -1,0 +1,622 @@
+import { concat, overlay, repeat, padTo } from "std:core";
+import * as drums from "std:drums";
+import * as theory from "std:theory";
+import * as vocal from "std:vocal";
+
+// -----------------------------
+// Harmony / Pad
+// -----------------------------
+
+fn chordBar(pitches, v) {
+  return clip {
+    chord(pitches, w, vel: v);
+  };
+}
+
+fn pad4(v) {
+  return concat(
+    chordBar(theory.minorTriad(E3), v),
+    concat(
+      chordBar(theory.majorTriad(C3), v),
+      concat(
+        chordBar(theory.majorTriad(G3), v),
+        chordBar(theory.majorTriad(D3), v)
+      )
+    )
+  );
+}
+
+fn pad4Wide(v) {
+  const base = pad4(v);
+  return base;
+}
+
+fn introPad4() {
+  return padTo(clip {
+    at(0);
+    chord(theory.minorTriad(E3), w, vel: 0.32);
+
+    at(w);
+    chord(theory.minorTriad(E3), w, vel: 0.36);
+
+    at(w * 2);
+    chord(theory.minorTriad(E3), w, vel: 0.40);
+
+    at(w * 3);
+    chord(theory.minorTriad(E3), w, vel: 0.44);
+  }, w * 4);
+}
+
+fn stabBar(pitches, v) {
+  return padTo(clip {
+    at(q + e);
+    chord(pitches, e, vel: v);
+
+    at(q * 3 + e);
+    chord(pitches, e, vel: v);
+  }, w);
+}
+
+fn stabs4(v) {
+  return concat(
+    stabBar(theory.minorTriad(E4), v),
+    concat(
+      stabBar(theory.majorTriad(C4), v),
+      concat(
+        stabBar(theory.majorTriad(G4), v),
+        stabBar(theory.majorTriad(D4), v)
+      )
+    )
+  );
+}
+
+fn chorusPad8() {
+  const sustained = repeat(pad4Wide(0.55), 2);
+  const gated = repeat(stabs4(0.70), 2);
+  return padTo(overlay(sustained, gated), w * 8);
+}
+
+fn outroPad4() {
+  return padTo(clip {
+    chord(theory.minorTriad(E3), w * 4, vel: 0.42);
+  }, w * 4);
+}
+
+// -----------------------------
+// Bass
+// -----------------------------
+
+fn bassMotifE() {
+  return padTo(clip {
+    note(E2, e, vel: 0.90);
+    rest(e);
+    note(E2, e, vel: 0.82);
+    note(E3, e, vel: 0.84);
+    note(B2, q, vel: 0.80);
+    note(E2, q, vel: 0.88);
+  }, w);
+}
+
+fn bassMotifC() {
+  return padTo(clip {
+    note(C2, e, vel: 0.90);
+    rest(e);
+    note(C2, e, vel: 0.82);
+    note(C3, e, vel: 0.84);
+    note(G2, q, vel: 0.80);
+    note(C2, q, vel: 0.88);
+  }, w);
+}
+
+fn bassMotifG() {
+  return padTo(clip {
+    note(G2, e, vel: 0.90);
+    rest(e);
+    note(G2, e, vel: 0.82);
+    note(G3, e, vel: 0.84);
+    note(D3, q, vel: 0.80);
+    note(G2, q, vel: 0.88);
+  }, w);
+}
+
+fn bassMotifD() {
+  return padTo(clip {
+    note(D2, e, vel: 0.90);
+    rest(e);
+    note(D2, e, vel: 0.82);
+    note(D3, e, vel: 0.84);
+    note(A2, q, vel: 0.80);
+    note(D2, q, vel: 0.88);
+  }, w);
+}
+
+fn bass4() {
+  return concat(bassMotifE(), concat(bassMotifC(), concat(bassMotifG(), bassMotifD())));
+}
+
+fn bass16() {
+  return repeat(bass4(), 4);
+}
+
+// -----------------------------
+// Arp (movement / coolness)
+// -----------------------------
+
+fn arpBar(triad, v) {
+  return padTo(clip {
+    note(triad[0], e, vel: v);
+    note(triad[1], e, vel: v);
+    note(triad[2], e, vel: v);
+    note(triad[1], e, vel: v);
+    note(triad[0], e, vel: v);
+    note(triad[1], e, vel: v);
+    note(triad[2], e, vel: v);
+    note(triad[1], e, vel: v);
+  }, w);
+}
+
+fn arp4(v) {
+  return concat(
+    arpBar(theory.minorTriad(E4), v),
+    concat(
+      arpBar(theory.majorTriad(C4), v),
+      concat(
+        arpBar(theory.majorTriad(G4), v),
+        arpBar(theory.majorTriad(D4), v)
+      )
+    )
+  );
+}
+
+fn arp8(v) {
+  return repeat(arp4(v), 2);
+}
+
+// -----------------------------
+// Drums (Kick/Snare/Clap/Crash)
+// -----------------------------
+
+fn crashBar() {
+  return padTo(clip {
+    at(0);
+    hit(drums.crash, e, vel: 0.90);
+  }, w);
+}
+
+fn drumGrooveBar() {
+  return padTo(clip {
+    at(0);
+    hit(drums.kick, e, vel: 0.95);
+    at(h);
+    hit(drums.kick, e, vel: 0.90);
+    at(h + e + s);
+    hit(drums.kick, e, vel: 0.80);
+
+    at(q);
+    hit(drums.snare, e, vel: 0.86);
+    at(q);
+    hit(drums.clap, e, vel: 0.55);
+
+    at(q * 3);
+    hit(drums.snare, e, vel: 0.90);
+    at(q * 3);
+    hit(drums.clap, e, vel: 0.60);
+
+    at(h - s);
+    hit(drums.snare, s, vel: 0.35);
+  }, w);
+}
+
+fn drumFillBar() {
+  return padTo(clip {
+    at(0);
+    hit(drums.kick, e, vel: 0.95);
+
+    at(q);
+    hit(drums.snare, e, vel: 0.85);
+    at(q);
+    hit(drums.clap, e, vel: 0.55);
+
+    at(h);
+    hit(drums.kick, e, vel: 0.90);
+
+    at(q * 3);
+    hit(drums.snare, s, vel: 0.50);
+    at(q * 3 + s);
+    hit(drums.snare, s, vel: 0.62);
+    at(q * 3 + s * 2);
+    hit(drums.snare, s, vel: 0.76);
+    at(q * 3 + s * 3);
+    hit(drums.snare, s, vel: 0.92);
+
+    at(q * 3 + s * 3);
+    hit(drums.crash, s, vel: 0.90);
+  }, w);
+}
+
+fn drums8() {
+  const first = overlay(crashBar(), drumGrooveBar());
+  const mid = repeat(drumGrooveBar(), 6);
+  const last = drumFillBar();
+  return padTo(concat(first, concat(mid, last)), w * 8);
+}
+
+// -----------------------------
+// Hats (separate track)
+// -----------------------------
+
+fn hatBuildBarQuarter(v) {
+  return padTo(clip {
+    at(0);
+    hit(drums.hhc, s, vel: v);
+    at(q);
+    hit(drums.hhc, s, vel: v);
+    at(h);
+    hit(drums.hhc, s, vel: v);
+    at(q * 3);
+    hit(drums.hhc, s, vel: v);
+  }, w);
+}
+
+fn hatBarVerse() {
+  return padTo(clip {
+    at(0);      hit(drums.hhc, s, vel: 0.55);
+    at(e);      hit(drums.hhc, s, vel: 0.45);
+    at(e * 2);  hit(drums.hhc, s, vel: 0.55);
+    at(e * 3);  hit(drums.hhc, s, vel: 0.45);
+    at(e * 4);  hit(drums.hhc, s, vel: 0.55);
+    at(e * 5);  hit(drums.hhc, s, vel: 0.45);
+    at(e * 6);  hit(drums.hhc, s, vel: 0.55);
+    at(e * 7);  hit(drums.hho, s, vel: 0.45);
+  }, w);
+}
+
+fn hatBarChorus() {
+  return padTo(clip {
+    at(0);      hit(drums.hhc, s, vel: 0.62);
+    at(e);      hit(drums.hhc, s, vel: 0.52);
+    at(e * 2);  hit(drums.hhc, s, vel: 0.62);
+    at(e * 3);  hit(drums.hhc, s, vel: 0.52);
+    at(e * 4);  hit(drums.hhc, s, vel: 0.62);
+    at(e * 5);  hit(drums.hhc, s, vel: 0.52);
+    at(e * 6);  hit(drums.hhc, s, vel: 0.62);
+
+    at(q * 3);          hit(drums.hhc, s, vel: 0.55);
+    at(q * 3 + s);      hit(drums.hhc, s, vel: 0.55);
+    at(q * 3 + s * 2);  hit(drums.hhc, s, vel: 0.55);
+    at(q * 3 + s * 3);  hit(drums.hho, s, vel: 0.50);
+  }, w);
+}
+
+fn hats4Intro() {
+  const b1 = hatBuildBarQuarter(0.35);
+  const b2 = hatBuildBarQuarter(0.38);
+  const b3 = hatBarVerse();
+  const b4 = hatBarVerse();
+  return concat(b1, concat(b2, concat(b3, b4)));
+}
+
+fn hats8Verse() {
+  return repeat(hatBarVerse(), 8);
+}
+
+fn hats8Chorus() {
+  return repeat(hatBarChorus(), 8);
+}
+
+fn outroDrums4() {
+  return padTo(clip {
+    at(0);
+    hit(drums.crash, q, vel: 0.95);
+    at(0);
+    hit(drums.kick, e, vel: 0.95);
+
+    at(h);
+    hit(drums.snare, e, vel: 0.80);
+    at(h);
+    hit(drums.clap, e, vel: 0.55);
+
+    at(w);
+    hit(drums.crash, q, vel: 0.80);
+  }, w * 4);
+}
+
+// -----------------------------
+// Lead (hook in chorus)
+// -----------------------------
+
+fn leadBarA() {
+  return padTo(clip {
+    rest(e);
+
+    note(B4, e, vel: 0.78);
+    note(D5, e, vel: 0.80);
+    note(E5, e, vel: 0.86);
+    note(G5, q, vel: 0.90);
+    note(Gb5, e, vel: 0.82);
+    note(E5, e, vel: 0.88);
+  }, w);
+}
+
+fn leadBarB() {
+  return padTo(clip {
+    note(E5, e, vel: 0.82);
+    note(D5, e, vel: 0.80);
+    note(B4, e, vel: 0.78);
+    note(A4, e, vel: 0.76);
+    note(B4, e, vel: 0.80);
+    note(D5, e, vel: 0.84);
+    note(E5, e, vel: 0.90);
+    note(G5, e, vel: 0.92);
+  }, w);
+}
+
+fn leadPhrase2() {
+  return concat(leadBarA(), leadBarB());
+}
+
+fn leadChorus8() {
+  return repeat(leadPhrase2(), 4);
+}
+
+// -----------------------------
+// Vocal - NEON EDGE Lyrics
+// -----------------------------
+
+// Verse 1A: ネオンのひかり (8小節のうち前半4小節)
+// Em - C - G - D
+fn vocalVerse1A() {
+  let c = clip {
+    // Bar 1 (Em): ネオンの
+    note(E4, e, vel: 0.82);    // ネ
+    note(E4, e, vel: 0.80);    // オ
+    note(G4, q, vel: 0.85);    // ン
+    note(G4, e, vel: 0.82);    // の
+    rest(e + q);
+
+    // Bar 2 (C): ひかり
+    note(G4, e, vel: 0.85);    // ひ
+    note(E4, e, vel: 0.82);    // か
+    note(C4, h, vel: 0.88);    // り
+    rest(q);
+
+    // Bar 3 (G): てらす
+    note(D4, e, vel: 0.82);    // て
+    note(G4, e, vel: 0.85);    // ら
+    note(B4, q, vel: 0.88);    // す
+    rest(h);
+
+    // Bar 4 (D): まち
+    note(A4, e, vel: 0.85);    // ま
+    note(Gb4, q + e, vel: 0.88);  // ち
+    rest(h);
+  };
+
+  const lyr = vocal.syllables(
+    ["ネ", "オ", "ン", "の", "ひ", "か", "り", "て", "ら", "す", "ま", "ち"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// Verse 1B: こころは (4小節)
+fn vocalVerse1B() {
+  let c = clip {
+    // Bar 5 (Em): こころは
+    note(E4, e, vel: 0.82);    // こ
+    note(E4, e, vel: 0.80);    // こ
+    note(G4, e, vel: 0.85);    // ろ
+    note(G4, e, vel: 0.82);    // は
+    rest(h);
+
+    // Bar 6 (C): さまよう
+    note(G4, e, vel: 0.85);    // さ
+    note(E4, e, vel: 0.82);    // ま
+    note(E4, e, vel: 0.80);    // よ
+    note(C4, e, vel: 0.85);    // う
+    rest(h);
+
+    // Bar 7 (G): このよる
+    note(D4, e, vel: 0.82);    // こ
+    note(G4, e, vel: 0.85);    // の
+    note(B4, e, vel: 0.88);    // よ
+    note(B4, e, vel: 0.85);    // る
+    rest(h);
+
+    // Bar 8 (D): を
+    note(A4, q, vel: 0.88);    // を
+    rest(h + q);
+  };
+
+  const lyr = vocal.syllables(
+    ["こ", "こ", "ろ", "は", "さ", "ま", "よ", "う", "こ", "の", "よ", "る", "を"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn vocalVerse8() {
+  return concat(vocalVerse1A(), vocalVerse1B());
+}
+
+// Chorus: 走り出せ NEON EDGE (8小節)
+fn vocalChorusA() {
+  let c = clip {
+    // Bar 1 (Em): はしりだせ
+    note(E4, e, vel: 0.90);    // は
+    note(G4, e, vel: 0.92);    // し
+    note(B4, q, vel: 0.95);    // り
+    note(B4, e, vel: 0.92);    // だ
+    note(G4, q + e, vel: 0.95); // せ
+
+    // Bar 2 (C): どこまでも
+    note(G4, e, vel: 0.90);    // ど
+    note(E4, e, vel: 0.88);    // こ
+    note(E4, e, vel: 0.90);    // ま
+    note(C4, e, vel: 0.88);    // で
+    note(E4, h, vel: 0.92);    // も
+
+    // Bar 3 (G): かがやけ
+    note(D4, e, vel: 0.88);    // か
+    note(G4, e, vel: 0.90);    // が
+    note(B4, q, vel: 0.95);    // や
+    note(D5, q, vel: 0.98);    // け
+    rest(q);
+
+    // Bar 4 (D): この夜に
+    note(D5, e, vel: 0.95);    // こ
+    note(A4, e, vel: 0.92);    // の
+    note(Gb4, e, vel: 0.90);   // よ
+    note(A4, e, vel: 0.92);    // る
+    note(Gb4, h, vel: 0.95);   // に
+  };
+
+  const lyr = vocal.syllables(
+    ["は", "し", "り", "だ", "せ", "ど", "こ", "ま", "で", "も", "か", "が", "や", "け", "こ", "の", "よ", "る", "に"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.3, rate: 5.5);
+  return c;
+}
+
+fn vocalChorusB() {
+  let c = clip {
+    // Bar 5 (Em): ネオン
+    note(E4, e, vel: 0.92);    // ネ
+    note(G4, e, vel: 0.95);    // オ
+    note(B4, h, vel: 0.98);    // ン
+    rest(q);
+
+    // Bar 6 (C): エッジ
+    note(G4, e, vel: 0.95);    // エ
+    note(E4, e, vel: 0.92);    // ッ
+    note(C4, h, vel: 0.95);    // ジ
+    rest(q);
+
+    // Bar 7 (G): きりひらけ
+    note(D4, e, vel: 0.88);    // き
+    note(G4, e, vel: 0.90);    // り
+    note(B4, e, vel: 0.92);    // ひ
+    note(D5, e, vel: 0.95);    // ら
+    note(B4, h, vel: 0.98);    // け
+
+    // Bar 8 (D): みらいを
+    note(A4, e, vel: 0.92);    // み
+    note(Gb4, e, vel: 0.90);   // ら
+    note(D4, e, vel: 0.88);    // い
+    note(A4, q + e, vel: 0.95); // を
+    rest(q);
+  };
+
+  const lyr = vocal.syllables(
+    ["ネ", "オ", "ン", "エ", "ッ", "ジ", "き", "り", "ひ", "ら", "け", "み", "ら", "い", "を"],
+    "ja-JP"
+  );
+
+  c = vocal.align(c, lyr);
+  c = vocal.vibrato(c, depth: 0.35, rate: 5.5);
+  return c;
+}
+
+fn vocalChorus8() {
+  return concat(vocalChorusA(), vocalChorusB());
+}
+
+// -----------------------------
+// Score
+// -----------------------------
+
+export fn main() {
+  return score {
+    meta {
+      title "NEON EDGE";
+      artist "Tako v3 demo";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 140bpm; }
+
+    marker(1:1, "section", "Intro");
+    marker(5:1, "section", "Verse");
+    marker(13:1, "section", "Chorus");
+    marker(21:1, "section", "Outro");
+
+    sound "pad" kind instrument {
+      label "Pad";
+      family "synth";
+      range C2..C6;
+    }
+
+    sound "arp" kind instrument {
+      label "Arp";
+      family "synth";
+      range C3..C6;
+    }
+
+    sound "synth_bass" kind instrument {
+      label "Synth Bass";
+      family "synth";
+      range C1..C4;
+    }
+
+    sound "lead" kind instrument {
+      label "Lead Synth";
+      family "synth";
+      range C3..C6;
+    }
+
+    sound "kit" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; clap; }
+    }
+
+    sound "lead_vocal" kind vocal {
+      vocal {
+        lang "ja-JP";
+        range C3..C6;
+      }
+    }
+
+    track "Pad" role Instrument sound "pad" {
+      place 1:1 introPad4();
+      place 5:1 repeat(pad4(0.45), 2);
+      place 13:1 chorusPad8();
+      place 21:1 outroPad4();
+    }
+
+    track "Arp" role Instrument sound "arp" {
+      place 5:1 arp8(0.38);
+      place 13:1 arp8(0.52);
+    }
+
+    track "Bass" role Instrument sound "synth_bass" {
+      place 5:1 bass16();
+    }
+
+    track "Drums" role Drums sound "kit" {
+      place 5:1 drums8();
+      place 13:1 drums8();
+      place 21:1 outroDrums4();
+    }
+
+    track "Hats" role Drums sound "kit" {
+      place 1:1 hats4Intro();
+      place 5:1 hats8Verse();
+      place 13:1 hats8Chorus();
+    }
+
+    track "Lead" role Instrument sound "lead" {
+      place 13:1 leadChorus8();
+    }
+
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 5:1 vocalVerse8();
+      place 13:1 vocalChorus8();
+    }
+  };
+}

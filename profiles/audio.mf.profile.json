@@ -1,0 +1,39 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "neon_edge_audio",
+  "renderer": "audio.simple",
+  "output": {
+    "path": "out/neon_edge_backing.mp3",
+    "wavPath": "out/neon_edge_backing.wav",
+    "sampleRate": 44100,
+    "bitrate": 192
+  },
+  "bindings": [
+    {
+      "selector": { "sound": "pad" },
+      "config": { "preset": "pad", "gain": 0.35, "pan": -0.2 }
+    },
+    {
+      "selector": { "sound": "arp" },
+      "config": { "preset": "lead", "gain": 0.30, "pan": 0.3 }
+    },
+    {
+      "selector": { "sound": "synth_bass" },
+      "config": { "preset": "bass", "gain": 0.55, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "lead" },
+      "config": { "preset": "lead", "gain": 0.45, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "kit" },
+      "config": { "preset": "drums", "gain": 0.9, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": { "preset": "vocal", "gain": 0, "pan": 0 }
+    }
+  ]
+}

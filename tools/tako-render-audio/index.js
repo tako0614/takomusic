@@ -20,7 +20,7 @@ const VERSION = "0.1.0";
 const SUPPORTED_EVENTS = new Set(["note", "chord", "drumHit"]);
 const TAU = Math.PI * 2;
 
-function main() {
+async function main() {
   const cmd = process.argv[2];
   if (!cmd || cmd === "-h" || cmd === "--help") {
     printUsage();
@@ -52,7 +52,7 @@ function main() {
       printJson(runValidate(process.argv.slice(3)));
       break;
     case "render":
-      runRender(process.argv.slice(3));
+      await runRender(process.argv.slice(3));
       break;
     default:
       printUsage();
@@ -98,7 +98,7 @@ function runValidate(args) {
   return validateInputs(score, profile);
 }
 
-function runRender(args) {
+async function runRender(args) {
   if (!lamejs) {
     console.error("lamejs not installed. Run npm install in tools/tako-render-audio.");
     process.exit(2);
@@ -121,7 +121,7 @@ function runRender(args) {
 
   // If NEUTRINO is configured and there's a vocal track, render and mix it
   if (useNeutrino) {
-    const vocalWav = renderNeutrinoVocal(score, profile, output);
+    const vocalWav = await renderNeutrinoVocal(score, profile, output);
     if (vocalWav) {
       mixNeutrinoVocal(renderResult, vocalWav, output.neutrinoGain, output.sampleRate);
     }
@@ -168,7 +168,7 @@ function hasVocalTrack(score) {
   });
 }
 
-function renderNeutrinoVocal(score, profile, output) {
+async function renderNeutrinoVocal(score, profile, output) {
   const cwd = process.cwd();
   const baseName = path.parse(output.pathAbs).name;
   const workDir = path.resolve(cwd, "neutrino_work");
@@ -188,7 +188,7 @@ function renderNeutrinoVocal(score, profile, output) {
   fs.mkdirSync(path.dirname(fullLabelPath), { recursive: true });
   fs.mkdirSync(path.dirname(monoLabelPath), { recursive: true });
 
-  // Generate MusicXML from vocal track
+  // Generate MusicXML from vocal track (lyrics must be hiragana/katakana)
   const musicxml = buildVocalMusicXml(score, output);
   fs.writeFileSync(musicxmlPath, musicxml, "utf-8");
 
@@ -264,11 +264,26 @@ function buildVocalMusicXml(score, output) {
         if (ev.type !== "note") continue;
         const startTick = ratToTicks(ev.start, ticksPerWhole) + ratToTicks(placementAt, ticksPerWhole);
         const durationTick = Math.max(1, ratToTicks(ev.dur, ticksPerWhole));
+
+        // Handle extend lyrics by merging with previous note
+        const lyricKind = ev.lyric?.kind;
+        if (lyricKind === "extend" && notes.length > 0) {
+          // Extend the previous note's duration
+          const prevNote = notes[notes.length - 1];
+          prevNote.durationTick = startTick + durationTick - prevNote.startTick;
+          continue;
+        }
+
+        // Lyric should already be in hiragana/katakana from source
+        // Each note should have 1-2 mora (no automatic splitting)
+        // Use "あー" for notes without lyrics (humming/sustained sounds)
+        const lyric = ev.lyric?.text || "あー";
+
         notes.push({
           startTick,
           durationTick,
           midi: ev.pitch?.midi ?? 60,
-          lyric: ev.lyric?.text ?? ""
+          lyric
         });
       }
     }
@@ -1215,4 +1230,7 @@ const DRUM_PRESETS = {
   default: { freq: 250, decay: 0.2, tone: 0.3, noise: 0.6, clap: false }
 };
 
-main();
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
