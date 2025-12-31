@@ -1,6 +1,6 @@
 {
   "name": "takomusic",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "description": "TakoMusic - A music composition DSL that evaluates to neutral IR and renders via plugins",
   "type": "module",
   "main": "dist/index.js",
@@ -9,7 +9,8 @@
   },
   "files": [
     "dist",
-    "lib"
+    "lib",
+    "docs/schemas"
   ],
   "scripts": {
     "build": "tsc",
@@ -46,7 +47,9 @@
     "ajv": "^8.12.0",
     "kuroshiro": "^1.2.0",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
-    "toml": "^3.0.0"
+    "toml": "^3.0.0",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
   },
   "engines": {
     "node": ">=18.0.0"

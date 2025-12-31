@@ -2,7 +2,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { V3Compiler } from '../../compiler.js';
+import { V4Compiler } from '../../compiler.js';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 import { handleCliError } from '../errorHandler.js';
@@ -11,6 +11,8 @@ import type { MFConfig } from '../../config/index.js';
 export async function buildCommand(args: string[]): Promise<number> {
   // Parse arguments
   let watchMode = false;
+  let inputFile: string | null = null;
+  let outputFile: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-p' || args[i] === '--profile') {
@@ -18,21 +20,47 @@ export async function buildCommand(args: string[]): Promise<number> {
       return ExitCodes.STATIC_ERROR;
     } else if (args[i] === '-w' || args[i] === '--watch') {
       watchMode = true;
+    } else if (args[i] === '-o' || args[i] === '--output') {
+      outputFile = args[++i];
     } else if (args[i] === '-h' || args[i] === '--help') {
-      console.log(`Usage: mf build [options]
+      console.log(`Usage: mf build [file.mf] [options]
+
+Arguments:
+  file.mf      Input file (optional if mfconfig.toml exists)
 
 Options:
+  -o, --output Output file path
   -w, --watch  Watch for changes and rebuild
   -h, --help   Show this help message
+
+Examples:
+  mf build                    # Build using mfconfig.toml
+  mf build song.mf            # Build single file (no config needed)
+  mf build song.mf -o out.json
 `);
       return ExitCodes.SUCCESS;
+    } else if (args[i].endsWith('.mf')) {
+      inputFile = args[i];
     }
   }
 
-  // Find config
+  // Standalone file mode (no config required)
+  if (inputFile) {
+    const entryPath = path.resolve(inputFile);
+    if (!fs.existsSync(entryPath)) {
+      console.error(`File not found: ${inputFile}`);
+      return ExitCodes.IO_ERROR;
+    }
+    const baseDir = path.dirname(entryPath);
+    const outPath = outputFile || entryPath + '.score.json';
+    return runStandaloneBuild(baseDir, entryPath, outPath);
+  }
+
+  // Project mode (requires config)
   const configPath = findConfigPath(process.cwd());
   if (!configPath) {
-    console.error('No mfconfig.toml found. Run "mf init" first.');
+    console.error('No mfconfig.toml found. Provide a .mf file or run "mf init".');
+    console.error('Usage: mf build <file.mf> or mf build (with mfconfig.toml)');
     return ExitCodes.IO_ERROR;
   }
 
@@ -60,6 +88,40 @@ Options:
   return result;
 }
 
+async function runStandaloneBuild(
+  baseDir: string,
+  entryPath: string,
+  outputPath: string
+): Promise<number> {
+  const startTime = Date.now();
+
+  try {
+    console.log('Compiling...');
+    const compiler = new V4Compiler(baseDir);
+    const ir = compiler.compile(entryPath);
+    const diagnostics = compiler.getDiagnostics().filter((d) => d.severity === 'warning');
+    for (const diag of diagnostics) {
+      console.log(`[warning] ${diag.message}`);
+    }
+
+    // Ensure output directory exists
+    const outDir = path.dirname(outputPath);
+    if (outDir && !fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true });
+    }
+
+    // Write IR
+    fs.writeFileSync(outputPath, JSON.stringify(ir, null, 2));
+    console.log(`Generated: ${outputPath}`);
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`Build complete in ${elapsed}s`);
+    return ExitCodes.SUCCESS;
+  } catch (err) {
+    return handleCliError(err);
+  }
+}
+
 async function runBuild(
   baseDir: string,
   entryPath: string,
@@ -70,7 +132,7 @@ async function runBuild(
   try {
     // Compile to IR using Compiler (handles imports)
     console.log('Compiling...');
-    const compiler = new V3Compiler(baseDir);
+    const compiler = new V4Compiler(baseDir);
     const ir = compiler.compile(entryPath);
     const diagnostics = compiler.getDiagnostics().filter((d) => d.severity === 'warning');
     for (const diag of diagnostics) {
@@ -88,7 +150,7 @@ async function runBuild(
     fs.writeFileSync(irPath, JSON.stringify(ir, null, 2));
     console.log(`Generated: ${path.relative(baseDir, irPath)}`);
 
-    // v3: renderer plugin output is handled separately
+    // renderer plugin output is handled separately
     const fileCount = 1;
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);

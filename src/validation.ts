@@ -10,6 +10,7 @@ import type {
   ClipExpr,
   ClipStmt,
   Expr,
+  MatchPattern,
 } from './ast.js';
 
 export interface ValidationContext {
@@ -80,12 +81,20 @@ function validateExpr(expr: Expr, ctx: ValidationContext): void {
       break;
     case 'ArrayLiteral':
       for (const el of expr.elements) {
-        validateExpr(el, ctx);
+        if (el.kind === 'SpreadElement') {
+          validateExpr(el.argument, ctx);
+        } else {
+          validateExpr(el, ctx);
+        }
       }
       break;
     case 'ObjectLiteral':
       for (const prop of expr.properties) {
-        validateExpr(prop.value, ctx);
+        if (prop.kind === 'SpreadElement') {
+          validateExpr(prop.argument, ctx);
+        } else {
+          validateExpr(prop.value, ctx);
+        }
       }
       break;
     case 'MemberExpr':
@@ -111,11 +120,28 @@ function validateExpr(expr: Expr, ctx: ValidationContext): void {
     case 'MatchExpr':
       validateExpr(expr.value, ctx);
       for (const arm of expr.arms) {
-        if (arm.pattern) validateExpr(arm.pattern, ctx);
+        if (arm.pattern) validatePattern(arm.pattern, ctx);
         validateExpr(arm.value, ctx);
       }
       break;
   }
+}
+
+function validatePattern(pattern: MatchPattern, ctx: ValidationContext): void {
+  if (pattern.kind === 'RangePattern') {
+    // Range patterns are valid if start <= end
+    if (pattern.start.value > pattern.end.value) {
+      ctx.diagnostics.push({
+        severity: 'warning',
+        message: `Range pattern start (${pattern.start.value}) is greater than end (${pattern.end.value})`,
+        position: pattern.position,
+        filePath: ctx.filePath,
+      });
+    }
+    return;
+  }
+  // Otherwise validate as regular expression
+  validateExpr(pattern, ctx);
 }
 
 function validateScoreExpr(expr: ScoreExpr, ctx: ValidationContext): void {

@@ -1,4 +1,4 @@
-// TakoMusic v3 - Jazz Progression
+// TakoMusic - Jazz Progression
 
 import { majorTriad, minorTriad } from "std:theory";
 

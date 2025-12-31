@@ -1,5 +1,7 @@
 import { createSignal, onMount, onCleanup, Show } from 'solid-js'
 import { useI18n } from '../i18n'
+import { compile as takoCompile, type Diagnostic } from '../lib/compiler'
+import { getAudioPlayer, type ScoreIR } from '../lib/audioPlayer'
 
 // Monaco editor types
 declare global {
@@ -199,6 +201,8 @@ export function Playground() {
   const [isCompiling, setIsCompiling] = createSignal(false)
   const [monacoLoaded, setMonacoLoaded] = createSignal(false)
   const [activeTab, setActiveTab] = createSignal<'ir' | 'ast'>('ir')
+  const [isPlaying, setIsPlaying] = createSignal(false)
+  const [currentIR, setCurrentIR] = createSignal<ScoreIR | null>(null)
 
   const initMonaco = () => {
     if (!editorContainer || !window.monaco) return
@@ -318,23 +322,63 @@ export function Playground() {
 
   onCleanup(() => {
     editor?.dispose()
+    getAudioPlayer().dispose()
   })
 
   const compile = async () => {
     setIsCompiling(true)
     setOutput('')
+    setCurrentIR(null)
 
     try {
-      // Simulate compilation (in real implementation, this would call the Tako compiler)
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Use real TakoMusic compiler
+      const result = await takoCompile(code())
 
-      // Generate mock IR output
-      const mockIR = generateMockIR(code())
-      setOutput(JSON.stringify(mockIR, null, 2))
+      if (!result.success) {
+        // Format diagnostics
+        const errorOutput = result.diagnostics
+          .map((d: Diagnostic) => {
+            const loc = d.line ? `${d.line}:${d.column ?? 1}` : ''
+            const prefix = d.severity === 'error' ? 'error' : 'warning'
+            return loc ? `${prefix}: ${d.message}\n  --> main.mf:${loc}` : `${prefix}: ${d.message}`
+          })
+          .join('\n\n')
+        setOutput(errorOutput)
+      } else {
+        // Store IR for playback
+        if (result.ir) {
+          setCurrentIR(result.ir as ScoreIR)
+        }
+        // Show IR or AST based on active tab
+        const outputData = activeTab() === 'ir' ? result.ir : result.ast
+        setOutput(JSON.stringify(outputData, null, 2))
+      }
     } catch (err) {
       setOutput(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setIsCompiling(false)
+    }
+  }
+
+  const togglePlayback = async () => {
+    const player = getAudioPlayer()
+
+    if (isPlaying()) {
+      player.stop()
+      setIsPlaying(false)
+    } else {
+      const ir = currentIR()
+      if (!ir) {
+        // Compile first if no IR
+        await compile()
+        const newIR = currentIR()
+        if (!newIR) return
+        setIsPlaying(true)
+        await player.play(newIR, () => setIsPlaying(false))
+      } else {
+        setIsPlaying(true)
+        await player.play(ir, () => setIsPlaying(false))
+      }
     }
   }
 
@@ -376,29 +420,56 @@ export function Playground() {
               <div class="w-3 h-3 rounded-full bg-green-500" />
               <span class="ml-4 text-slate-400 text-sm font-mono">main.mf</span>
             </div>
-            <button
-              onClick={compile}
-              disabled={isCompiling()}
-              class="px-4 py-1.5 text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-lg transition-colors flex items-center gap-2"
-            >
-              {isCompiling() ? (
-                <>
-                  <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  {t().playground?.compiling || 'Compiling...'}
-                </>
-              ) : (
-                <>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {t().playground?.compile || 'Compile'}
-                </>
-              )}
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                onClick={compile}
+                disabled={isCompiling()}
+                class="px-4 py-1.5 text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isCompiling() ? (
+                  <>
+                    <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    {t().playground?.compiling || 'Compiling...'}
+                  </>
+                ) : (
+                  <>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                    {t().playground?.compile || 'Compile'}
+                  </>
+                )}
+              </button>
+              <button
+                onClick={togglePlayback}
+                disabled={isCompiling()}
+                class={`px-4 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-2 ${
+                  isPlaying()
+                    ? 'bg-red-600 hover:bg-red-500'
+                    : 'bg-green-600 hover:bg-green-500'
+                } disabled:bg-slate-600`}
+              >
+                {isPlaying() ? (
+                  <>
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                    Stop
+                  </>
+                ) : (
+                  <>
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    Play
+                  </>
+                )}
+              </button>
+            </div>
           </div>
           <Show
             when={monacoLoaded()}
@@ -461,62 +532,8 @@ export function Playground() {
       </div>
 
       <p class="text-center text-slate-500 text-sm mt-6">
-        {t().playground?.note || 'Note: This is a demo playground. For full functionality, install TakoMusic locally.'}
+        {t().playground?.note || 'Note: This playground validates syntax and shows IR structure. For full compilation, install TakoMusic locally.'}
       </p>
     </section>
   )
-}
-
-// Mock IR generator (simulates compilation output)
-function generateMockIR(code: string): object {
-  // Extract title from meta block if present
-  const titleMatch = code.match(/title\s+"([^"]+)"/)
-  const title = titleMatch ? titleMatch[1] : 'Untitled'
-
-  // Extract tempo
-  const tempoMatch = code.match(/(\d+)bpm/)
-  const tempo = tempoMatch ? parseInt(tempoMatch[1]) : 120
-
-  // Extract meter
-  const meterMatch = code.match(/(\d+)\/(\d+)/)
-  const meterN = meterMatch ? parseInt(meterMatch[1]) : 4
-  const meterD = meterMatch ? parseInt(meterMatch[2]) : 4
-
-  // Count tracks
-  const trackMatches = code.match(/track\s+"([^"]+)"/g) || []
-  const tracks = trackMatches.map((match, i) => {
-    const name = match.match(/"([^"]+)"/)?.[1] || `Track ${i + 1}`
-    return {
-      name,
-      role: code.includes(`track "${name}" role Drums`) ? 'Drums' :
-            code.includes(`track "${name}" role Vocal`) ? 'Vocal' : 'Instrument',
-      placements: [
-        {
-          pos: { n: 0, d: 1 },
-          clip: {
-            events: [
-              { type: 'note', start: { n: 0, d: 1 }, dur: { n: 1, d: 4 }, pitch: { note: 'C', octave: 4 } }
-            ]
-          }
-        }
-      ]
-    }
-  })
-
-  return {
-    "tako.irVersion": 3,
-    meta: {
-      title,
-      generatedAt: new Date().toISOString()
-    },
-    tempoMap: [
-      { pos: { n: 0, d: 1 }, bpm: tempo, unit: { n: 1, d: 4 } }
-    ],
-    meterMap: [
-      { bar: 1, meter: { n: meterN, d: meterD } }
-    ],
-    sounds: [],
-    tracks,
-    markers: []
-  }
 }

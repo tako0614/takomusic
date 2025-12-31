@@ -1,4 +1,4 @@
-// TakoMusic v3 - Rock Demo Song
+// TakoMusic - Rock Demo Song
 // "Burning Heart" - アグレッシブなロックナンバー
 
 import { concat, repeat } from "std:core";

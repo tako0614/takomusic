@@ -7,6 +7,10 @@
 export enum TokenType {
   NUMBER = 'NUMBER',
   STRING = 'STRING',
+  TEMPLATE_HEAD = 'TEMPLATE_HEAD',
+  TEMPLATE_MIDDLE = 'TEMPLATE_MIDDLE',
+  TEMPLATE_TAIL = 'TEMPLATE_TAIL',
+  TEMPLATE_NO_SUBST = 'TEMPLATE_NO_SUBST',
   IDENT = 'IDENT',
   PITCH = 'PITCH',
   DUR = 'DUR',
@@ -39,6 +43,8 @@ export enum TokenType {
   ROLE = 'ROLE',
   KIND = 'KIND',
   AS = 'AS',
+  TYPE = 'TYPE',
+  ENUM = 'ENUM',
 
   PLUS = 'PLUS',
   MINUS = 'MINUS',
@@ -63,6 +69,8 @@ export enum TokenType {
   ARROW = 'ARROW',
   AT = 'AT',
   DOTDOT = 'DOTDOT',
+  SPREAD = 'SPREAD',
+  PIPE = 'PIPE',
 
   LPAREN = 'LPAREN',
   RPAREN = 'RPAREN',
@@ -107,4 +115,6 @@ export const KEYWORDS: Record<string, TokenType> = {
   role: TokenType.ROLE,
   kind: TokenType.KIND,
   as: TokenType.AS,
+  type: TokenType.TYPE,
+  enum: TokenType.ENUM,
 };

@@ -1,4 +1,4 @@
-// std:core (v3)
+// std:core (v4)
 
 fn posToRat(pos) {
   if (pos == null) {
@@ -442,4 +442,322 @@ export fn ceil(a) {
 // length - returns the length of a clip
 export fn length(c) {
   return clipLength(c);
+}
+
+// ============================================
+// Generic Array Functions
+// ============================================
+
+// map - apply function to each element
+export fn map(items, f) {
+  let out = [];
+  for (item in items) {
+    out[out.length] = f(item);
+  }
+  return out;
+}
+
+// filter - keep elements matching predicate
+export fn filter(items, pred) {
+  let out = [];
+  for (item in items) {
+    if (pred(item)) {
+      out[out.length] = item;
+    }
+  }
+  return out;
+}
+
+// fold - reduce array to single value
+export fn fold(items, init, f) {
+  let acc = init;
+  for (item in items) {
+    acc = f(acc, item);
+  }
+  return acc;
+}
+
+// flatMap - map and flatten results
+export fn flatMap(items, f) {
+  let out = [];
+  for (item in items) {
+    const result = f(item);
+    for (r in result) {
+      out[out.length] = r;
+    }
+  }
+  return out;
+}
+
+// zip - combine two arrays into array of pairs
+export fn zip(a, b) {
+  let out = [];
+  let len = a.length;
+  if (b.length < len) {
+    len = b.length;
+  }
+  for (i in 0..(len - 1)) {
+    out[out.length] = [a[i], b[i]];
+  }
+  return out;
+}
+
+// enumerate - add indices to elements
+export fn enumerate(items) {
+  let out = [];
+  let i = 0;
+  for (item in items) {
+    out[out.length] = [i, item];
+    i = i + 1;
+  }
+  return out;
+}
+
+// range - generate sequence of integers
+export fn range(start, end, step) {
+  let stepVal = step;
+  if (stepVal == null) {
+    stepVal = 1;
+  }
+  let out = [];
+  if (stepVal > 0) {
+    let idx = start;
+    for (_ in 0..10000) {
+      if (idx >= end) {
+        return out;
+      }
+      out[out.length] = idx;
+      idx = idx + stepVal;
+    }
+  } else if (stepVal < 0) {
+    let idx = start;
+    for (_ in 0..10000) {
+      if (idx <= end) {
+        return out;
+      }
+      out[out.length] = idx;
+      idx = idx + stepVal;
+    }
+  }
+  return out;
+}
+
+// find - find first element matching predicate
+export fn find(items, pred) {
+  for (item in items) {
+    if (pred(item)) {
+      return item;
+    }
+  }
+  return null;
+}
+
+// findIndex - find index of first matching element
+export fn findIndex(items, pred) {
+  let i = 0;
+  for (item in items) {
+    if (pred(item)) {
+      return i;
+    }
+    i = i + 1;
+  }
+  return -1;
+}
+
+// every - check if all elements match predicate
+export fn every(items, pred) {
+  for (item in items) {
+    if (!pred(item)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// some - check if any element matches predicate
+export fn some(items, pred) {
+  for (item in items) {
+    if (pred(item)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// includes - check if array contains value
+export fn includes(items, value) {
+  for (item in items) {
+    if (item == value) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// take - take first n elements
+export fn take(items, n) {
+  let out = [];
+  let count = 0;
+  for (item in items) {
+    if (count >= n) {
+      return out;
+    }
+    out[out.length] = item;
+    count = count + 1;
+  }
+  return out;
+}
+
+// drop - drop first n elements
+export fn drop(items, n) {
+  let out = [];
+  let count = 0;
+  for (item in items) {
+    if (count >= n) {
+      out[out.length] = item;
+    }
+    count = count + 1;
+  }
+  return out;
+}
+
+// ============================================
+// Extended Clip Operations
+// ============================================
+
+// merge - overlay multiple clips at once
+export fn merge(clips) {
+  if (clips.length == 0) {
+    return { events: [], length: 0 / 1 };
+  }
+  let result = clips[0];
+  for (i in 1..(clips.length - 1)) {
+    result = overlay(result, clips[i]);
+  }
+  return result;
+}
+
+// reverse - reverse the temporal order of events
+export fn reverse(c) {
+  const len = clipLength(c);
+  if (len == null) {
+    return c;
+  }
+  let events = [];
+  for (ev in c.events) {
+    const start = eventStartRat(ev);
+    const evEnd = eventEndRat(ev);
+    if (start == null || evEnd == null) {
+      events[events.length] = ev;
+      continue;
+    }
+    const dur = evEnd - start;
+    const newStart = len - evEnd;
+    events[events.length] = shiftEvent(updateEvent(ev, { start: newStart }), 0 / 1);
+  }
+  return { events: events, length: len };
+}
+
+// invert - invert pitches around an axis
+export fn invert(c, axis) {
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const newPitch = axis * 2 - ev.pitch;
+      events[events.length] = updateEvent(ev, { pitch: newPitch });
+    } else if (ev.type == "chord") {
+      let newPitches = [];
+      for (p in ev.pitches) {
+        newPitches[newPitches.length] = axis * 2 - p;
+      }
+      events[events.length] = updateEvent(ev, { pitches: newPitches });
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// retrograde - alias for reverse (music theory term)
+export fn retrograde(c) {
+  return reverse(c);
+}
+
+// split - split clip at given positions into multiple clips
+export fn split(c, positions) {
+  if (positions.length == 0) {
+    return [c];
+  }
+  // Sort positions
+  let sorted = [];
+  for (p in positions) {
+    sorted[sorted.length] = posToRat(p);
+  }
+  // Simple bubble sort
+  for (i in 0..(sorted.length - 1)) {
+    for (j in 0..(sorted.length - i - 2)) {
+      if (sorted[j] > sorted[j + 1]) {
+        const tmp = sorted[j];
+        sorted[j] = sorted[j + 1];
+        sorted[j + 1] = tmp;
+      }
+    }
+  }
+
+  let result = [];
+  let prevPos = 0 / 1;
+  for (pos in sorted) {
+    if (pos > prevPos) {
+      result[result.length] = slice(c, prevPos, pos);
+    }
+    prevPos = pos;
+  }
+  // Add remaining
+  const len = clipLength(c);
+  if (len != null && prevPos < len) {
+    result[result.length] = slice(c, prevPos, len);
+  }
+  return result;
+}
+
+// augment - double all durations (augmentation in music theory)
+export fn augment(c, factor) {
+  let f = factor;
+  if (f == null) {
+    f = 2;
+  }
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit" || ev.type == "breath") {
+      const newStart = eventStartRat(ev) * f;
+      const newDur = ev.dur * f;
+      events[events.length] = updateEvent(ev, { start: newStart, dur: newDur });
+    } else if (ev.type == "automation") {
+      const newStart = eventStartRat(ev) * f;
+      const newEnd = posToRat(ev.end) * f;
+      events[events.length] = updateEvent(ev, { start: newStart, end: newEnd });
+    } else if (ev.type == "marker") {
+      const newPos = posToRat(ev.pos) * f;
+      events[events.length] = { type: "marker", pos: newPos, kind: ev.kind, label: ev.label };
+    } else if (ev.type == "control") {
+      const newStart = eventStartRat(ev) * f;
+      events[events.length] = updateEvent(ev, { start: newStart });
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  let newLen = null;
+  if (c.length != null) {
+    newLen = c.length * f;
+  }
+  return { events: events, length: newLen };
+}
+
+// diminish - halve all durations (diminution in music theory)
+export fn diminish(c, factor) {
+  let f = factor;
+  if (f == null) {
+    f = 2;
+  }
+  return augment(c, 1 / f);
 }

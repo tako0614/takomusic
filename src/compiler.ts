@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
-import { V3Lexer } from './lexer.js';
-import { V3Parser } from './parser.js';
-import { V3Evaluator } from './evaluator.js';
+import { V4Lexer } from './lexer.js';
+import { V4Parser } from './parser.js';
+import { V4Evaluator } from './evaluator.js';
 import { Scope } from './scope.js';
 import { normalizeScore } from './normalize.js';
 import { resolveStdlibPath } from './utils/stdlib.js';
@@ -25,7 +25,7 @@ interface Module {
   source: string;
 }
 
-export class V3Compiler {
+export class V4Compiler {
   private modules = new Map<string, Module>();
   private diagnostics: Diagnostic[] = [];
   private baseDir: string;
@@ -45,7 +45,7 @@ export class V3Compiler {
       this.pushError(`export fn main() not found in ${entryPath}`);
     }
 
-    const evaluator = new V3Evaluator(this.diagnostics, module.path);
+    const evaluator = new V4Evaluator(this.diagnostics, module.path);
     const result = evaluator.callFunction(main as any, [], new Map());
     let score: ScoreValueData;
     try {
@@ -95,9 +95,9 @@ export class V3Compiler {
     if (cached) return cached;
 
     const source = fs.readFileSync(absolutePath, 'utf-8');
-    const lexer = new V3Lexer(source, absolutePath);
+    const lexer = new V4Lexer(source, absolutePath);
     const tokens = lexer.tokenize();
-    const parser = new V3Parser(tokens, absolutePath);
+    const parser = new V4Parser(tokens, absolutePath);
     const program = parser.parseProgram();
     typeCheckProgram(program, this.diagnostics, absolutePath);
 
@@ -116,7 +116,7 @@ export class V3Compiler {
   private evaluateModule(module: Module): Module {
     if (module.evaluated) return module;
 
-    const evaluator = new V3Evaluator(this.diagnostics, module.path);
+    const evaluator = new V4Evaluator(this.diagnostics, module.path);
     const scope = new Scope();
     const exports = new Map<string, RuntimeValue>();
 
@@ -124,6 +124,7 @@ export class V3Compiler {
       this.handleImport(importDecl, scope, module);
     }
 
+    // First pass: register functions and enums (they can be referenced before definition)
     for (const decl of module.program.body) {
       if (decl.kind === 'FnDecl') {
         const fnValue = evaluator.createFunction(decl, scope);
@@ -131,9 +132,15 @@ export class V3Compiler {
         if (decl.exported) {
           exports.set(decl.name, fnValue);
         }
+      } else if (decl.kind === 'EnumDecl') {
+        evaluator.evaluateEnum(decl, scope);
+        if (decl.exported) {
+          exports.set(decl.name, scope.get(decl.name));
+        }
       }
     }
 
+    // Second pass: evaluate constants (they may reference functions and enums)
     for (const decl of module.program.body) {
       if (decl.kind === 'ConstDecl') {
         evaluator.evaluateConst(decl, scope);

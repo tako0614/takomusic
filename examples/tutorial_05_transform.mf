@@ -1,0 +1,484 @@
+// ============================================================================
+// チュートリアル 05: クリップ変換（std:transform）
+// ============================================================================
+// このファイルでは以下を学びます:
+// - std:transform モジュールの使用
+// - transpose: 移調（ピッチの上下移動）
+// - stretch: 時間伸縮
+// - quantize: クオンタイズ（グリッドへのスナップ）
+// - swing: スウィング（ノリの変更）
+// - humanize: ヒューマナイズ（タイミング・ベロシティの揺らぎ）
+//
+// コンパイル: mf build examples/tutorial_05_transform.mf
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// std:transform から変換関数をインポート
+// ----------------------------------------------------------------------------
+import { transpose, stretch, quantize, swing, humanize } from "std:transform";
+
+// std:core から基本関数をインポート
+import { concat, repeat, overlay } from "std:core";
+
+// std:drums からドラムキーをインポート
+import { kick, snare, hhc, hho } from "std:drums";
+
+// std:random から乱数生成器をインポート
+import { rng } from "std:random";
+
+// ============================================================================
+// 基本的なモチーフ（変換のベースとなるクリップ）
+// ============================================================================
+
+fn baseMotif() -> Clip {
+  return clip {
+    note(C4, q, vel: 0.7);
+    note(E4, q, vel: 0.72);
+    note(G4, q, vel: 0.75);
+    note(E4, q, vel: 0.7);
+  };
+}
+
+fn longerMelody() -> Clip {
+  return clip {
+    note(C4, e, vel: 0.7);
+    note(D4, e, vel: 0.72);
+    note(E4, q, vel: 0.75);
+    note(G4, e, vel: 0.7);
+    note(A4, e, vel: 0.72);
+    note(G4, q, vel: 0.75);
+    note(E4, h, vel: 0.8);
+  };
+}
+
+fn bassLine() -> Clip {
+  return clip {
+    note(C2, h, vel: 0.65);
+    note(G2, h, vel: 0.6);
+  };
+}
+
+fn simpleChords() -> Clip {
+  return clip {
+    chord([C3, E3, G3], w, vel: 0.5);
+    chord([A2, C3, E3], w, vel: 0.5);
+    chord([F2, A2, C3], w, vel: 0.5);
+    chord([G2, B2, D3], w, vel: 0.5);
+  };
+}
+
+fn drumPattern() -> Clip {
+  return clip {
+    hit(kick, e, vel: 0.9);
+    hit(hhc, e, vel: 0.5);
+    hit(hhc, e, vel: 0.4);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.85);
+    hit(hhc, e, vel: 0.5);
+    hit(hhc, e, vel: 0.4);
+    hit(hhc, e, vel: 0.5);
+  };
+}
+
+// ============================================================================
+// パート1: transpose（移調）
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// transpose(clip, semitones)
+// クリップ内のすべてのノート/コードを指定したセミトーン数だけ移調
+// 正の値: 上げる、負の値: 下げる
+// ----------------------------------------------------------------------------
+fn transposeDemo() -> Clip {
+  const original = baseMotif();
+
+  // 原調
+  let c = original;
+
+  // 5度上（+7セミトーン）に移調
+  c = concat(c, transpose(original, 7));
+
+  // オクターブ上（+12セミトーン）に移調
+  c = concat(c, transpose(original, 12));
+
+  // 4度下（-5セミトーン）に移調
+  c = concat(c, transpose(original, -5));
+
+  return c;
+}
+
+// ----------------------------------------------------------------------------
+// 移調を使ったコード進行の変形
+// ----------------------------------------------------------------------------
+fn transposeChords() -> Clip {
+  // Cから始まるシンプルなコード
+  const cChord = clip { chord([C3, E3, G3], w, vel: 0.6); };
+
+  // 同じ形を移調してコード進行を作る
+  // C -> F(+5) -> G(+7) -> C(0)
+  let progression = cChord;
+  progression = concat(progression, transpose(cChord, 5));   // F
+  progression = concat(progression, transpose(cChord, 7));   // G
+  progression = concat(progression, cChord);                  // C
+
+  return progression;
+}
+
+// ============================================================================
+// パート2: stretch（時間伸縮）
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// stretch(clip, factor)
+// クリップの時間を伸縮する
+// factor > 1: 遅くなる（長くなる）
+// factor < 1: 速くなる（短くなる）
+// ----------------------------------------------------------------------------
+fn stretchDemo() -> Clip {
+  const original = baseMotif();  // 1小節
+
+  // 原速
+  let c = original;
+
+  // 2倍に伸ばす（遅くする）: 1小節 -> 2小節
+  c = concat(c, stretch(original, 2));
+
+  // 半分に縮める（速くする）: 1小節 -> 0.5小節
+  c = concat(c, stretch(original, 1 / 2));
+  c = concat(c, stretch(original, 1 / 2));  // もう一度
+
+  return c;
+}
+
+// ----------------------------------------------------------------------------
+// stretchを使ったテンポ変化のシミュレーション
+// ----------------------------------------------------------------------------
+fn stretchBass() -> Clip {
+  const bass = bassLine();
+
+  // 通常のベース
+  let c = repeat(bass, 2);
+
+  // 半分の速さ（ロングトーン的な効果）
+  c = concat(c, stretch(bass, 2));
+
+  // 2倍の速さ（忙しい動き）
+  c = concat(c, repeat(stretch(bass, 1 / 2), 4));
+
+  return c;
+}
+
+// ============================================================================
+// パート3: quantize（クオンタイズ）
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// quantize(clip, grid, strength)
+// イベントのタイミングを指定したグリッドにスナップ
+// grid: スナップ先のグリッド（q=4分音符、e=8分音符など）
+// strength: 適用の強さ（1.0=完全にスナップ、0.5=半分だけ近づく）
+// ----------------------------------------------------------------------------
+fn quantizeDemo() -> Clip {
+  // 「揺れた」タイミングのフレーズをシミュレート
+  // at()を使ってずれたタイミングで配置
+  const unquantized = clip {
+    at(0);
+    note(C4, e, vel: 0.7);
+    at(e + s);  // 少しずれている
+    note(D4, e, vel: 0.72);
+    at(q);
+    note(E4, e, vel: 0.75);
+    at(q + e + s);  // 少しずれている
+    note(F4, e, vel: 0.7);
+    at(h);
+    note(G4, q, vel: 0.8);
+  };
+
+  // 8分音符グリッドにクオンタイズ（強度1.0 = 完全）
+  const quantized = quantize(unquantized, e, 1);
+
+  // 8分音符グリッドに半分だけクオンタイズ
+  const halfQuantized = quantize(unquantized, e, 0.5);
+
+  let c = unquantized;              // 元のまま
+  c = concat(c, clip { rest(q); });
+  c = concat(c, quantized);          // 完全クオンタイズ
+  c = concat(c, clip { rest(q); });
+  c = concat(c, halfQuantized);      // 半分クオンタイズ
+
+  return c;
+}
+
+// ============================================================================
+// パート4: swing（スウィング）
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// swing(clip, grid, amount)
+// オフビート（裏拍）のタイミングを遅らせてスウィング感を出す
+// grid: スウィングを適用するグリッド
+// amount: スウィングの量（0.0=なし、0.5=中程度、1.0=最大）
+// ----------------------------------------------------------------------------
+fn swingDemo() -> Clip {
+  // ストレートな8分音符パターン
+  const straightEighths = clip {
+    note(C4, e, vel: 0.7);
+    note(D4, e, vel: 0.65);
+    note(E4, e, vel: 0.7);
+    note(F4, e, vel: 0.65);
+    note(G4, e, vel: 0.7);
+    note(A4, e, vel: 0.65);
+    note(B4, e, vel: 0.7);
+    note(C5, e, vel: 0.75);
+  };
+
+  // スウィングなし
+  let c = straightEighths;
+
+  // 軽いスウィング（ジャズ風）
+  c = concat(c, swing(straightEighths, e, 0.3));
+
+  // 強いスウィング（シャッフル風）
+  c = concat(c, swing(straightEighths, e, 0.6));
+
+  return c;
+}
+
+// ----------------------------------------------------------------------------
+// ドラムにスウィングを適用
+// ----------------------------------------------------------------------------
+fn swingDrums() -> Clip {
+  const pattern = drumPattern();
+
+  // ストレート版（元のまま）
+  let c = repeat(pattern, 2);
+
+  // スウィング版
+  const swungPattern = swing(pattern, e, 0.4);
+  c = concat(c, repeat(swungPattern, 2));
+
+  return c;
+}
+
+// ============================================================================
+// パート5: humanize（ヒューマナイズ）
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// humanize(clip, rng, timing, velocity)
+// タイミングとベロシティにランダムな揺らぎを加える
+// rng: 乱数生成器（再現性のためにシードを指定できる）
+// timing: タイミングの揺れ量（4分音符単位）
+// velocity: ベロシティの揺れ量（割合）
+//
+// 戻り値: [newRng, humanizedClip] の配列
+// ----------------------------------------------------------------------------
+fn humanizeDemo() -> Clip {
+  const mechanical = clip {
+    note(C4, e, vel: 0.7);
+    note(D4, e, vel: 0.7);
+    note(E4, e, vel: 0.7);
+    note(F4, e, vel: 0.7);
+    note(G4, e, vel: 0.7);
+    note(A4, e, vel: 0.7);
+    note(B4, e, vel: 0.7);
+    note(C5, e, vel: 0.7);
+  };
+
+  // 乱数生成器を初期化（シード値で再現性を確保）
+  let r = rng(12345);
+
+  // 機械的な元のクリップ
+  let c = mechanical;
+
+  // 軽いヒューマナイズ
+  // timing: 0.02 = 約8分音符の2%のずれ
+  // velocity: 0.1 = ベロシティの10%の揺れ
+  const result1 = humanize(mechanical, r, 0.02, 0.1);
+  r = result1[0];  // 更新されたRNGを保存
+  const humanized1 = result1[1];
+  c = concat(c, humanized1);
+
+  // 強いヒューマナイズ（より人間的）
+  const result2 = humanize(mechanical, r, 0.05, 0.2);
+  const humanized2 = result2[1];
+  c = concat(c, humanized2);
+
+  return c;
+}
+
+// ============================================================================
+// パート6: 変換の組み合わせ
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// 複数の変換を順番に適用
+// ----------------------------------------------------------------------------
+fn combinedTransforms() -> Clip {
+  // 元のモチーフ
+  const original = longerMelody();
+
+  // 1. オクターブ上に移調
+  let transformed = transpose(original, 12);
+
+  // 2. スウィングを適用
+  transformed = swing(transformed, e, 0.3);
+
+  // 3. ヒューマナイズを適用
+  const r = rng(42);
+  const result = humanize(transformed, r, 0.015, 0.08);
+  transformed = result[1];
+
+  // 元のメロディと変換後を重ねる
+  return overlay(original, transformed);
+}
+
+// ----------------------------------------------------------------------------
+// 複数パートの変換
+// ----------------------------------------------------------------------------
+fn multiTrackTransform() -> Clip {
+  // メロディとベースを別々に変換して組み合わせ
+  const melody = baseMotif();
+  const bass = bassLine();
+
+  // メロディ: 通常
+  // ベース: オクターブ下
+  const lowBass = transpose(bass, -12);
+
+  // 両方を重ねる
+  return overlay(melody, lowBass);
+}
+
+// ============================================================================
+// メイン関数
+// ============================================================================
+
+export fn main() -> Score {
+  return score {
+    meta {
+      title "クリップ変換チュートリアル";
+      artist "Tutorial";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 100bpm; }
+
+    // セクションマーカー
+    marker(1:1, "section", "Transpose");
+    marker(9:1, "section", "Stretch");
+    marker(17:1, "section", "Quantize");
+    marker(25:1, "section", "Swing");
+    marker(33:1, "section", "Humanize");
+    marker(41:1, "section", "Combined");
+
+    // サウンド定義
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
+    }
+
+    sound "bass" kind instrument {
+      label "Bass";
+      range E0..G3;
+    }
+
+    sound "kit" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; }
+    }
+
+    // ========================================================================
+    // トラック1: 移調デモ
+    // ========================================================================
+    track "Transpose Demo" role Instrument sound "piano" {
+      // 基本的な移調
+      place 1:1 transposeDemo();
+
+      // コード進行の移調
+      place 5:1 transposeChords();
+    }
+
+    // ========================================================================
+    // トラック2: 時間伸縮デモ
+    // ========================================================================
+    track "Stretch Demo" role Instrument sound "piano" {
+      // メロディの伸縮
+      place 9:1 stretchDemo();
+
+      // ベースの伸縮
+      place 13:1 stretchBass();
+    }
+
+    // ========================================================================
+    // トラック3: クオンタイズデモ
+    // ========================================================================
+    track "Quantize Demo" role Instrument sound "piano" {
+      place 17:1 quantizeDemo();
+    }
+
+    // ========================================================================
+    // トラック4: スウィングデモ（メロディ）
+    // ========================================================================
+    track "Swing Melody" role Instrument sound "piano" {
+      place 25:1 swingDemo();
+    }
+
+    // ========================================================================
+    // トラック5: スウィングデモ（ドラム）
+    // ========================================================================
+    track "Swing Drums" role Drums sound "kit" {
+      place 25:1 swingDrums();
+    }
+
+    // ========================================================================
+    // トラック6: ヒューマナイズデモ
+    // ========================================================================
+    track "Humanize Demo" role Instrument sound "piano" {
+      place 33:1 humanizeDemo();
+    }
+
+    // ========================================================================
+    // トラック7: 複合変換デモ
+    // ========================================================================
+    track "Combined" role Instrument sound "piano" {
+      place 41:1 combinedTransforms();
+      place 45:1 multiTrackTransform();
+    }
+  };
+}
+
+// ============================================================================
+// std:transform リファレンス
+// ============================================================================
+
+// transpose(clip, semitones)
+//   クリップ内のピッチを移調
+//   semitones: 正=上げる、負=下げる
+//   例: transpose(c, 12) -> オクターブ上
+//   例: transpose(c, -5) -> 4度下
+
+// stretch(clip, factor)
+//   時間を伸縮
+//   factor > 1: 遅くなる（長くなる）
+//   factor < 1: 速くなる（短くなる）
+//   例: stretch(c, 2) -> 2倍の長さ
+//   例: stretch(c, 0.5) -> 半分の長さ
+
+// quantize(clip, grid, strength)
+//   タイミングをグリッドにスナップ
+//   grid: スナップ先（q, e, s など）
+//   strength: 0.0-1.0（1.0=完全スナップ）
+//   例: quantize(c, e, 1.0) -> 8分音符にスナップ
+
+// swing(clip, grid, amount)
+//   オフビートを遅らせてスウィング感を付与
+//   grid: 適用するグリッド
+//   amount: 0.0-1.0
+//   例: swing(c, e, 0.4) -> 中程度のスウィング
+
+// humanize(clip, rng, timing, velocity) -> [rng, clip]
+//   タイミングとベロシティにランダムな揺らぎを追加
+//   rng: 乱数生成器（rng(seed)で作成）
+//   timing: タイミングの揺れ量
+//   velocity: ベロシティの揺れ量
+//   戻り値は [更新されたRNG, 変換後のClip] の配列
+// ============================================================================

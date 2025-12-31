@@ -241,6 +241,7 @@ function metaToObject(meta: ScoreValueData['meta']): ObjectValue {
   if (meta.artist) props.set('artist', makeString(meta.artist));
   if (meta.album) props.set('album', makeString(meta.album));
   if (meta.copyright) props.set('copyright', makeString(meta.copyright));
+  if (meta.anacrusis) props.set('anacrusis', makeRatValue(meta.anacrusis));
   if (meta.ext) props.set('ext', plainToValue(meta.ext));
   return makeObject(props);
 }
@@ -276,6 +277,10 @@ function coerceMeta(value: RuntimeValue | undefined): ScoreValueData['meta'] {
   for (const [key, val] of value.props.entries()) {
     if (key === 'title' || key === 'artist' || key === 'album' || key === 'copyright') {
       meta[key] = expectString(val);
+      continue;
+    }
+    if (key === 'anacrusis') {
+      meta.anacrusis = coerceRat(val);
       continue;
     }
     if (key === 'ext' && val.type === 'object') {

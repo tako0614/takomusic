@@ -1,0 +1,7 @@
+[project]
+name = "daisho"
+version = "0.1.0"
+entry = "daisho.mf"
+dist  = "dist"
+out   = "out"
+default_profile = "daisho.mf.profile.json"

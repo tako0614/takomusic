@@ -1,4 +1,4 @@
-// std:time (v3)
+// std:time (v4)
 
 export fn barBeat(bar, beat) {
   return { kind: "posref", bar: bar, beat: beat };

@@ -2,11 +2,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { V3Compiler } from '../../compiler.js';
-import { formatDiagnostic } from '../../diagnostics.js';
+import { V4Compiler } from '../../compiler.js';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 import { handleCliError } from '../errorHandler.js';
+import { formatRichDiagnostic } from '../richFormatter.js';
+import { colors } from '../colors.js';
 
 export async function checkCommand(args: string[]): Promise<number> {
   // Parse arguments
@@ -43,15 +44,16 @@ Options:
   }
 
   try {
-    const compiler = new V3Compiler(baseDir);
+    const compiler = new V4Compiler(baseDir);
     const diagnostics = compiler.check(entryPath);
 
-    // Report diagnostics
+    // Report diagnostics with rich formatting
     let errorCount = 0;
     let warningCount = 0;
 
     for (const diag of diagnostics) {
-      console.log(formatDiagnostic(diag));
+      console.error(formatRichDiagnostic(diag));
+      console.error(''); // Blank line between diagnostics
       if (diag.severity === 'error') {
         errorCount++;
       } else {
@@ -61,13 +63,22 @@ Options:
 
     // Summary
     if (diagnostics.length === 0) {
-      console.log('No issues found.');
+      console.log(colors.success('No issues found.'));
     } else {
-      console.log('');
       const parts: string[] = [];
-      if (errorCount > 0) parts.push(`${errorCount} error${errorCount > 1 ? 's' : ''}`);
-      if (warningCount > 0) parts.push(`${warningCount} warning${warningCount > 1 ? 's' : ''}`);
-      console.log(`Found ${parts.join(', ')}.`);
+      if (errorCount > 0) {
+        const label = errorCount === 1 ? 'error' : 'errors';
+        parts.push(colors.error(`${errorCount} ${label}`));
+      }
+      if (warningCount > 0) {
+        const label = warningCount === 1 ? 'warning' : 'warnings';
+        parts.push(colors.warning(`${warningCount} ${label}`));
+      }
+      if (errorCount > 0) {
+        console.error(colors.boldRed(`aborting due to ${parts.join(' and ')}`));
+      } else {
+        console.log(`generated ${parts.join(' and ')}`);
+      }
     }
 
     return errorCount > 0 ? ExitCodes.STATIC_ERROR : ExitCodes.SUCCESS;

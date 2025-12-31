@@ -1,12 +1,14 @@
 ﻿import { KEYWORDS, TokenType, type Token, type Position } from './token.js';
 import { parsePitchLiteral } from './pitch.js';
 
-export class V3Lexer {
+export class V4Lexer {
   private source: string;
   private index = 0;
   private line = 1;
   private column = 1;
   private filePath?: string;
+  private templateDepth = 0;
+  private braceStack: number[] = [];
 
   constructor(source: string, filePath?: string) {
     this.source = source;
@@ -55,7 +57,11 @@ export class V3Lexer {
 
   private readString(): Token {
     const pos = this.currentPosition();
-    this.advance();
+    this.advance(); // consume opening "
+    return this.readTemplateContent(pos, true);
+  }
+
+  private readTemplateContent(pos: Position, isStart: boolean): Token {
     let value = '';
     while (!this.isAtEnd() && this.peek() !== '"') {
       if (this.peek() === '\\') {
@@ -68,7 +74,19 @@ export class V3Lexer {
           case 'r': value += '\r'; break;
           case '\\': value += '\\'; break;
           case '"': value += '"'; break;
+          case '$': value += '$'; break;
           default: value += escaped; break;
+        }
+      } else if (this.peek() === '$' && this.peekNext() === '{') {
+        // Start of template expression
+        this.advance(); // consume $
+        this.advance(); // consume {
+        this.templateDepth++;
+        this.braceStack.push(1);
+        if (isStart) {
+          return { type: TokenType.TEMPLATE_HEAD, value, position: pos };
+        } else {
+          return { type: TokenType.TEMPLATE_MIDDLE, value, position: pos };
         }
       } else {
         if (this.peek() === '\n') {
@@ -81,8 +99,20 @@ export class V3Lexer {
     if (this.isAtEnd()) {
       throw this.error('Unterminated string literal', pos);
     }
-    this.advance();
-    return { type: TokenType.STRING, value, position: pos };
+    this.advance(); // consume closing "
+
+    // If we started a template but ended with ", it's either regular STRING or TEMPLATE_TAIL
+    if (isStart) {
+      // No substitutions found, return as regular STRING for backward compat
+      return { type: TokenType.STRING, value, position: pos };
+    } else {
+      return { type: TokenType.TEMPLATE_TAIL, value, position: pos };
+    }
+  }
+
+  continueTemplate(): Token {
+    const pos = this.currentPosition();
+    return this.readTemplateContent(pos, false);
   }
 
   private readNumberLike(): Token | null {
@@ -171,11 +201,17 @@ export class V3Lexer {
         break;
       case '|':
         if (this.match('|')) return { type: TokenType.OR, position: pos };
+        if (this.match('>')) return { type: TokenType.PIPE, position: pos };
         break;
       case '?':
         if (this.match('?')) return { type: TokenType.NULLISH, position: pos };
         break;
       case '.':
+        if (this.peek() === '.' && this.peekNext() === '.') {
+          this.advance(); // consume second .
+          this.advance(); // consume third .
+          return { type: TokenType.SPREAD, position: pos };
+        }
         if (this.match('.')) return { type: TokenType.DOTDOT, position: pos };
         return { type: TokenType.DOT, position: pos };
       case ',': return { type: TokenType.COMMA, position: pos };
@@ -187,8 +223,22 @@ export class V3Lexer {
       case ')':
         return { type: TokenType.RPAREN, position: pos };
       case '{':
+        if (this.templateDepth > 0) {
+          this.braceStack[this.braceStack.length - 1]++;
+        }
         return { type: TokenType.LBRACE, position: pos };
       case '}':
+        if (this.templateDepth > 0) {
+          const stackTop = this.braceStack[this.braceStack.length - 1];
+          if (stackTop === 1) {
+            // This closes the template expression
+            this.braceStack.pop();
+            this.templateDepth--;
+            return this.continueTemplate();
+          } else {
+            this.braceStack[this.braceStack.length - 1]--;
+          }
+        }
         return { type: TokenType.RBRACE, position: pos };
       case '[':
         return { type: TokenType.LBRACKET, position: pos };
@@ -339,6 +389,6 @@ export class V3Lexer {
 
   private error(message: string, position: Position): Error {
     const loc = this.filePath ? `${this.filePath}:${position.line}:${position.column}` : `${position.line}:${position.column}`;
-    return new Error(`[v3 lexer] ${message} at ${loc}`);
+    return new Error(`[lexer] ${message} at ${loc}`);
   }
 }

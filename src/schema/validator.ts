@@ -15,7 +15,7 @@ let ajv: AjvInstance | null = null;
 const validators = new Map<string, ValidateFunction>();
 
 export function validateScoreIR(score: unknown): string[] {
-  return validateWith('IR_V3.schema.json', score);
+  return validateWith('IR_V4.schema.json', score);
 }
 
 export function validateRenderProfile(profile: unknown): string[] {

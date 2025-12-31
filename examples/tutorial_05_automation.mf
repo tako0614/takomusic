@@ -1,0 +1,146 @@
+// Tutorial 05: Automation and Control
+// Using automation curves and control messages
+
+import { repeat, concat } from "std:core";
+import { linear, easeInOut } from "std:curves";
+
+// Melody with velocity automation
+fn dynamicMelody() -> Clip {
+  return clip {
+    // Crescendo: velocity increases
+    note(C4, q, vel: 0.4);
+    note(E4, q, vel: 0.5);
+    note(G4, q, vel: 0.6);
+    note(C5, q, vel: 0.7);
+
+    // Peak
+    note(E5, h, vel: 0.9);
+
+    // Decrescendo
+    note(D5, q, vel: 0.7);
+    note(B4, q, vel: 0.5);
+  };
+}
+
+// Bass with filter sweep automation
+fn filterSweepBass() -> Clip {
+  return clip {
+    // Notes
+    note(C2, w, vel: 0.7);
+    note(C2, w, vel: 0.7);
+
+    // Filter cutoff automation (MIDI CC 74)
+    automation "midi.cc.74" from 1:1 to 3:1 curve linear(20, 127);
+    automation "midi.cc.74" from 3:1 to 5:1 curve linear(127, 20);
+  };
+}
+
+// Pad with volume swell
+fn padSwell() -> Clip {
+  return clip {
+    chord([C3, E3, G3, B3], w * 4, vel: 0.6);
+
+    // Volume automation (MIDI CC 7)
+    automation "midi.cc.7" from 1:1 to 3:1 curve easeInOut(40, 100);
+    automation "midi.cc.7" from 3:1 to 5:1 curve easeInOut(100, 40);
+  };
+}
+
+// Tempo changes example
+fn buildUp() -> Clip {
+  return clip {
+    note(C4, e, vel: 0.6);
+    note(C4, e, vel: 0.65);
+    note(C4, e, vel: 0.7);
+    note(C4, e, vel: 0.75);
+    note(C4, e, vel: 0.8);
+    note(C4, e, vel: 0.85);
+    note(C4, e, vel: 0.9);
+    note(C4, e, vel: 0.95);
+  };
+}
+
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Automation Tutorial";
+      artist "TakoMusic";
+    }
+
+    meter { 1:1 -> 4/4; }
+
+    // Tempo map with changes
+    tempo {
+      1:1 -> 100bpm;    // Start at 100 BPM
+      9:1 -> 110bpm;    // Speed up at bar 9
+      13:1 -> 120bpm;   // Even faster at bar 13
+    }
+
+    // Section markers
+    marker(1:1, "section", "Intro");
+    marker(5:1, "section", "Verse");
+    marker(9:1, "section", "Build");
+    marker(13:1, "section", "Drop");
+
+    sound "lead" kind instrument {
+      label "Lead Synth";
+      range C3..C6;
+    }
+
+    sound "bass" kind instrument {
+      label "Bass Synth";
+      range C1..C3;
+    }
+
+    sound "pad" kind instrument {
+      label "Pad";
+      range C2..C5;
+    }
+
+    // Lead with dynamics
+    track "Lead" role Instrument sound "lead" {
+      place 1:1 repeat(dynamicMelody(), 2);
+      place 9:1 buildUp();
+    }
+
+    // Bass with filter automation
+    track "Bass" role Instrument sound "bass" {
+      place 5:1 filterSweepBass();
+    }
+
+    // Pad with volume swell
+    track "Pad" role Instrument sound "pad" {
+      place 1:1 padSwell();
+    }
+
+    // Automation track for global effects
+    track "FX" role Automation sound "lead" {
+      place 13:1 clip {
+        // Pitch bend for drop effect
+        automation "midi.pitchBend" from 13:1 to 13:2 curve linear(0, -8192);
+        automation "midi.pitchBend" from 13:2 to 13:3 curve linear(-8192, 0);
+      };
+    }
+  };
+}
+
+// Automation reference:
+// automation "param" from POS to POS curve CURVE_FN(start, end);
+//
+// Common MIDI CC parameters:
+// midi.cc.1    - Modulation wheel
+// midi.cc.7    - Volume
+// midi.cc.10   - Pan
+// midi.cc.11   - Expression
+// midi.cc.64   - Sustain pedal
+// midi.cc.74   - Filter cutoff
+//
+// Special parameters:
+// midi.pitchBend - Pitch bend (-8192 to 8191)
+// midi.program   - Program change
+//
+// Curve functions (from std:curves):
+// linear(start, end)     - Linear interpolation
+// easeIn(start, end)     - Slow start, fast end
+// easeOut(start, end)    - Fast start, slow end
+// easeInOut(start, end)  - Slow start and end

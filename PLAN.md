@@ -1,4 +1,6 @@
-﻿# Tako v3 実装計画
+﻿# Tako v3 実装計画（レガシー）
+
+※ 現行は v4 運用（IR は `tako.irVersion = 4`）。この文書は v3 の当時計画として残している。
 
 本書は v3 実装のロードマップ。規範仕様は `docs/` を唯一の仕様ソースとする。
 実装は段階的に進め、CLI/ツールは後追いで整備する。
@@ -17,7 +19,7 @@
 ## 2. 仕様ソース（参照）
 
 - `docs/LANGUAGE.md`
-- `docs/schemas/IR_V3.schema.json`
+- `docs/schemas/IR_V4.schema.json`
 - `docs/schemas/PROFILE_V3.schema.json`
 - `docs/RENDERING.md`
 - `docs/STDLIB.md`
@@ -29,7 +31,7 @@
 - IR dump: `*.mf.score.json`
 
 バージョン:
-- `tako.irVersion = 3`
+- `tako.irVersion = 4`
 - `tako.profileVersion = 1`
 - `tako.pluginProtocolVersion = 1`
 
@@ -87,6 +89,7 @@ CLI/設定ファイルでの言語バージョン選択は行わない。
 
 - parser/evaluator のゴールデンテスト
 - `docs/schemas/IR_V3.schema.json` での検証
+- `docs/schemas/IR_V4.schema.json` での検証
 - Renderer Plugin のモックテスト
 
 ## 8. ドキュメント

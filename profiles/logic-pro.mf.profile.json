@@ -1,0 +1,35 @@
+{
+  "$schema": "../schemas/profile.schema.json",
+  "renderer": "midi.standard",
+  "output": {
+    "path": "output/logic-ready.mid",
+    "ppq": 960
+  },
+  "humanize": {
+    "enabled": true,
+    "timing": 3,
+    "velocity": 5
+  },
+  "bindings": [
+    {
+      "selector": { "role": "Instrument" },
+      "config": {
+        "channel": 0,
+        "program": 0
+      }
+    },
+    {
+      "selector": { "role": "Drums" },
+      "config": {
+        "channel": 9
+      }
+    },
+    {
+      "selector": { "role": "Vocal" },
+      "config": {
+        "channel": 1,
+        "program": 52
+      }
+    }
+  ]
+}

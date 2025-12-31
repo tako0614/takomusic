@@ -1,0 +1,734 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tako-lang.example/schemas/IR_V4.schema.json",
+  "title": "Tako v4 Score IR",
+  "type": "object",
+  "required": [
+    "tako",
+    "meta",
+    "tempoMap",
+    "meterMap",
+    "sounds",
+    "tracks"
+  ],
+  "properties": {
+    "tako": {
+      "type": "object",
+      "required": [
+        "irVersion"
+      ],
+      "properties": {
+        "irVersion": {
+          "const": 4
+        },
+        "language": {
+          "type": "string",
+          "description": "Language identifier (recommended: tako-v4)"
+        },
+        "sourceHash": {
+          "type": "string",
+          "description": "Optional hash for reproducibility"
+        },
+        "generator": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "artist": {
+          "type": "string"
+        },
+        "album": {
+          "type": "string"
+        },
+        "copyright": {
+          "type": "string"
+        },
+        "anacrusis": {
+          "$ref": "#/$defs/Rat"
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "tempoMap": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TempoEvent"
+      }
+    },
+    "meterMap": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MeterEvent"
+      }
+    },
+    "sounds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SoundDecl"
+      }
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Track"
+      }
+    },
+    "markers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MarkerEvent"
+      }
+    }
+  },
+  "$defs": {
+    "Rat": {
+      "type": "object",
+      "required": [
+        "n",
+        "d"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer"
+        },
+        "d": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "description": "Rational number n/d in reduced form (recommended)."
+    },
+    "Pitch": {
+      "type": "object",
+      "required": [
+        "midi",
+        "cents"
+      ],
+      "properties": {
+        "midi": {
+          "type": "integer"
+        },
+        "cents": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TempoEvent": {
+      "type": "object",
+      "required": [
+        "at",
+        "bpm",
+        "unit"
+      ],
+      "properties": {
+        "at": {
+          "$ref": "#/$defs/Rat"
+        },
+        "bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "$ref": "#/$defs/Rat"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MeterEvent": {
+      "type": "object",
+      "required": [
+        "at",
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "at": {
+          "$ref": "#/$defs/Rat"
+        },
+        "numerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "denominator": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            4,
+            8,
+            16,
+            32,
+            64
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "SoundDecl": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "instrument",
+            "drumKit",
+            "vocal",
+            "fx"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "family": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "range": {
+          "$ref": "#/$defs/PitchRange"
+        },
+        "transposition": {
+          "type": "integer"
+        },
+        "drumKeys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DrumKeyDecl"
+          }
+        },
+        "vocal": {
+          "$ref": "#/$defs/VocalDecl"
+        },
+        "hints": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "PitchRange": {
+      "type": "object",
+      "required": [
+        "low",
+        "high"
+      ],
+      "properties": {
+        "low": {
+          "$ref": "#/$defs/Pitch"
+        },
+        "high": {
+          "$ref": "#/$defs/Pitch"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DrumKeyDecl": {
+      "type": "object",
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "VocalDecl": {
+      "type": "object",
+      "properties": {
+        "lang": {
+          "type": "string"
+        },
+        "defaultLyricMode": {
+          "type": "string",
+          "enum": [
+            "text",
+            "syllables",
+            "phonemes"
+          ]
+        },
+        "preferredAlphabet": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/$defs/PitchRange"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Track": {
+      "type": "object",
+      "required": [
+        "name",
+        "role",
+        "sound",
+        "placements"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "Instrument",
+            "Drums",
+            "Vocal",
+            "Automation"
+          ]
+        },
+        "sound": {
+          "type": "string"
+        },
+        "mix": {
+          "$ref": "#/$defs/Mix"
+        },
+        "placements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Placement"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Mix": {
+      "type": "object",
+      "properties": {
+        "gain": {
+          "type": "number"
+        },
+        "pan": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Placement": {
+      "type": "object",
+      "required": [
+        "at",
+        "clip"
+      ],
+      "properties": {
+        "at": {
+          "$ref": "#/$defs/Rat"
+        },
+        "clip": {
+          "$ref": "#/$defs/Clip"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Clip": {
+      "type": "object",
+      "required": [
+        "events"
+      ],
+      "properties": {
+        "length": {
+          "$ref": "#/$defs/Rat"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Event"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Event": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/NoteEvent"
+        },
+        {
+          "$ref": "#/$defs/ChordEvent"
+        },
+        {
+          "$ref": "#/$defs/DrumHitEvent"
+        },
+        {
+          "$ref": "#/$defs/BreathEvent"
+        },
+        {
+          "$ref": "#/$defs/ControlEvent"
+        },
+        {
+          "$ref": "#/$defs/AutomationEvent"
+        },
+        {
+          "$ref": "#/$defs/MarkerEvent"
+        }
+      ]
+    },
+    "NoteEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "dur",
+        "pitch"
+      ],
+      "properties": {
+        "type": {
+          "const": "note"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "dur": {
+          "$ref": "#/$defs/Rat"
+        },
+        "pitch": {
+          "$ref": "#/$defs/Pitch"
+        },
+        "velocity": {
+          "type": "number"
+        },
+        "voice": {
+          "type": "integer"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lyric": {
+          "$ref": "#/$defs/LyricSpan"
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ChordEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "dur",
+        "pitches"
+      ],
+      "properties": {
+        "type": {
+          "const": "chord"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "dur": {
+          "$ref": "#/$defs/Rat"
+        },
+        "pitches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Pitch"
+          }
+        },
+        "velocity": {
+          "type": "number"
+        },
+        "voice": {
+          "type": "integer"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "DrumHitEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "dur",
+        "key"
+      ],
+      "properties": {
+        "type": {
+          "const": "drumHit"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "dur": {
+          "$ref": "#/$defs/Rat"
+        },
+        "key": {
+          "type": "string"
+        },
+        "velocity": {
+          "type": "number"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "BreathEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "dur"
+      ],
+      "properties": {
+        "type": {
+          "const": "breath"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "dur": {
+          "$ref": "#/$defs/Rat"
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Breath intensity (0=silent, 1=full audible breath)"
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "Vocal breath/inhalation event for natural phrasing"
+    },
+    "ControlEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "kind",
+        "data"
+      ],
+      "properties": {
+        "type": {
+          "const": "control"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "AutomationEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "param",
+        "start",
+        "end",
+        "curve"
+      ],
+      "properties": {
+        "type": {
+          "const": "automation"
+        },
+        "param": {
+          "type": "string"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "end": {
+          "$ref": "#/$defs/Rat"
+        },
+        "curve": {
+          "$ref": "#/$defs/Curve"
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Curve": {
+      "type": "object",
+      "required": [
+        "kind",
+        "points"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "piecewiseLinear"
+          ]
+        },
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/CurvePoint"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Curve points use normalized time t in [0,1]."
+    },
+    "CurvePoint": {
+      "type": "object",
+      "required": [
+        "t",
+        "v"
+      ],
+      "properties": {
+        "t": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "v": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MarkerEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "pos",
+        "kind",
+        "label"
+      ],
+      "properties": {
+        "type": {
+          "const": "marker"
+        },
+        "pos": {
+          "$ref": "#/$defs/Rat"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "LyricSpan": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "syllable",
+            "extend"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "wordPos": {
+          "type": "string",
+          "enum": [
+            "single",
+            "begin",
+            "middle",
+            "end"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

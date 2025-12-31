@@ -1,0 +1,31 @@
+{
+  "name": "@takomusic/render-lilypond",
+  "version": "1.0.0",
+  "description": "Lilypond/PDF sheet music renderer for TakoMusic",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "tako-render-lilypond": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "takomusic",
+    "music",
+    "lilypond",
+    "sheet-music",
+    "pdf",
+    "renderer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "takomusic": "^3.0.0"
+  }
+}

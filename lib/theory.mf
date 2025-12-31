@@ -1,4 +1,9 @@
-// std:theory (v3)
+// std:theory (v4)
+// Music theory utilities: chords, scales, intervals, and progressions
+
+// ============================================================================
+// Internal Helpers
+// ============================================================================
 
 fn applyIntervals(root, intervals) {
   let out = [];
@@ -8,6 +13,10 @@ fn applyIntervals(root, intervals) {
   return out;
 }
 
+// ============================================================================
+// Basic Triads
+// ============================================================================
+
 export fn majorTriad(root) {
   return [root, root + 4, root + 7];
 }
@@ -16,10 +25,1043 @@ export fn minorTriad(root) {
   return [root, root + 3, root + 7];
 }
 
+export fn diminished(root) {
+  return [root, root + 3, root + 6];
+}
+
+export fn augmented(root) {
+  return [root, root + 4, root + 8];
+}
+
+export fn sus2(root) {
+  return [root, root + 2, root + 7];
+}
+
+export fn sus4(root) {
+  return [root, root + 5, root + 7];
+}
+
+// ============================================================================
+// Seventh Chords
+// ============================================================================
+
+export fn major7(root) {
+  return [root, root + 4, root + 7, root + 11];
+}
+
+export fn minor7(root) {
+  return [root, root + 3, root + 7, root + 10];
+}
+
+export fn dominant7(root) {
+  return [root, root + 4, root + 7, root + 10];
+}
+
+export fn diminished7(root) {
+  return [root, root + 3, root + 6, root + 9];
+}
+
+export fn halfDiminished7(root) {
+  return [root, root + 3, root + 6, root + 10];
+}
+
+export fn minorMajor7(root) {
+  return [root, root + 3, root + 7, root + 11];
+}
+
+export fn augmented7(root) {
+  return [root, root + 4, root + 8, root + 10];
+}
+
+export fn augmentedMajor7(root) {
+  return [root, root + 4, root + 8, root + 11];
+}
+
+// ============================================================================
+// Extended Chords
+// ============================================================================
+
+export fn add9(root) {
+  return [root, root + 4, root + 7, root + 14];
+}
+
+export fn add11(root) {
+  return [root, root + 4, root + 7, root + 17];
+}
+
+export fn major9(root) {
+  return [root, root + 4, root + 7, root + 11, root + 14];
+}
+
+export fn minor9(root) {
+  return [root, root + 3, root + 7, root + 10, root + 14];
+}
+
+export fn dominant9(root) {
+  return [root, root + 4, root + 7, root + 10, root + 14];
+}
+
+export fn major11(root) {
+  return [root, root + 4, root + 7, root + 11, root + 14, root + 17];
+}
+
+export fn minor11(root) {
+  return [root, root + 3, root + 7, root + 10, root + 14, root + 17];
+}
+
+export fn dominant11(root) {
+  return [root, root + 4, root + 7, root + 10, root + 14, root + 17];
+}
+
+export fn major13(root) {
+  return [root, root + 4, root + 7, root + 11, root + 14, root + 17, root + 21];
+}
+
+export fn minor13(root) {
+  return [root, root + 3, root + 7, root + 10, root + 14, root + 17, root + 21];
+}
+
+export fn dominant13(root) {
+  return [root, root + 4, root + 7, root + 10, root + 14, root + 17, root + 21];
+}
+
+// ============================================================================
+// Power Chords
+// ============================================================================
+
+export fn power(root) {
+  return [root, root + 7];
+}
+
+export fn power5(root) {
+  return [root, root + 7, root + 12];
+}
+
+// ============================================================================
+// Chord Inversions
+// ============================================================================
+
+// First inversion: move root up an octave
+export fn invert1(chord) {
+  if (chord.length < 2) {
+    return chord;
+  }
+  let out = [];
+  for (i in 1..(chord.length - 1)) {
+    out[out.length] = chord[i];
+  }
+  out[out.length] = chord[0] + 12;
+  return out;
+}
+
+// Second inversion: apply inversion twice
+export fn invert2(chord) {
+  return invert1(invert1(chord));
+}
+
+// Third inversion: apply inversion three times
+export fn invert3(chord) {
+  return invert1(invert2(chord));
+}
+
+// ============================================================================
+// Scales - Major Modes
+// ============================================================================
+
 export fn scaleMajor(root) {
   return applyIntervals(root, [0, 2, 4, 5, 7, 9, 11, 12]);
 }
 
+// Alias for scaleMajor
+export fn ionian(root) {
+  return scaleMajor(root);
+}
+
+export fn dorian(root) {
+  return applyIntervals(root, [0, 2, 3, 5, 7, 9, 10, 12]);
+}
+
+export fn phrygian(root) {
+  return applyIntervals(root, [0, 1, 3, 5, 7, 8, 10, 12]);
+}
+
+export fn lydian(root) {
+  return applyIntervals(root, [0, 2, 4, 6, 7, 9, 11, 12]);
+}
+
+export fn mixolydian(root) {
+  return applyIntervals(root, [0, 2, 4, 5, 7, 9, 10, 12]);
+}
+
+export fn aeolian(root) {
+  return scaleMinor(root);
+}
+
+export fn locrian(root) {
+  return applyIntervals(root, [0, 1, 3, 5, 6, 8, 10, 12]);
+}
+
+// ============================================================================
+// Scales - Minor Variants
+// ============================================================================
+
 export fn scaleMinor(root) {
   return applyIntervals(root, [0, 2, 3, 5, 7, 8, 10, 12]);
+}
+
+export fn harmonicMinor(root) {
+  return applyIntervals(root, [0, 2, 3, 5, 7, 8, 11, 12]);
+}
+
+export fn melodicMinor(root) {
+  return applyIntervals(root, [0, 2, 3, 5, 7, 9, 11, 12]);
+}
+
+// ============================================================================
+// Scales - Pentatonic
+// ============================================================================
+
+export fn majorPentatonic(root) {
+  return applyIntervals(root, [0, 2, 4, 7, 9, 12]);
+}
+
+export fn minorPentatonic(root) {
+  return applyIntervals(root, [0, 3, 5, 7, 10, 12]);
+}
+
+// ============================================================================
+// Scales - Blues and Jazz
+// ============================================================================
+
+export fn blues(root) {
+  return applyIntervals(root, [0, 3, 5, 6, 7, 10, 12]);
+}
+
+export fn bebop(root) {
+  return applyIntervals(root, [0, 2, 4, 5, 7, 9, 10, 11, 12]);
+}
+
+export fn wholeTone(root) {
+  return applyIntervals(root, [0, 2, 4, 6, 8, 10, 12]);
+}
+
+export fn diminishedHalfWhole(root) {
+  return applyIntervals(root, [0, 1, 3, 4, 6, 7, 9, 10, 12]);
+}
+
+export fn diminishedWholeHalf(root) {
+  return applyIntervals(root, [0, 2, 3, 5, 6, 8, 9, 11, 12]);
+}
+
+// ============================================================================
+// Scales - World Music
+// ============================================================================
+
+export fn japanese(root) {
+  return applyIntervals(root, [0, 1, 5, 7, 8, 12]);
+}
+
+export fn hirajoshi(root) {
+  return applyIntervals(root, [0, 2, 3, 7, 8, 12]);
+}
+
+export fn hungarian(root) {
+  return applyIntervals(root, [0, 2, 3, 6, 7, 8, 11, 12]);
+}
+
+export fn gypsy(root) {
+  return applyIntervals(root, [0, 1, 4, 5, 7, 8, 10, 12]);
+}
+
+export fn arabian(root) {
+  return applyIntervals(root, [0, 2, 4, 5, 6, 8, 10, 12]);
+}
+
+// ============================================================================
+// Chromatic Scale
+// ============================================================================
+
+export fn chromatic(root) {
+  return applyIntervals(root, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+}
+
+// ============================================================================
+// Intervals
+// ============================================================================
+
+export fn unison(pitch) {
+  return pitch;
+}
+
+export fn minorSecond(pitch) {
+  return pitch + 1;
+}
+
+export fn majorSecond(pitch) {
+  return pitch + 2;
+}
+
+export fn minorThird(pitch) {
+  return pitch + 3;
+}
+
+export fn majorThird(pitch) {
+  return pitch + 4;
+}
+
+export fn perfectFourth(pitch) {
+  return pitch + 5;
+}
+
+export fn tritone(pitch) {
+  return pitch + 6;
+}
+
+export fn perfectFifth(pitch) {
+  return pitch + 7;
+}
+
+export fn minorSixth(pitch) {
+  return pitch + 8;
+}
+
+export fn majorSixth(pitch) {
+  return pitch + 9;
+}
+
+export fn minorSeventh(pitch) {
+  return pitch + 10;
+}
+
+export fn majorSeventh(pitch) {
+  return pitch + 11;
+}
+
+export fn octave(pitch) {
+  return pitch + 12;
+}
+
+// ============================================================================
+// Transpose Functions
+// ============================================================================
+
+export fn transposeUp(pitch, semitones) {
+  return pitch + semitones;
+}
+
+export fn transposeDown(pitch, semitones) {
+  return pitch - semitones;
+}
+
+export fn transposeOctave(pitch, octaves) {
+  return pitch + (octaves * 12);
+}
+
+// ============================================================================
+// Pitch Utilities
+// ============================================================================
+
+// Get the pitch class (0-11) from a MIDI pitch
+export fn pitchClass(pitch) {
+  return pitch % 12;
+}
+
+// Get the octave number from a MIDI pitch
+export fn octaveOf(pitch) {
+  const result = (pitch / 12) - 1;
+  return result - (result % 1);
+}
+
+// Create a pitch from pitch class and octave
+export fn makePitch(class, oct) {
+  return (oct + 1) * 12 + class;
+}
+
+// ============================================================================
+// Chord Analysis
+// ============================================================================
+
+// Get root note of a chord (lowest note)
+export fn chordRoot(chord) {
+  if (chord.length == 0) {
+    return null;
+  }
+  return chord[0];
+}
+
+// Get chord intervals from root
+export fn chordIntervals(chord) {
+  if (chord.length == 0) {
+    return [];
+  }
+  const root = chord[0];
+  let out = [];
+  for (p in chord) {
+    out[out.length] = p - root;
+  }
+  return out;
+}
+
+// ============================================================================
+// Arpeggio Patterns
+// ============================================================================
+
+// Ascending arpeggio (bottom to top)
+export fn arpeggioUp(chord) {
+  return chord;
+}
+
+// Descending arpeggio (top to bottom)
+export fn arpeggioDown(chord) {
+  let out = [];
+  let i = chord.length - 1;
+  for (_ in chord) {
+    out[out.length] = chord[i];
+    i = i - 1;
+  }
+  return out;
+}
+
+// Ascending then descending (alberti bass style)
+export fn arpeggioUpDown(chord) {
+  let up = chord;
+  let down = arpeggioDown(chord);
+  let out = [];
+  for (p in up) {
+    out[out.length] = p;
+  }
+  // Skip first note of down to avoid repeat
+  let i = 1;
+  for (_ in 1..(down.length - 1)) {
+    out[out.length] = down[i];
+    i = i + 1;
+  }
+  return out;
+}
+
+// Descending then ascending
+export fn arpeggioDownUp(chord) {
+  let down = arpeggioDown(chord);
+  let up = chord;
+  let out = [];
+  for (p in down) {
+    out[out.length] = p;
+  }
+  let i = 1;
+  for (_ in 1..(up.length - 1)) {
+    out[out.length] = up[i];
+    i = i + 1;
+  }
+  return out;
+}
+
+// Alberti bass pattern: low-high-mid-high
+export fn arpeggioAlberti(chord) {
+  if (chord.length < 3) {
+    return chord;
+  }
+  return [chord[0], chord[2], chord[1], chord[2]];
+}
+
+// Broken chord: low-mid-high-mid
+export fn arpeggioBroken(chord) {
+  if (chord.length < 3) {
+    return chord;
+  }
+  return [chord[0], chord[1], chord[2], chord[1]];
+}
+
+// Add octave above to arpeggio
+export fn arpeggioWithOctave(chord) {
+  let out = [];
+  for (p in chord) {
+    out[out.length] = p;
+  }
+  out[out.length] = chord[0] + 12;
+  return out;
+}
+
+// Double arpeggio (two octaves)
+export fn arpeggioDouble(chord) {
+  let out = [];
+  for (p in chord) {
+    out[out.length] = p;
+  }
+  for (p in chord) {
+    out[out.length] = p + 12;
+  }
+  return out;
+}
+
+// ============================================================================
+// Chord Progressions
+// ============================================================================
+
+// Get diatonic chord for scale degree (1-7)
+// mode: "major" or "minor"
+fn diatonicChord(root, degree, mode) {
+  // Major scale intervals: W W H W W W H
+  const majorIntervals = [0, 2, 4, 5, 7, 9, 11];
+  // Minor scale intervals: W H W W H W W
+  const minorIntervals = [0, 2, 3, 5, 7, 8, 10];
+
+  let intervals = majorIntervals;
+  if (mode == "minor") {
+    intervals = minorIntervals;
+  }
+
+  const idx = degree - 1;
+  const chordRoot = root + intervals[idx];
+
+  // Determine chord quality based on degree
+  if (mode == "major") {
+    // I, IV, V = major; ii, iii, vi = minor; vii = dim
+    if (degree == 1 || degree == 4 || degree == 5) {
+      return majorTriad(chordRoot);
+    } else if (degree == 2 || degree == 3 || degree == 6) {
+      return minorTriad(chordRoot);
+    } else {
+      return diminished(chordRoot);
+    }
+  } else {
+    // Minor: i, iv, v = minor; III, VI, VII = major; ii = dim
+    if (degree == 1 || degree == 4 || degree == 5) {
+      return minorTriad(chordRoot);
+    } else if (degree == 3 || degree == 6 || degree == 7) {
+      return majorTriad(chordRoot);
+    } else {
+      return diminished(chordRoot);
+    }
+  }
+}
+
+// ii-V-I progression in major key
+export fn progressionTwoFiveOne(root) {
+  return [
+    minorTriad(root + 2),
+    majorTriad(root + 7),
+    majorTriad(root)
+  ];
+}
+
+// ii-V-I with 7th chords (jazz)
+export fn progressionTwoFiveOneJazz(root) {
+  return [
+    minor7(root + 2),
+    dominant7(root + 7),
+    major7(root)
+  ];
+}
+
+// I-IV-V-I (basic rock/pop)
+export fn progressionOneFourFive(root) {
+  return [
+    majorTriad(root),
+    majorTriad(root + 5),
+    majorTriad(root + 7),
+    majorTriad(root)
+  ];
+}
+
+// I-V-vi-IV (pop progression)
+export fn progressionPopCanon(root) {
+  return [
+    majorTriad(root),
+    majorTriad(root + 7),
+    minorTriad(root + 9),
+    majorTriad(root + 5)
+  ];
+}
+
+// vi-IV-I-V (pop progression variant)
+export fn progressionSixFourOneFive(root) {
+  return [
+    minorTriad(root + 9),
+    majorTriad(root + 5),
+    majorTriad(root),
+    majorTriad(root + 7)
+  ];
+}
+
+// I-vi-IV-V (50s progression)
+export fn progressionFifties(root) {
+  return [
+    majorTriad(root),
+    minorTriad(root + 9),
+    majorTriad(root + 5),
+    majorTriad(root + 7)
+  ];
+}
+
+// i-VII-VI-VII (minor key rock)
+export fn progressionMinorRock(root) {
+  return [
+    minorTriad(root),
+    majorTriad(root + 10),
+    majorTriad(root + 8),
+    majorTriad(root + 10)
+  ];
+}
+
+// Circle of fifths progression (shortened)
+export fn progressionCircleOfFifths(root) {
+  return [
+    majorTriad(root),
+    majorTriad(root + 7),
+    majorTriad(root + 2),
+    majorTriad(root + 9),
+    majorTriad(root + 4),
+    majorTriad(root + 11),
+    majorTriad(root + 6)
+  ];
+}
+
+// Blues progression (12-bar outline, just unique chords)
+export fn progressionBlues(root) {
+  return [
+    dominant7(root),      // I7
+    dominant7(root + 5),  // IV7
+    dominant7(root + 7)   // V7
+  ];
+}
+
+// Jazz turnaround: I-vi-ii-V
+export fn progressionTurnaround(root) {
+  return [
+    major7(root),
+    minor7(root + 9),
+    minor7(root + 2),
+    dominant7(root + 7)
+  ];
+}
+
+// Andalusian cadence: i-VII-VI-V
+export fn progressionAndalusian(root) {
+  return [
+    minorTriad(root),
+    majorTriad(root + 10),
+    majorTriad(root + 8),
+    majorTriad(root + 7)
+  ];
+}
+
+// Royal Road progression (Japanese pop): IV-V-iii-vi
+export fn progressionRoyalRoad(root) {
+  return [
+    majorTriad(root + 5),
+    majorTriad(root + 7),
+    minorTriad(root + 4),
+    minorTriad(root + 9)
+  ];
+}
+
+// ============================================================================
+// Expression / Dynamics Utilities
+// ============================================================================
+
+// Velocity constants
+export const ppp = 0.15;
+export const pp = 0.25;
+export const p = 0.4;
+export const mp = 0.55;
+export const mf = 0.65;
+export const f = 0.75;
+export const ff = 0.85;
+export const fff = 0.95;
+
+// Linear velocity ramp from start to end over count steps
+export fn velocityRamp(startVel, endVel, count) {
+  if (count <= 1) {
+    return [startVel];
+  }
+  let out = [];
+  const step = (endVel - startVel) / (count - 1);
+  let current = startVel;
+  let i = 0;
+  for (_ in 0..(count - 1)) {
+    out[out.length] = current;
+    current = current + step;
+    i = i + 1;
+  }
+  return out;
+}
+
+// Crescendo: gradually increase velocity
+export fn crescendo(startVel, endVel, count) {
+  return velocityRamp(startVel, endVel, count);
+}
+
+// Decrescendo: gradually decrease velocity
+export fn decrescendo(startVel, endVel, count) {
+  return velocityRamp(startVel, endVel, count);
+}
+
+// Accent pattern: emphasize every Nth note
+export fn accentPattern(baseVel, accentVel, count, accentEvery) {
+  let out = [];
+  let i = 0;
+  for (_ in 0..(count - 1)) {
+    if (i % accentEvery == 0) {
+      out[out.length] = accentVel;
+    } else {
+      out[out.length] = baseVel;
+    }
+    i = i + 1;
+  }
+  return out;
+}
+
+// Swing pattern velocities (strong-weak)
+export fn swingVelocities(strongVel, weakVel, count) {
+  let out = [];
+  let i = 0;
+  for (_ in 0..(count - 1)) {
+    if (i % 2 == 0) {
+      out[out.length] = strongVel;
+    } else {
+      out[out.length] = weakVel;
+    }
+    i = i + 1;
+  }
+  return out;
+}
+
+// Random velocity variation around a base value
+// Simplified version that generates deterministic variation
+export fn humanizeVelocity(baseVel, variation, count, seed) {
+  let out = [];
+  for (i in 0..(count - 1)) {
+    // Simple deterministic variation based on index and seed
+    const factor = ((seed + i * 7919) % 1000) / 1000.0;
+    const delta = (factor - 0.5) * 2 * variation;
+    let vel = baseVel + delta;
+    if (vel < 0.0) {
+      vel = 0.0;
+    }
+    if (vel > 1.0) {
+      vel = 1.0;
+    }
+    out[i] = vel;
+  }
+  return out;
+}
+
+// ============================================================================
+// Rhythm Utilities
+// ============================================================================
+
+// Generate a sequence of durations from a rhythm pattern string
+// Pattern uses: w=whole, h=half, q=quarter, e=eighth, s=sixteenth
+// Example: "q q e e q" for a simple pattern
+export fn rhythmPattern(pattern) {
+  let durations = [];
+  let i = 0;
+  const len = pattern.length;
+  for (_ in 0..(len - 1)) {
+    const c = pattern[i];
+    if (c == "w") {
+      durations[durations.length] = w;
+    } else if (c == "h") {
+      durations[durations.length] = h;
+    } else if (c == "q") {
+      durations[durations.length] = q;
+    } else if (c == "e") {
+      durations[durations.length] = e;
+    } else if (c == "s") {
+      durations[durations.length] = s;
+    }
+    i = i + 1;
+  }
+  return durations;
+}
+
+// Common rhythm patterns
+export fn rhythmStraightFour() {
+  return [q, q, q, q];
+}
+
+export fn rhythmStraightEight() {
+  return [e, e, e, e, e, e, e, e];
+}
+
+export fn rhythmSyncopated() {
+  return [e, q, e, q, e, e];
+}
+
+export fn rhythmDotted() {
+  return [q., e, q., e];
+}
+
+export fn rhythmTriplet() {
+  // Triplet eighth notes (3 in time of 2)
+  return [e, e, e];
+}
+
+// ============================================================================
+// Aliases for Common Functions
+// ============================================================================
+
+// Triad aliases (shorter names)
+export fn maj(root) { return majorTriad(root); }
+export fn min(root) { return minorTriad(root); }
+export fn dim(root) { return diminished(root); }
+export fn aug(root) { return augmented(root); }
+
+// 7th chord aliases
+export fn maj7(root) { return major7(root); }
+export fn min7(root) { return minor7(root); }
+export fn dom7(root) { return dominant7(root); }
+export fn dim7(root) { return diminished7(root); }
+
+// Extended chord aliases
+export fn maj9(root) { return major9(root); }
+export fn min9(root) { return minor9(root); }
+export fn dom9(root) { return dominant9(root); }
+
+// Scale aliases
+export fn major(root) { return scaleMajor(root); }
+export fn minor(root) { return scaleMinor(root); }
+
+// Backward compatibility alias
+export fn progressionSixFourOneFlve(root) { return progressionSixFourOneFive(root); }
+
+// ============================================================================
+// Advanced Chord Analysis
+// ============================================================================
+
+// Analyze pitches and return chord symbol info
+// Returns: { root, quality, intervals }
+export fn analyze(pitches) {
+  if (pitches.length == 0) {
+    return null;
+  }
+  const root = pitches[0];
+  let intervals = [];
+  for (p in pitches) {
+    intervals[intervals.length] = (p - root) % 12;
+  }
+
+  // Sort and dedupe intervals
+  let unique = [];
+  for (iv in intervals) {
+    let found = false;
+    for (u in unique) {
+      if (u == iv) {
+        found = true;
+      }
+    }
+    if (!found) {
+      unique[unique.length] = iv;
+    }
+  }
+  // Simple bubble sort
+  for (i in 0..(unique.length - 1)) {
+    for (j in 0..(unique.length - i - 2)) {
+      if (unique[j] > unique[j + 1]) {
+        const tmp = unique[j];
+        unique[j] = unique[j + 1];
+        unique[j + 1] = tmp;
+      }
+    }
+  }
+
+  // Determine quality based on intervals
+  let quality = "unknown";
+  const hasMinor3 = containsInterval(unique, 3);
+  const hasMajor3 = containsInterval(unique, 4);
+  const hasDim5 = containsInterval(unique, 6);
+  const hasPerfect5 = containsInterval(unique, 7);
+  const hasAug5 = containsInterval(unique, 8);
+  const hasMinor7 = containsInterval(unique, 10);
+  const hasMajor7 = containsInterval(unique, 11);
+
+  if (hasMajor3 && hasPerfect5 && hasMajor7) {
+    quality = "maj7";
+  } else if (hasMinor3 && hasPerfect5 && hasMinor7) {
+    quality = "min7";
+  } else if (hasMajor3 && hasPerfect5 && hasMinor7) {
+    quality = "dom7";
+  } else if (hasMinor3 && hasDim5 && hasMinor7) {
+    quality = "m7b5";
+  } else if (hasMinor3 && hasDim5) {
+    quality = "dim";
+  } else if (hasMajor3 && hasAug5) {
+    quality = "aug";
+  } else if (hasMajor3 && hasPerfect5) {
+    quality = "maj";
+  } else if (hasMinor3 && hasPerfect5) {
+    quality = "min";
+  } else if (containsInterval(unique, 2) && hasPerfect5) {
+    quality = "sus2";
+  } else if (containsInterval(unique, 5) && hasPerfect5) {
+    quality = "sus4";
+  }
+
+  return { root: root, quality: quality, intervals: unique };
+}
+
+fn containsInterval(intervals, target) {
+  for (iv in intervals) {
+    if (iv == target) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Find common tones between two chords
+export fn commonTones(a, b) {
+  let common = [];
+  for (pa in a) {
+    const pcA = pa % 12;
+    for (pb in b) {
+      const pcB = pb % 12;
+      if (pcA == pcB) {
+        common[common.length] = pa;
+      }
+    }
+  }
+  return common;
+}
+
+// Voice leading: revoice 'target' chord to minimize movement from 'source' chord
+export fn voiceLead(source, target) {
+  if (source.length == 0 || target.length == 0) {
+    return target;
+  }
+
+  let result = [];
+  // For each target pitch, find the best octave to minimize distance
+  for (tgtPitch in target) {
+    const targetPC = tgtPitch % 12;
+    let bestPitch = tgtPitch;
+    let bestDistance = 1000;
+
+    // Try different octaves
+    for (octave in 0..8) {
+      const candidate = targetPC + (octave * 12);
+      // Find minimum distance to any note in 'source'
+      for (srcPitch in source) {
+        let dist = candidate - srcPitch;
+        if (dist < 0) {
+          dist = 0 - dist;
+        }
+        if (dist < bestDistance) {
+          bestDistance = dist;
+          bestPitch = candidate;
+        }
+      }
+    }
+    result[result.length] = bestPitch;
+  }
+  return result;
+}
+
+// Get chord for scale degree
+export fn degreeToChord(scale, degree, chordType) {
+  if (scale.length == 0 || degree < 1) {
+    return [];
+  }
+  const idx = (degree - 1) % scale.length;
+  const root = scale[idx];
+
+  if (chordType == "maj" || chordType == "major") {
+    return majorTriad(root);
+  } else if (chordType == "min" || chordType == "minor") {
+    return minorTriad(root);
+  } else if (chordType == "dim" || chordType == "diminished") {
+    return diminished(root);
+  } else if (chordType == "aug" || chordType == "augmented") {
+    return augmented(root);
+  } else if (chordType == "maj7") {
+    return major7(root);
+  } else if (chordType == "min7") {
+    return minor7(root);
+  } else if (chordType == "dom7") {
+    return dominant7(root);
+  }
+  // Default to major triad
+  return majorTriad(root);
+}
+
+// Add chord extensions/alterations
+export fn add2(root) {
+  return [root, root + 2, root + 4, root + 7];
+}
+
+export fn add4(root) {
+  return [root, root + 4, root + 5, root + 7];
+}
+
+export fn six(root) {
+  return [root, root + 4, root + 7, root + 9];
+}
+
+export fn sixNine(root) {
+  return [root, root + 4, root + 7, root + 9, root + 14];
+}
+
+export fn minorSix(root) {
+  return [root, root + 3, root + 7, root + 9];
+}
+
+// Chord alterations
+export fn sharpFive(chord) {
+  let result = [];
+  for (p in chord) {
+    const interval = (p - chord[0]) % 12;
+    if (interval == 7) {
+      result[result.length] = p + 1;  // Raise perfect 5th
+    } else {
+      result[result.length] = p;
+    }
+  }
+  return result;
+}
+
+export fn flatFive(chord) {
+  let result = [];
+  for (p in chord) {
+    const interval = (p - chord[0]) % 12;
+    if (interval == 7) {
+      result[result.length] = p - 1;  // Lower perfect 5th
+    } else {
+      result[result.length] = p;
+    }
+  }
+  return result;
+}
+
+export fn sharpNine(chord) {
+  // Add #9 to a chord
+  let result = [];
+  for (p in chord) {
+    result[result.length] = p;
+  }
+  result[result.length] = chord[0] + 15;  // #9 = minor 10th
+  return result;
+}
+
+export fn flatNine(chord) {
+  // Add b9 to a chord
+  let result = [];
+  for (p in chord) {
+    result[result.length] = p;
+  }
+  result[result.length] = chord[0] + 13;  // b9 = minor 9th
+  return result;
+}
+
+// Transpose progression to new key
+export fn modulate(progression, fromRoot, toRoot) {
+  const interval = toRoot - fromRoot;
+  let result = [];
+  for (chord in progression) {
+    let transposed = [];
+    for (p in chord) {
+      transposed[transposed.length] = p + interval;
+    }
+    result[result.length] = transposed;
+  }
+  return result;
 }

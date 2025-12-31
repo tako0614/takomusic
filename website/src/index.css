@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 html {
   scroll-behavior: smooth;
@@ -12,4 +13,49 @@ body {
 
 code, pre {
   font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* Documentation prose styles */
+.prose pre {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+}
+
+.prose code {
+  background-color: #334155;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.prose th, .prose td {
+  border: 1px solid #475569;
+  padding: 0.5rem 0.75rem;
+}
+
+.prose th {
+  background-color: #1e293b;
+}
+
+.prose a {
+  color: #38bdf8;
+}
+
+.prose a:hover {
+  color: #7dd3fc;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  scroll-margin-top: 80px;
 }

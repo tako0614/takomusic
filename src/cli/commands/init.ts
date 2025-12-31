@@ -16,7 +16,7 @@ const TEMPLATES: Record<string, Template> = {
   default: {
     name: 'Default',
     description: 'Starter project with vocal and piano tracks',
-    main: `// TakoMusic v3 - Starter
+    main: `// TakoMusic v4 - Starter
 
 import { repeat } from "std:core";
 import * as vocal from "std:vocal";
@@ -84,7 +84,7 @@ export fn main() -> Score {
   piano: {
     name: 'Piano',
     description: 'Piano solo template',
-    main: `// TakoMusic v3 - Piano Solo
+    main: `// TakoMusic v4 - Piano Solo
 
 export fn main() -> Score {
   return score {
@@ -119,7 +119,7 @@ export fn main() -> Score {
   vocaloid: {
     name: 'Vocaloid',
     description: 'Vocal synthesis template',
-    main: `// TakoMusic v3 - Vocal Demo
+    main: `// TakoMusic v4 - Vocal Demo
 
 import * as vocal from "std:vocal";
 
@@ -167,7 +167,7 @@ export fn main() -> Score {
   minimal: {
     name: 'Minimal',
     description: 'Minimal starting template',
-    main: `// TakoMusic v3 - Minimal
+    main: `// TakoMusic v4 - Minimal
 
 export fn main() -> Score {
   return score {

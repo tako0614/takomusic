@@ -1,6 +1,6 @@
-﻿# Tako v3 Standard Library (std:*)
+﻿# TakoMusic Standard Library (std:*)
 
-This document describes the v3 standard library modules. All std functions are backend-agnostic.
+This document describes the standard library modules. All std functions are backend-agnostic.
 
 ## Common Rules
 
@@ -325,7 +325,7 @@ const t = tracks[0];              // -> Track
 
 Individual `track { ... }` blocks inside `score { ... }` are not first-class expressions. To create a score with dynamically generated tracks, use `mapTracks` or construct the full score via DSL.
 
-**Limitations (v3):**
+**Current Limitations:**
 
 - No standalone `track { ... }` expression syntax
 - Tracks cannot be constructed outside of `score { ... }`
@@ -339,7 +339,7 @@ Individual `track { ... }` blocks inside `score { ... }` are not first-class exp
 
 ### Score Composition Rules
 
-Scores are **not composable** in v3. Each `score { ... }` is a complete, standalone value.
+Scores are **not composable** currently. Each `score { ... }` is a complete, standalone value.
 
 **Not supported:**
 - Merging two scores

@@ -3,7 +3,7 @@ import type { Pitch } from './pitch.js';
 
 export interface ScoreIR {
   tako: {
-    irVersion: 3;
+    irVersion: 4;
     sourceHash?: string;
     generator?: string;
     [key: string]: unknown;
@@ -21,6 +21,7 @@ export interface Meta {
   artist?: string;
   album?: string;
   copyright?: string;
+  anacrusis?: Rat;
   ext?: Record<string, unknown>;
 }
 

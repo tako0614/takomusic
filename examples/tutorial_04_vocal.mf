@@ -1,0 +1,132 @@
+// Tutorial 04: Vocal Synthesis
+// Creating vocal tracks with lyrics
+
+import * as vocal from "std:vocal";
+import { repeat } from "std:core";
+
+// Simple vocal melody with lyrics
+fn verseMelody() -> Clip {
+  let c = clip {
+    note(C4, q, vel: 0.75);
+    note(D4, q, vel: 0.75);
+    note(E4, h, vel: 0.78);
+    note(D4, q, vel: 0.75);
+    note(C4, q, vel: 0.75);
+    note(D4, h, vel: 0.78);
+  };
+
+  // Align lyrics to notes
+  const lyr = vocal.text("hel lo world how are you", "en-US");
+  c = vocal.align(c, lyr);
+
+  // Add automatic breaths between phrases
+  c = vocal.autoBreath(c);
+
+  // Apply vibrato for more natural sound
+  return vocal.vibrato(c, depth: 0.2);
+}
+
+// Chorus with more power
+fn chorusMelody() -> Clip {
+  let c = clip {
+    note(E4, q, vel: 0.85);
+    note(G4, q, vel: 0.85);
+    note(A4, h, vel: 0.9);
+    note(G4, q, vel: 0.85);
+    note(E4, q, vel: 0.85);
+    note(D4, w, vel: 0.88);
+  };
+
+  const lyr = vocal.text("sing ing loud and clear", "en-US");
+  c = vocal.align(c, lyr);
+  c = vocal.autoBreath(c);
+
+  // Stronger vibrato for chorus
+  return vocal.vibrato(c, depth: 0.35, rate: 5.5);
+}
+
+// Japanese lyrics example
+fn japaneseVerse() -> Clip {
+  let c = clip {
+    note(C4, e, vel: 0.75);
+    note(D4, e, vel: 0.75);
+    note(E4, q, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(E4, e, vel: 0.75);
+    note(G4, q, vel: 0.78);
+  };
+
+  // Japanese lyrics (hiragana)
+  const lyr = vocal.text("こん に ち は せ かい", "ja-JP");
+  c = vocal.align(c, lyr);
+
+  return vocal.vibrato(c, depth: 0.25);
+}
+
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Vocal Tutorial";
+      artist "TakoMusic";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 90bpm; }
+
+    // Define vocal sound
+    sound "vocal" kind vocal {
+      label "Lead Vocal";
+      vocal {
+        lang "en-US";        // Default language
+        range C3..C5;        // Vocal range
+      }
+    }
+
+    // Japanese vocal sound
+    sound "jpVocal" kind vocal {
+      label "Japanese Vocal";
+      vocal {
+        lang "ja-JP";
+        range C3..C5;
+      }
+    }
+
+    // Backing instrument
+    sound "piano" kind instrument { range A0..C8; }
+
+    // Lead vocal track
+    track "Lead" role Vocal sound "vocal" {
+      // Verse
+      place 1:1 repeat(verseMelody(), 2);
+      // Chorus
+      place 5:1 chorusMelody();
+    }
+
+    // Japanese vocal track
+    track "Harmony" role Vocal sound "jpVocal" {
+      place 9:1 japaneseVerse();
+    }
+
+    // Simple piano accompaniment
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        chord([C3, E3, G3], w, vel: 0.4);
+        chord([F3, A3, C4], w, vel: 0.4);
+        chord([G3, B3, D4], w, vel: 0.4);
+        chord([C3, E3, G3], w, vel: 0.4);
+      };
+    }
+  };
+}
+
+// Vocal functions reference:
+// vocal.text(lyrics, lang)     - Create lyric object from text
+// vocal.syllables(list, lang)  - Create from syllable list
+// vocal.align(clip, lyrics)    - Align lyrics to notes
+// vocal.autoBreath(clip)       - Insert automatic breaths
+// vocal.vibrato(clip, opts)    - Add vibrato effect
+//
+// Supported languages depend on the synthesizer:
+// "en-US" - American English
+// "ja-JP" - Japanese
+// "zh-CN" - Chinese (Simplified)

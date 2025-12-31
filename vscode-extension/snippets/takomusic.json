@@ -20,7 +20,7 @@
       "\t};",
       "}"
     ],
-    "description": "Create a v3 main entry point"
+    "description": "Create main entry point"
   },
   "Score Block": {
     "prefix": "score",

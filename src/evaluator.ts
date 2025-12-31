@@ -13,9 +13,14 @@ import { Scope } from './scope.js';
 import type { Diagnostic } from './diagnostics.js';
 import type { LyricSpan } from './ir.js';
 import type {
+  ArpDirection,
   Block,
   ClipExpr,
+  ClipStmt,
   CallArg,
+  CallExpr,
+  ConstDecl,
+  EnumDecl,
   Expr,
   FnDecl,
   ForStmt,
@@ -25,10 +30,13 @@ import type {
   ReturnStmt,
   ScoreExpr,
   SoundBodyItem,
+  SpreadElement,
   Statement,
   TempoItem,
   MeterItem,
   TrackDecl,
+  TripletStmt,
+  TuplePattern,
 } from './ast.js';
 import {
   ArrayValue,
@@ -68,6 +76,7 @@ import {
   isPosExpr,
   isPosRef,
   isRat,
+  makeEnumVariant,
 } from './runtime.js';
 import { clipToObject, scoreToObject, coerceClip, coerceCurve, coerceLyricSpan } from './value-codec.js';
 
@@ -79,7 +88,7 @@ class ReturnSignal {
   }
 }
 
-export class V3Evaluator {
+export class V4Evaluator {
   private diagnostics: Diagnostic[];
   private filePath?: string;
   private callDepth = 0;
@@ -100,9 +109,81 @@ export class V3Evaluator {
     };
   }
 
-  evaluateConst(decl: { name: string; value: Expr; mutable: boolean }, scope: Scope): void {
+  evaluateConst(decl: ConstDecl, scope: Scope): void {
     const value = this.evaluateExpr(decl.value, scope);
+
+    // Handle tuple destructuring pattern
+    if (decl.pattern) {
+      this.evaluateTupleDestructuring(decl.pattern, value, decl.mutable, scope);
+      return;
+    }
+
     scope.define(decl.name, value, decl.mutable);
+  }
+
+  evaluateEnum(decl: EnumDecl, scope: Scope): void {
+    // Create an object to hold all variants, accessible as EnumName.Variant
+    const enumProps = new Map<string, RuntimeValue>();
+
+    for (const variant of decl.variants) {
+      if (variant.payload) {
+        // Variant with payload: create a constructor function
+        // e.g., ChordQuality.Custom([Number]) -> Custom is a function that takes an argument
+        const variantName = variant.name;
+        const enumName = decl.name;
+        const constructorFn: FunctionValue = {
+          type: 'function',
+          name: `${enumName}.${variantName}`,
+          native: (args: RuntimeValue[]) => {
+            if (args.length !== 1) {
+              throw new Error(`${enumName}.${variantName} expects 1 argument`);
+            }
+            return makeEnumVariant(enumName, variantName, args[0]);
+          },
+        };
+        enumProps.set(variantName, constructorFn);
+      } else {
+        // Simple variant without payload: create a singleton value
+        // e.g., Direction.Up -> Up is a value
+        enumProps.set(variant.name, makeEnumVariant(decl.name, variant.name));
+      }
+    }
+
+    // Register the enum as an object in scope
+    scope.define(decl.name, makeObject(enumProps), false);
+  }
+
+  private evaluateTupleDestructuring(
+    pattern: TuplePattern,
+    value: RuntimeValue,
+    mutable: boolean,
+    scope: Scope
+  ): void {
+    // Tuples are evaluated as arrays
+    if (value.type !== 'array') {
+      throw this.error('Cannot destructure non-array value as tuple', pattern.position);
+    }
+
+    const elements = value.elements;
+    let elementIndex = 0;
+
+    for (let i = 0; i < pattern.elements.length; i++) {
+      const patternElement = pattern.elements[i];
+
+      if (patternElement.rest) {
+        // Rest pattern: collect remaining elements into an array
+        const restElements = elements.slice(elementIndex);
+        scope.define(patternElement.name, makeArray(restElements), mutable);
+        break;
+      } else {
+        // Regular element: extract single value
+        const elementValue = elementIndex < elements.length
+          ? elements[elementIndex]
+          : makeNull();
+        scope.define(patternElement.name, elementValue, mutable);
+        elementIndex++;
+      }
+    }
   }
 
   evaluateExpr(expr: Expr, scope: Scope): RuntimeValue {
@@ -111,6 +192,17 @@ export class V3Evaluator {
         return makeNumber(expr.value);
       case 'StringLiteral':
         return makeString(expr.value);
+      case 'TemplateLiteral': {
+        let result = '';
+        for (let i = 0; i < expr.quasis.length; i++) {
+          result += expr.quasis[i];
+          if (i < expr.expressions.length) {
+            const value = this.evaluateExpr(expr.expressions[i], scope);
+            result += this.valueToString(value);
+          }
+        }
+        return makeString(result);
+      }
       case 'BoolLiteral':
         return makeBool(expr.value);
       case 'NullLiteral':
@@ -124,13 +216,44 @@ export class V3Evaluator {
       case 'Identifier':
         return scope.get(expr.name);
       case 'ArrayLiteral': {
-        const elements = expr.elements.map((el) => this.evaluateExpr(el, scope));
+        const elements: RuntimeValue[] = [];
+        for (const el of expr.elements) {
+          if (el.kind === 'SpreadElement') {
+            const spread = el as SpreadElement;
+            const value = this.evaluateExpr(spread.argument, scope);
+            if (value.type !== 'array') {
+              throw this.error('Spread operator requires an array', spread.position);
+            }
+            elements.push(...value.elements);
+          } else {
+            elements.push(this.evaluateExpr(el, scope));
+          }
+        }
+        return makeArray(elements);
+      }
+      case 'TupleLiteral': {
+        // Tuples are evaluated as arrays
+        const elements: RuntimeValue[] = [];
+        for (const el of expr.elements) {
+          elements.push(this.evaluateExpr(el, scope));
+        }
         return makeArray(elements);
       }
       case 'ObjectLiteral': {
         const props = new Map<string, RuntimeValue>();
         for (const prop of expr.properties) {
-          props.set(prop.key, this.evaluateExpr(prop.value, scope));
+          if (prop.kind === 'SpreadElement') {
+            const spread = prop as SpreadElement;
+            const value = this.evaluateExpr(spread.argument, scope);
+            if (value.type !== 'object') {
+              throw this.error('Spread operator requires an object', spread.position);
+            }
+            for (const [key, val] of value.props) {
+              props.set(key, val);
+            }
+          } else {
+            props.set(prop.key, this.evaluateExpr(prop.value, scope));
+          }
         }
         return makeObject(props);
       }
@@ -144,6 +267,8 @@ export class V3Evaluator {
         return this.evaluateUnary(expr.operator, expr.operand, scope, expr.position);
         case 'BinaryExpr':
           return this.evaluateBinary(expr.operator, expr.left, expr.right, scope, expr.position);
+        case 'PipeExpr':
+          return this.evaluatePipe(expr.left, expr.call, scope, expr.position);
         case 'MatchExpr':
           return this.evaluateMatch(expr, scope);
         case 'ScoreExpr':
@@ -268,7 +393,7 @@ export class V3Evaluator {
     if (!fn.body || !fn.closure || !fn.params) {
       throw new Error('Invalid function value');
     }
-    if (this.callDepth >= V3Evaluator.MAX_CALL_DEPTH) {
+    if (this.callDepth >= V4Evaluator.MAX_CALL_DEPTH) {
       throw new Error('Call stack depth exceeded');
     }
     this.callDepth++;
@@ -404,6 +529,30 @@ export class V3Evaluator {
     return this.callFunction(fnValue, positional, named);
   }
 
+  private evaluatePipe(left: Expr, call: CallExpr, scope: Scope, position: any): RuntimeValue {
+    // Evaluate the left expression (the value to pipe)
+    const pipedValue = this.evaluateExpr(left, scope);
+
+    // Evaluate the function
+    const fnValue = this.evaluateExpr(call.callee, scope);
+    if (fnValue.type !== 'function') {
+      throw this.error('パイプライン式で関数呼び出しが必要です', position);
+    }
+
+    // Build arguments: piped value as first argument, followed by call's arguments
+    const positional: RuntimeValue[] = [pipedValue];
+    const named = new Map<string, RuntimeValue>();
+    for (const arg of call.args) {
+      if (arg.name) {
+        named.set(arg.name, this.evaluateExpr(arg.value, scope));
+      } else {
+        positional.push(this.evaluateExpr(arg.value, scope));
+      }
+    }
+
+    return this.callFunction(fnValue, positional, named);
+  }
+
   private evaluateUnary(operator: string, operand: Expr, scope: Scope, position: any): RuntimeValue {
     const value = this.evaluateExpr(operand, scope);
     switch (operator) {
@@ -484,22 +633,59 @@ export class V3Evaluator {
 
     private evaluateMatch(expr: MatchExpr, scope: Scope): RuntimeValue {
       const value = this.evaluateExpr(expr.value, scope);
-      let fallback: Expr | null = null;
+      let fallback: { value: Expr; guard?: Expr } | null = null;
       for (const arm of expr.arms) {
         if (arm.isDefault) {
-          fallback = arm.value;
+          fallback = { value: arm.value, guard: arm.guard };
           continue;
         }
         if (!arm.pattern) continue;
-        const patternValue = this.evaluateExpr(arm.pattern, scope);
-        if (valuesEqual(value, patternValue)) {
+
+        let patternMatches = false;
+
+        // Handle RangePattern
+        if (arm.pattern.kind === 'RangePattern') {
+          const start = arm.pattern.start.value;
+          const end = arm.pattern.end.value;
+          patternMatches = this.matchesRange(value, start, end);
+        } else {
+          const patternValue = this.evaluateExpr(arm.pattern, scope);
+          patternMatches = valuesEqual(value, patternValue);
+        }
+
+        if (patternMatches) {
+          // Check guard condition if present
+          if (arm.guard) {
+            const guardResult = this.evaluateExpr(arm.guard, scope);
+            if (guardResult.type !== 'bool' || !guardResult.value) {
+              continue; // Guard failed, try next arm
+            }
+          }
           return this.evaluateExpr(arm.value, scope);
         }
       }
       if (fallback) {
-        return this.evaluateExpr(fallback, scope);
+        // Check guard on default arm too
+        if (fallback.guard) {
+          const guardResult = this.evaluateExpr(fallback.guard, scope);
+          if (guardResult.type !== 'bool' || !guardResult.value) {
+            return makeNull();
+          }
+        }
+        return this.evaluateExpr(fallback.value, scope);
       }
       return makeNull();
+    }
+
+    private matchesRange(value: RuntimeValue, start: number, end: number): boolean {
+      if (value.type === 'number') {
+        return value.value >= start && value.value <= end;
+      }
+      if (value.type === 'rat') {
+        const numValue = ratToNumber(value.value);
+        return numValue >= start && numValue <= end;
+      }
+      return false;
     }
 
   private evaluateScore(expr: ScoreExpr, scope: Scope): ScoreValueData {
@@ -518,6 +704,8 @@ export class V3Evaluator {
             const value = this.evaluateExpr(field.value, scope);
             if (field.key === 'title' || field.key === 'artist' || field.key === 'album' || field.key === 'copyright') {
               meta[field.key] = this.expectString(value, field.position);
+            } else if (field.key === 'anacrusis') {
+              meta.anacrusis = this.expectRat(value, field.position);
             } else {
               if (!meta.ext) meta.ext = {};
               meta.ext[field.key] = this.toPlainValue(value);
@@ -569,9 +757,134 @@ export class V3Evaluator {
       const unit = item.unit
         ? this.expectRat(this.evaluateExpr(item.unit, scope), item.position)
         : makeRat(1, 4);
-      results.push({ at, bpm, unit });
+
+      // Check for gradational tempo (Phase 3-B)
+      if (item.endAt && item.curveType) {
+        // This is a gradational tempo change
+        const endAt = this.expectPos(this.evaluateExpr(item.endAt, scope), item.position);
+
+        // We need the start BPM from the previous tempo event or default to 120
+        // For now, we'll generate intermediate tempo points
+        // The startBpm should be looked up from previous tempo events in the results
+        const startBpm = this.findPreviousBpm(results, at) ?? 120;
+
+        // Generate intermediate tempo events
+        const gradationalEvents = this.generateGradationalTempo(
+          at,
+          endAt,
+          startBpm,
+          bpm,
+          unit,
+          item.curveType,
+          item.position
+        );
+        results.push(...gradationalEvents);
+      } else {
+        // Simple tempo change (no gradient)
+        results.push({ at, bpm, unit });
+      }
     }
     return results;
+  }
+
+  // Find the BPM value at or before the given position
+  private findPreviousBpm(tempoEvents: TempoEventValue[], pos: PosValue): number | null {
+    // Simple implementation: return the last BPM in the array
+    // In a more complete implementation, we'd compare positions
+    if (tempoEvents.length === 0) return null;
+    return tempoEvents[tempoEvents.length - 1].bpm;
+  }
+
+  // Generate intermediate tempo events for gradational tempo
+  private generateGradationalTempo(
+    startPos: PosValue,
+    endPos: PosValue,
+    startBpm: number,
+    endBpm: number,
+    unit: { n: number; d: number },
+    curveType: 'linear' | 'ease',
+    position: any
+  ): TempoEventValue[] {
+    const results: TempoEventValue[] = [];
+
+    // Determine the number of intermediate points based on the position difference
+    // We'll use a fixed resolution for now: one event per quarter note (1/4)
+    // For positions that are PosRef, we need to estimate the duration
+
+    // Calculate number of steps (minimum 4 steps for smooth transitions)
+    const numSteps = 16;
+
+    for (let i = 0; i <= numSteps; i++) {
+      const t = i / numSteps;
+
+      // Calculate interpolated BPM based on curve type
+      let interpolatedBpm: number;
+      if (curveType === 'linear') {
+        // Linear interpolation
+        interpolatedBpm = startBpm + (endBpm - startBpm) * t;
+      } else {
+        // Ease-in-out interpolation (using smoothstep)
+        const easedT = t * t * (3 - 2 * t);
+        interpolatedBpm = startBpm + (endBpm - startBpm) * easedT;
+      }
+
+      // Calculate interpolated position
+      const interpolatedPos = this.interpolatePos(startPos, endPos, t, position);
+
+      results.push({
+        at: interpolatedPos,
+        bpm: interpolatedBpm,
+        unit,
+      });
+    }
+
+    return results;
+  }
+
+  // Interpolate between two positions
+  private interpolatePos(startPos: PosValue, endPos: PosValue, t: number, position: any): PosValue {
+    // Handle different position types
+    if (isRat(startPos.value) && isRat(endPos.value)) {
+      // Both are rational positions - interpolate directly
+      const startRat = ratToNumber(startPos.value);
+      const endRat = ratToNumber(endPos.value);
+      const interpolated = startRat + (endRat - startRat) * t;
+      // Convert back to rational (approximate)
+      return makePosValue(makeRat(Math.round(interpolated * 1000), 1000));
+    }
+
+    if (isPosRef(startPos.value) && isPosRef(endPos.value)) {
+      // Both are bar:beat references
+      const startBar = startPos.value.bar;
+      const startBeat = startPos.value.beat;
+      const endBar = endPos.value.bar;
+      const endBeat = endPos.value.beat;
+
+      // Simple linear interpolation of bar and beat
+      const interpolatedBar = Math.floor(startBar + (endBar - startBar) * t);
+      const interpolatedBeat = Math.floor(startBeat + (endBeat - startBeat) * t);
+
+      // For fractional positions, we use PosExpr with an offset
+      const baseBeat = startBeat + (endBeat - startBeat) * t;
+      const beatFraction = baseBeat - Math.floor(baseBeat);
+
+      if (beatFraction > 0.001) {
+        // Has fractional part, use PosExpr
+        return makePosValue(makePosExpr(
+          makePosRef(interpolatedBar, Math.floor(baseBeat)),
+          makeRat(Math.round(beatFraction * 1000), 1000)
+        ));
+      }
+
+      return makePosValue(makePosRef(interpolatedBar, interpolatedBeat));
+    }
+
+    // Fallback: just return start position for t=0, end for t=1, linear interpolation otherwise
+    if (t <= 0) return startPos;
+    if (t >= 1) return endPos;
+
+    // For mixed types or PosExpr, we do a rough approximation
+    return t < 0.5 ? startPos : endPos;
   }
 
   private evaluateMeterBlock(items: MeterItem[], scope: Scope): ScoreValueData['meterMap'] {
@@ -837,12 +1150,197 @@ export class V3Evaluator {
           events.push(event);
           break;
         }
+        case 'ArpStmt': {
+          const pitchesValue = this.evaluateExpr(stmt.pitches, scope);
+          const pitches = this.expectPitchArray(pitchesValue, stmt.position);
+          const dur = this.expectRat(this.evaluateExpr(stmt.duration, scope), stmt.position);
+          const orderedPitches = this.expandArpeggio(pitches, stmt.direction);
+          for (const pitch of orderedPitches) {
+            const noteEvent: NoteEventValue = {
+              type: 'note',
+              start: cursor,
+              dur,
+              pitch,
+            };
+            this.applyNoteOptions(noteEvent, stmt.opts, scope);
+            events.push(noteEvent);
+            cursor = addPos(cursor, dur);
+          }
+          break;
+        }
+        case 'TripletStmt': {
+          // Evaluate the triplet body and scale durations by inTime/n
+          const result = this.evaluateTriplet(stmt, cursor, scope);
+          events.push(...result.events);
+          cursor = result.cursor;
+          break;
+        }
         default:
           throw this.error('Unknown clip statement', (stmt as any).position);
       }
     }
 
     return { events };
+  }
+
+  private evaluateTriplet(
+    stmt: TripletStmt,
+    startCursor: PosValue,
+    scope: Scope
+  ): { events: ClipEventValue[]; cursor: PosValue } {
+    const events: ClipEventValue[] = [];
+    let cursor = startCursor;
+
+    // Scale factor: inTime/n
+    // For triplet(3): 3 notes in time of 2, so scale = 2/3
+    const scaleFactor = makeRat(stmt.inTime, stmt.n);
+
+    for (const bodyStmt of stmt.body) {
+      switch (bodyStmt.kind) {
+        case 'AtStmt':
+          // at() inside triplet is relative to start of triplet, scaled
+          cursor = this.expectPos(this.evaluateExpr(bodyStmt.pos, scope), bodyStmt.position);
+          break;
+        case 'RestStmt': {
+          const dur = this.expectRat(this.evaluateExpr(bodyStmt.dur, scope), bodyStmt.position);
+          const scaledDur = mulRat(dur, scaleFactor);
+          cursor = addPos(cursor, scaledDur);
+          break;
+        }
+        case 'BreathStmt': {
+          const dur = this.expectRat(this.evaluateExpr(bodyStmt.dur, scope), bodyStmt.position);
+          const scaledDur = mulRat(dur, scaleFactor);
+          let intensity = 0.6;
+          if (bodyStmt.intensity) {
+            intensity = this.expectNumber(this.evaluateExpr(bodyStmt.intensity, scope), bodyStmt.position);
+          }
+          const event: BreathEventValue = {
+            type: 'breath',
+            start: cursor,
+            dur: scaledDur,
+            intensity,
+          };
+          events.push(event);
+          cursor = addPos(cursor, scaledDur);
+          break;
+        }
+        case 'NoteStmt': {
+          const pitch = this.expectPitch(this.evaluateExpr(bodyStmt.pitch, scope), bodyStmt.position);
+          const dur = this.expectRat(this.evaluateExpr(bodyStmt.dur, scope), bodyStmt.position);
+          const scaledDur = mulRat(dur, scaleFactor);
+          const event: NoteEventValue = {
+            type: 'note',
+            start: cursor,
+            dur: scaledDur,
+            pitch,
+          };
+          this.applyNoteOptions(event, bodyStmt.opts, scope);
+          events.push(event);
+          cursor = addPos(cursor, scaledDur);
+          break;
+        }
+        case 'ChordStmt': {
+          const pitches = this.expectPitchArray(this.evaluateExpr(bodyStmt.pitches, scope), bodyStmt.position);
+          const dur = this.expectRat(this.evaluateExpr(bodyStmt.dur, scope), bodyStmt.position);
+          const scaledDur = mulRat(dur, scaleFactor);
+          const event: ClipEventValue = {
+            type: 'chord',
+            start: cursor,
+            dur: scaledDur,
+            pitches,
+          };
+          this.applyEventOptions(event, bodyStmt.opts, scope);
+          events.push(event);
+          cursor = addPos(cursor, scaledDur);
+          break;
+        }
+        case 'HitStmt': {
+          const keyValue = this.evaluateExpr(bodyStmt.key, scope);
+          const key = this.expectStringLike(keyValue, bodyStmt.position);
+          const dur = this.expectRat(this.evaluateExpr(bodyStmt.dur, scope), bodyStmt.position);
+          const scaledDur = mulRat(dur, scaleFactor);
+          const event: DrumHitEventValue = {
+            type: 'drumHit',
+            start: cursor,
+            dur: scaledDur,
+            key,
+          };
+          this.applyEventOptions(event, bodyStmt.opts, scope);
+          events.push(event);
+          cursor = addPos(cursor, scaledDur);
+          break;
+        }
+        case 'CCStmt': {
+          const number = this.expectNumber(this.evaluateExpr(bodyStmt.num, scope), bodyStmt.position);
+          const value = this.expectNumber(this.evaluateExpr(bodyStmt.value, scope), bodyStmt.position);
+          events.push({
+            type: 'control',
+            start: cursor,
+            kind: 'cc',
+            data: { number, value },
+          });
+          break;
+        }
+        case 'AutomationStmt': {
+          const param = this.expectStringLike(this.evaluateExpr(bodyStmt.param, scope), bodyStmt.position);
+          const start = this.expectPos(this.evaluateExpr(bodyStmt.start, scope), bodyStmt.position);
+          const end = this.expectPos(this.evaluateExpr(bodyStmt.end, scope), bodyStmt.position);
+          const curveValue = this.evaluateExpr(bodyStmt.curve, scope);
+          const curve = this.expectCurve(curveValue, bodyStmt.position);
+          const event: AutomationEventValue = {
+            type: 'automation',
+            param,
+            start,
+            end,
+            curve,
+          };
+          events.push(event);
+          break;
+        }
+        case 'MarkerStmt': {
+          const kind = this.expectStringLike(this.evaluateExpr(bodyStmt.markerKind, scope), bodyStmt.position);
+          const label = this.expectStringLike(this.evaluateExpr(bodyStmt.label, scope), bodyStmt.position);
+          const event: MarkerEventValue = {
+            type: 'marker',
+            pos: cursor,
+            kind,
+            label,
+          };
+          events.push(event);
+          break;
+        }
+        case 'ArpStmt': {
+          const pitchesValue = this.evaluateExpr(bodyStmt.pitches, scope);
+          const pitches = this.expectPitchArray(pitchesValue, bodyStmt.position);
+          const dur = this.expectRat(this.evaluateExpr(bodyStmt.duration, scope), bodyStmt.position);
+          const scaledDur = mulRat(dur, scaleFactor);
+          const orderedPitches = this.expandArpeggio(pitches, bodyStmt.direction);
+          for (const pitch of orderedPitches) {
+            const noteEvent: NoteEventValue = {
+              type: 'note',
+              start: cursor,
+              dur: scaledDur,
+              pitch,
+            };
+            this.applyNoteOptions(noteEvent, bodyStmt.opts, scope);
+            events.push(noteEvent);
+            cursor = addPos(cursor, scaledDur);
+          }
+          break;
+        }
+        case 'TripletStmt': {
+          // Nested triplet - recursively evaluate
+          const nestedResult = this.evaluateTriplet(bodyStmt, cursor, scope);
+          events.push(...nestedResult.events);
+          cursor = nestedResult.cursor;
+          break;
+        }
+        default:
+          throw this.error('Unknown clip statement in triplet', (bodyStmt as any).position);
+      }
+    }
+
+    return { events, cursor };
   }
 
   private applyNoteOptions(event: NoteEventValue, opts: any[], scope: Scope): void {
@@ -996,6 +1494,93 @@ export class V3Evaluator {
     }
   }
 
+  private expandArpeggio(
+    pitches: Array<{ midi: number; cents: number }>,
+    direction: ArpDirection
+  ): Array<{ midi: number; cents: number }> {
+    if (pitches.length === 0) return [];
+
+    switch (direction) {
+      case 'up':
+        // Play in array order (assumed ascending)
+        return [...pitches];
+      case 'down':
+        // Play in reverse order
+        return [...pitches].reverse();
+      case 'updown': {
+        // Up then down, but don't repeat the highest note
+        // [C, E, G] -> [C, E, G, E, C]
+        if (pitches.length <= 1) return [...pitches];
+        const down = [...pitches].reverse().slice(1);
+        return [...pitches, ...down];
+      }
+      case 'downup': {
+        // Down then up, but don't repeat the lowest note
+        // [C, E, G] -> [G, E, C, E, G]
+        if (pitches.length <= 1) return [...pitches];
+        const reversed = [...pitches].reverse();
+        const up = [...pitches].slice(1);
+        return [...reversed, ...up];
+      }
+      case 'random':
+        // Shuffle the pitches using Fisher-Yates algorithm
+        const shuffled = [...pitches];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      default:
+        return [...pitches];
+    }
+  }
+
+  private valueToString(value: RuntimeValue): string {
+    switch (value.type) {
+      case 'number':
+        return String(value.value);
+      case 'string':
+        return value.value;
+      case 'bool':
+        return value.value ? 'true' : 'false';
+      case 'null':
+        return 'null';
+      case 'rat':
+        if (value.value.d === 1) {
+          return String(value.value.n);
+        }
+        return `${value.value.n}/${value.value.d}`;
+      case 'pitch':
+        return `midi:${value.value.midi}`;
+      case 'pos':
+        if (isRat(value.value)) {
+          return value.value.d === 1 ? String(value.value.n) : `${value.value.n}/${value.value.d}`;
+        }
+        if (isPosRef(value.value)) {
+          return `${value.value.bar}:${value.value.beat}`;
+        }
+        if (isPosExpr(value.value)) {
+          return `${value.value.base.bar}:${value.value.base.beat}+${value.value.offset.n}/${value.value.offset.d}`;
+        }
+        return '[pos]';
+      case 'array':
+        return '[' + value.elements.map((el) => this.valueToString(el)).join(', ') + ']';
+      case 'object':
+        return '{...}';
+      case 'function':
+        return value.name ? `[function ${value.name}]` : '[function]';
+      case 'range':
+        return `${this.valueToString(value.start)}..${this.valueToString(value.end)}`;
+      case 'enumVariant':
+        if (value.payload) {
+          return `${value.enumName}.${value.variantName}(${this.valueToString(value.payload)})`;
+        }
+        return `${value.enumName}.${value.variantName}`;
+      default:
+        return `[${value.type}]`;
+    }
+  }
+
   private toPlainValue(value: RuntimeValue): unknown {
     switch (value.type) {
       case 'number':
@@ -1029,6 +1614,13 @@ export class V3Evaluator {
       case 'lyricToken':
       case 'rng':
         return value.type;
+      case 'enumVariant':
+        return {
+          _type: 'enumVariant',
+          enumName: value.enumName,
+          variantName: value.variantName,
+          payload: value.payload ? this.toPlainValue(value.payload) : undefined,
+        };
       default:
         return value.type;
     }
@@ -1038,7 +1630,7 @@ export class V3Evaluator {
     const loc = position
       ? ` at ${this.filePath ?? 'unknown'}:${position.line}:${position.column}`
       : '';
-    return new Error(`[v3 eval] ${message}${loc}`);
+    return new Error(`[eval] ${message}${loc}`);
   }
 
   private typeError(expected: string, got: RuntimeValue, position?: any): Error {
@@ -1256,6 +1848,18 @@ function valuesEqual(a: RuntimeValue, b: RuntimeValue): boolean {
         );
       }
       return false;
+    }
+    case 'enumVariant': {
+      const bEnum = b as typeof a;
+      if (a.enumName !== bEnum.enumName || a.variantName !== bEnum.variantName) {
+        return false;
+      }
+      // If both have no payload, they're equal
+      if (!a.payload && !bEnum.payload) return true;
+      // If one has payload and the other doesn't, they're not equal
+      if (!a.payload || !bEnum.payload) return false;
+      // Compare payloads recursively
+      return valuesEqual(a.payload, bEnum.payload);
     }
     default:
       return a === b;

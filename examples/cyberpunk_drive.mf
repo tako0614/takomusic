@@ -1,0 +1,471 @@
+// Cyberpunk Drive - A Synthwave Track
+// Demonstrates TakoMusic's capabilities with a complete song
+
+import { concat, repeat, overlay, padTo } from "std:core";
+import { transpose } from "std:transform";
+import {
+  minorTriad, majorTriad, minor7,
+  arpeggioUp, arpeggioDown,
+  scaleMinor
+} from "std:theory";
+import { kick, snare, hhc, hho, crash, clap } from "std:drums";
+
+// ============================================
+// SONG PARAMETERS
+// ============================================
+const ROOT = A3;  // A minor - dark, moody
+
+// ============================================
+// DRUM PATTERNS
+// ============================================
+
+// Four-on-the-floor kick with sidestick
+fn kickPattern() -> Clip {
+  return clip {
+    hit(kick, e, vel: 0.95);
+    hit(hhc, e, vel: 0.4);
+    hit(hhc, e, vel: 0.6);
+    hit(kick, e, vel: 0.85);
+    hit(snare, e, vel: 0.9);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.9);
+    hit(hhc, e, vel: 0.7);
+  };
+}
+
+// Driving hi-hats
+fn hihatPattern() -> Clip {
+  return clip {
+    hit(hhc, s, vel: 0.6);
+    hit(hhc, s, vel: 0.3);
+    hit(hhc, s, vel: 0.5);
+    hit(hhc, s, vel: 0.3);
+    hit(hho, s, vel: 0.7);
+    hit(hhc, s, vel: 0.3);
+    hit(hhc, s, vel: 0.5);
+    hit(hhc, s, vel: 0.4);
+  };
+}
+
+// Build-up fill
+fn buildFill() -> Clip {
+  return clip {
+    hit(snare, s, vel: 0.5);
+    hit(snare, s, vel: 0.55);
+    hit(snare, s, vel: 0.6);
+    hit(snare, s, vel: 0.65);
+    hit(snare, s, vel: 0.7);
+    hit(snare, s, vel: 0.75);
+    hit(snare, s, vel: 0.8);
+    hit(snare, s, vel: 0.85);
+    hit(snare, s, vel: 0.9);
+    hit(snare, s, vel: 0.92);
+    hit(snare, s, vel: 0.95);
+    hit(snare, s, vel: 0.97);
+    hit(crash, q, vel: 1.0);
+  };
+}
+
+// Drop crash
+fn dropHit() -> Clip {
+  return clip {
+    hit(crash, e, vel: 1.0);
+    hit(kick, e, vel: 1.0);
+  };
+}
+
+// Full drum loop (2 bars)
+fn drumLoop() -> Clip {
+  const kicks = repeat(kickPattern(), 2);
+  const hats = repeat(hihatPattern(), 4);
+  return overlay(kicks, hats);
+}
+
+// ============================================
+// BASS PATTERNS
+// ============================================
+
+// Driving octave bass
+fn bassLine() -> Clip {
+  return clip {
+    // Am
+    note(A1, e, vel: 0.9);
+    note(A2, s, vel: 0.7);
+    note(A1, s, vel: 0.6);
+    note(A1, e, vel: 0.85);
+    rest(e);
+    // F
+    note(F1, e, vel: 0.9);
+    note(F2, s, vel: 0.7);
+    note(F1, s, vel: 0.6);
+    note(F1, e, vel: 0.85);
+    rest(e);
+    // C
+    note(C2, e, vel: 0.9);
+    note(C3, s, vel: 0.7);
+    note(C2, s, vel: 0.6);
+    note(C2, e, vel: 0.85);
+    rest(e);
+    // G
+    note(G1, e, vel: 0.9);
+    note(G2, s, vel: 0.7);
+    note(G1, s, vel: 0.6);
+    note(G1, e, vel: 0.85);
+    rest(e);
+  };
+}
+
+// Sub bass for drops
+fn subBass() -> Clip {
+  return clip {
+    note(A1, h, vel: 0.95);
+    note(F1, h, vel: 0.95);
+    note(C2, h, vel: 0.95);
+    note(G1, h, vel: 0.95);
+  };
+}
+
+// ============================================
+// SYNTH ARPEGGIOS
+// ============================================
+
+// Main arpeggio pattern
+fn arpPattern() -> Clip {
+  const am = minorTriad(A4);
+  const fM = majorTriad(F4);
+  const cM = majorTriad(C5);
+  const gM = majorTriad(G4);
+
+  let c = clip {};
+
+  // Am arpeggio
+  for (p in arpeggioUp(am)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+  for (p in arpeggioDown(am)) {
+    c = concat(c, clip { note(p, s, vel: 0.6); });
+  }
+
+  // F arpeggio
+  for (p in arpeggioUp(fM)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+  for (p in arpeggioDown(fM)) {
+    c = concat(c, clip { note(p, s, vel: 0.6); });
+  }
+
+  // C arpeggio
+  for (p in arpeggioUp(cM)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+  for (p in arpeggioDown(cM)) {
+    c = concat(c, clip { note(p, s, vel: 0.6); });
+  }
+
+  // G arpeggio
+  for (p in arpeggioUp(gM)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+  for (p in arpeggioDown(gM)) {
+    c = concat(c, clip { note(p, s, vel: 0.6); });
+  }
+
+  return c;
+}
+
+// High shimmering arp
+fn highArp() -> Clip {
+  return transpose(arpPattern(), 12);
+}
+
+// ============================================
+// PAD CHORDS
+// ============================================
+
+fn padChords() -> Clip {
+  return clip {
+    chord(minor7(A3), w, vel: 0.5);
+    chord(majorTriad(F3), w, vel: 0.5);
+    chord(majorTriad(C4), w, vel: 0.5);
+    chord(majorTriad(G3), w, vel: 0.5);
+  };
+}
+
+// ============================================
+// LEAD MELODY
+// ============================================
+
+fn leadMelody() -> Clip {
+  return clip {
+    // Phrase 1
+    note(E5, e, vel: 0.8);
+    note(E5, s, vel: 0.7);
+    note(D5, s, vel: 0.75);
+    note(C5, e, vel: 0.8);
+    note(A4, e, vel: 0.75);
+    rest(q);
+
+    // Phrase 2
+    note(E5, e, vel: 0.8);
+    note(G5, q, vel: 0.85);
+    note(F5, e, vel: 0.75);
+    note(E5, e, vel: 0.8);
+    note(D5, e, vel: 0.7);
+
+    // Phrase 3
+    note(C5, q, vel: 0.85);
+    note(D5, e, vel: 0.75);
+    note(E5, e, vel: 0.8);
+    note(A4, h, vel: 0.9);
+
+    // Phrase 4 - Resolution
+    note(G5, e, vel: 0.85);
+    note(F5, e, vel: 0.8);
+    note(E5, q, vel: 0.85);
+    note(D5, e, vel: 0.75);
+    note(C5, e, vel: 0.8);
+    note(A4, h, vel: 0.9);
+  };
+}
+
+// Counter melody
+fn counterMelody() -> Clip {
+  return clip {
+    rest(h);
+    note(A4, q, vel: 0.6);
+    note(G4, q, vel: 0.55);
+    note(F4, h, vel: 0.6);
+    note(E4, q, vel: 0.55);
+    note(D4, q, vel: 0.5);
+    note(C4, w, vel: 0.6);
+    note(E4, h, vel: 0.55);
+    note(D4, h, vel: 0.5);
+  };
+}
+
+// ============================================
+// SECTION BUILDERS
+// ============================================
+
+// Intro: Just arps and hats (8 bars)
+fn buildIntro() -> Clip {
+  const arps = repeat(arpPattern(), 2);
+  const hats = repeat(hihatPattern(), 8);
+  return overlay(arps, hats);
+}
+
+// Verse: Add bass and kicks (8 bars)
+fn buildVerse() -> Clip {
+  const drums = repeat(drumLoop(), 4);
+  const bass = repeat(bassLine(), 2);
+  const arps = repeat(arpPattern(), 2);
+  const pads = padChords();
+
+  let section = overlay(drums, bass);
+  section = overlay(section, arps);
+  section = overlay(section, pads);
+  return section;
+}
+
+// Pre-chorus: Build tension (4 bars)
+fn buildPreChorus() -> Clip {
+  const drums = concat(repeat(drumLoop(), 1), repeat(buildFill(), 2));
+  const bass = bassLine();
+  const arps = arpPattern();
+  const highArps = highArp();
+
+  let section = overlay(drums, bass);
+  section = overlay(section, arps);
+  section = overlay(section, highArps);
+  return section;
+}
+
+// Chorus: Full energy (8 bars)
+fn buildChorus() -> Clip {
+  const drop = dropHit();
+  const drums = repeat(drumLoop(), 4);
+  const bass = repeat(bassLine(), 2);
+  const sub = repeat(subBass(), 2);
+  const arps = repeat(arpPattern(), 2);
+  const highArps = repeat(highArp(), 2);
+  const pads = repeat(padChords(), 2);
+  const lead = repeat(leadMelody(), 2);
+
+  let section = concat(drop, padTo(drums, w * 8));
+  section = overlay(section, bass);
+  section = overlay(section, sub);
+  section = overlay(section, arps);
+  section = overlay(section, highArps);
+  section = overlay(section, pads);
+  section = overlay(section, lead);
+  return section;
+}
+
+// Bridge: Strip back (4 bars)
+fn buildBridge() -> Clip {
+  const pads = padChords();
+  const counter = counterMelody();
+  const hats = repeat(hihatPattern(), 4);
+
+  let section = overlay(pads, counter);
+  section = overlay(section, hats);
+  return section;
+}
+
+// Outro: Fade out feel (4 bars)
+fn buildOutro() -> Clip {
+  const arps = arpPattern();
+  const pads = padChords();
+  const hats = repeat(hihatPattern(), 4);
+
+  let section = overlay(arps, pads);
+  section = overlay(section, hats);
+  return section;
+}
+
+// ============================================
+// MAIN SCORE
+// ============================================
+
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Cyberpunk Drive";
+      artist "TakoMusic";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 128bpm; }  // Classic synthwave tempo
+
+    // Section markers
+    marker(1:1, "section", "Intro");
+    marker(9:1, "section", "Verse 1");
+    marker(17:1, "section", "Pre-Chorus");
+    marker(21:1, "section", "Chorus 1");
+    marker(29:1, "section", "Verse 2");
+    marker(37:1, "section", "Pre-Chorus");
+    marker(41:1, "section", "Chorus 2");
+    marker(49:1, "section", "Bridge");
+    marker(53:1, "section", "Chorus 3");
+    marker(61:1, "section", "Outro");
+
+    // Sound definitions
+    sound "lead_synth" kind instrument {
+      label "Lead Synth";
+      range C4..C7;
+    }
+
+    sound "arp_synth" kind instrument {
+      label "Arp Synth";
+      range C3..C7;
+    }
+
+    sound "pad" kind instrument {
+      label "Pad";
+      range C2..C6;
+    }
+
+    sound "bass" kind instrument {
+      label "Synth Bass";
+      range C1..C3;
+    }
+
+    sound "sub" kind instrument {
+      label "Sub Bass";
+      range C0..C2;
+    }
+
+    sound "drums" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; clap; }
+    }
+
+    // ============================================
+    // ARRANGEMENT
+    // ============================================
+
+    // Drums
+    track "Drums" role Drums sound "drums" {
+      // Intro - just hats
+      place 1:1 repeat(hihatPattern(), 8);
+      // Verse 1
+      place 9:1 repeat(drumLoop(), 4);
+      // Pre-Chorus + fill
+      place 17:1 concat(repeat(drumLoop(), 1), repeat(buildFill(), 2));
+      // Chorus 1
+      place 21:1 concat(dropHit(), padTo(repeat(drumLoop(), 4), w * 8));
+      // Verse 2
+      place 29:1 repeat(drumLoop(), 4);
+      // Pre-Chorus
+      place 37:1 concat(repeat(drumLoop(), 1), repeat(buildFill(), 2));
+      // Chorus 2
+      place 41:1 concat(dropHit(), padTo(repeat(drumLoop(), 4), w * 8));
+      // Bridge
+      place 49:1 repeat(hihatPattern(), 4);
+      // Chorus 3
+      place 53:1 concat(dropHit(), padTo(repeat(drumLoop(), 4), w * 8));
+      // Outro
+      place 61:1 repeat(hihatPattern(), 4);
+    }
+
+    // Bass
+    track "Bass" role Instrument sound "bass" {
+      place 9:1 repeat(bassLine(), 2);
+      place 21:1 repeat(bassLine(), 4);
+      place 29:1 repeat(bassLine(), 2);
+      place 41:1 repeat(bassLine(), 4);
+      place 53:1 repeat(bassLine(), 4);
+    }
+
+    // Sub Bass
+    track "Sub" role Instrument sound "sub" {
+      place 21:1 repeat(subBass(), 2);
+      place 41:1 repeat(subBass(), 2);
+      place 53:1 repeat(subBass(), 2);
+    }
+
+    // Main Arp
+    track "Arp" role Instrument sound "arp_synth" {
+      place 1:1 repeat(arpPattern(), 2);
+      place 9:1 repeat(arpPattern(), 2);
+      place 17:1 arpPattern();
+      place 21:1 repeat(arpPattern(), 2);
+      place 29:1 repeat(arpPattern(), 2);
+      place 37:1 arpPattern();
+      place 41:1 repeat(arpPattern(), 2);
+      place 53:1 repeat(arpPattern(), 2);
+      place 61:1 arpPattern();
+    }
+
+    // High Arp
+    track "High Arp" role Instrument sound "arp_synth" {
+      place 17:1 highArp();
+      place 21:1 repeat(highArp(), 2);
+      place 37:1 highArp();
+      place 41:1 repeat(highArp(), 2);
+      place 53:1 repeat(highArp(), 2);
+    }
+
+    // Pad
+    track "Pad" role Instrument sound "pad" {
+      place 9:1 padChords();
+      place 21:1 repeat(padChords(), 2);
+      place 29:1 padChords();
+      place 41:1 repeat(padChords(), 2);
+      place 49:1 padChords();
+      place 53:1 repeat(padChords(), 2);
+      place 61:1 padChords();
+    }
+
+    // Lead
+    track "Lead" role Instrument sound "lead_synth" {
+      place 21:1 repeat(leadMelody(), 2);
+      place 41:1 repeat(leadMelody(), 2);
+      place 53:1 repeat(leadMelody(), 2);
+    }
+
+    // Counter Melody
+    track "Counter" role Instrument sound "lead_synth" {
+      place 49:1 counterMelody();
+    }
+  };
+}

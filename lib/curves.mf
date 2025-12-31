@@ -1,4 +1,4 @@
-// std:curves (v3)
+// std:curves (v4)
 
 fn makeCurve(points) {
   return { kind: "piecewiseLinear", points: points };

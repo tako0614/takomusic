@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { V3Compiler } from '../compiler.js';
+import { V4Compiler } from '../compiler.js';
 import { isStdlibImport, resolveStdlibPath, STDLIB_MODULES } from '../utils/stdlib.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-describe('V3 compiler', () => {
-  const tmpDir = path.join(os.tmpdir(), 'mf-v3-test');
+describe('V4 compiler', () => {
+  const tmpDir = path.join(os.tmpdir(), 'mf-v4-test');
 
   beforeAll(() => {
     if (!fs.existsSync(tmpDir)) {
@@ -54,10 +54,10 @@ describe('V3 compiler', () => {
       }
     `);
 
-    const compiler = new V3Compiler(tmpDir);
+    const compiler = new V4Compiler(tmpDir);
     const ir = compiler.compile(mainPath);
 
-    expect(ir.tako.irVersion).toBe(3);
+      expect(ir.tako.irVersion).toBe(4);
     expect(ir.tracks.length).toBe(1);
     expect(ir.sounds[0].id).toBe('piano');
   });
@@ -86,7 +86,7 @@ describe('V3 compiler', () => {
       }
     `);
 
-    const compiler = new V3Compiler(tmpDir);
+    const compiler = new V4Compiler(tmpDir);
     const ir = compiler.compile(mainPath);
 
     expect(ir.tracks[0].placements.length).toBe(1);
@@ -109,7 +109,7 @@ describe('V3 compiler', () => {
       }
     `);
 
-    const compiler = new V3Compiler(tmpDir);
+    const compiler = new V4Compiler(tmpDir);
     const ir = compiler.compile(mainPath);
 
     expect(ir.markers?.length ?? 0).toBe(1);
@@ -140,7 +140,7 @@ describe('V3 compiler', () => {
       }
     `);
 
-    const compiler = new V3Compiler(tmpDir);
+    const compiler = new V4Compiler(tmpDir);
     const ir = compiler.compile(mainPath);
 
     const events = ir.tracks[0].placements[0].clip.events;
@@ -172,7 +172,7 @@ describe('V3 compiler', () => {
       }
     `);
 
-    const compiler = new V3Compiler(tmpDir);
+    const compiler = new V4Compiler(tmpDir);
     const ir = compiler.compile(mainPath);
 
     expect(ir.meta.title).toBe('Two');
@@ -195,14 +195,14 @@ describe('V3 compiler', () => {
       }
     `);
 
-    const compiler = new V3Compiler(tmpDir);
+    const compiler = new V4Compiler(tmpDir);
     const diagnostics = compiler.check(mainPath);
     const messages = diagnostics.map((d) => d.message);
     expect(messages.some((m) => m.includes('Expected duration'))).toBe(true);
   });
 });
 
-describe('V3 stdlib registry', () => {
+describe('stdlib registry', () => {
   it('resolves std: imports', () => {
     expect(isStdlibImport('std:core')).toBe(true);
     expect(isStdlibImport('./local.mf')).toBe(false);

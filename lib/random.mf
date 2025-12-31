@@ -1,4 +1,4 @@
-// std:random (v3)
+// std:random (v4)
 
 const RNG_A = 1664525;
 const RNG_C = 1013904223;
