@@ -9,7 +9,7 @@ import {
   compile as browserCompile,
   type CompileResult as BrowserCompileResult,
   type ScoreIR,
-} from '../../../src/browser/index.js';
+} from '../../../dist/browser/index.js';
 
 export interface CompileResult {
   success: boolean;
@@ -34,7 +34,7 @@ export async function compile(source: string): Promise<CompileResult> {
 
     // Convert diagnostics to playground format
     const diagnostics: Diagnostic[] = result.diagnostics.map((d) => ({
-      severity: d.severity,
+      severity: (d.severity === 'error' ? 'error' : 'warning') as 'error' | 'warning',
       message: d.message,
       line: d.position?.line,
       column: d.position?.column,
