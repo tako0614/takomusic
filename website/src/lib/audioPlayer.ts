@@ -114,7 +114,10 @@ export class AudioPlayer {
       for (const placement of track.placements) {
         const placementTime = ratToSeconds(placement.at, bpm, beatUnit);
 
-        for (const event of placement.clip.events) {
+        for (const rawEvent of placement.clip.events) {
+          // Cast to any for flexible property access across different event types
+          const event = rawEvent as any;
+
           // Handle different event types
           const eventType = event.type || event.kind;
           const eventAt = event.start || event.at || { n: 0, d: 1 };
