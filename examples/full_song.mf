@@ -1,4 +1,4 @@
-// TakoMusic v3 - Full Song Sketch
+// TakoMusic - Full Song Sketch
 
 import { repeat } from "std:core";
 import { fourOnFloor } from "std:drums";

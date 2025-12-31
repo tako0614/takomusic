@@ -1,0 +1,79 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "Standard MIDI",
+  "renderer": "midi.standard",
+  "degradePolicy": "Drop",
+  "output": {
+    "path": "output.mid",
+    "ppq": 480
+  },
+  "humanize": {
+    "enabled": false,
+    "timing": 5,
+    "velocity": 5
+  },
+  "bindings": [
+    {
+      "selector": { "role": "Instrument" },
+      "config": { "channel": 0 }
+    },
+    {
+      "selector": { "role": "Drums" },
+      "config": {
+        "channel": 9,
+        "drumMap": {
+          "kick": 36,
+          "snare": 38,
+          "hhc": 42,
+          "hho": 46,
+          "crash": 49,
+          "ride": 51,
+          "tom1": 50,
+          "tom2": 48,
+          "tom3": 45,
+          "tom4": 43,
+          "rimshot": 37,
+          "clap": 39
+        }
+      }
+    },
+    {
+      "selector": { "role": "Vocal" },
+      "config": { "channel": 1, "program": 54 }
+    },
+    {
+      "selector": { "sound": "piano" },
+      "config": { "channel": 0, "program": 0 }
+    },
+    {
+      "selector": { "sound": "lead_synth" },
+      "config": { "channel": 1, "program": 81 }
+    },
+    {
+      "selector": { "sound": "arp_synth" },
+      "config": { "channel": 2, "program": 81 }
+    },
+    {
+      "selector": { "sound": "pad" },
+      "config": { "channel": 3, "program": 89 }
+    },
+    {
+      "selector": { "sound": "bass" },
+      "config": { "channel": 4, "program": 38 }
+    },
+    {
+      "selector": { "sound": "sub" },
+      "config": { "channel": 5, "program": 38 }
+    },
+    {
+      "selector": { "sound": "strings" },
+      "config": { "channel": 6, "program": 48 }
+    },
+    {
+      "selector": { "sound": "brass" },
+      "config": { "channel": 7, "program": 61 }
+    }
+  ]
+}

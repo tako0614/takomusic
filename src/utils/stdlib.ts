@@ -18,6 +18,7 @@ export const STDLIB_MODULES = [
   'theory',
   'drums',
   'vocal',
+  'result',
 ] as const;
 
 export type StdlibModule = typeof STDLIB_MODULES[number];

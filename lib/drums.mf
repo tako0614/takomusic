@@ -1,4 +1,4 @@
-// std:drums (v3)
+// std:drums (v4)
 
 export const kick = "kick";
 export const snare = "snare";

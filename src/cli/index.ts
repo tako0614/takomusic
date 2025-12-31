@@ -6,6 +6,11 @@ import { initCommand } from './commands/init.js';
 import { checkCommand } from './commands/check.js';
 import { buildCommand } from './commands/build.js';
 import { renderCommand } from './commands/render.js';
+import { lspCommand } from './commands/lsp.js';
+import { fmtCommand } from './commands/fmt.js';
+import { installCommand } from './commands/install.js';
+import { watchCommand } from './commands/watch.js';
+import { replCommand } from './commands/repl.js';
 import { ExitCodes } from '../errors.js';
 
 // Read version from package.json
@@ -19,10 +24,15 @@ TakoMusic v${VERSION} - Music composition with MFS language
 Usage: mf <command> [options]
 
 Commands:
-  init              Initialize a new TakoMusic v3 project
-  check             Check v3 source for errors
-  build             Build v3 IR (.mf.score.json)
+  init              Initialize a new TakoMusic v4 project
+  check             Check source for errors
+  build             Build IR (.mf.score.json)
   render            Render via profile + renderer plugin
+  lsp               Start Language Server Protocol server
+  fmt               Format source files
+  install           Install packages from URLs (Go/Deno style)
+  watch             Watch for changes and auto-rebuild
+  repl              Start interactive REPL session
 
 Options:
   -h, --help        Show this help message
@@ -33,6 +43,9 @@ Examples:
   mf check
   mf build
   mf render --profile profiles/default.mf.profile.json
+  mf fmt --check
+  mf install github.com/user/repo/lib/chords.mf
+  mf watch --build
 `;
 
 async function main(): Promise<number> {
@@ -64,6 +77,24 @@ async function main(): Promise<number> {
 
       case 'render':
         return await renderCommand(commandArgs);
+
+      case 'lsp':
+        return await lspCommand(commandArgs);
+
+      case 'fmt':
+      case 'format':
+        return await fmtCommand(commandArgs);
+
+      case 'install':
+      case 'i':
+        return await installCommand(commandArgs);
+
+      case 'watch':
+      case 'w':
+        return await watchCommand(commandArgs);
+
+      case 'repl':
+        return await replCommand(commandArgs);
 
       default:
         console.error(`Unknown command: ${command}`);

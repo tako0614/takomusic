@@ -1,0 +1,1776 @@
+// TakoMusic - 『代償』
+// BPM: 132, Key: E minor
+
+import { concat, repeat } from "std:core";
+import * as vocal from "std:vocal";
+import { kick, snare, hhc, hho, crash, ride } from "std:drums";
+
+// ========================================
+// コード定義
+// ========================================
+
+// E minor add9: E G B F#
+fn Emadd9() {
+  return [E3, G3, B3, F#4];
+}
+
+// C major 7: C E G B
+fn Cmaj7() {
+  return [C3, E3, G3, B3];
+}
+
+// D major: D F# A
+fn Dmaj() {
+  return [D3, F#3, A3];
+}
+
+// A minor 7: A C E G
+fn Am7() {
+  return [A2, C3, E3, G3];
+}
+
+// G major: G B D
+fn Gmaj() {
+  return [G3, B3, D4];
+}
+
+// D/F#: D with F# in bass
+fn DFs() {
+  return [F#2, D3, F#3, A3];
+}
+
+// E minor 7: E G B D
+fn Em7() {
+  return [E3, G3, B3, D4];
+}
+
+// C major: C E G
+fn Cmaj() {
+  return [C3, E3, G3];
+}
+
+// ========================================
+// Intro (4小節)
+// ========================================
+
+fn introGuitar() -> Clip {
+  return clip {
+    // | Em(add9) | Em(add9) | Cmaj7 | D |
+    chord(Emadd9(), w, vel: 0.7);
+    chord(Emadd9(), w, vel: 0.7);
+    chord(Cmaj7(), w, vel: 0.7);
+    chord(Dmaj(), w, vel: 0.75);
+  };
+}
+
+fn introDrums() -> Clip {
+  return clip {
+    // 1小節目: 静かに入る
+    hit(hhc, q, vel: 0.4);
+    hit(hhc, q, vel: 0.4);
+    hit(hhc, q, vel: 0.4);
+    hit(hhc, q, vel: 0.4);
+    // 2小節目
+    hit(hhc, q, vel: 0.5);
+    hit(hhc, q, vel: 0.5);
+    hit(hhc, q, vel: 0.5);
+    hit(hhc, q, vel: 0.5);
+    // 3小節目
+    hit(hhc, q, vel: 0.6);
+    hit(hhc, q, vel: 0.6);
+    hit(hhc, q, vel: 0.6);
+    hit(hhc, q, vel: 0.6);
+    // 4小節目: フィルで盛り上げ
+    hit(kick, q, vel: 0.7);
+    hit(snare, q, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(snare, e, vel: 0.8);
+    hit(crash, h, vel: 0.9);
+  };
+}
+
+// ========================================
+// Aメロ (8小節) - パームミュートでタイト
+// ========================================
+
+fn verseAGuitar() -> Clip {
+  return clip {
+    // | Em(add9) | Em(add9) | Cmaj7 | D |
+    // | Em(add9) | Em(add9) | Cmaj7 | D |
+    // パームミュートで8分刻み（タイト）
+
+    // 小節1: Em(add9)
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+
+    // 小節2: Em(add9)
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.5);
+
+    // 小節3: Cmaj7
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+
+    // 小節4: D
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.45);
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.45);
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.45);
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.5);
+
+    // 小節5-8: 繰り返し
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.4);
+    chord(Emadd9(), e, vel: 0.5);
+    chord(Emadd9(), e, vel: 0.5);
+
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+    chord(Cmaj7(), e, vel: 0.5);
+    chord(Cmaj7(), e, vel: 0.4);
+
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.45);
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.45);
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.45);
+    chord(Dmaj(), e, vel: 0.55);
+    chord(Dmaj(), e, vel: 0.6);
+  };
+}
+
+fn verseAMelody() -> Clip {
+  // PLANの歌メロ案に基づく (8小節×8分音符)
+  let c = clip {
+    // 小節1: Em(add9) - 「みんなと同じこと」
+    // B3 B3 D4 E4 F#4 E4 D4 B3
+    note(B3, e, vel: 0.75);
+    note(B3, e, vel: 0.75);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.8);
+    note(F#4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(B3, e, vel: 0.72);
+
+    // 小節2: Em(add9) - 「すらできないって」
+    // B3 B3 D4 E4 F#4 G4 F#4 E4
+    note(B3, e, vel: 0.75);
+    note(B3, e, vel: 0.75);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.8);
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+
+    // 小節3: Cmaj7 - 「言われるたびに」
+    // G4 E4 E4 D4 E4 G4 A4 G4
+    note(G4, e, vel: 0.8);
+    note(E4, e, vel: 0.75);
+    note(E4, e, vel: 0.75);
+    note(D4, e, vel: 0.72);
+    note(E4, e, vel: 0.75);
+    note(G4, e, vel: 0.8);
+    note(A4, e, vel: 0.85);
+    note(G4, e, vel: 0.8);
+
+    // 小節4: D - 「笑ってごまかした」
+    // F#4 E4 D4 E4 F#4 A4 G4 F#4
+    note(F#4, e, vel: 0.78);
+    note(E4, e, vel: 0.75);
+    note(D4, e, vel: 0.72);
+    note(E4, e, vel: 0.75);
+    note(F#4, e, vel: 0.8);
+    note(A4, e, vel: 0.85);
+    note(G4, e, vel: 0.82);
+    note(F#4, e, vel: 0.78);
+
+    // 小節5: Em(add9) - 「うなずくたび」
+    // B3 B3 D4 E4 F#4 E4 D4 B3
+    note(B3, e, vel: 0.75);
+    note(B3, e, vel: 0.75);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.8);
+    note(F#4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(B3, e, vel: 0.72);
+
+    // 小節6: Em(add9) - 「胸の奥で」
+    // B3 B3 D4 E4 F#4 G4 F#4 E4
+    note(B3, e, vel: 0.75);
+    note(B3, e, vel: 0.75);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.8);
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+
+    // 小節7: Cmaj7 - 「『違う』って声が」
+    // G4 E4 D4 E4 G4 A4 G4 E4
+    note(G4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(E4, e, vel: 0.78);
+    note(G4, e, vel: 0.85);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.85);
+    note(E4, e, vel: 0.8);
+
+    // 小節8: D - 「痛いほど響いた」
+    // F#4 E4 D4 C#4 D4 E4 F#4 E4
+    note(F#4, e, vel: 0.8);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(C#4, e, vel: 0.72);
+    note(D4, e, vel: 0.75);
+    note(E4, e, vel: 0.8);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.82);
+  };
+
+  const lyr = vocal.text(
+    "み ん な と お な じ こ と す ら で き な い っ て い わ れ る た び に わ ら っ て ご ま か し た う な ず く た び む ね の お く で ち が う っ て こ え が い た い ほ ど ひ び い た",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn verseADrums() -> Clip {
+  // Aメロ: ハイハット8分＋スネア2&4（固く）
+  return clip {
+    // 8小節分
+    // 小節1
+    hit(kick, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.65);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+
+    // 小節2
+    hit(kick, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.65);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+
+    // 小節3
+    hit(kick, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.65);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+
+    // 小節4
+    hit(kick, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.65);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+
+    // 小節5
+    hit(kick, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.65);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+
+    // 小節6
+    hit(kick, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.65);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+
+    // 小節7
+    hit(kick, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+    hit(kick, e, vel: 0.65);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.7);
+    hit(hhc, e, vel: 0.5);
+
+    // 小節8: フィルで持ち上げ
+    hit(kick, e, vel: 0.75);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, e, vel: 0.75);
+    hit(snare, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(snare, e, vel: 0.85);
+    hit(snare, e, vel: 0.9);
+    hit(crash, e, vel: 0.95);
+  };
+}
+
+fn verseABass() -> Clip {
+  // Aメロはルート中心で我慢
+  return clip {
+    // | Em(add9) | Em(add9) | Cmaj7 | D | x2
+    // 小節1-2: E
+    note(E2, h, vel: 0.7);
+    note(E2, h, vel: 0.65);
+    note(E2, h, vel: 0.7);
+    note(E2, h, vel: 0.65);
+    // 小節3: C
+    note(C2, h, vel: 0.7);
+    note(C2, h, vel: 0.65);
+    // 小節4: D
+    note(D2, h, vel: 0.7);
+    note(D2, h, vel: 0.7);
+    // 小節5-6: E
+    note(E2, h, vel: 0.7);
+    note(E2, h, vel: 0.65);
+    note(E2, h, vel: 0.7);
+    note(E2, h, vel: 0.65);
+    // 小節7: C
+    note(C2, h, vel: 0.7);
+    note(C2, h, vel: 0.65);
+    // 小節8: D
+    note(D2, h, vel: 0.7);
+    note(D2, h, vel: 0.75);
+  };
+}
+
+// ========================================
+// Bメロ (4小節) - ミュート外して開く
+// ========================================
+
+fn verseBGuitar() -> Clip {
+  return clip {
+    // | Am7 | C | D | D(sus4→D) |
+    chord(Am7(), h, vel: 0.7);
+    chord(Am7(), h, vel: 0.65);
+
+    chord(Cmaj(), h, vel: 0.72);
+    chord(Cmaj(), h, vel: 0.7);
+
+    chord(Dmaj(), h, vel: 0.75);
+    chord(Dmaj(), h, vel: 0.72);
+
+    chord([D3, G3, A3], h, vel: 0.75);
+    chord(Dmaj(), h, vel: 0.8);
+  };
+}
+
+fn verseBMelody() -> Clip {
+  let c = clip {
+    // Am7
+    note(A4, e, vel: 0.8);
+    note(G4, e, vel: 0.78);
+    note(E4, e, vel: 0.75);
+    note(E4, e, vel: 0.75);
+    note(G4, e, vel: 0.8);
+    note(A4, e, vel: 0.82);
+    note(G4, e, vel: 0.8);
+    note(E4, e, vel: 0.78);
+
+    // C
+    note(G4, e, vel: 0.8);
+    note(E4, e, vel: 0.78);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(E4, e, vel: 0.78);
+    note(G4, e, vel: 0.82);
+    note(A4, e, vel: 0.85);
+    note(G4, e, vel: 0.82);
+
+    // D
+    note(F#4, e, vel: 0.82);
+    note(A4, e, vel: 0.85);
+    note(A4, e, vel: 0.85);
+    note(G4, e, vel: 0.82);
+    note(F#4, e, vel: 0.8);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(E4, e, vel: 0.78);
+
+    // D (sus4→D) - 持ち上げ
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.9);
+    note(B4, e, vel: 0.92);
+    note(A4, e, vel: 0.9);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.85);
+  };
+
+  const lyr = vocal.text(
+    "き ず つ か な い よ う に う ま く わ ら え た っ て そ ん な き よ う な い き か た じゃ ほ ん と う に ほ し い も の は て に は い ら な い だ ろ う",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn verseBDrums() -> Clip {
+  // Bメロ: タムフィルで持ち上げ
+  return clip {
+    // 小節1: Am7
+    hit(kick, q, vel: 0.7);
+    hit(hhc, q, vel: 0.6);
+    hit(snare, q, vel: 0.7);
+    hit(hhc, q, vel: 0.6);
+
+    // 小節2: C
+    hit(kick, q, vel: 0.72);
+    hit(hhc, q, vel: 0.62);
+    hit(snare, q, vel: 0.72);
+    hit(hhc, q, vel: 0.62);
+
+    // 小節3: D
+    hit(kick, q, vel: 0.75);
+    hit(hho, q, vel: 0.65);
+    hit(snare, q, vel: 0.75);
+    hit(hho, q, vel: 0.65);
+
+    // 小節4: フィル
+    hit(kick, e, vel: 0.8);
+    hit(snare, e, vel: 0.75);
+    hit(snare, e, vel: 0.8);
+    hit(snare, e, vel: 0.85);
+    hit(snare, e, vel: 0.9);
+    hit(snare, e, vel: 0.92);
+    hit(crash, q, vel: 0.95);
+  };
+}
+
+fn verseBBass() -> Clip {
+  return clip {
+    // | Am7 | C | D | D |
+    note(A2, h, vel: 0.7);
+    note(A2, h, vel: 0.68);
+    note(C2, h, vel: 0.72);
+    note(C2, h, vel: 0.7);
+    note(D2, h, vel: 0.75);
+    note(D2, h, vel: 0.72);
+    note(D2, h, vel: 0.78);
+    note(D2, h, vel: 0.8);
+  };
+}
+
+// ========================================
+// サビ (16小節) - オープンで鳴らし切る
+// ========================================
+
+fn chorusGuitar() -> Clip {
+  return clip {
+    // | G | D/F# | Em7 | C | x2
+    // | G | D | C | D | x2
+
+    // 1-4小節
+    chord(Gmaj(), w, vel: 0.85);
+    chord(DFs(), w, vel: 0.82);
+    chord(Em7(), w, vel: 0.8);
+    chord(Cmaj(), w, vel: 0.82);
+
+    // 5-8小節
+    chord(Gmaj(), w, vel: 0.85);
+    chord(Dmaj(), w, vel: 0.82);
+    chord(Cmaj(), w, vel: 0.8);
+    chord(Dmaj(), w, vel: 0.85);
+
+    // 9-12小節（抜ける）
+    chord(Gmaj(), w, vel: 0.9);
+    chord(DFs(), w, vel: 0.85);
+    chord(Em7(), w, vel: 0.82);
+    chord(Cmaj(), w, vel: 0.85);
+
+    // 13-16小節
+    chord(Gmaj(), w, vel: 0.88);
+    chord(Dmaj(), w, vel: 0.85);
+    chord(Cmaj(), w, vel: 0.82);
+    chord(Dmaj(), w, vel: 0.9);
+  };
+}
+
+fn chorusMelody() -> Clip {
+  // PLAN通りの歌メロ
+  let c = clip {
+    // 小節1: G - 「代償を払って」
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.87);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+
+    // 小節2: D/F# - 「それでも進むんだ」
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.87);
+    note(A4, e, vel: 0.9);
+    note(B4, e, vel: 0.93);
+    note(A4, e, vel: 0.9);
+    note(G4, e, vel: 0.87);
+    note(F#4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+
+    // 小節3: Em7 - 「安定もプライドも」
+    note(E4, e, vel: 0.85);
+    note(F#4, e, vel: 0.87);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+
+    // 小節4: C - 「踏み越えていけ」
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.93);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+    note(D4, e, vel: 0.85);
+
+    // 小節5: G - 「失くしたぶんだけ」
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.87);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+
+    // 小節6: D - 「この足は速くなる」
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.85);
+
+    // 小節7: C - 「傷つく覚悟が」
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.88);
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+
+    // 小節8: D - 「自由の値段なら」
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.82);
+    note(D4, e, vel: 0.8);
+    note(E4, e, vel: 0.85);
+    note(F#4, e, vel: 0.88);
+
+    // 小節9: G（一番抜ける）- 「俺はもう」
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(D5, e, vel: 1.0);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.88);
+
+    // 小節10: D/F# - 「引き返さない」
+    note(F#4, e, vel: 0.88);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(F#4, e, vel: 0.88);
+    note(D4, e, vel: 0.85);
+
+    // 小節11: Em7 - (合唱「引き返さない」)
+    note(E4, e, vel: 0.88);
+    note(G4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(F#4, e, vel: 0.88);
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+
+    // 小節12: C
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+    note(D4, e, vel: 0.85);
+
+    // 小節13: G
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.88);
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(A4, e, vel: 0.95);
+    note(G4, e, vel: 0.92);
+    note(E4, e, vel: 0.88);
+
+    // 小節14: D
+    note(F#4, e, vel: 0.88);
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(F#4, e, vel: 0.9);
+    note(A4, e, vel: 0.95);
+    note(G4, e, vel: 0.92);
+    note(F#4, e, vel: 0.88);
+
+    // 小節15: C
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.87);
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+
+    // 小節16: D（最後は伸ばす）
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(A4, e, vel: 0.95);
+    note(G4, h + e, vel: 0.95);
+  };
+
+  const lyr = vocal.text(
+    "だ い し ょ う を は ら っ て そ れ で も す す む ん だ あ ん て い も ぷ ら い ど も ふ み こ え て い け な く し た ぶ ん だ け こ の あ し は は や く な る き ず つ く か く ご が じ ゆ う の ね だ ん な ら お れ は も う ひ き か え さ な い ひ き か え さ な い も う ひ き か え さ な い",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn chorusDrums() -> Clip {
+  // サビ: オープンハット or ライドで解放
+  return clip {
+    // 16小節、8分で押し切る
+
+    // 小節1-4
+    hit(crash, e, vel: 0.9);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.7);
+    hit(kick, e, vel: 0.75);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.7);
+
+    hit(kick, e, vel: 0.75);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.7);
+    hit(kick, e, vel: 0.75);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.7);
+
+    hit(kick, e, vel: 0.75);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.7);
+    hit(kick, e, vel: 0.75);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.7);
+
+    hit(kick, e, vel: 0.75);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.7);
+    hit(kick, e, vel: 0.75);
+    hit(hho, e, vel: 0.7);
+    hit(snare, e, vel: 0.8);
+    hit(hho, e, vel: 0.72);
+
+    // 小節5-8
+    hit(kick, e, vel: 0.78);
+    hit(hho, e, vel: 0.72);
+    hit(snare, e, vel: 0.82);
+    hit(hho, e, vel: 0.72);
+    hit(kick, e, vel: 0.78);
+    hit(hho, e, vel: 0.72);
+    hit(snare, e, vel: 0.82);
+    hit(hho, e, vel: 0.72);
+
+    hit(kick, e, vel: 0.78);
+    hit(hho, e, vel: 0.72);
+    hit(snare, e, vel: 0.82);
+    hit(hho, e, vel: 0.72);
+    hit(kick, e, vel: 0.78);
+    hit(hho, e, vel: 0.72);
+    hit(snare, e, vel: 0.82);
+    hit(hho, e, vel: 0.72);
+
+    hit(kick, e, vel: 0.78);
+    hit(hho, e, vel: 0.72);
+    hit(snare, e, vel: 0.82);
+    hit(hho, e, vel: 0.72);
+    hit(kick, e, vel: 0.78);
+    hit(hho, e, vel: 0.72);
+    hit(snare, e, vel: 0.82);
+    hit(hho, e, vel: 0.72);
+
+    hit(kick, e, vel: 0.8);
+    hit(hho, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(hho, e, vel: 0.75);
+    hit(kick, e, vel: 0.8);
+    hit(snare, e, vel: 0.85);
+    hit(snare, e, vel: 0.88);
+    hit(crash, e, vel: 0.9);
+
+    // 小節9-12（抜けるところ）
+    hit(crash, e, vel: 0.95);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+    hit(kick, e, vel: 0.8);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+
+    hit(kick, e, vel: 0.8);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+    hit(kick, e, vel: 0.8);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+
+    hit(kick, e, vel: 0.8);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+    hit(kick, e, vel: 0.8);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+
+    hit(kick, e, vel: 0.8);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+    hit(kick, e, vel: 0.8);
+    hit(ride, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(ride, e, vel: 0.75);
+
+    // 小節13-16
+    hit(kick, e, vel: 0.82);
+    hit(hho, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(hho, e, vel: 0.75);
+    hit(kick, e, vel: 0.82);
+    hit(hho, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(hho, e, vel: 0.75);
+
+    hit(kick, e, vel: 0.82);
+    hit(hho, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(hho, e, vel: 0.75);
+    hit(kick, e, vel: 0.82);
+    hit(hho, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(hho, e, vel: 0.75);
+
+    hit(kick, e, vel: 0.82);
+    hit(hho, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(hho, e, vel: 0.75);
+    hit(kick, e, vel: 0.82);
+    hit(hho, e, vel: 0.75);
+    hit(snare, e, vel: 0.85);
+    hit(hho, e, vel: 0.75);
+
+    // ラスト
+    hit(kick, e, vel: 0.9);
+    hit(crash, e, vel: 0.95);
+    hit(snare, e, vel: 0.9);
+    hit(hho, e, vel: 0.8);
+    hit(kick, e, vel: 0.85);
+    hit(hho, e, vel: 0.8);
+    hit(snare, q, vel: 0.95);
+  };
+}
+
+fn chorusBass() -> Clip {
+  // サビで8分で押し切る（推進力が正義）
+  return clip {
+    // 16小節
+
+    // 小節1-4
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+
+    note(F#2, e, vel: 0.78);
+    note(F#2, e, vel: 0.73);
+    note(F#2, e, vel: 0.78);
+    note(F#2, e, vel: 0.73);
+    note(F#2, e, vel: 0.78);
+    note(F#2, e, vel: 0.73);
+    note(F#2, e, vel: 0.78);
+    note(F#2, e, vel: 0.73);
+
+    note(E2, e, vel: 0.78);
+    note(E2, e, vel: 0.73);
+    note(E2, e, vel: 0.78);
+    note(E2, e, vel: 0.73);
+    note(E2, e, vel: 0.78);
+    note(E2, e, vel: 0.73);
+    note(E2, e, vel: 0.78);
+    note(E2, e, vel: 0.73);
+
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+
+    // 小節5-8
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.75);
+
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.73);
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.73);
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.73);
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.73);
+
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.73);
+
+    note(D2, e, vel: 0.8);
+    note(D2, e, vel: 0.75);
+    note(D2, e, vel: 0.8);
+    note(D2, e, vel: 0.75);
+    note(D2, e, vel: 0.82);
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.85);
+    note(D2, e, vel: 0.8);
+
+    // 小節9-12
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+
+    note(F#2, e, vel: 0.82);
+    note(F#2, e, vel: 0.78);
+    note(F#2, e, vel: 0.82);
+    note(F#2, e, vel: 0.78);
+    note(F#2, e, vel: 0.82);
+    note(F#2, e, vel: 0.78);
+    note(F#2, e, vel: 0.82);
+    note(F#2, e, vel: 0.78);
+
+    note(E2, e, vel: 0.82);
+    note(E2, e, vel: 0.78);
+    note(E2, e, vel: 0.82);
+    note(E2, e, vel: 0.78);
+    note(E2, e, vel: 0.82);
+    note(E2, e, vel: 0.78);
+    note(E2, e, vel: 0.82);
+    note(E2, e, vel: 0.78);
+
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+
+    // 小節13-16
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+    note(G2, e, vel: 0.85);
+    note(G2, e, vel: 0.8);
+
+    note(D2, e, vel: 0.82);
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.82);
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.82);
+    note(D2, e, vel: 0.78);
+    note(D2, e, vel: 0.82);
+    note(D2, e, vel: 0.78);
+
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+    note(C2, e, vel: 0.82);
+    note(C2, e, vel: 0.78);
+
+    note(D2, e, vel: 0.88);
+    note(D2, e, vel: 0.85);
+    note(D2, e, vel: 0.88);
+    note(D2, e, vel: 0.85);
+    note(D2, e, vel: 0.9);
+    note(D2, e, vel: 0.88);
+    note(D2, q, vel: 0.92);
+  };
+}
+
+// ========================================
+// Aメロ② - 歌詞違い
+// ========================================
+
+fn verseA2Melody() -> Clip {
+  let c = clip {
+    // 小節1-8: 同じメロディパターン
+    note(B3, e, vel: 0.75);
+    note(B3, e, vel: 0.75);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.8);
+    note(F#4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(B3, e, vel: 0.72);
+
+    note(B3, e, vel: 0.75);
+    note(B3, e, vel: 0.75);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.8);
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+
+    note(G4, e, vel: 0.8);
+    note(E4, e, vel: 0.75);
+    note(E4, e, vel: 0.75);
+    note(D4, e, vel: 0.72);
+    note(E4, e, vel: 0.75);
+    note(G4, e, vel: 0.8);
+    note(A4, e, vel: 0.85);
+    note(G4, e, vel: 0.8);
+
+    note(F#4, e, vel: 0.78);
+    note(E4, e, vel: 0.75);
+    note(D4, e, vel: 0.72);
+    note(E4, e, vel: 0.75);
+    note(F#4, e, vel: 0.8);
+    note(A4, e, vel: 0.85);
+    note(G4, e, vel: 0.82);
+    note(F#4, e, vel: 0.78);
+
+    note(B3, e, vel: 0.78);
+    note(B3, e, vel: 0.78);
+    note(D4, e, vel: 0.8);
+    note(E4, e, vel: 0.82);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.82);
+    note(D4, e, vel: 0.78);
+    note(B3, e, vel: 0.75);
+
+    note(B3, e, vel: 0.78);
+    note(B3, e, vel: 0.78);
+    note(D4, e, vel: 0.8);
+    note(E4, e, vel: 0.82);
+    note(F#4, e, vel: 0.88);
+    note(G4, e, vel: 0.92);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.82);
+
+    note(G4, e, vel: 0.85);
+    note(E4, e, vel: 0.82);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.82);
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.88);
+    note(E4, e, vel: 0.85);
+
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.82);
+    note(D4, e, vel: 0.78);
+    note(C#4, e, vel: 0.75);
+    note(D4, e, vel: 0.8);
+    note(E4, e, vel: 0.85);
+    note(F#4, e, vel: 0.9);
+    note(E4, e, vel: 0.88);
+  };
+
+  const lyr = vocal.text(
+    "だ れ か の き た い を う ら ぎ る い た み を さ け る た び に う そ を か さ ね た ほ ん と う の じ ぶ ん を こ ろ す く ら い な ら す べ て こ わ し て き ら わ れ る ほ う が い い",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// ========================================
+// Bメロ②
+// ========================================
+
+fn verseB2Melody() -> Clip {
+  let c = clip {
+    note(A4, e, vel: 0.8);
+    note(G4, e, vel: 0.78);
+    note(E4, e, vel: 0.75);
+    note(E4, e, vel: 0.75);
+    note(G4, e, vel: 0.8);
+    note(A4, e, vel: 0.82);
+    note(G4, e, vel: 0.8);
+    note(E4, e, vel: 0.78);
+
+    note(G4, e, vel: 0.82);
+    note(E4, e, vel: 0.78);
+    note(E4, e, vel: 0.78);
+    note(D4, e, vel: 0.75);
+    note(E4, e, vel: 0.8);
+    note(G4, e, vel: 0.85);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.85);
+
+    note(F#4, e, vel: 0.85);
+    note(A4, e, vel: 0.88);
+    note(A4, e, vel: 0.88);
+    note(G4, e, vel: 0.85);
+    note(F#4, e, vel: 0.82);
+    note(E4, e, vel: 0.8);
+    note(D4, e, vel: 0.78);
+    note(E4, e, vel: 0.8);
+
+    note(F#4, e, vel: 0.88);
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(A4, e, vel: 0.95);
+    note(G4, e, vel: 0.92);
+    note(F#4, e, vel: 0.88);
+    note(E4, e, vel: 0.88);
+  };
+
+  const lyr = vocal.text(
+    "あ ん ぜ ん な み ち は い つ で も そ こ に あ る だ け ど そ の さ き に ほ し い も の は ひ と つ も み つ か ら な い う そ つ け な い か ら",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// ========================================
+// サビ②
+// ========================================
+
+fn chorus2Melody() -> Clip {
+  let c = clip {
+    // 小節1-8
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.87);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.87);
+    note(A4, e, vel: 0.9);
+    note(B4, e, vel: 0.93);
+    note(A4, e, vel: 0.9);
+    note(G4, e, vel: 0.87);
+    note(F#4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+
+    note(E4, e, vel: 0.85);
+    note(F#4, e, vel: 0.87);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.93);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+    note(D4, e, vel: 0.85);
+
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.87);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+
+    note(F#4, e, vel: 0.85);
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.85);
+
+    note(G4, e, vel: 0.88);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.88);
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.88);
+    note(F#4, e, vel: 0.85);
+    note(E4, e, vel: 0.82);
+    note(D4, e, vel: 0.8);
+    note(E4, e, vel: 0.85);
+    note(F#4, e, vel: 0.88);
+
+    // 小節9-16
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(D5, e, vel: 1.0);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.88);
+
+    note(F#4, e, vel: 0.88);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(F#4, e, vel: 0.88);
+    note(D4, e, vel: 0.85);
+
+    note(E4, e, vel: 0.88);
+    note(G4, e, vel: 0.92);
+    note(B4, e, vel: 0.95);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(F#4, e, vel: 0.88);
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+    note(D4, e, vel: 0.85);
+
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.88);
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(A4, e, vel: 0.95);
+    note(G4, e, vel: 0.92);
+    note(E4, e, vel: 0.88);
+
+    note(F#4, e, vel: 0.88);
+    note(E4, e, vel: 0.85);
+    note(D4, e, vel: 0.82);
+    note(E4, e, vel: 0.85);
+    note(F#4, e, vel: 0.9);
+    note(A4, e, vel: 0.95);
+    note(G4, e, vel: 0.92);
+    note(F#4, e, vel: 0.88);
+
+    note(G4, e, vel: 0.9);
+    note(A4, e, vel: 0.92);
+    note(G4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.87);
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(A4, e, vel: 0.95);
+    note(G4, h + e, vel: 0.95);
+  };
+
+  const lyr = vocal.text(
+    "だ い し ょ う を は ら っ て お れ は お れ を え ら ぶ こ ど く で も ま ち が い で も か ま わ な い ぎ せ い に し た も の が お お い ほ ど つ よ く な る ほ ん き の い た み を わ す れ な い た め に お れ は ま だ と ま れ な い ん だ と ま れ な い ん だ も う と ま れ な い",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// ========================================
+// Cメロ（落ちサビ）
+// ========================================
+
+fn cMeloGuitar() -> Clip {
+  // 落ちサビ - 静かに
+  return clip {
+    chord(Emadd9(), w, vel: 0.5);
+    chord(Cmaj7(), w, vel: 0.5);
+    chord(Dmaj(), w, vel: 0.55);
+    chord(Emadd9(), w, vel: 0.6);
+    chord(Cmaj7(), w, vel: 0.6);
+    chord(Dmaj(), h, vel: 0.65);
+    chord(Dmaj(), h, vel: 0.7);
+  };
+}
+
+fn cMeloMelody() -> Clip {
+  let c = clip {
+    // 静かに、でも芯を持って
+    note(E4, q, vel: 0.7);
+    note(F#4, q, vel: 0.72);
+    note(G4, q, vel: 0.75);
+    note(F#4, q, vel: 0.72);
+
+    note(E4, q, vel: 0.7);
+    note(D4, q, vel: 0.68);
+    note(E4, h, vel: 0.72);
+
+    note(G4, q, vel: 0.75);
+    note(A4, q, vel: 0.78);
+    note(G4, q, vel: 0.75);
+    note(E4, q, vel: 0.72);
+
+    note(D4, h, vel: 0.72);
+    note(E4, h, vel: 0.75);
+
+    note(G4, q, vel: 0.78);
+    note(A4, q, vel: 0.82);
+    note(B4, q, vel: 0.85);
+    note(A4, q, vel: 0.82);
+
+    note(G4, q, vel: 0.8);
+    note(F#4, e, vel: 0.78);
+    note(E4, e, vel: 0.75);
+    note(F#4, q + e, vel: 0.82);
+    note(E4, e, vel: 0.8);
+  };
+
+  const lyr = vocal.text(
+    "お そ れ な い わ け じゃ な い な く す も の だ っ て こ わ い ほ ど あ る け ど む ね の お く に あ る さ け び を む し し た ら し ん だ も お な じ だ ろ",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn cMeloDrums() -> Clip {
+  // 落ちサビ - 静かに
+  return clip {
+    // 6小節分、シンプルに
+    hit(kick, h, vel: 0.5);
+    hit(hhc, h, vel: 0.4);
+    hit(kick, h, vel: 0.5);
+    hit(hhc, h, vel: 0.4);
+    hit(kick, h, vel: 0.5);
+    hit(hhc, h, vel: 0.4);
+    hit(kick, h, vel: 0.5);
+    hit(hhc, h, vel: 0.4);
+    // 盛り上げ
+    hit(kick, q, vel: 0.6);
+    hit(hhc, q, vel: 0.5);
+    hit(snare, q, vel: 0.6);
+    hit(hhc, q, vel: 0.5);
+    // フィル
+    hit(snare, e, vel: 0.7);
+    hit(snare, e, vel: 0.75);
+    hit(snare, e, vel: 0.8);
+    hit(snare, e, vel: 0.85);
+    hit(crash, h, vel: 0.95);
+  };
+}
+
+fn cMeloBass() -> Clip {
+  return clip {
+    note(E2, w, vel: 0.55);
+    note(C2, w, vel: 0.55);
+    note(D2, w, vel: 0.58);
+    note(E2, w, vel: 0.6);
+    note(C2, w, vel: 0.6);
+    note(D2, h, vel: 0.65);
+    note(D2, h, vel: 0.7);
+  };
+}
+
+// ========================================
+// ラストサビ
+// ========================================
+
+fn lastChorusMelody() -> Clip {
+  let c = clip {
+    // 最大の盛り上がり
+    note(D4, e, vel: 0.9);
+    note(E4, e, vel: 0.92);
+    note(G4, e, vel: 0.95);
+    note(A4, e, vel: 0.97);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.95);
+    note(E4, e, vel: 0.92);
+
+    note(F#4, e, vel: 0.9);
+    note(G4, e, vel: 0.92);
+    note(A4, e, vel: 0.95);
+    note(B4, e, vel: 0.98);
+    note(A4, e, vel: 0.95);
+    note(G4, e, vel: 0.92);
+    note(F#4, e, vel: 0.9);
+    note(D4, e, vel: 0.87);
+
+    note(E4, e, vel: 0.9);
+    note(F#4, e, vel: 0.92);
+    note(G4, e, vel: 0.95);
+    note(A4, e, vel: 0.97);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.95);
+    note(E4, e, vel: 0.92);
+
+    note(E4, e, vel: 0.9);
+    note(D4, e, vel: 0.87);
+    note(E4, e, vel: 0.9);
+    note(G4, e, vel: 0.95);
+    note(A4, e, vel: 0.98);
+    note(G4, e, vel: 0.95);
+    note(E4, e, vel: 0.92);
+    note(D4, e, vel: 0.9);
+
+    note(D4, e, vel: 0.9);
+    note(E4, e, vel: 0.92);
+    note(G4, e, vel: 0.95);
+    note(A4, e, vel: 0.97);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.95);
+    note(E4, e, vel: 0.92);
+
+    note(F#4, e, vel: 0.9);
+    note(G4, e, vel: 0.93);
+    note(A4, e, vel: 0.97);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.93);
+    note(F#4, e, vel: 0.9);
+    note(E4, e, vel: 0.9);
+
+    note(G4, e, vel: 0.93);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.93);
+    note(E4, e, vel: 0.9);
+    note(D4, e, vel: 0.87);
+    note(E4, e, vel: 0.9);
+    note(G4, e, vel: 0.95);
+    note(A4, e, vel: 0.97);
+
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.93);
+    note(F#4, e, vel: 0.9);
+    note(E4, e, vel: 0.87);
+    note(D4, e, vel: 0.85);
+    note(E4, e, vel: 0.9);
+    note(F#4, e, vel: 0.93);
+
+    // 小節9-16
+    note(G4, e, vel: 0.97);
+    note(A4, e, vel: 1.0);
+    note(B4, e, vel: 1.0);
+    note(D5, e, vel: 1.0);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.95);
+    note(E4, e, vel: 0.92);
+
+    note(F#4, e, vel: 0.93);
+    note(G4, e, vel: 0.95);
+    note(A4, e, vel: 0.97);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.95);
+    note(F#4, e, vel: 0.93);
+    note(D4, e, vel: 0.9);
+
+    note(E4, e, vel: 0.93);
+    note(G4, e, vel: 0.97);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.95);
+    note(F#4, e, vel: 0.93);
+    note(E4, e, vel: 0.9);
+    note(D4, e, vel: 0.87);
+
+    note(E4, e, vel: 0.9);
+    note(D4, e, vel: 0.87);
+    note(E4, e, vel: 0.9);
+    note(G4, e, vel: 0.95);
+    note(A4, e, vel: 0.97);
+    note(G4, e, vel: 0.95);
+    note(E4, e, vel: 0.92);
+    note(D4, e, vel: 0.9);
+
+    note(D4, e, vel: 0.9);
+    note(E4, e, vel: 0.93);
+    note(G4, e, vel: 0.97);
+    note(A4, e, vel: 1.0);
+    note(B4, e, vel: 1.0);
+    note(A4, e, vel: 1.0);
+    note(G4, e, vel: 0.97);
+    note(E4, e, vel: 0.93);
+
+    note(F#4, e, vel: 0.93);
+    note(E4, e, vel: 0.9);
+    note(D4, e, vel: 0.87);
+    note(E4, e, vel: 0.9);
+    note(F#4, e, vel: 0.95);
+    note(A4, e, vel: 1.0);
+    note(G4, e, vel: 0.97);
+    note(F#4, e, vel: 0.93);
+
+    // 「もう二度と」
+    note(G4, e, vel: 0.97);
+    note(A4, e, vel: 1.0);
+    note(B4, q, vel: 1.0);
+    note(A4, q, vel: 0.97);
+    note(G4, q, vel: 0.95);
+
+    // 「引き返さない」
+    note(A4, e, vel: 1.0);
+    note(B4, e, vel: 1.0);
+    note(A4, q, vel: 1.0);
+    note(G4, w, vel: 1.0);
+  };
+
+  const lyr = vocal.text(
+    "だ い し ょ う を は ら っ て そ れ で も す す む ん だ し ん よ う も み ら い も か け て い い ひ き か え に え る の は な ん の ほ し ょ う も な い だ け ど じ ぶ ん で え ら ん だ み ち な ら す べ て の い た み に い み が あ る か ら も う に ど と ひ き か え さ な い",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+// ========================================
+// Outro
+// ========================================
+
+fn outroGuitar() -> Clip {
+  return clip {
+    chord(Emadd9(), w, vel: 0.7);
+    chord(Cmaj7(), w, vel: 0.65);
+    chord(Dmaj(), w, vel: 0.6);
+    chord(Emadd9(), w + w, vel: 0.55);
+  };
+}
+
+fn outroMelody() -> Clip {
+  let c = clip {
+    note(E4, q, vel: 0.75);
+    note(F#4, q, vel: 0.72);
+    note(G4, q, vel: 0.7);
+    note(E4, q, vel: 0.68);
+
+    note(D4, q, vel: 0.65);
+    note(E4, q, vel: 0.62);
+    note(F#4, h, vel: 0.6);
+
+    note(G4, q, vel: 0.58);
+    note(E4, q, vel: 0.55);
+    note(D4, h, vel: 0.52);
+
+    note(E4, w + w, vel: 0.5);
+  };
+
+  const lyr = vocal.text(
+    "き ず あ と の か ず だ け い き て い る だ れ で も な い お れ じ し ん で",
+    "ja-JP"
+  );
+  c = vocal.align(c, lyr);
+  return c;
+}
+
+fn outroDrums() -> Clip {
+  return clip {
+    hit(kick, h, vel: 0.5);
+    hit(hhc, h, vel: 0.4);
+    hit(kick, h, vel: 0.45);
+    hit(hhc, h, vel: 0.35);
+    hit(kick, h, vel: 0.4);
+    hit(hhc, h, vel: 0.3);
+    hit(kick, w, vel: 0.35);
+    rest(w);
+  };
+}
+
+fn outroBass() -> Clip {
+  return clip {
+    note(E2, w, vel: 0.55);
+    note(C2, w, vel: 0.5);
+    note(D2, w, vel: 0.45);
+    note(E2, w + w, vel: 0.4);
+  };
+}
+
+// ========================================
+// メイン
+// ========================================
+
+export fn main() -> Score {
+  // 各パートを組み立て
+  const intro_guitar = introGuitar();
+  const intro_drums = introDrums();
+
+  const verseA1_guitar = verseAGuitar();
+  const verseA1_melody = verseAMelody();
+  const verseA1_drums = verseADrums();
+  const verseA1_bass = verseABass();
+
+  const verseB1_guitar = verseBGuitar();
+  const verseB1_melody = verseBMelody();
+  const verseB1_drums = verseBDrums();
+  const verseB1_bass = verseBBass();
+
+  const chorus1_guitar = chorusGuitar();
+  const chorus1_melody = chorusMelody();
+  const chorus1_drums = chorusDrums();
+  const chorus1_bass = chorusBass();
+
+  const verseA2_guitar = verseAGuitar();
+  const verseA2_melody = verseA2Melody();
+  const verseA2_drums = verseADrums();
+  const verseA2_bass = verseABass();
+
+  const verseB2_guitar = verseBGuitar();
+  const verseB2_melody = verseB2Melody();
+  const verseB2_drums = verseBDrums();
+  const verseB2_bass = verseBBass();
+
+  const chorus2_guitar = chorusGuitar();
+  const chorus2_melody = chorus2Melody();
+  const chorus2_drums = chorusDrums();
+  const chorus2_bass = chorusBass();
+
+  const cMelo_guitar = cMeloGuitar();
+  const cMelo_melody = cMeloMelody();
+  const cMelo_drums = cMeloDrums();
+  const cMelo_bass = cMeloBass();
+
+  const lastChorus_guitar = chorusGuitar();
+  const lastChorus_melody = lastChorusMelody();
+  const lastChorus_drums = chorusDrums();
+  const lastChorus_bass = chorusBass();
+
+  const outro_guitar = outroGuitar();
+  const outro_melody = outroMelody();
+  const outro_drums = outroDrums();
+  const outro_bass = outroBass();
+
+  return score {
+    meta {
+      title "代償";
+      composer "TakoMusic";
+    }
+
+    tempo {
+      1:1 -> 132bpm;
+    }
+
+    meter {
+      1:1 -> 4/4;
+    }
+
+    // サウンド定義
+    sound "guitar" kind instrument {
+      label "Electric Guitar";
+      family "guitar";
+      range E2..E6;
+    }
+
+    sound "bass" kind instrument {
+      label "Bass";
+      family "bass";
+      range E1..G4;
+    }
+
+    sound "kit_standard" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; ride; }
+    }
+
+    sound "lead_vocal" kind vocal {
+      vocal { lang "ja-JP"; }
+    }
+
+    // トラック定義
+    // 構成: Intro(4) -> A1(8) -> B1(4) -> Chorus1(16) -> A2(8) -> B2(4) -> Chorus2(16) -> C(6) -> LastChorus(16) -> Outro(5)
+
+    track "Guitar" role Instrument sound "guitar" {
+      place 1:1 intro_guitar;
+      place 5:1 verseA1_guitar;
+      place 13:1 verseB1_guitar;
+      place 17:1 chorus1_guitar;
+      place 33:1 verseA2_guitar;
+      place 41:1 verseB2_guitar;
+      place 45:1 chorus2_guitar;
+      place 61:1 cMelo_guitar;
+      place 67:1 lastChorus_guitar;
+      place 83:1 outro_guitar;
+    }
+
+    track "Bass" role Instrument sound "bass" {
+      place 5:1 verseA1_bass;
+      place 13:1 verseB1_bass;
+      place 17:1 chorus1_bass;
+      place 33:1 verseA2_bass;
+      place 41:1 verseB2_bass;
+      place 45:1 chorus2_bass;
+      place 61:1 cMelo_bass;
+      place 67:1 lastChorus_bass;
+      place 83:1 outro_bass;
+    }
+
+    track "Drums" role Drums sound "kit_standard" {
+      place 1:1 intro_drums;
+      place 5:1 verseA1_drums;
+      place 13:1 verseB1_drums;
+      place 17:1 chorus1_drums;
+      place 33:1 verseA2_drums;
+      place 41:1 verseB2_drums;
+      place 45:1 chorus2_drums;
+      place 61:1 cMelo_drums;
+      place 67:1 lastChorus_drums;
+      place 83:1 outro_drums;
+    }
+
+    track "Vocal" role Vocal sound "lead_vocal" {
+      place 5:1 verseA1_melody;
+      place 13:1 verseB1_melody;
+      place 17:1 chorus1_melody;
+      place 33:1 verseA2_melody;
+      place 41:1 verseB2_melody;
+      place 45:1 chorus2_melody;
+      place 61:1 cMelo_melody;
+      place 67:1 lastChorus_melody;
+      place 83:1 outro_melody;
+    }
+  };
+}

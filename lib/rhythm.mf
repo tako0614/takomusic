@@ -1,0 +1,338 @@
+// std:rhythm (v4)
+// Rhythmic pattern generation utilities
+
+// euclidean - generate Euclidean rhythm pattern
+// Returns array of booleans where true = hit
+// Example: euclidean(3, 8) = [true, false, false, true, false, false, true, false]
+export fn euclidean(hits, steps, rotation) {
+  if (hits <= 0 || steps <= 0) {
+    return [];
+  }
+  if (hits >= steps) {
+    let out = [];
+    for (i in 0..(steps - 1)) {
+      out[out.length] = true;
+    }
+    return out;
+  }
+
+  // Bjorklund's algorithm
+  let pattern = [];
+  for (i in 0..(steps - 1)) {
+    if (i < hits) {
+      pattern[pattern.length] = [true];
+    } else {
+      pattern[pattern.length] = [false];
+    }
+  }
+
+  let divisor = steps - hits;
+  for (_ in 0..100) {
+    if (divisor <= 1) {
+      // Flatten
+      let out = [];
+      for (seq in pattern) {
+        for (v in seq) {
+          out[out.length] = v;
+        }
+      }
+      // Apply rotation
+      if (rotation != null && rotation != 0) {
+        let rotated = [];
+        const len = out.length;
+        let r = rotation % len;
+        if (r < 0) {
+          r = r + len;
+        }
+        for (i in 0..(len - 1)) {
+          const idx = (i + r) % len;
+          rotated[rotated.length] = out[idx];
+        }
+        return rotated;
+      }
+      return out;
+    }
+
+    let newPattern = [];
+    const minLen = pattern.length - divisor;
+    if (minLen <= 0) {
+      // Flatten
+      let out = [];
+      for (seq in pattern) {
+        for (v in seq) {
+          out[out.length] = v;
+        }
+      }
+      return out;
+    }
+
+    for (i in 0..(minLen - 1)) {
+      let combined = [];
+      for (v in pattern[i]) {
+        combined[combined.length] = v;
+      }
+      const tailIdx = pattern.length - 1 - i;
+      if (tailIdx >= minLen) {
+        for (v in pattern[tailIdx]) {
+          combined[combined.length] = v;
+        }
+      }
+      newPattern[newPattern.length] = combined;
+    }
+    // Append remaining
+    for (i in minLen..(pattern.length - divisor - 1)) {
+      newPattern[newPattern.length] = pattern[i];
+    }
+    pattern = newPattern;
+    divisor = pattern.length - minLen;
+    if (divisor < 0) {
+      divisor = 0;
+    }
+  }
+
+  // Fallback: flatten
+  let out = [];
+  for (seq in pattern) {
+    for (v in seq) {
+      out[out.length] = v;
+    }
+  }
+  return out;
+}
+
+// euclideanClip - generate Euclidean rhythm as a Clip
+export fn euclideanClip(hits, steps, stepDur, key, vel, rotation) {
+  const pattern = euclidean(hits, steps, rotation);
+  let velocity = vel;
+  if (velocity == null) {
+    velocity = 0.8;
+  }
+  let events = [];
+  let pos = 0 / 1;
+  for (hit in pattern) {
+    if (hit) {
+      events[events.length] = {
+        type: "drumHit",
+        start: pos,
+        dur: stepDur,
+        key: key,
+        velocity: velocity
+      };
+    }
+    pos = pos + stepDur;
+  }
+  return { events: events, length: pos };
+}
+
+// polyrhythm - create polyrhythmic pattern
+// a beats against b beats over given duration
+export fn polyrhythm(a, b, totalDur) {
+  const durA = totalDur / a;
+  const durB = totalDur / b;
+
+  let events = [];
+
+  // First voice
+  for (i in 0..(a - 1)) {
+    events[events.length] = {
+      type: "note",
+      start: durA * i,
+      dur: durA,
+      pitch: 60,  // C4
+      velocity: 0.8,
+      voice: 0
+    };
+  }
+
+  // Second voice
+  for (i in 0..(b - 1)) {
+    events[events.length] = {
+      type: "note",
+      start: durB * i,
+      dur: durB,
+      pitch: 64,  // E4
+      velocity: 0.7,
+      voice: 1
+    };
+  }
+
+  return { events: events, length: totalDur };
+}
+
+// crossRhythm - create cross-rhythm pattern from duration array
+export fn crossRhythm(durations, against) {
+  let events = [];
+  let pos = 0 / 1;
+  let voice = 0;
+  for (dur in durations) {
+    events[events.length] = {
+      type: "note",
+      start: pos,
+      dur: dur,
+      pitch: 60,
+      velocity: 0.8,
+      voice: voice
+    };
+    pos = pos + dur;
+    voice = (voice + 1) % 2;
+  }
+  return { events: events, length: pos };
+}
+
+// groove - create a groove map (velocity/timing offsets)
+export fn groove(name, intensity) {
+  let intens = intensity;
+  if (intens == null) {
+    intens = 0.5;
+  }
+
+  if (name == "swing") {
+    return {
+      name: "swing",
+      intensity: intens,
+      offsets: [0, intens * 0.33, 0, intens * 0.33]
+    };
+  }
+  if (name == "shuffle") {
+    return {
+      name: "shuffle",
+      intensity: intens,
+      offsets: [0, intens * 0.5, 0, intens * 0.5]
+    };
+  }
+  if (name == "lazy") {
+    return {
+      name: "lazy",
+      intensity: intens,
+      offsets: [0, intens * 0.1, intens * 0.05, intens * 0.15]
+    };
+  }
+  if (name == "push") {
+    return {
+      name: "push",
+      intensity: intens,
+      offsets: [0, 0 - intens * 0.1, 0, 0 - intens * 0.1]
+    };
+  }
+  // Default: straight
+  return {
+    name: "straight",
+    intensity: 0,
+    offsets: [0, 0, 0, 0]
+  };
+}
+
+// applyGroove - apply groove map to a clip
+export fn applyGroove(c, gr, grid) {
+  let gridDur = grid;
+  if (gridDur == null) {
+    gridDur = 1 / 8;  // eighth note default
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      const start = ev.start;
+      if (start != null && start.n != null && start.d != null) {
+        // Calculate position in grid
+        const gridNum = start.n * gridDur.d;
+        const gridDen = start.d * gridDur.n;
+        const gridPos = gridNum / gridDen;
+        const gridIdx = gridPos - (gridPos - (gridPos % 1));
+        const offsetIdx = gridIdx % gr.offsets.length;
+        const offset = gr.offsets[offsetIdx] * gridDur;
+
+        let newEvent = {
+          type: ev.type,
+          start: start + offset,
+          dur: ev.dur,
+          velocity: ev.velocity
+        };
+        if (ev.type == "note") {
+          newEvent.pitch = ev.pitch;
+          newEvent.voice = ev.voice;
+          newEvent.techniques = ev.techniques;
+          newEvent.lyric = ev.lyric;
+        } else if (ev.type == "chord") {
+          newEvent.pitches = ev.pitches;
+          newEvent.voice = ev.voice;
+          newEvent.techniques = ev.techniques;
+        } else if (ev.type == "drumHit") {
+          newEvent.key = ev.key;
+          newEvent.techniques = ev.techniques;
+        }
+        events[events.length] = newEvent;
+      } else {
+        events[events.length] = ev;
+      }
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// clave - generate common clave patterns
+export fn clave(style, dur) {
+  let stepDur = dur;
+  if (stepDur == null) {
+    stepDur = 1 / 8;
+  }
+
+  let pattern = [];
+  if (style == "son" || style == "3-2") {
+    pattern = [true, false, false, true, false, false, true, false,
+               false, false, true, false, true, false, false, false];
+  } else if (style == "rumba" || style == "rumba-3-2") {
+    pattern = [true, false, false, true, false, false, false, true,
+               false, false, true, false, true, false, false, false];
+  } else if (style == "2-3") {
+    pattern = [false, false, true, false, true, false, false, false,
+               true, false, false, true, false, false, true, false];
+  } else if (style == "bossa") {
+    pattern = [true, false, false, true, false, false, true, false,
+               false, true, false, false, true, false, false, false];
+  } else {
+    // Default to son clave
+    pattern = [true, false, false, true, false, false, true, false,
+               false, false, true, false, true, false, false, false];
+  }
+
+  let events = [];
+  let pos = 0 / 1;
+  for (hit in pattern) {
+    if (hit) {
+      events[events.length] = {
+        type: "drumHit",
+        start: pos,
+        dur: stepDur,
+        key: "clave",
+        velocity: 0.9
+      };
+    }
+    pos = pos + stepDur;
+  }
+  return { events: events, length: pos };
+}
+
+// accent - create accent pattern
+export fn accent(pattern, strongVel, weakVel) {
+  let strong = strongVel;
+  let weak = weakVel;
+  if (strong == null) {
+    strong = 1.0;
+  }
+  if (weak == null) {
+    weak = 0.6;
+  }
+
+  let velocities = [];
+  for (isStrong in pattern) {
+    if (isStrong) {
+      velocities[velocities.length] = strong;
+    } else {
+      velocities[velocities.length] = weak;
+    }
+  }
+  return velocities;
+}

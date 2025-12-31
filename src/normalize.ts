@@ -26,7 +26,7 @@ export function normalizeScore(score: ScoreValueData, diagnostics: Diagnostic[])
 
   const ir: ScoreIR = {
     tako: {
-      irVersion: 3,
+        irVersion: 4,
       generator: 'takomusic',
     },
     meta: score.meta,

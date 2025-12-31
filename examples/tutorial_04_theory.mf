@@ -1,0 +1,530 @@
+// ============================================================================
+// チュートリアル 04: 音楽理論（std:theory）
+// ============================================================================
+// このファイルでは以下を学びます:
+// - std:theory モジュールの使用
+// - コード（和音）の構築: メジャー、マイナー、セブンスコード
+// - スケール（音階）: メジャー、マイナー、モード
+// - アルペジオパターン
+// - コード進行のプリセット
+// - ベロシティと表現
+//
+// コンパイル: mf build examples/tutorial_04_theory.mf
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// std:theory から必要な関数をインポート
+// ----------------------------------------------------------------------------
+import {
+  // 基本的な三和音
+  majorTriad, minorTriad, diminished, augmented, sus2, sus4,
+  // セブンスコード
+  major7, minor7, dominant7, diminished7, halfDiminished7,
+  // エクステンデッドコード
+  add9, major9, minor9, dominant9,
+  // インバージョン（転回形）
+  invert1, invert2, invert3,
+  // スケール
+  scaleMajor, scaleMinor, harmonicMinor, melodicMinor,
+  majorPentatonic, minorPentatonic, blues,
+  // モード
+  ionian, dorian, phrygian, lydian, mixolydian, aeolian, locrian,
+  // アルペジオ
+  arpeggioUp, arpeggioDown, arpeggioUpDown, arpeggioAlberti,
+  // コード進行
+  progressionTwoFiveOne, progressionTwoFiveOneJazz,
+  progressionPopCanon, progressionOneFourFive,
+  progressionBlues, progressionAndalusian,
+  // ベロシティ定数
+  pp, p, mp, mf, f, ff,
+  // ユーティリティ
+  velocityRamp, crescendo
+} from "std:theory";
+
+import { concat, repeat, overlay } from "std:core";
+
+// ============================================================================
+// パート1: 基本的な三和音（トライアド）
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// メジャー、マイナー、ディミニッシュ、オーギュメント
+// ----------------------------------------------------------------------------
+fn triadsDemo() -> Clip {
+  return clip {
+    // Cメジャー（長三和音）: C-E-G
+    // 構成: ルート + 長3度(+4) + 完全5度(+7)
+    chord(majorTriad(C4), h, vel: 0.7);
+
+    // Aマイナー（短三和音）: A-C-E
+    // 構成: ルート + 短3度(+3) + 完全5度(+7)
+    chord(minorTriad(A3), h, vel: 0.7);
+
+    // Bディミニッシュ（減三和音）: B-D-F
+    // 構成: ルート + 短3度(+3) + 減5度(+6)
+    chord(diminished(B3), h, vel: 0.7);
+
+    // Cオーギュメント（増三和音）: C-E-G#
+    // 構成: ルート + 長3度(+4) + 増5度(+8)
+    chord(augmented(C4), h, vel: 0.7);
+  };
+}
+
+// ----------------------------------------------------------------------------
+// サスペンデッドコード
+// ----------------------------------------------------------------------------
+fn suspendedDemo() -> Clip {
+  return clip {
+    // Csus2: C-D-G（3度の代わりに2度）
+    chord(sus2(C4), h, vel: 0.7);
+
+    // Csus4: C-F-G（3度の代わりに4度）
+    chord(sus4(C4), h, vel: 0.7);
+
+    // 解決: Cメジャーへ
+    chord(majorTriad(C4), w, vel: 0.75);
+  };
+}
+
+// ============================================================================
+// パート2: セブンスコード
+// ============================================================================
+
+fn seventhChordsDemo() -> Clip {
+  return clip {
+    // Cmaj7（メジャーセブンス）: C-E-G-B
+    // ジャジーで温かみのあるサウンド
+    chord(major7(C4), h, vel: 0.7);
+
+    // Dm7（マイナーセブンス）: D-F-A-C
+    // スムーズでメロウなサウンド
+    chord(minor7(D4), h, vel: 0.7);
+
+    // G7（ドミナントセブンス）: G-B-D-F
+    // 緊張感があり、解決を求めるサウンド
+    chord(dominant7(G3), h, vel: 0.75);
+
+    // Cmaj7 へ解決
+    chord(major7(C4), w, vel: 0.7);
+  };
+}
+
+// ----------------------------------------------------------------------------
+// ディミニッシュセブンスとハーフディミニッシュ
+// ----------------------------------------------------------------------------
+fn advancedSeventhsDemo() -> Clip {
+  return clip {
+    // Bdim7（ディミニッシュセブンス）: B-D-F-Ab
+    // 非常に緊張感のあるサウンド
+    chord(diminished7(B3), h, vel: 0.7);
+
+    // Bm7b5（ハーフディミニッシュ）: B-D-F-A
+    // ジャズでよく使われる
+    chord(halfDiminished7(B3), h, vel: 0.7);
+
+    // 解決
+    chord(majorTriad(C4), w, vel: 0.75);
+  };
+}
+
+// ============================================================================
+// パート3: コードの転回形（インバージョン）
+// ============================================================================
+
+fn inversionsDemo() -> Clip {
+  // 基本形（ルートポジション）
+  const root = majorTriad(C4);     // C-E-G
+
+  // 第1転回形: 最低音が3度
+  const first = invert1(root);     // E-G-C
+
+  // 第2転回形: 最低音が5度
+  const second = invert2(root);    // G-C-E
+
+  return clip {
+    // 転回形を順に演奏
+    chord(root, q, vel: 0.7);
+    rest(e);
+    chord(first, q, vel: 0.7);
+    rest(e);
+    chord(second, q, vel: 0.7);
+    rest(e);
+    chord(root, h, vel: 0.75);
+  };
+}
+
+// ============================================================================
+// パート4: スケール（音階）
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// メジャースケールとマイナースケール
+// ----------------------------------------------------------------------------
+fn basicScalesDemo() -> Clip {
+  let c = clip {};
+
+  // Cメジャースケール（長音階）
+  // C-D-E-F-G-A-B-C（全全半全全全半）
+  for (p in scaleMajor(C4)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  // 少し休憩
+  c = concat(c, clip { rest(q); });
+
+  // Aナチュラルマイナースケール（自然短音階）
+  // A-B-C-D-E-F-G-A（全半全全半全全）
+  for (p in scaleMinor(A3)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  return c;
+}
+
+// ----------------------------------------------------------------------------
+// ハーモニックマイナーとメロディックマイナー
+// ----------------------------------------------------------------------------
+fn minorVariantsDemo() -> Clip {
+  let c = clip {};
+
+  // Aハーモニックマイナー（和声的短音階）
+  // 7度が半音上がる: A-B-C-D-E-F-G#-A
+  for (p in harmonicMinor(A3)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  c = concat(c, clip { rest(q); });
+
+  // Aメロディックマイナー（旋律的短音階）
+  // 上行時: 6度と7度が半音上がる: A-B-C-D-E-F#-G#-A
+  for (p in melodicMinor(A3)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  return c;
+}
+
+// ----------------------------------------------------------------------------
+// ペンタトニックスケールとブルーススケール
+// ----------------------------------------------------------------------------
+fn pentatonicAndBluesDemo() -> Clip {
+  let c = clip {};
+
+  // Cメジャーペンタトニック（5音音階）
+  // C-D-E-G-A-C
+  for (p in majorPentatonic(C4)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  c = concat(c, clip { rest(q); });
+
+  // Aマイナーペンタトニック
+  // A-C-D-E-G-A（ロック・ブルースで頻出）
+  for (p in minorPentatonic(A3)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  c = concat(c, clip { rest(q); });
+
+  // Aブルーススケール
+  // A-C-D-Eb-E-G-A（ブルーノート入り）
+  for (p in blues(A3)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  return c;
+}
+
+// ============================================================================
+// パート5: モード（教会旋法）
+// ============================================================================
+
+fn modesDemo() -> Clip {
+  let c = clip {};
+
+  // ドリアンモード（Dから始まる白鍵）
+  // マイナーに近いが、6度が長6度（ジャジー）
+  for (p in dorian(D4)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+  c = concat(c, clip { rest(e); });
+
+  // ミクソリディアンモード（Gから始まる白鍵）
+  // メジャーに近いが、7度が短7度（ブルージー）
+  for (p in mixolydian(G4)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+  c = concat(c, clip { rest(e); });
+
+  // リディアンモード（Fから始まる白鍵）
+  // メジャーに近いが、4度が増4度（明るく夢幻的）
+  for (p in lydian(F4)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+  c = concat(c, clip { rest(e); });
+
+  // フリジアンモード（Eから始まる白鍵）
+  // マイナーに近いが、2度が短2度（スパニッシュ風）
+  for (p in phrygian(E4)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+
+  return c;
+}
+
+// ============================================================================
+// パート6: アルペジオパターン
+// ============================================================================
+
+fn arpeggiosDemo() -> Clip {
+  const cMaj = majorTriad(C4);
+  const gMaj = majorTriad(G4);
+  const am7 = minor7(A3);
+
+  let c = clip {};
+
+  // 上昇アルペジオ
+  for (p in arpeggioUp(cMaj)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  // 下降アルペジオ
+  for (p in arpeggioDown(gMaj)) {
+    c = concat(c, clip { note(p, e, vel: 0.7); });
+  }
+
+  // 上昇下降アルペジオ
+  for (p in arpeggioUpDown(cMaj)) {
+    c = concat(c, clip { note(p, s, vel: 0.7); });
+  }
+
+  // アルベルティバス（古典的な伴奏パターン: 低-高-中-高）
+  for (i in 0..1) {
+    for (p in arpeggioAlberti(cMaj)) {
+      c = concat(c, clip { note(p, s, vel: 0.6); });
+    }
+  }
+
+  return c;
+}
+
+// ============================================================================
+// パート7: コード進行
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// II-V-I進行（ジャズの基本）
+// ----------------------------------------------------------------------------
+fn twoFiveOneDemo() -> Clip {
+  // Cメジャーキーの II-V-I
+  // Dm7 - G7 - Cmaj7
+  const progression = progressionTwoFiveOneJazz(C4);
+
+  let c = clip {};
+  for (chordPitches in progression) {
+    c = concat(c, clip { chord(chordPitches, h, vel: 0.7); });
+  }
+  return c;
+}
+
+// ----------------------------------------------------------------------------
+// ポップスの定番進行（I-V-vi-IV）
+// ----------------------------------------------------------------------------
+fn popProgressionDemo() -> Clip {
+  // Cメジャーキーの I-V-vi-IV
+  // C - G - Am - F
+  const progression = progressionPopCanon(C4);
+
+  let c = clip {};
+  for (chordPitches in progression) {
+    c = concat(c, clip { chord(chordPitches, w, vel: 0.65); });
+  }
+  return c;
+}
+
+// ----------------------------------------------------------------------------
+// アンダルシア終止（i-VII-VI-V）
+// ----------------------------------------------------------------------------
+fn andalusianDemo() -> Clip {
+  // Aマイナーキーのアンダルシア進行
+  // Am - G - F - E
+  const progression = progressionAndalusian(A3);
+
+  let c = clip {};
+  for (chordPitches in progression) {
+    c = concat(c, clip { chord(chordPitches, h, vel: 0.7); });
+  }
+  return c;
+}
+
+// ============================================================================
+// パート8: ベロシティと表現
+// ============================================================================
+
+fn dynamicsDemo() -> Clip {
+  return clip {
+    // 標準ライブラリのベロシティ定数を使用
+    // pp(ピアニッシモ) < p < mp < mf < f < ff(フォルテッシモ)
+    note(C4, q, vel: pp);    // とても弱く
+    note(D4, q, vel: p);     // 弱く
+    note(E4, q, vel: mp);    // やや弱く
+    note(F4, q, vel: mf);    // やや強く
+    note(G4, q, vel: f);     // 強く
+    note(A4, q, vel: ff);    // とても強く
+    note(B4, q, vel: f);     // 強く
+    note(C5, q, vel: mf);    // やや強く
+  };
+}
+
+// ----------------------------------------------------------------------------
+// クレッシェンド（だんだん強く）
+// ----------------------------------------------------------------------------
+fn crescendoDemo() -> Clip {
+  // 8つの音符でクレッシェンド
+  const velocities = crescendo(0.3, 0.9, 8);
+  const pitches = [C4, D4, E4, F4, G4, A4, B4, C5];
+
+  let c = clip {};
+  for (i in 0..7) {
+    const vel = velocities[i];
+    const pitch = pitches[i];
+    c = concat(c, clip { note(pitch, e, vel: vel); });
+  }
+  return c;
+}
+
+// ============================================================================
+// メイン関数
+// ============================================================================
+
+export fn main() -> Score {
+  return score {
+    meta {
+      title "音楽理論チュートリアル";
+      artist "Tutorial";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 90bpm; }
+
+    // セクションマーカー
+    marker(1:1, "section", "Triads");
+    marker(5:1, "section", "Sevenths");
+    marker(9:1, "section", "Inversions");
+    marker(13:1, "section", "Scales");
+    marker(21:1, "section", "Modes");
+    marker(25:1, "section", "Arpeggios");
+    marker(29:1, "section", "Progressions");
+    marker(41:1, "section", "Dynamics");
+
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
+    }
+
+    // ========================================================================
+    // デモトラック
+    // ========================================================================
+    track "Demo" role Instrument sound "piano" {
+      // 三和音のデモ
+      place 1:1 triadsDemo();
+      place 3:1 suspendedDemo();
+
+      // セブンスコード
+      place 5:1 seventhChordsDemo();
+      place 7:1 advancedSeventhsDemo();
+
+      // 転回形
+      place 9:1 inversionsDemo();
+      place 11:1 inversionsDemo();  // もう一度
+
+      // スケール
+      place 13:1 basicScalesDemo();
+      place 17:1 minorVariantsDemo();
+      place 19:1 pentatonicAndBluesDemo();
+
+      // モード
+      place 21:1 modesDemo();
+
+      // アルペジオ
+      place 25:1 arpeggiosDemo();
+
+      // コード進行
+      place 29:1 twoFiveOneDemo();
+      place 33:1 popProgressionDemo();
+      place 37:1 andalusianDemo();
+
+      // ダイナミクス
+      place 41:1 dynamicsDemo();
+      place 43:1 crescendoDemo();
+    }
+  };
+}
+
+// ============================================================================
+// std:theory リファレンス
+// ============================================================================
+
+// 三和音:
+//   majorTriad(root)    - メジャー（長三和音）
+//   minorTriad(root)    - マイナー（短三和音）
+//   diminished(root)    - ディミニッシュ（減三和音）
+//   augmented(root)     - オーギュメント（増三和音）
+//   sus2(root)          - サスペンデッド2
+//   sus4(root)          - サスペンデッド4
+
+// セブンスコード:
+//   major7(root)        - メジャーセブンス
+//   minor7(root)        - マイナーセブンス
+//   dominant7(root)     - ドミナントセブンス
+//   diminished7(root)   - ディミニッシュセブンス
+//   halfDiminished7(root) - ハーフディミニッシュ
+
+// エクステンデッド:
+//   add9(root)          - アド9
+//   major9(root)        - メジャー9
+//   minor9(root)        - マイナー9
+//   dominant9(root)     - ドミナント9
+
+// 転回形:
+//   invert1(chord)      - 第1転回形
+//   invert2(chord)      - 第2転回形
+//   invert3(chord)      - 第3転回形
+
+// スケール:
+//   scaleMajor(root)    - メジャースケール
+//   scaleMinor(root)    - ナチュラルマイナースケール
+//   harmonicMinor(root) - ハーモニックマイナー
+//   melodicMinor(root)  - メロディックマイナー
+//   majorPentatonic(root) - メジャーペンタトニック
+//   minorPentatonic(root) - マイナーペンタトニック
+//   blues(root)         - ブルーススケール
+
+// モード:
+//   ionian(root)        - イオニアン（= メジャー）
+//   dorian(root)        - ドリアン
+//   phrygian(root)      - フリジアン
+//   lydian(root)        - リディアン
+//   mixolydian(root)    - ミクソリディアン
+//   aeolian(root)       - エオリアン（= ナチュラルマイナー）
+//   locrian(root)       - ロクリアン
+
+// アルペジオ:
+//   arpeggioUp(chord)      - 上昇
+//   arpeggioDown(chord)    - 下降
+//   arpeggioUpDown(chord)  - 上昇下降
+//   arpeggioAlberti(chord) - アルベルティバス
+
+// 進行:
+//   progressionTwoFiveOne(root)     - II-V-I（基本）
+//   progressionTwoFiveOneJazz(root) - II-V-I（セブンス版）
+//   progressionPopCanon(root)       - I-V-vi-IV
+//   progressionOneFourFive(root)    - I-IV-V-I
+//   progressionBlues(root)          - ブルース進行
+//   progressionAndalusian(root)     - アンダルシア終止
+
+// ベロシティ:
+//   ppp, pp, p, mp, mf, f, ff, fff - ダイナミクス定数
+//   velocityRamp(start, end, count) - ベロシティの勾配
+//   crescendo(start, end, count)    - クレッシェンド
+// ============================================================================

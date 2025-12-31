@@ -1,4 +1,4 @@
-// TakoMusic v3 - Domo Demo Song
+// TakoMusic - Domo Demo Song
 
 import { concat, repeat } from "std:core";
 import { majorTriad, minorTriad } from "std:theory";

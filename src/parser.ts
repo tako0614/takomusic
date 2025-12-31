@@ -11,6 +11,9 @@ import type {
   ImportNamed,
   FnDecl,
   ConstDecl,
+  TypeAliasDecl,
+  EnumDecl,
+  EnumVariant,
   Param,
   TypeRef,
   Block,
@@ -23,6 +26,7 @@ import type {
   Expr,
   NumberLiteral,
   StringLiteral,
+  TemplateLiteral,
   BoolLiteral,
   NullLiteral,
   PitchLiteral,
@@ -32,14 +36,21 @@ import type {
   ArrayLiteral,
   ObjectLiteral,
   ObjectProperty,
+  SpreadElement,
+  TupleLiteral,
+  TuplePattern,
+  TuplePatternElement,
   MemberExpr,
   IndexExpr,
   CallExpr,
   CallArg,
   UnaryExpr,
   BinaryExpr,
+  PipeExpr,
   MatchExpr,
   MatchArm,
+  MatchPattern,
+  RangePattern,
   ScoreExpr,
   ScoreItem,
   MetaBlock,
@@ -68,10 +79,13 @@ import type {
   CCStmt,
   AutomationStmt,
   MarkerStmt,
+  ArpStmt,
+  ArpDirection,
   NamedArg,
+  TripletStmt,
 } from './ast.js';
 
-export class V3Parser {
+export class V4Parser {
   private tokens: Token[];
   private current = 0;
   private filePath?: string;
@@ -83,7 +97,7 @@ export class V3Parser {
 
   parseProgram(): Program {
     const imports: ImportDecl[] = [];
-    const body: (FnDecl | ConstDecl)[] = [];
+    const body: (FnDecl | ConstDecl | TypeAliasDecl | EnumDecl)[] = [];
     const start = this.peek().position;
 
     while (!this.isAtEnd()) {
@@ -145,7 +159,7 @@ export class V3Parser {
     return spec;
   }
 
-  private parseTopDecl(): FnDecl | ConstDecl {
+  private parseTopDecl(): FnDecl | ConstDecl | TypeAliasDecl | EnumDecl {
     const exported = this.match(TokenType.EXPORT);
     if (this.match(TokenType.FN)) {
       return this.parseFnDecl(exported);
@@ -154,12 +168,83 @@ export class V3Parser {
       const mutable = this.previous().type === TokenType.LET;
       return this.parseConstDecl(exported, mutable);
     }
+    if (this.match(TokenType.TYPE)) {
+      if (exported) {
+        throw this.error('Type aliases cannot be exported', this.previous().position);
+      }
+      return this.parseTypeAliasDecl();
+    }
+    if (this.match(TokenType.ENUM)) {
+      return this.parseEnumDecl(exported);
+    }
     throw this.error('Expected declaration', this.peek().position);
+  }
+
+  private parseTypeAliasDecl(): TypeAliasDecl {
+    const pos = this.previous().position;
+    const name = this.expect(TokenType.IDENT, 'Expected type alias name').value as string;
+    this.expect(TokenType.EQ, "Expected '=' after type alias name");
+    const typeExpr = this.parseTypeRef();
+    this.expect(TokenType.SEMI, "Expected ';' after type alias");
+    return {
+      kind: 'TypeAliasDecl',
+      position: pos,
+      name,
+      typeExpr,
+    };
+  }
+
+  private parseEnumDecl(exported: boolean): EnumDecl {
+    const pos = this.previous().position;
+    const name = this.expect(TokenType.IDENT, 'Expected enum name').value as string;
+    this.expect(TokenType.LBRACE, "Expected '{' after enum name");
+
+    const variants: EnumVariant[] = [];
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      const variantPos = this.peek().position;
+      const variantName = this.expect(TokenType.IDENT, 'Expected variant name').value as string;
+
+      let payload: TypeRef | undefined;
+      // Check for payload type: Variant(Type)
+      if (this.match(TokenType.LPAREN)) {
+        payload = this.parseTypeRef();
+        this.expect(TokenType.RPAREN, "Expected ')' after variant payload type");
+      }
+
+      variants.push({
+        kind: 'EnumVariant',
+        position: variantPos,
+        name: variantName,
+        payload,
+      });
+
+      // Optional trailing comma
+      if (!this.match(TokenType.COMMA)) {
+        break;
+      }
+    }
+
+    this.expect(TokenType.RBRACE, "Expected '}' after enum variants");
+
+    return {
+      kind: 'EnumDecl',
+      position: pos,
+      name,
+      variants,
+      exported,
+    };
   }
 
   private parseFnDecl(exported: boolean): FnDecl {
     const pos = this.previous().position;
     const name = this.expect(TokenType.IDENT, 'Expected function name').value as string;
+
+    // Parse optional type parameters: fn identity<T, U>(...)
+    let typeParams: string[] | undefined;
+    if (this.match(TokenType.LT)) {
+      typeParams = this.parseTypeParams();
+    }
+
     this.expect(TokenType.LPAREN, "Expected '('");
     const params: Param[] = [];
     if (!this.check(TokenType.RPAREN)) {
@@ -183,6 +268,7 @@ export class V3Parser {
       kind: 'FnDecl',
       position: pos,
       name,
+      typeParams,
       params,
       returnType,
       body,
@@ -190,8 +276,36 @@ export class V3Parser {
     };
   }
 
+  private parseTypeParams(): string[] {
+    const params: string[] = [];
+    do {
+      const paramName = this.expect(TokenType.IDENT, 'Expected type parameter name').value as string;
+      params.push(paramName);
+    } while (this.match(TokenType.COMMA));
+    this.expect(TokenType.GT, "Expected '>' after type parameters");
+    return params;
+  }
+
   private parseConstDecl(exported: boolean, mutable: boolean): ConstDecl {
     const pos = this.previous().position;
+
+    // Check for tuple destructuring pattern: const (a, b) = expr
+    if (this.check(TokenType.LPAREN)) {
+      const pattern = this.parseTuplePattern();
+      this.expect(TokenType.EQ, "Expected '='");
+      const value = this.parseExpression();
+      this.expect(TokenType.SEMI, "Expected ';'");
+      return {
+        kind: 'ConstDecl',
+        position: pos,
+        name: '',  // No single name for tuple destructuring
+        pattern,
+        value,
+        mutable,
+        exported,
+      };
+    }
+
     const name = this.expectIdentLike('Expected identifier');
     let type: TypeRef | undefined;
     if (this.match(TokenType.COLON)) {
@@ -211,10 +325,109 @@ export class V3Parser {
     };
   }
 
+  private parseTuplePattern(): TuplePattern {
+    const pos = this.peek().position;
+    this.expect(TokenType.LPAREN, "Expected '('");
+    const elements: TuplePatternElement[] = [];
+
+    if (!this.check(TokenType.RPAREN)) {
+      do {
+        const elemPos = this.peek().position;
+        let rest = false;
+
+        // Check for rest pattern: ...rest
+        if (this.match(TokenType.SPREAD)) {
+          rest = true;
+        }
+
+        const name = this.expect(TokenType.IDENT, 'Expected identifier in tuple pattern').value as string;
+        elements.push({
+          kind: 'TuplePatternElement',
+          position: elemPos,
+          name,
+          rest,
+        });
+
+        // Rest pattern must be last
+        if (rest && !this.check(TokenType.RPAREN)) {
+          throw this.error('Rest pattern must be last in tuple destructuring', elemPos);
+        }
+      } while (this.match(TokenType.COMMA));
+    }
+
+    this.expect(TokenType.RPAREN, "Expected ')'");
+
+    if (elements.length === 0) {
+      throw this.error('Empty tuple pattern is not allowed', pos);
+    }
+
+    return {
+      kind: 'TuplePattern',
+      position: pos,
+      elements,
+    };
+  }
+
+  // Parse either a parenthesized expression (expr) or a tuple literal (expr, expr, ...)
+  private parseParenOrTuple(): Expr {
+    const pos = this.peek().position;
+    this.expect(TokenType.LPAREN, "Expected '('");
+
+    // Empty parens - error
+    if (this.check(TokenType.RPAREN)) {
+      throw this.error('Empty parentheses are not allowed', pos);
+    }
+
+    // Parse the first expression
+    const first = this.parseExpression();
+
+    // Check if this is a tuple (has comma) or just a grouped expression
+    if (this.match(TokenType.COMMA)) {
+      // This is a tuple literal
+      const elements: Expr[] = [first];
+
+      // Parse remaining elements
+      if (!this.check(TokenType.RPAREN)) {
+        do {
+          elements.push(this.parseExpression());
+        } while (this.match(TokenType.COMMA) && !this.check(TokenType.RPAREN));
+      }
+
+      this.expect(TokenType.RPAREN, "Expected ')'");
+
+      const tuple: TupleLiteral = {
+        kind: 'TupleLiteral',
+        position: pos,
+        elements,
+      };
+      return tuple;
+    }
+
+    // Just a grouped expression
+    this.expect(TokenType.RPAREN, "Expected ')'");
+    return first;
+  }
+
   private parseTypeRef(): TypeRef {
     const pos = this.peek().position;
     const name = this.expect(TokenType.IDENT, 'Expected type name').value as string;
-    return { kind: 'TypeRef', position: pos, name };
+
+    // Parse optional type arguments: TypeName<Arg1, Arg2>
+    let typeArgs: TypeRef[] | undefined;
+    if (this.match(TokenType.LT)) {
+      typeArgs = this.parseTypeArgs();
+    }
+
+    return { kind: 'TypeRef', position: pos, name, typeArgs };
+  }
+
+  private parseTypeArgs(): TypeRef[] {
+    const args: TypeRef[] = [];
+    do {
+      args.push(this.parseTypeRef());
+    } while (this.match(TokenType.COMMA));
+    this.expect(TokenType.GT, "Expected '>' after type arguments");
+    return args;
   }
 
   private parseBlock(): Block {
@@ -296,7 +509,29 @@ export class V3Parser {
   }
 
   private parseExpression(): Expr {
-    return this.parseBinary(0);
+    return this.parsePipe();
+  }
+
+  private parsePipe(): Expr {
+    let expr = this.parseBinary(0);
+    while (this.match(TokenType.PIPE)) {
+      const pipePos = this.previous().position;
+      // Parse the right side which must be a call expression
+      const callee = this.parsePostfix();
+      if (callee.kind !== 'CallExpr') {
+        throw this.error('パイプライン式で関数呼び出しが必要です', pipePos);
+      }
+      const call = callee as CallExpr;
+      // Create pipe expression
+      const pipeExpr: PipeExpr = {
+        kind: 'PipeExpr',
+        position: pipePos,
+        left: expr,
+        call,
+      };
+      expr = pipeExpr;
+    }
+    return expr;
   }
 
   private parseBinary(minPrec: number): Expr {
@@ -386,6 +621,8 @@ export class V3Parser {
       case TokenType.STRING:
         this.advance();
         return { kind: 'StringLiteral', position: token.position, value: token.value as string } as StringLiteral;
+      case TokenType.TEMPLATE_HEAD:
+        return this.parseTemplateLiteral();
       case TokenType.TRUE:
       case TokenType.FALSE:
         this.advance();
@@ -414,10 +651,7 @@ export class V3Parser {
         this.advance();
         return { kind: 'Identifier', position: token.position, name: token.value as string } as Identifier;
       case TokenType.LPAREN: {
-        this.advance();
-        const expr = this.parseExpression();
-        this.expect(TokenType.RPAREN, "Expected ')'");
-        return expr;
+        return this.parseParenOrTuple();
       }
       case TokenType.LBRACKET:
         return this.parseArrayLiteral();
@@ -434,6 +668,43 @@ export class V3Parser {
     }
   }
 
+  private parseTemplateLiteral(): TemplateLiteral {
+    const pos = this.peek().position;
+    const quasis: string[] = [];
+    const expressions: Expr[] = [];
+
+    // First part: TEMPLATE_HEAD
+    const head = this.expect(TokenType.TEMPLATE_HEAD, 'Expected template head');
+    quasis.push(head.value as string);
+
+    // Parse expressions and middle/tail parts
+    while (!this.isAtEnd()) {
+      // Parse the expression inside ${}
+      const expr = this.parseExpression();
+      expressions.push(expr);
+
+      // Next token should be TEMPLATE_MIDDLE or TEMPLATE_TAIL
+      const next = this.peek();
+      if (next.type === TokenType.TEMPLATE_MIDDLE) {
+        this.advance();
+        quasis.push(next.value as string);
+      } else if (next.type === TokenType.TEMPLATE_TAIL) {
+        this.advance();
+        quasis.push(next.value as string);
+        break;
+      } else {
+        throw this.error('Expected template continuation', next.position);
+      }
+    }
+
+    return {
+      kind: 'TemplateLiteral',
+      position: pos,
+      quasis,
+      expressions,
+    };
+  }
+
   private parseMatchExpr(): MatchExpr {
     const pos = this.peek().position;
     this.expect(TokenType.MATCH, "Expected 'match'");
@@ -444,12 +715,17 @@ export class V3Parser {
     const arms: MatchArm[] = [];
     while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
       const armPos = this.peek().position;
-      let pattern: Expr | undefined;
+      let pattern: MatchPattern | undefined;
+      let guard: Expr | undefined;
       let isDefault = false;
       if (this.match(TokenType.ELSE)) {
         isDefault = true;
       } else {
-        pattern = this.parseExpression();
+        pattern = this.parseMatchPattern();
+        // Check for guard condition: pattern if condition -> value
+        if (this.match(TokenType.IF)) {
+          guard = this.parseExpression();
+        }
       }
       this.expect(TokenType.ARROW, "Expected '->' in match arm");
       const valueExpr = this.parseExpression();
@@ -458,6 +734,7 @@ export class V3Parser {
         kind: 'MatchArm',
         position: armPos,
         pattern,
+        guard,
         value: valueExpr,
         isDefault,
       });
@@ -466,13 +743,47 @@ export class V3Parser {
     return { kind: 'MatchExpr', position: pos, value, arms };
   }
 
+  private parseMatchPattern(): MatchPattern {
+    // Check for range pattern: NUMBER..NUMBER
+    if (this.check(TokenType.NUMBER) && this.checkNext(TokenType.DOTDOT)) {
+      const startToken = this.advance();
+      const startLiteral: NumberLiteral = {
+        kind: 'NumberLiteral',
+        position: startToken.position,
+        value: startToken.value as number,
+      };
+      this.expect(TokenType.DOTDOT, "Expected '..' in range pattern");
+      const endToken = this.expect(TokenType.NUMBER, "Expected number after '..' in range pattern");
+      const endLiteral: NumberLiteral = {
+        kind: 'NumberLiteral',
+        position: endToken.position,
+        value: endToken.value as number,
+      };
+      const rangePattern: RangePattern = {
+        kind: 'RangePattern',
+        position: startToken.position,
+        start: startLiteral,
+        end: endLiteral,
+      };
+      return rangePattern;
+    }
+    // Otherwise, parse as regular expression
+    return this.parseExpression();
+  }
+
   private parseArrayLiteral(): ArrayLiteral {
     const pos = this.peek().position;
     this.expect(TokenType.LBRACKET, "Expected '['");
-    const elements: Expr[] = [];
+    const elements: (Expr | SpreadElement)[] = [];
     if (!this.check(TokenType.RBRACKET)) {
       do {
-        elements.push(this.parseExpression());
+        if (this.match(TokenType.SPREAD)) {
+          const spreadPos = this.previous().position;
+          const argument = this.parseExpression();
+          elements.push({ kind: 'SpreadElement', position: spreadPos, argument });
+        } else {
+          elements.push(this.parseExpression());
+        }
       } while (this.match(TokenType.COMMA));
     }
     this.expect(TokenType.RBRACKET, "Expected ']'");
@@ -482,22 +793,28 @@ export class V3Parser {
   private parseObjectLiteral(): ObjectLiteral {
     const pos = this.peek().position;
     this.expect(TokenType.LBRACE, "Expected '{'");
-    const properties: ObjectProperty[] = [];
+    const properties: (ObjectProperty | SpreadElement)[] = [];
     if (!this.check(TokenType.RBRACE)) {
       do {
-        const keyToken = this.peek();
-        if (!this.isPropertyToken(keyToken.type)) {
-          throw this.error('Expected key', keyToken.position);
+        if (this.match(TokenType.SPREAD)) {
+          const spreadPos = this.previous().position;
+          const argument = this.parseExpression();
+          properties.push({ kind: 'SpreadElement', position: spreadPos, argument });
+        } else {
+          const keyToken = this.peek();
+          if (!this.isPropertyToken(keyToken.type)) {
+            throw this.error('Expected key', keyToken.position);
+          }
+          this.advance();
+          this.expect(TokenType.COLON, "Expected ':'");
+          const value = this.parseExpression();
+          properties.push({
+            kind: 'ObjectProperty',
+            position: keyToken.position,
+            key: keyToken.value as string,
+            value,
+          });
         }
-        this.advance();
-        this.expect(TokenType.COLON, "Expected ':'");
-        const value = this.parseExpression();
-        properties.push({
-          kind: 'ObjectProperty',
-          position: keyToken.position,
-          key: keyToken.value as string,
-          value,
-        });
       } while (this.match(TokenType.COMMA));
     }
     this.expect(TokenType.RBRACE, "Expected '}'");
@@ -574,25 +891,58 @@ export class V3Parser {
       const itemPos = this.peek().position;
       const at = this.parseExpression();
       this.expect(TokenType.ARROW, "Expected '->'");
+
+      // Check for gradational tempo syntax: at -> endAt curveType bpm
+      // Peek ahead to see if we have: expression followed by 'ramp' or 'ease'
+      let endAt: Expr | undefined;
+      let curveType: 'linear' | 'ease' | undefined;
       let bpm: Expr;
-      if (this.match(TokenType.BPM)) {
-        const token = this.previous();
-        bpm = { kind: 'NumberLiteral', position: token.position, value: token.value as number };
-      } else {
-        bpm = this.parseExpression();
-        if (this.check(TokenType.IDENT) && (this.peek().value as string) === 'bpm') {
-          this.advance();
+
+      // Try to parse the next expression
+      const firstExprAfterArrow = this.parseTempoExprOrBpm();
+
+      // Check if next token is 'ramp' or 'ease' (curve type keyword)
+      if (this.check(TokenType.IDENT)) {
+        const nextIdent = this.peek().value as string;
+        if (nextIdent === 'ramp' || nextIdent === 'ease') {
+          // This is gradational syntax: at -> endAt curveType bpm
+          endAt = firstExprAfterArrow;
+          curveType = nextIdent === 'ramp' ? 'linear' : 'ease';
+          this.advance(); // consume 'ramp' or 'ease'
+
+          // Now parse the BPM
+          bpm = this.parseTempoExprOrBpm();
+        } else {
+          // Not gradational - first expression is the BPM
+          bpm = firstExprAfterArrow;
+          // Check for optional 'bpm' suffix
+          if (nextIdent === 'bpm') {
+            this.advance();
+          }
         }
+      } else {
+        // No identifier after expression - first expression is the BPM
+        bpm = firstExprAfterArrow;
       }
+
       let unit: Expr | undefined;
       if (this.match(TokenType.AT)) {
         unit = this.parseExpression();
       }
       this.expect(TokenType.SEMI, "Expected ';'");
-      items.push({ kind: 'TempoItem', position: itemPos, at, bpm, unit });
+      items.push({ kind: 'TempoItem', position: itemPos, at, bpm, unit, endAt, curveType });
     }
     this.expect(TokenType.RBRACE, "Expected '}'");
     return { kind: 'TempoBlock', position: pos, items };
+  }
+
+  // Helper method to parse BPM value (handles both BPM token and regular expression)
+  private parseTempoExprOrBpm(): Expr {
+    if (this.match(TokenType.BPM)) {
+      const token = this.previous();
+      return { kind: 'NumberLiteral', position: token.position, value: token.value as number };
+    }
+    return this.parseExpression();
   }
 
   private parseMeterBlock(): MeterBlock {
@@ -724,6 +1074,12 @@ export class V3Parser {
   private parseClipStmt(): ClipStmt {
     const pos = this.peek().position;
     const ident = this.expect(TokenType.IDENT, 'Expected clip statement').value as string;
+
+    // Handle triplet and tuplet which use { } instead of ( )
+    if (ident === 'triplet' || ident === 'tuplet') {
+      return this.parseTripletStmt(pos, ident);
+    }
+
     this.expect(TokenType.LPAREN, "Expected '('");
     switch (ident) {
       case 'at': {
@@ -813,9 +1169,81 @@ export class V3Parser {
         const stmt: MarkerStmt = { kind: 'MarkerStmt', position: pos, markerKind, label };
         return stmt;
       }
+      case 'arp': {
+        const pitches = this.parseExpression();
+        this.expect(TokenType.COMMA, "Expected ','");
+        const duration = this.parseExpression();
+        this.expect(TokenType.COMMA, "Expected ','");
+        const directionToken = this.expect(TokenType.IDENT, 'Expected direction (up, down, updown, downup, random)');
+        const directionValue = directionToken.value as string;
+        if (!this.isValidArpDirection(directionValue)) {
+          throw this.error(`Invalid arp direction: ${directionValue}. Expected up, down, updown, downup, or random`, directionToken.position);
+        }
+        const direction = directionValue as ArpDirection;
+        const opts = this.parseNamedArgs();
+        this.expect(TokenType.RPAREN, "Expected ')'");
+        this.expect(TokenType.SEMI, "Expected ';'");
+        const stmt: ArpStmt = { kind: 'ArpStmt', position: pos, pitches, duration, direction, opts };
+        return stmt;
+      }
       default:
         throw this.error(`Unknown clip statement: ${ident}`, pos);
     }
+  }
+
+  private parseTripletStmt(pos: Position, keyword: string): TripletStmt {
+    this.expect(TokenType.LPAREN, "Expected '('");
+
+    let n: number;
+    let inTime: number;
+
+    if (keyword === 'triplet') {
+      // triplet(inTime) { ... } - defaults to n = 3 notes in inTime beats
+      // Or triplet(3) defaults to 3 notes in 2 beats
+      const firstArg = this.expect(TokenType.NUMBER, 'Expected number');
+      const firstValue = firstArg.value as number;
+
+      if (this.match(TokenType.COMMA)) {
+        // triplet(n, inTime) form - explicit both values
+        n = firstValue;
+        const secondArg = this.expect(TokenType.NUMBER, 'Expected number for inTime');
+        inTime = secondArg.value as number;
+      } else {
+        // triplet(n) form - defaults: n notes in (n-1) beats
+        n = firstValue;
+        inTime = n - 1;
+      }
+    } else {
+      // tuplet(n, inTime) { ... } - explicit both values required
+      const nArg = this.expect(TokenType.NUMBER, 'Expected number for n');
+      n = nArg.value as number;
+      this.expect(TokenType.COMMA, "Expected ','");
+      const inTimeArg = this.expect(TokenType.NUMBER, 'Expected number for inTime');
+      inTime = inTimeArg.value as number;
+    }
+
+    this.expect(TokenType.RPAREN, "Expected ')'");
+    this.expect(TokenType.LBRACE, "Expected '{'");
+
+    const body: ClipStmt[] = [];
+    while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
+      body.push(this.parseClipStmt());
+    }
+
+    this.expect(TokenType.RBRACE, "Expected '}'");
+
+    const stmt: TripletStmt = {
+      kind: 'TripletStmt',
+      position: pos,
+      n,
+      inTime,
+      body,
+    };
+    return stmt;
+  }
+
+  private isValidArpDirection(value: string): value is ArpDirection {
+    return value === 'up' || value === 'down' || value === 'updown' || value === 'downup' || value === 'random';
   }
 
   private parseNamedArgs(): NamedArg[] {
@@ -973,6 +1401,8 @@ export class V3Parser {
       case TokenType.FALSE:
       case TokenType.NULL:
       case TokenType.AS:
+      case TokenType.TYPE:
+      case TokenType.ENUM:
         return true;
       default:
         return false;
@@ -985,6 +1415,6 @@ export class V3Parser {
 
   private error(message: string, position: Position): Error {
     const loc = this.filePath ? `${this.filePath}:${position.line}:${position.column}` : `${position.line}:${position.column}`;
-    return new Error(`[v3 parser] ${message} at ${loc}`);
+    return new Error(`[parser] ${message} at ${loc}`);
   }
 }

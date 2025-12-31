@@ -11,7 +11,7 @@ export interface Program extends BaseNode {
   body: TopDecl[];
 }
 
-export type TopDecl = FnDecl | ConstDecl;
+export type TopDecl = FnDecl | ConstDecl | TypeAliasDecl | EnumDecl;
 
 export interface ImportDecl extends BaseNode {
   kind: 'ImportDecl';
@@ -34,6 +34,7 @@ export interface ImportNamed extends BaseNode {
 export interface FnDecl extends BaseNode {
   kind: 'FnDecl';
   name: string;
+  typeParams?: string[];  // Generic type parameters: fn identity<T>(x: T) -> T
   params: Param[];
   returnType?: TypeRef;
   body: Block;
@@ -49,6 +50,7 @@ export interface Param extends BaseNode {
 export interface ConstDecl extends BaseNode {
   kind: 'ConstDecl';
   name: string;
+  pattern?: TuplePattern;  // For tuple destructuring: const (a, b) = expr
   value: Expr;
   mutable: boolean;
   type?: TypeRef;
@@ -58,6 +60,27 @@ export interface ConstDecl extends BaseNode {
 export interface TypeRef extends BaseNode {
   kind: 'TypeRef';
   name: string;
+  typeArgs?: TypeRef[];  // Generic type arguments: Box<Number>, Map<String, Number>
+}
+
+export interface TypeAliasDecl extends BaseNode {
+  kind: 'TypeAliasDecl';
+  name: string;
+  typeExpr: TypeRef;
+}
+
+// Algebraic Data Type (enum) declarations
+export interface EnumVariant extends BaseNode {
+  kind: 'EnumVariant';
+  name: string;
+  payload?: TypeRef;  // Optional payload type for variants like Custom([Number])
+}
+
+export interface EnumDecl extends BaseNode {
+  kind: 'EnumDecl';
+  name: string;
+  variants: EnumVariant[];
+  exported: boolean;
 }
 
 export interface Block extends BaseNode {
@@ -106,6 +129,7 @@ export interface ExprStmt extends BaseNode {
 export type Expr =
   | NumberLiteral
   | StringLiteral
+  | TemplateLiteral
   | BoolLiteral
   | NullLiteral
   | PitchLiteral
@@ -114,11 +138,13 @@ export type Expr =
   | Identifier
   | ArrayLiteral
   | ObjectLiteral
+  | TupleLiteral
   | MemberExpr
   | IndexExpr
   | CallExpr
   | UnaryExpr
   | BinaryExpr
+  | PipeExpr
   | MatchExpr
   | ScoreExpr
   | ClipExpr;
@@ -131,6 +157,12 @@ export interface NumberLiteral extends BaseNode {
 export interface StringLiteral extends BaseNode {
   kind: 'StringLiteral';
   value: string;
+}
+
+export interface TemplateLiteral extends BaseNode {
+  kind: 'TemplateLiteral';
+  quasis: string[];      // Static string parts
+  expressions: Expr[];   // Interpolated expressions
 }
 
 export interface BoolLiteral extends BaseNode {
@@ -165,12 +197,34 @@ export interface Identifier extends BaseNode {
 
 export interface ArrayLiteral extends BaseNode {
   kind: 'ArrayLiteral';
+  elements: (Expr | SpreadElement)[];
+}
+
+export interface SpreadElement extends BaseNode {
+  kind: 'SpreadElement';
+  argument: Expr;
+}
+
+export interface TupleLiteral extends BaseNode {
+  kind: 'TupleLiteral';
   elements: Expr[];
+}
+
+// Pattern for tuple destructuring: const (a, b, ...rest) = expr
+export interface TuplePattern extends BaseNode {
+  kind: 'TuplePattern';
+  elements: TuplePatternElement[];
+}
+
+export interface TuplePatternElement extends BaseNode {
+  kind: 'TuplePatternElement';
+  name: string;
+  rest: boolean;  // true for ...rest patterns
 }
 
 export interface ObjectLiteral extends BaseNode {
   kind: 'ObjectLiteral';
-  properties: ObjectProperty[];
+  properties: (ObjectProperty | SpreadElement)[];
 }
 
 export interface ObjectProperty extends BaseNode {
@@ -216,15 +270,30 @@ export interface BinaryExpr extends BaseNode {
   right: Expr;
 }
 
+export interface PipeExpr extends BaseNode {
+  kind: 'PipeExpr';
+  left: Expr;
+  call: CallExpr;
+}
+
 export interface MatchExpr extends BaseNode {
   kind: 'MatchExpr';
   value: Expr;
   arms: MatchArm[];
 }
 
+export interface RangePattern extends BaseNode {
+  kind: 'RangePattern';
+  start: NumberLiteral;
+  end: NumberLiteral;
+}
+
+export type MatchPattern = Expr | RangePattern;
+
 export interface MatchArm extends BaseNode {
   kind: 'MatchArm';
-  pattern?: Expr;
+  pattern?: MatchPattern;
+  guard?: Expr;  // Optional guard condition: pattern if guard -> value
   value: Expr;
   isDefault: boolean;
 }
@@ -263,6 +332,9 @@ export interface TempoItem extends BaseNode {
   at: Expr;
   bpm: Expr;
   unit?: Expr;
+  // Gradational tempo fields (Phase 3-B)
+  endAt?: Expr;           // End position for gradational tempo
+  curveType?: 'linear' | 'ease';  // 'linear' for ramp, 'ease' for ease-in-out
 }
 
 export interface MeterBlock extends BaseNode {
@@ -342,7 +414,9 @@ export type ClipStmt =
   | HitStmt
   | CCStmt
   | AutomationStmt
-  | MarkerStmt;
+  | MarkerStmt
+  | ArpStmt
+  | TripletStmt;
 
 export interface AtStmt extends BaseNode {
   kind: 'AtStmt';
@@ -401,8 +475,25 @@ export interface MarkerStmt extends BaseNode {
   label: Expr;
 }
 
+export type ArpDirection = 'up' | 'down' | 'updown' | 'downup' | 'random';
+
+export interface ArpStmt extends BaseNode {
+  kind: 'ArpStmt';
+  pitches: Expr;
+  duration: Expr;
+  direction: ArpDirection;
+  opts: NamedArg[];
+}
+
 export interface NamedArg extends BaseNode {
   kind: 'NamedArg';
   name: string;
   value: Expr;
+}
+
+export interface TripletStmt extends BaseNode {
+  kind: 'TripletStmt';
+  n: number;        // Number of notes (e.g., 3 for triplet)
+  inTime: number;   // Time span to fit notes into (e.g., 2 for triplet = 3 notes in time of 2)
+  body: ClipStmt[];
 }

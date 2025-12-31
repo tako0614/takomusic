@@ -1,4 +1,4 @@
-// TakoMusic v3 - Drum Groove
+// TakoMusic - Drum Groove
 
 import { concat, repeat } from "std:core";
 import { basicRock, fill } from "std:drums";

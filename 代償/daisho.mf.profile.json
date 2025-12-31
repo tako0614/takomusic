@@ -1,0 +1,36 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "daisho_full",
+  "renderer": "audio.simple",
+  "output": {
+    "path": "out/daisho.mp3",
+    "wavPath": "out/daisho.wav",
+    "sampleRate": 44100,
+    "bitrate": 192,
+    "neutrinoRoot": "C:/Users/shout/NEUTRINO",
+    "neutrinoModel": "MERROW",
+    "neutrinoThreads": 4,
+    "neutrinoTranspose": 0,
+    "neutrinoGain": 0.9
+  },
+  "bindings": [
+    {
+      "selector": { "sound": "guitar" },
+      "config": { "preset": "lead", "gain": 0.6, "pan": -0.2 }
+    },
+    {
+      "selector": { "sound": "bass" },
+      "config": { "preset": "bass", "gain": 0.65, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "kit_standard" },
+      "config": { "preset": "drums", "gain": 0.85, "pan": 0 }
+    },
+    {
+      "selector": { "sound": "lead_vocal" },
+      "config": { "preset": "vocal", "gain": 0.85, "pan": 0 }
+    }
+  ]
+}

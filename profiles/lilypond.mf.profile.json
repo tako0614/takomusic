@@ -1,0 +1,29 @@
+{
+  "$schema": "../schemas/profile.schema.json",
+  "renderer": "lilypond.standard",
+  "output": {
+    "path": "output/score.ly",
+    "format": "lilypond",
+    "paperSize": "a4"
+  },
+  "bindings": [
+    {
+      "selector": { "role": "Instrument" },
+      "config": {
+        "clef": "treble"
+      }
+    },
+    {
+      "selector": { "role": "Drums" },
+      "config": {
+        "staff": "drum"
+      }
+    },
+    {
+      "selector": { "role": "Vocal" },
+      "config": {
+        "clef": "treble"
+      }
+    }
+  ]
+}

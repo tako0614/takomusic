@@ -1,4 +1,4 @@
-﻿# Tako v3 Core DSL / Built-ins
+﻿# TakoMusic Core DSL / Built-ins
 
 This document describes the language-level constructs that produce `Score` and `Clip` values.
 High-level musical helpers live in `std:*` modules.
@@ -183,6 +183,9 @@ Statements:
 - `cc(num, value)` -> control event (cursor unchanged) — see CC Mapping below
 - `automation(param, start, end, curve)` -> automation event (cursor unchanged)
 - `marker(kind, label)` -> marker event (cursor unchanged)
+- `arp([pitches], dur, direction, opts?)` -> add arpeggiated notes; cursor += dur (see Arpeggio below)
+- `triplet(n) { ... }` / `triplet(n, inTime) { ... }` -> tuplet grouping (see Triplets below)
+- `tuplet(n, inTime) { ... }` -> general tuplet grouping (see Triplets below)
 
 ### Validation Constraints
 
@@ -265,6 +268,143 @@ chord([C4, E4, G4], h, tech: [arpeggiate]);
   - `Drop`: technique ignored
   - `Approx`: closest available approximation
 - Custom techniques can be used; interpretation is renderer-dependent
+
+### Arpeggio (`arp`)
+
+The `arp` statement creates arpeggiated notes from a pitch array:
+
+```mf
+arp([C4, E4, G4], q, up);              // Ascending arpeggio
+arp([C4, E4, G4], h, down, vel: 0.7);  // Descending with velocity
+arp([C4, E4, G4, B4], w, updown);      // Up then down
+```
+
+**Syntax:**
+
+```
+arp(pitches, duration, direction, opts?);
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pitches` | `[Pitch]` | Array of pitches to arpeggiate |
+| `duration` | `Duration` | Total duration for the arpeggio |
+| `direction` | `ArpDirection` | Pattern direction (see below) |
+| `opts` | Named args | Optional: `vel`, `voice`, `tech` |
+
+**Direction values:**
+
+| Direction | Pattern | Example (C-E-G) |
+|-----------|---------|-----------------|
+| `up` | Low to high | C → E → G |
+| `down` | High to low | G → E → C |
+| `updown` | Up then down | C → E → G → E |
+| `downup` | Down then up | G → E → C → E |
+| `random` | Random order | Varies each time |
+
+**Note timing:**
+
+Each note in the arpeggio is evenly spaced within the total duration:
+- 3 pitches in a quarter note: each note gets 1/12 duration
+- The cursor advances by the total duration after the arpeggio
+
+**Example:**
+
+```mf
+const melody = clip {
+  arp([C4, E4, G4], q, up);      // 3 notes in quarter note time
+  arp([F4, A4, C5], q, down);    // Descending
+  arp([G4, B4, D5, G5], h, updown, vel: 0.8);  // 7 notes (up 4 + down 3)
+};
+```
+
+### Triplets and Tuplets
+
+Triplets and tuplets allow fitting N notes into the time of M beats:
+
+```mf
+triplet(3) {       // 3 notes in time of 2 beats
+  note(C4, q);
+  note(E4, q);
+  note(G4, q);
+}
+
+tuplet(5, 4) {     // 5 notes in time of 4 beats
+  note(C4, q);
+  note(D4, q);
+  note(E4, q);
+  note(F4, q);
+  note(G4, q);
+}
+```
+
+**Syntax:**
+
+```
+triplet(n) { ... }           // n notes in (n-1) beats
+triplet(n, inTime) { ... }   // n notes in inTime beats
+tuplet(n, inTime) { ... }    // Equivalent to triplet(n, inTime)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n` | `Number` | Number of notes (or duration slots) |
+| `inTime` | `Number` | Time span to fit notes into (default: n-1 for triplet) |
+
+**Common patterns:**
+
+| Syntax | Ratio | Musical name |
+|--------|-------|--------------|
+| `triplet(3)` | 3:2 | Triplet (3 in the time of 2) |
+| `triplet(3, 2)` | 3:2 | Same as above |
+| `tuplet(5, 4)` | 5:4 | Quintuplet |
+| `tuplet(6, 4)` | 6:4 | Sextuplet |
+| `tuplet(7, 8)` | 7:8 | Septuplet |
+
+**How durations scale:**
+
+Durations inside the triplet/tuplet body are scaled by `inTime/n`. For a standard triplet (3:2):
+- Each quarter note inside becomes: `q * 2/3`
+- Three quarter notes total: `3 * q * 2/3 = 2q = h` (half note worth of time)
+
+**Example with eighth notes:**
+
+```mf
+// Standard triplet eighth notes
+triplet(3) {
+  note(C4, e);
+  note(E4, e);
+  note(G4, e);
+}
+// These 3 eighth notes fit in the time of 2 eighth notes (= 1 quarter note)
+
+// Swing feel using triplets
+triplet(3) {
+  note(C4, q);   // Long note
+  rest(e);       // Short rest
+  note(E4, e);   // Short note
+}
+```
+
+**Nested triplets:**
+
+Triplets can be nested for complex rhythms:
+
+```mf
+triplet(3) {
+  note(C4, q);
+  triplet(3) {
+    note(D4, e);
+    note(E4, e);
+    note(F4, e);
+  }
+  note(G4, q);
+}
+```
 
 ## Event Mapping (IR)
 
@@ -371,7 +511,7 @@ A **pickup** (or **anacrusis**) is a partial bar before the first full bar. Comm
 
 ### Design Limitation
 
-Tako v3 uses 1-indexed bars, so there is no built-in "bar 0" concept for pickups. The recommended workaround is to use clip-level positioning with negative offsets.
+TakoMusic uses 1-indexed bars, so there is no built-in "bar 0" concept for pickups. The recommended workaround is to use clip-level positioning with negative offsets.
 
 ### Recommended Pattern
 

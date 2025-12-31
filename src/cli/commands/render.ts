@@ -2,7 +2,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { V3Compiler } from '../../compiler.js';
+import { V4Compiler } from '../../compiler.js';
 import { ExitCodes } from '../../errors.js';
 import { findConfigPath, loadConfig } from '../../config/index.js';
 import { handleCliError } from '../errorHandler.js';
@@ -107,7 +107,7 @@ Options:
 
     try {
       console.log('Compiling...');
-      const compiler = new V3Compiler(baseDir);
+      const compiler = new V4Compiler(baseDir);
       const ir = compiler.compile(entryPath);
       const warnings = compiler.getDiagnostics().filter((d) => d.severity === 'warning');
       for (const diag of warnings) {

@@ -1,7 +1,7 @@
-﻿# TakoMusic (Tako v3)
+# TakoMusic (v4)
 
 TakoMusic is a music composition DSL that evaluates to a neutral `Score` IR and renders via external plugins.
-The v3 design keeps the language core backend-agnostic and pushes sound binding to Render Profiles.
+The language core is backend-agnostic and pushes sound binding to Render Profiles.
 
 ## Highlights
 
@@ -9,111 +9,141 @@ The v3 design keeps the language core backend-agnostic and pushes sound binding 
 - Rational time model (Dur/Pos) without ticks
 - Abstract sounds + render profiles decouple composition from output
 - Renderer Plugin protocol: `capabilities` / `validate` / `render`
+- Web Playground with real-time audio preview
+
+## Quick Start
+
+```bash
+# Install
+npm install -g takomusic
+
+# Build a single file (no config needed)
+mf build song.mf
+
+# Or initialize a project
+mf init
+mf build
+mf render
+```
+
+## Demo Song
+
+Check out `examples/cyberpunk_drive.mf` - a complete synthwave track demonstrating TakoMusic's capabilities:
+
+- 64 bars, 8 tracks, 128 BPM
+- Drums, bass, arpeggios, pads, and lead melody
+- Uses std:core, std:transform, std:theory, std:drums
+
+```bash
+# Build and render the demo
+mf build examples/cyberpunk_drive.mf
+mf render examples/cyberpunk_drive.mf.score.json -p profiles/midi.mf.profile.json
+```
 
 ## Documentation
 
+**Web Documentation**: https://takomusic.pages.dev (includes Playground)
+
+Local documentation:
 - Language spec: `docs/LANGUAGE.md`
 - Core DSL & built-ins: `docs/BUILTINS.md`
 - Standard library: `docs/STDLIB.md`
 - Rendering and plugins: `docs/RENDERING.md`
 - Schemas: `docs/SCHEMAS.md`
-- Plan: `PLAN.md`
-
-## Status
-
-The v3 core compiler/evaluator, IR normalization, and renderer plugin host are implemented. `mf render` requires an external renderer plugin to be installed.
 
 ## Example (.mf)
 
 ```tako
 import { concat, repeat } from "std:core";
-import * as transform from "std:transform";
-import * as curves from "std:curves";
-import * as vocal from "std:vocal";
-import * as drums from "std:drums";
+import { kick, snare, hhc } from "std:drums";
+import { majorTriad, minorTriad } from "std:theory";
 
-fn motif() -> Clip {
+fn drumPart() -> Clip {
   return clip {
-    note(C4, q, vel: 0.7);
-    note(E4, q, vel: 0.72);
-    note(G4, h, vel: 0.75);
+    hit(kick, q, vel: 0.9);
+    hit(hhc, e, vel: 0.5);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, q, vel: 0.85);
+    hit(hhc, q, vel: 0.5);
   };
 }
 
-fn synthPart() -> Clip {
-  const up = transform.transpose(motif(), 12);
-  return concat(motif(), up);
-}
-
-fn vocalPart() -> Clip {
-  let c = clip {
-    note(A3, q, vel: 0.75);
-    note(B3, q, vel: 0.76);
-    note(C4, h, vel: 0.78);
+fn chords() -> Clip {
+  return clip {
+    chord(majorTriad(C4), w, vel: 0.6);
+    chord(minorTriad(A3), w, vel: 0.6);
+    chord(majorTriad(F3), w, vel: 0.6);
+    chord(majorTriad(G3), w, vel: 0.6);
   };
-
-  const lyr = vocal.syllables(["star", "light", vocal.Ext], "en-US");
-  c = vocal.align(c, lyr);
-  c = vocal.vibrato(c, depth: 0.2, rate: 5.5);
-  return vocal.loudness(c, curves.easeInOut(0.2, 0.8, 4), start: 0 / 1, end: q * 4);
 }
 
 export fn main() -> Score {
-  const section = match (2) {
-    1 -> "Intro";
-    2 -> "Verse";
-    else -> "Outro";
-  };
-
   return score {
-    meta { title "Starlight"; }
+    meta { title "Simple Song"; }
 
     meter { 1:1 -> 4/4; }
-    tempo { 1:1 -> 110bpm; }
-    marker(1:1, "section", section);
+    tempo { 1:1 -> 120bpm; }
 
-    sound "synth" kind instrument { label "Synth"; range C2..C6; }
-    sound "lead_vocal" kind vocal { vocal { lang "en-US"; range A3..E5; } }
-    sound "kit_standard" kind drumKit {
-      drumKeys { kick; snare; hhc; hho; crash; ride; }
+    sound "piano" kind instrument { range A0..C8; }
+    sound "kit" kind drumKit {
+      drumKeys { kick; snare; hhc; }
     }
 
-    track "Synth" role Instrument sound "synth" {
-      place 1:1 repeat(synthPart(), 2);
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 repeat(chords(), 2);
     }
 
-    track "Drums" role Drums sound "kit_standard" {
-      place 1:1 drums.basicRock(2, q);
-    }
-
-    track "Vocal" role Vocal sound "lead_vocal" {
-      place 1:1 vocalPart();
+    track "Drums" role Drums sound "kit" {
+      place 1:1 repeat(drumPart(), 8);
     }
   };
 }
 ```
 
-## Pipeline (v3)
+## Pipeline
 
 1. Parse `.mf` -> AST
 2. Resolve/import + typecheck (Pos/Dur separation)
 3. Evaluate `main()` -> `Score`
 4. Normalize IR (bar:beat -> absolute Pos)
-5. Emit `score.json` (IR v3)
+5. Emit `score.json` (IR v4)
 6. Render via profile + renderer plugin
 
 ## CLI
 
-- `mf check` checks the entry `.mf`
-- `mf build` writes `.mf.score.json` into `dist`
-- `mf render` runs validate + render using `profiles/default.mf.profile.json` (or `--profile`)
+```bash
+# Check syntax and types
+mf check song.mf
+
+# Build single file (no config required)
+mf build song.mf
+mf build song.mf -o output.json
+
+# Build project with mfconfig.toml
+mf build
+mf build -w  # Watch mode
+
+# Render to output format
+mf render score.json -p profile.json
+```
 
 Renderer plugins are external executables; use `--plugin` to override the resolver if needed.
 
+## Standard Library
+
+| Module | Description |
+|--------|-------------|
+| `std:core` | `concat`, `repeat`, `overlay`, `padTo`, `slice`, `shift` |
+| `std:transform` | `transpose`, `stretch`, `quantize`, `swing`, `humanize` |
+| `std:theory` | Chords, scales, intervals, progressions |
+| `std:curves` | `linear`, `easeInOut`, `piecewise` |
+| `std:drums` | Drum keys and patterns |
+| `std:vocal` | `text`, `align`, `vibrato`, `autoBreath` |
+
 ## Versioning
 
-- Language: v3
-- IR schema: `tako.irVersion = 3`
+- Language: v4
+- IR schema: `tako.irVersion = 4`
 - Profile schema: `tako.profileVersion = 1`
 - Plugin protocol: `tako.pluginProtocolVersion = 1`
 

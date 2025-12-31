@@ -1,0 +1,78 @@
+// std:result (v4)
+// Result型のためのヘルパー関数
+
+// Ok - 成功値をラップ
+export fn Ok(value) {
+  return { kind: "Ok", value: value };
+}
+
+// Err - エラー値をラップ
+export fn Err(error) {
+  return { kind: "Err", error: error };
+}
+
+// isOk - Result が Ok かどうか判定
+export fn isOk(result) {
+  return result.kind == "Ok";
+}
+
+// isErr - Result が Err かどうか判定
+export fn isErr(result) {
+  return result.kind == "Err";
+}
+
+// unwrap - Ok から値を取り出す (Err の場合は null)
+export fn unwrap(result) {
+  if (result.kind == "Ok") {
+    return result.value;
+  }
+  return null;
+}
+
+// unwrapErr - Err からエラーを取り出す (Ok の場合は null)
+export fn unwrapErr(result) {
+  if (result.kind == "Err") {
+    return result.error;
+  }
+  return null;
+}
+
+// unwrapOr - Ok なら値を、Err ならデフォルト値を返す
+export fn unwrapOr(result, defaultValue) {
+  if (result.kind == "Ok") {
+    return result.value;
+  }
+  return defaultValue;
+}
+
+// map - Ok の値に関数を適用
+export fn map(result, f) {
+  if (result.kind == "Ok") {
+    return Ok(f(result.value));
+  }
+  return result;
+}
+
+// mapErr - Err の値に関数を適用
+export fn mapErr(result, f) {
+  if (result.kind == "Err") {
+    return Err(f(result.error));
+  }
+  return result;
+}
+
+// andThen - Ok の場合に別の Result を返す関数を適用 (flatMap/bind)
+export fn andThen(result, f) {
+  if (result.kind == "Ok") {
+    return f(result.value);
+  }
+  return result;
+}
+
+// orElse - Err の場合に別の Result を返す関数を適用
+export fn orElse(result, f) {
+  if (result.kind == "Err") {
+    return f(result.error);
+  }
+  return result;
+}

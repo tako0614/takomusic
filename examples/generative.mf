@@ -1,4 +1,4 @@
-// TakoMusic v3 - Generative Texture
+// TakoMusic - Generative Texture
 
 import { rng } from "std:random";
 import * as transform from "std:transform";

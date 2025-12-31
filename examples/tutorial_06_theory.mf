@@ -1,0 +1,313 @@
+// Tutorial 06: Music Theory Library
+// This file demonstrates the std:theory module for chords, scales, and progressions
+
+import { concat, repeat } from "std:core";
+import {
+  majorTriad, minorTriad, diminishedTriad, augmentedTriad,
+  majorSeventh, minorSeventh, dominantSeventh,
+  invert1, invert2,
+  scaleMajor, scaleMinor, harmonicMinor, melodicMinor,
+  ionian, dorian, phrygian, lydian, mixolydian, aeolian, locrian,
+  pentatonicMajor, pentatonicMinor, blues,
+  arpeggioUp, arpeggioDown, arpeggioAlberti,
+  progressionTwoFiveOne, progressionPopCanon, progressionBlues,
+  fifth, octave
+} from "std:theory";
+
+// ========================================
+// Part 1: Basic Triads
+// ========================================
+fn triadsDemo() -> Clip {
+  return clip {
+    // Major triad: root, major third, perfect fifth
+    chord(majorTriad(C4), h);     // C-E-G
+
+    // Minor triad: root, minor third, perfect fifth
+    chord(minorTriad(A3), h);     // A-C-E
+
+    // Diminished: root, minor third, diminished fifth
+    chord(diminishedTriad(B3), h); // B-D-F
+
+    // Augmented: root, major third, augmented fifth
+    chord(augmentedTriad(C4), h);  // C-E-G#
+  };
+}
+
+// ========================================
+// Part 2: Seventh Chords
+// ========================================
+fn seventhChordsDemo() -> Clip {
+  return clip {
+    // Major 7th: warm, jazzy sound
+    chord(majorSeventh(C4), h);    // C-E-G-B
+
+    // Minor 7th: smooth, mellow
+    chord(minorSeventh(D4), h);    // D-F-A-C
+
+    // Dominant 7th: tension, wants to resolve
+    chord(dominantSeventh(G3), h); // G-B-D-F
+
+    // Resolve to C major
+    chord(majorTriad(C4), w);
+  };
+}
+
+// ========================================
+// Part 3: Chord Inversions
+// ========================================
+fn inversionsDemo() -> Clip {
+  const root = majorTriad(C4);     // C-E-G (root position)
+  const first = invert1(root);     // E-G-C (1st inversion)
+  const second = invert2(root);    // G-C-E (2nd inversion)
+
+  return clip {
+    chord(root, q);
+    rest(e);
+    chord(first, q);
+    rest(e);
+    chord(second, q);
+    rest(e);
+    chord(root, h);
+  };
+}
+
+// ========================================
+// Part 4: Scales and Modes
+// ========================================
+fn scalesDemo() -> Clip {
+  return clip {
+    // Major scale (Ionian mode)
+    for (p in scaleMajor(C4)) {
+      note(p, e);
+    }
+    rest(q);
+
+    // Natural minor scale (Aeolian mode)
+    for (p in scaleMinor(A3)) {
+      note(p, e);
+    }
+    rest(q);
+
+    // Harmonic minor (raised 7th)
+    for (p in harmonicMinor(A3)) {
+      note(p, e);
+    }
+    rest(q);
+
+    // Pentatonic major (5-note scale)
+    for (p in pentatonicMajor(C4)) {
+      note(p, e);
+    }
+    rest(q);
+
+    // Blues scale
+    for (p in blues(C4)) {
+      note(p, e);
+    }
+  };
+}
+
+// ========================================
+// Part 5: Modal Scales (Church Modes)
+// ========================================
+fn modesDemo() -> Clip {
+  return clip {
+    // Dorian: minor with raised 6th (jazzy minor)
+    for (p in dorian(D4)) {
+      note(p, s);
+    }
+    rest(e);
+
+    // Mixolydian: major with lowered 7th (bluesy major)
+    for (p in mixolydian(G4)) {
+      note(p, s);
+    }
+    rest(e);
+
+    // Lydian: major with raised 4th (bright, dreamy)
+    for (p in lydian(F4)) {
+      note(p, s);
+    }
+    rest(e);
+
+    // Phrygian: minor with lowered 2nd (Spanish, exotic)
+    for (p in phrygian(E4)) {
+      note(p, s);
+    }
+  };
+}
+
+// ========================================
+// Part 6: Arpeggios
+// ========================================
+fn arpeggiosDemo() -> Clip {
+  const cMaj = majorTriad(C4);
+  const gMaj = majorTriad(G4);
+
+  return clip {
+    // Ascending arpeggio
+    for (p in arpeggioUp(cMaj)) {
+      note(p, e);
+    }
+
+    // Descending arpeggio
+    for (p in arpeggioDown(gMaj)) {
+      note(p, e);
+    }
+
+    // Alberti bass pattern (Classical accompaniment)
+    // Pattern: low-high-mid-high
+    for (p in arpeggioAlberti(cMaj)) {
+      note(p, s);
+    }
+    for (p in arpeggioAlberti(cMaj)) {
+      note(p, s);
+    }
+  };
+}
+
+// ========================================
+// Part 7: Chord Progressions
+// ========================================
+fn progressionsDemo() -> Clip {
+  let c = clip {};
+
+  // ii-V-I: The most common jazz progression
+  const twoFiveOne = progressionTwoFiveOne(C4);
+  for (chordPitches in twoFiveOne) {
+    c = concat(c, clip { chord(chordPitches, h); });
+  }
+
+  // Rest between progressions
+  c = concat(c, clip { rest(h); });
+
+  // Pop/Canon progression (I-V-vi-IV)
+  const popCanon = progressionPopCanon(C4);
+  for (chordPitches in popCanon) {
+    c = concat(c, clip { chord(chordPitches, h); });
+  }
+
+  return c;
+}
+
+// ========================================
+// Part 8: Intervals
+// ========================================
+fn intervalsDemo() -> Clip {
+  const root = C4;
+
+  return clip {
+    // Perfect fifth above
+    note(root, q);
+    note(fifth(root), q);
+
+    // Octave
+    note(root, q);
+    note(octave(root), q);
+
+    // Building a chord from intervals
+    chord([root, fifth(root), octave(root)], h);
+  };
+}
+
+// ========================================
+// Main: Put it all together
+// ========================================
+export fn main() -> Score {
+  return score {
+    meta {
+      title "Music Theory Demo";
+      artist "Tutorial";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 100bpm; }
+
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
+    }
+
+    // Demonstrate each concept
+    track "Triads" role Instrument sound "piano" {
+      place 1:1 triadsDemo();
+    }
+
+    track "Sevenths" role Instrument sound "piano" {
+      place 5:1 seventhChordsDemo();
+    }
+
+    track "Inversions" role Instrument sound "piano" {
+      place 9:1 inversionsDemo();
+    }
+
+    track "Scales" role Instrument sound "piano" {
+      place 13:1 scalesDemo();
+    }
+
+    track "Modes" role Instrument sound "piano" {
+      place 21:1 modesDemo();
+    }
+
+    track "Arpeggios" role Instrument sound "piano" {
+      place 25:1 arpeggiosDemo();
+    }
+
+    track "Progressions" role Instrument sound "piano" {
+      place 29:1 progressionsDemo();
+    }
+
+    track "Intervals" role Instrument sound "piano" {
+      place 37:1 intervalsDemo();
+    }
+  };
+}
+
+// ========================================
+// Reference: Available in std:theory
+// ========================================
+
+// TRIADS:
+//   majorTriad, minorTriad, diminishedTriad, augmentedTriad
+
+// SEVENTHS:
+//   majorSeventh, minorSeventh, dominantSeventh
+//   minorMajorSeventh, halfDiminishedSeventh, diminishedSeventh
+
+// EXTENDED CHORDS:
+//   majorNinth, minorNinth, dominantNinth
+//   majorEleventh, dominantThirteenth
+//   sus2, sus4, add9, sixNine
+
+// INVERSIONS:
+//   invert1, invert2, invert3
+
+// SCALES:
+//   scaleMajor, scaleMinor, harmonicMinor, melodicMinor
+//   pentatonicMajor, pentatonicMinor, blues
+//   bebop, wholeTone, diminishedScale
+
+// MODES:
+//   ionian, dorian, phrygian, lydian
+//   mixolydian, aeolian, locrian
+
+// WORLD SCALES:
+//   japanese, hirajoshi, hungarian, gypsy, arabian
+
+// INTERVALS:
+//   unison, minorSecond, majorSecond, minorThird, majorThird
+//   fourth, tritone, fifth, minorSixth, majorSixth
+//   minorSeventh, majorSeventh, octave
+
+// TRANSPOSITION:
+//   transposeUp, transposeDown, transposeOctave
+
+// PITCH UTILITIES:
+//   pitchClass, octaveOf, makePitch
+
+// ARPEGGIOS:
+//   arpeggioUp, arpeggioDown, arpeggioAlberti, arpeggioBroken
+
+// PROGRESSIONS:
+//   progressionTwoFiveOne, progressionPopCanon
+//   progressionBlues, progressionFifties

@@ -2,6 +2,7 @@ export const translations = {
   ja: {
     // Navigation
     nav: {
+      home: 'ホーム',
       features: '機能',
       example: '例',
       playground: 'Playground',
@@ -14,7 +15,7 @@ export const translations = {
       subtitle: '中立IRに評価される作曲DSL',
       subtitleLine2: 'Render Profile + PluginでMIDI/MusicXML/DAWへ出力',
       seeExample: '例を見る',
-      version: 'v3',
+      version: 'v3.3.0',
       license: 'AGPL-3.0',
       copied: 'コピー済み',
     },
@@ -106,6 +107,7 @@ export const translations = {
   en: {
     // Navigation
     nav: {
+      home: 'Home',
       features: 'Features',
       example: 'Example',
       playground: 'Playground',
@@ -118,7 +120,7 @@ export const translations = {
       subtitle: 'A backend-agnostic DSL that evaluates to neutral IR.',
       subtitleLine2: 'Render Profiles + Plugins for MIDI/MusicXML/DAW.',
       seeExample: 'See Example',
-      version: 'v3',
+      version: 'v3.3.0',
       license: 'AGPL-3.0',
       copied: 'Copied',
     },
@@ -181,7 +183,7 @@ export const translations = {
         typecheck: 'Resolve imports and typecheck',
         evaluate: 'Evaluate main() into Score',
         normalize: 'Normalize bar:beat into Pos',
-        emit: 'Emit IR v3 score.json',
+        emit: 'Emit IR score.json',
         render: 'Render artifacts via profile + plugin',
       },
     },

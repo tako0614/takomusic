@@ -1,0 +1,362 @@
+// Tutorial 07: Arrangement and Song Structure
+// This file demonstrates how to build a complete song with multiple sections
+
+import { concat, repeat, overlay, slice, shift, padTo, length } from "std:core";
+import { transpose, quantize, humanize } from "std:transform";
+import { majorTriad, minorTriad, dominantSeventh, arpeggioUp } from "std:theory";
+import { linear, easeInOut } from "std:curves";
+import { rng, nextInt } from "std:random";
+import { kick, snare, hhc, hho, crash } from "std:drums";
+
+// ========================================
+// Part 1: Define Musical Building Blocks
+// ========================================
+
+// A simple chord progression: C - Am - F - G
+fn chordProgression() -> Clip {
+  return clip {
+    chord(majorTriad(C4), h);
+    chord(minorTriad(A3), h);
+    chord(majorTriad(F3), h);
+    chord(majorTriad(G3), h);
+  };
+}
+
+// Melodic motif (main theme)
+fn mainMotif() -> Clip {
+  return clip {
+    note(E5, e);
+    note(D5, e);
+    note(C5, q);
+    note(D5, e);
+    note(E5, e);
+    note(E5, q);
+    rest(q);
+  };
+}
+
+// Counter melody (variation)
+fn counterMelody() -> Clip {
+  return clip {
+    rest(q);
+    note(G4, e);
+    note(A4, e);
+    note(G4, q);
+    note(E4, e);
+    note(D4, e);
+    note(C4, h);
+  };
+}
+
+// ========================================
+// Part 2: Drum Patterns
+// ========================================
+
+// Basic rock beat
+fn basicBeat() -> Clip {
+  return clip {
+    // Beat 1: Kick + Hi-hat
+    hit(kick, e);
+    hit(hhc, e);
+    // Beat 2: Snare + Hi-hat
+    hit(snare, e);
+    hit(hhc, e);
+    // Beat 3: Kick + Hi-hat
+    hit(kick, e);
+    hit(hhc, e);
+    // Beat 4: Snare + Hi-hat
+    hit(snare, e);
+    hit(hhc, e);
+  };
+}
+
+// Fill pattern
+fn drumFill() -> Clip {
+  return clip {
+    hit(snare, s);
+    hit(snare, s);
+    hit(snare, s);
+    hit(snare, s);
+    hit(snare, e);
+    hit(kick, e);
+    hit(crash, q);
+  };
+}
+
+// Intro drums (just hi-hat)
+fn introDrums() -> Clip {
+  return clip {
+    for (i in 0..7) {
+      hit(hhc, e);
+    }
+  };
+}
+
+// ========================================
+// Part 3: Bass Lines
+// ========================================
+
+// Root note bass following chord progression
+fn bassLine() -> Clip {
+  return clip {
+    // C
+    note(C2, q);
+    note(C2, e);
+    note(C2, e);
+    // Am
+    note(A1, q);
+    note(A1, e);
+    note(A1, e);
+    // F
+    note(F1, q);
+    note(F1, e);
+    note(F1, e);
+    // G
+    note(G1, q);
+    note(G1, e);
+    note(G1, e);
+  };
+}
+
+// Walking bass for bridge
+fn walkingBass() -> Clip {
+  return clip {
+    note(C2, e);
+    note(D2, e);
+    note(E2, e);
+    note(G2, e);
+    note(A2, e);
+    note(G2, e);
+    note(F2, e);
+    note(E2, e);
+  };
+}
+
+// ========================================
+// Part 4: Section Builders
+// ========================================
+
+// INTRO: 4 bars
+fn buildIntro() -> Clip {
+  const drums = repeat(introDrums(), 4);
+  const chords = chordProgression();
+
+  // Soft chords with automation crescendo
+  let c = overlay(drums, chords);
+
+  return c;
+}
+
+// VERSE: 8 bars (2x progression)
+fn buildVerse() -> Clip {
+  const melody = concat(mainMotif(), mainMotif());
+  const chords = repeat(chordProgression(), 2);
+  const drums = concat(repeat(basicBeat(), 7), drumFill());
+  const bass = repeat(bassLine(), 2);
+
+  // Layer everything
+  let verse = overlay(melody, chords);
+  verse = overlay(verse, drums);
+  verse = overlay(verse, bass);
+
+  return verse;
+}
+
+// CHORUS: 8 bars (higher energy)
+fn buildChorus() -> Clip {
+  // Transpose melody up an octave
+  const melody = transpose(concat(mainMotif(), mainMotif()), 12);
+  const harmony = counterMelody();
+
+  // Power chords
+  const chords = repeat(chordProgression(), 2);
+
+  // Driving drums
+  const drums = concat(repeat(basicBeat(), 7), drumFill());
+  const bass = repeat(bassLine(), 2);
+
+  // Layer with harmony
+  let chorus = overlay(melody, harmony);
+  chorus = overlay(chorus, chords);
+  chorus = overlay(chorus, drums);
+  chorus = overlay(chorus, bass);
+
+  return chorus;
+}
+
+// BRIDGE: 4 bars (different feel)
+fn buildBridge() -> Clip {
+  const melody = clip {
+    note(G4, h);
+    note(A4, h);
+    note(B4, h);
+    note(C5, h);
+  };
+
+  const chords = clip {
+    chord(minorTriad(E3), h);
+    chord(minorTriad(A3), h);
+    chord(majorTriad(D4), h);
+    chord(dominantSeventh(G3), h);
+  };
+
+  const drums = repeat(basicBeat(), 4);
+  const bass = repeat(walkingBass(), 2);
+
+  let bridge = overlay(melody, chords);
+  bridge = overlay(bridge, drums);
+  bridge = overlay(bridge, bass);
+
+  return bridge;
+}
+
+// OUTRO: 4 bars (fade out feel)
+fn buildOutro() -> Clip {
+  const melody = mainMotif();
+  const chords = chordProgression();
+
+  // Sparse drums
+  const drums = clip {
+    for (i in 0..3) {
+      hit(hhc, q);
+    }
+    hit(crash, q);
+  };
+
+  let outro = overlay(melody, chords);
+  outro = overlay(outro, drums);
+
+  return outro;
+}
+
+// ========================================
+// Part 5: Assemble Full Song
+// ========================================
+
+// Song structure: Intro - Verse - Chorus - Verse - Chorus - Bridge - Chorus - Outro
+// Total: 4 + 8 + 8 + 8 + 8 + 4 + 8 + 4 = 52 bars
+
+export fn main() -> Score {
+  // Build each section
+  const intro = buildIntro();    // 4 bars
+  const verse = buildVerse();    // 8 bars
+  const chorus = buildChorus();  // 8 bars
+  const bridge = buildBridge();  // 4 bars
+  const outro = buildOutro();    // 4 bars
+
+  return score {
+    meta {
+      title "Arrangement Demo";
+      artist "Tutorial";
+    }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 120bpm; }
+
+    // Section markers
+    marker(1:1, "section", "Intro");
+    marker(5:1, "section", "Verse 1");
+    marker(13:1, "section", "Chorus 1");
+    marker(21:1, "section", "Verse 2");
+    marker(29:1, "section", "Chorus 2");
+    marker(37:1, "section", "Bridge");
+    marker(41:1, "section", "Chorus 3");
+    marker(49:1, "section", "Outro");
+
+    // Define sounds
+    sound "lead" kind instrument {
+      label "Lead Synth";
+      range C3..C6;
+    }
+
+    sound "pad" kind instrument {
+      label "Pad";
+      range C2..C5;
+    }
+
+    sound "bass" kind instrument {
+      label "Bass";
+      range C1..C3;
+    }
+
+    sound "drums" kind drumKit {
+      drumKeys { kick; snare; hhc; hho; crash; }
+    }
+
+    // Lead melody track
+    track "Lead" role Instrument sound "lead" {
+      // Extract just melody from each section
+      place 1:1 slice(intro, 0, w * 4);
+      place 5:1 slice(verse, 0, w * 8);
+      place 13:1 slice(chorus, 0, w * 8);
+      place 21:1 slice(verse, 0, w * 8);
+      place 29:1 slice(chorus, 0, w * 8);
+      place 37:1 slice(bridge, 0, w * 4);
+      place 41:1 slice(chorus, 0, w * 8);
+      place 49:1 slice(outro, 0, w * 4);
+    }
+
+    // Chord/pad track
+    track "Chords" role Instrument sound "pad" {
+      place 1:1 intro;
+      place 5:1 verse;
+      place 13:1 chorus;
+      place 21:1 verse;
+      place 29:1 chorus;
+      place 37:1 bridge;
+      place 41:1 chorus;
+      place 49:1 outro;
+    }
+
+    // Bass track
+    track "Bass" role Instrument sound "bass" {
+      place 5:1 repeat(bassLine(), 2);
+      place 13:1 repeat(bassLine(), 2);
+      place 21:1 repeat(bassLine(), 2);
+      place 29:1 repeat(bassLine(), 2);
+      place 37:1 repeat(walkingBass(), 2);
+      place 41:1 repeat(bassLine(), 2);
+      place 49:1 bassLine();
+    }
+
+    // Drum track
+    track "Drums" role Drums sound "drums" {
+      place 1:1 repeat(introDrums(), 4);
+      place 5:1 concat(repeat(basicBeat(), 7), drumFill());
+      place 13:1 concat(repeat(basicBeat(), 7), drumFill());
+      place 21:1 concat(repeat(basicBeat(), 7), drumFill());
+      place 29:1 concat(repeat(basicBeat(), 7), drumFill());
+      place 37:1 repeat(basicBeat(), 4);
+      place 41:1 concat(repeat(basicBeat(), 7), drumFill());
+      place 49:1 repeat(introDrums(), 4);
+    }
+  };
+}
+
+// ========================================
+// Tips for Arrangement
+// ========================================
+
+// 1. CONTRAST: Vary energy levels between sections
+//    - Intro: sparse, building
+//    - Verse: moderate energy
+//    - Chorus: high energy, full arrangement
+//    - Bridge: different feel, builds tension
+
+// 2. LAYERING: Add/remove instruments to create dynamics
+//    - Start with few instruments, add more over time
+//    - Drop instruments before big moments
+
+// 3. VARIATION: Keep listeners engaged
+//    - Transpose melodies
+//    - Add counter-melodies in later sections
+//    - Use fills between sections
+
+// 4. MARKERS: Label sections for navigation
+//    - Use marker() to annotate song structure
+//    - Helps with DAW integration
+
+// 5. REUSE: Build from small building blocks
+//    - Define motifs and progressions as functions
+//    - Use repeat(), concat(), overlay() to combine
+//    - transpose() for variations

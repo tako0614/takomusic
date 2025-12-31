@@ -1,12 +1,14 @@
 # TakoMusic for VS Code
 
-VS Code language support for TakoMusic v3 (.mf files).
+VS Code language support for TakoMusic v4 (.mf files).
 
 ## Features
 
-- Syntax highlighting for v3 keywords, score/clip blocks, literals, and std modules
-- Snippets for common v3 structures and events
-- Diagnostics are not implemented for v3 yet
+- Syntax highlighting for v4 keywords, score/clip blocks, literals, and std modules
+- Snippets for common structures and events
+- Real-time diagnostics via LSP
+- Code completion for keywords and std modules
+- Hover documentation
 
 ## Snippets
 
@@ -31,7 +33,7 @@ VS Code language support for TakoMusic v3 (.mf files).
 ```tako
 export fn main() -> Score {
   return score {
-    meta { title "Hello v3"; }
+    meta { title "Hello TakoMusic"; }
     meter { 1:1 -> 4/4; }
     tempo { 1:1 -> 120bpm; }
 
@@ -54,7 +56,7 @@ export fn main() -> Score {
 ### From VSIX
 
 ```bash
-code --install-extension takomusic-1.1.0.vsix
+code --install-extension takomusic-4.0.0.vsix
 ```
 
 ### From Marketplace

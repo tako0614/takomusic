@@ -1,7 +1,7 @@
 [project]
-name = "neon_edge"
+name = "daisho"
 version = "0.1.0"
-entry = "temp_render.tako"
-dist  = "dist"
-out   = "out"
+entry = "代償/daisho.mf"
+dist  = "代償/dist"
+out   = "代償/out"
 default_profile = "profiles/audio.mf.profile.json"

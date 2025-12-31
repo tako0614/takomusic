@@ -1,7 +1,10 @@
-﻿import { createSignal, For } from 'solid-js'
+﻿import { createSignal, For, Show } from 'solid-js'
 import { useI18n } from './i18n'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { Playground } from './components/Playground'
+import { Docs } from './components/Docs'
+
+type Page = 'home' | 'docs'
 
 const codeExample = `import { concat, repeat } from "std:core";
 import * as transform from "std:transform";
@@ -72,6 +75,7 @@ export fn main() -> Score {
 function App() {
   const { t } = useI18n()
   const [copied, setCopied] = createSignal(false)
+  const [currentPage, setCurrentPage] = createSignal<Page>('home')
 
   const copyInstall = async () => {
     await navigator.clipboard.writeText('npm install -g takomusic')
@@ -133,6 +137,33 @@ function App() {
 
   return (
     <div class="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+      {/* Docs Page */}
+      <Show when={currentPage() === 'docs'}>
+        <header class="bg-slate-900 border-b border-slate-700">
+          <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <button onClick={() => setCurrentPage('home')} class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <img src="/logo.png" alt="TakoMusic" class="w-8 h-8 rounded-full" />
+              <span class="text-xl font-bold">TakoMusic</span>
+            </button>
+            <div class="flex items-center gap-6">
+              <button
+                onClick={() => setCurrentPage('home')}
+                class="hover:text-sky-400 transition-colors"
+              >
+                {t().nav.home || 'Home'}
+              </button>
+              <a href="https://github.com/tako0614/takomusic" target="_blank" class="hover:text-sky-400 transition-colors">{t().nav.github}</a>
+              <LanguageSwitcher />
+            </div>
+          </nav>
+        </header>
+        <div class="h-[calc(100vh-64px)]">
+          <Docs />
+        </div>
+      </Show>
+
+      {/* Home Page */}
+      <Show when={currentPage() === 'home'}>
       {/* Hero Section */}
       <header class="relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-500/20 via-transparent to-transparent" />
@@ -142,9 +173,16 @@ function App() {
             <span class="text-2xl font-bold">TakoMusic</span>
           </div>
           <div class="flex items-center gap-6">
-            <a href="#features" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.features}</a>
-            <a href="#playground" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.playground}</a>
-            <a href="#stdlib" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.docs}</a>
+            <Show when={currentPage() === 'home'}>
+              <a href="#features" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.features}</a>
+              <a href="#playground" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.playground}</a>
+            </Show>
+            <button
+              onClick={() => setCurrentPage(currentPage() === 'docs' ? 'home' : 'docs')}
+              class="hover:text-sky-400 transition-colors hidden sm:block"
+            >
+              {currentPage() === 'docs' ? t().nav.home || 'Home' : t().nav.docs}
+            </button>
             <a href="https://github.com/tako0614/takomusic" target="_blank" class="hover:text-sky-400 transition-colors hidden sm:block">{t().nav.github}</a>
             <LanguageSwitcher />
           </div>
@@ -326,6 +364,7 @@ function App() {
           </p>
         </div>
       </footer>
+      </Show>
     </div>
   )
 }

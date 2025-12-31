@@ -1,8 +1,8 @@
 {
   "name": "takomusic",
   "displayName": "TakoMusic",
-  "description": "Language support for TakoMusic v3 (.mf files)",
-  "version": "3.1.0",
+  "description": "Language support for TakoMusic v4 (.mf files)",
+  "version": "4.0.0",
   "publisher": "tako0614",
   "icon": "icon.png",
   "engines": {
@@ -35,6 +35,11 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "vsce package"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

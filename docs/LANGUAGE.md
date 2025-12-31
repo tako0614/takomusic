@@ -1,6 +1,6 @@
-﻿# Tako v3 Language Specification
+﻿# TakoMusic Language Specification
 
-Tako v3 is a deterministic DSL that evaluates to a neutral `Score` IR.
+TakoMusic is a deterministic DSL that evaluates to a neutral `Score` IR.
 Rendering is performed by backend plugins via Render Profiles, keeping the language core backend-agnostic.
 
 ## Quick Example
@@ -97,7 +97,7 @@ import { foo } from "./foo.mf";
 
 ## Operators
 
-Tako v3 supports the following operators:
+TakoMusic supports the following operators:
 
 ### Arithmetic Operators
 
@@ -167,7 +167,7 @@ const x = a ?? b && c;  // Parsed as: (a ?? b) && c
 
 ## Time Model and Literals
 
-Tako v3 uses rational numbers for time. There are no ticks.
+TakoMusic uses rational numbers for time. There are no ticks.
 
 ### Duration Literals
 
@@ -359,7 +359,7 @@ const b: String? = match (n) {
 
 ## Function Calls and Named Arguments
 
-Tako v3 supports named arguments using a trailing options syntax:
+TakoMusic supports named arguments using a trailing options syntax:
 
 ```mf
 note(C4, q, vel: 0.7, tech: [legato]);
@@ -392,7 +392,7 @@ example(1, vel: 0.5, 2);      // Compile error!
 
 ## Type System
 
-Tako v3 has a static type system with the following features.
+TakoMusic has a static type system with the following features.
 
 ### Primitive Types
 
@@ -460,7 +460,7 @@ const second = pair[1];  // String
 |--------|---------|---------|
 | `[T]` | Array of any length | `[Int]` — zero or more Ints |
 
-**Note:** Tako v3 currently uses arrays for multi-value returns instead of tuples. Access elements by index:
+**Note:** TakoMusic currently uses arrays for multi-value returns instead of tuples. Access elements by index:
 
 ```mf
 // Array types:
@@ -813,9 +813,9 @@ c = vocal.align(c, lyr);
 
 ## Additional Examples
 
-- `docs/examples/v3/demo_v3.mf`
-- `docs/examples/v3/ir/demo_v3.mf.score.json`
-- `docs/examples/v3/profiles/*.mf.profile.json`
+- `examples/cyberpunk_drive.mf` — Full synthwave demo track
+- `examples/tutorial_*.mf` — Step-by-step tutorials
+- `profiles/*.mf.profile.json` — Sample render profiles
 
 ## Related Docs
 

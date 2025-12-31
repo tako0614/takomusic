@@ -1,6 +1,6 @@
 # Rendering (Profiles + Plugins)
 
-Tako v3 rendering uses Render Profiles and external renderer plugins. The compiler only emits
+TakoMusic rendering uses Render Profiles and external renderer plugins. The compiler only emits
 neutral `Score` IR; output formats are produced by plugins.
 
 ## Render Profiles
@@ -325,7 +325,7 @@ If the profile omits `degradePolicy`, the plugin's `degradeDefaults` are used pe
         "trackName": { "type": "string" },
         "placementIndex": { "type": "integer" },
         "eventIndex": { "type": "integer" },
-        "pos": { "$ref": "IR_V3.schema.json#/$defs/Rat" }
+        "pos": { "$ref": "IR_V4.schema.json#/$defs/Rat" }
       }
     },
     "context": {
@@ -395,7 +395,7 @@ Array of Artifact objects:
 
 ## Known Limitations
 
-The following are explicit design limitations of Tako v3:
+The following are explicit design limitations of TakoMusic:
 
 1. **Score composition is not supported.** Each `score { ... }` is standalone; merging scores or reusing sound declarations across scores requires manual refactoring to shared Clip functions.
 

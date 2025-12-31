@@ -107,6 +107,14 @@ export interface RngValue {
   state: number;
 }
 
+// Enum variant value - tagged union for ADT
+export interface EnumVariantValue {
+  type: 'enumVariant';
+  enumName: string;      // e.g., "Direction"
+  variantName: string;   // e.g., "Up"
+  payload?: RuntimeValue; // Optional payload for variants like Custom([Number])
+}
+
 export type RuntimeValue =
   | NumberValue
   | BoolValue
@@ -124,13 +132,15 @@ export type RuntimeValue =
   | CurveValue
   | LyricValue
   | LyricTokenValue
-  | RngValue;
+  | RngValue
+  | EnumVariantValue;
 
 export interface MetaValue {
   title?: string;
   artist?: string;
   album?: string;
   copyright?: string;
+  anacrusis?: Rat;
   ext?: Record<string, unknown>;
 }
 
@@ -376,6 +386,14 @@ export function makeLyricToken(token: LyricToken): LyricTokenValue {
 
 export function makeRng(state: number): RngValue {
   return { type: 'rng', state };
+}
+
+export function makeEnumVariant(
+  enumName: string,
+  variantName: string,
+  payload?: RuntimeValue
+): EnumVariantValue {
+  return { type: 'enumVariant', enumName, variantName, payload };
 }
 
 export function isRat(value: PosAtom): value is Rat {

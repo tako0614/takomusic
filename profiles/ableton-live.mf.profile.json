@@ -1,0 +1,35 @@
+{
+  "$schema": "../schemas/profile.schema.json",
+  "renderer": "midi.standard",
+  "output": {
+    "path": "output/ableton-ready.mid",
+    "ppq": 480
+  },
+  "humanize": {
+    "enabled": true,
+    "timing": 5,
+    "velocity": 8
+  },
+  "bindings": [
+    {
+      "selector": { "role": "Instrument" },
+      "config": {
+        "channel": 0,
+        "program": 0
+      }
+    },
+    {
+      "selector": { "role": "Drums" },
+      "config": {
+        "channel": 9
+      }
+    },
+    {
+      "selector": { "role": "Vocal" },
+      "config": {
+        "channel": 1,
+        "program": 52
+      }
+    }
+  ]
+}

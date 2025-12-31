@@ -1,4 +1,4 @@
-// std:vocal (v3)
+// std:vocal (v4)
 
 export const Strict = "Strict";
 export const BestEffort = "BestEffort";
