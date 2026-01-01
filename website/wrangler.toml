@@ -1,5 +1,4 @@
 name = "takomusic-website"
 compatibility_date = "2024-12-17"
 
-[site]
-bucket = "./dist"
+pages_build_output_dir = "./dist"
