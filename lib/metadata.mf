@@ -1,0 +1,448 @@
+// std:metadata (v5)
+// Metadata: copyright, credits, part extraction, publishing info
+
+import core;
+
+// ============================================
+// Score Metadata
+// ============================================
+
+// Create complete metadata object
+export fn scoreMeta(title, composer, options) {
+  let meta = {
+    title: title,
+    artist: composer
+  };
+
+  if (options != null) {
+    if (options.album != null) {
+      meta.album = options.album;
+    }
+    if (options.copyright != null) {
+      meta.copyright = options.copyright;
+    }
+    if (options.ext != null) {
+      meta.ext = options.ext;
+    } else {
+      meta.ext = {};
+    }
+
+    // Extended metadata
+    if (options.arranger != null) {
+      meta.ext.arranger = options.arranger;
+    }
+    if (options.lyricist != null) {
+      meta.ext.lyricist = options.lyricist;
+    }
+    if (options.publisher != null) {
+      meta.ext.publisher = options.publisher;
+    }
+    if (options.genre != null) {
+      meta.ext.genre = options.genre;
+    }
+    if (options.year != null) {
+      meta.ext.year = options.year;
+    }
+    if (options.opus != null) {
+      meta.ext.opus = options.opus;
+    }
+    if (options.movement != null) {
+      meta.ext.movement = options.movement;
+    }
+    if (options.dedication != null) {
+      meta.ext.dedication = options.dedication;
+    }
+  }
+
+  return meta;
+}
+
+// ============================================
+// Copyright and Licensing
+// ============================================
+
+// Standard copyright notice
+export fn copyright(year, holder) {
+  return "Copyright (c) " + year + " " + holder + ". All rights reserved.";
+}
+
+// Creative Commons licenses
+export const LICENSE = {
+  CC_BY: "CC BY 4.0",
+  CC_BY_SA: "CC BY-SA 4.0",
+  CC_BY_NC: "CC BY-NC 4.0",
+  CC_BY_NC_SA: "CC BY-NC-SA 4.0",
+  CC_BY_ND: "CC BY-ND 4.0",
+  CC_BY_NC_ND: "CC BY-NC-ND 4.0",
+  CC0: "CC0 1.0 (Public Domain)",
+  ALL_RIGHTS: "All Rights Reserved",
+  PUBLIC_DOMAIN: "Public Domain"
+};
+
+// Create license info
+export fn licenseInfo(license, details) {
+  return {
+    license: license,
+    details: details
+  };
+}
+
+// ============================================
+// Industry Standard Identifiers
+// ============================================
+
+// ISRC (International Standard Recording Code)
+export fn isrc(code) {
+  return {
+    type: "isrc",
+    code: code
+  };
+}
+
+// ISWC (International Standard Musical Work Code)
+export fn iswc(code) {
+  return {
+    type: "iswc",
+    code: code
+  };
+}
+
+// UPC (Universal Product Code)
+export fn upc(code) {
+  return {
+    type: "upc",
+    code: code
+  };
+}
+
+// Catalog number
+export fn catalogNumber(label, number) {
+  return {
+    label: label,
+    number: number
+  };
+}
+
+// ============================================
+// Credits
+// ============================================
+
+// Credit entry
+export fn credit(role, name, details) {
+  return {
+    role: role,
+    name: name,
+    details: details
+  };
+}
+
+// Common credit roles
+export fn composer(name) { return credit("Composer", name, null); }
+export fn arranger(name) { return credit("Arranger", name, null); }
+export fn lyricist(name) { return credit("Lyricist", name, null); }
+export fn orchestrator(name) { return credit("Orchestrator", name, null); }
+export fn performer(name, instrument) { return credit("Performer", name, instrument); }
+export fn conductor(name) { return credit("Conductor", name, null); }
+export fn producer(name) { return credit("Producer", name, null); }
+export fn engineer(name) { return credit("Recording Engineer", name, null); }
+export fn mixEngineer(name) { return credit("Mix Engineer", name, null); }
+export fn masterEngineer(name) { return credit("Mastering Engineer", name, null); }
+
+// Credits list
+export fn creditsList(credits) {
+  return {
+    type: "credits",
+    credits: credits
+  };
+}
+
+// ============================================
+// Part Extraction
+// ============================================
+
+// Extract a single part from a score
+export fn extractPart(score, trackName) {
+  let partTracks = [];
+
+  for (track in score.tracks) {
+    if (track.name == trackName) {
+      partTracks[partTracks.length] = track;
+    }
+  }
+
+  return {
+    tako: score.tako,
+    meta: {
+      title: score.meta.title,
+      artist: score.meta.artist,
+      copyright: score.meta.copyright,
+      ext: {
+        part: trackName,
+        fullScore: false
+      }
+    },
+    tempoMap: score.tempoMap,
+    meterMap: score.meterMap,
+    sounds: score.sounds,
+    tracks: partTracks,
+    markers: score.markers
+  };
+}
+
+// Extract multiple parts
+export fn extractParts(score, trackNames) {
+  let partTracks = [];
+
+  for (track in score.tracks) {
+    for (name in trackNames) {
+      if (track.name == name) {
+        partTracks[partTracks.length] = track;
+      }
+    }
+  }
+
+  let partNames = "";
+  for (i in 0..(trackNames.length - 1)) {
+    if (i > 0) {
+      partNames = partNames + ", ";
+    }
+    partNames = partNames + trackNames[i];
+  }
+
+  return {
+    tako: score.tako,
+    meta: {
+      title: score.meta.title,
+      artist: score.meta.artist,
+      copyright: score.meta.copyright,
+      ext: {
+        part: partNames,
+        fullScore: false
+      }
+    },
+    tempoMap: score.tempoMap,
+    meterMap: score.meterMap,
+    sounds: score.sounds,
+    tracks: partTracks,
+    markers: score.markers
+  };
+}
+
+// Create part book (all parts as separate entries)
+export fn createPartBook(score) {
+  let parts = [];
+
+  for (track in score.tracks) {
+    parts[parts.length] = {
+      name: track.name,
+      part: extractPart(score, track.name)
+    };
+  }
+
+  return parts;
+}
+
+// ============================================
+// Version Control
+// ============================================
+
+// Version info
+export fn version(major, minor, patch, notes) {
+  return {
+    major: major,
+    minor: minor,
+    patch: patch,
+    string: "" + major + "." + minor + "." + patch,
+    notes: notes
+  };
+}
+
+// Revision history entry
+export fn revision(date, author, changes) {
+  return {
+    date: date,
+    author: author,
+    changes: changes
+  };
+}
+
+// Revision history
+export fn revisionHistory(revisions) {
+  return {
+    type: "revisionHistory",
+    revisions: revisions
+  };
+}
+
+// ============================================
+// Performance Information
+// ============================================
+
+// Premiere info
+export fn premiereInfo(date, venue, performers) {
+  return {
+    type: "premiere",
+    date: date,
+    venue: venue,
+    performers: performers
+  };
+}
+
+// Commission info
+export fn commissionInfo(commissioner, date, occasion) {
+  return {
+    type: "commission",
+    commissioner: commissioner,
+    date: date,
+    occasion: occasion
+  };
+}
+
+// ============================================
+// Program Notes
+// ============================================
+
+// Program note
+export fn programNote(text, author) {
+  return {
+    type: "programNote",
+    text: text,
+    author: author
+  };
+}
+
+// Performance instructions
+export fn performanceInstructions(text) {
+  return {
+    type: "performanceInstructions",
+    text: text
+  };
+}
+
+// ============================================
+// Duration and Difficulty
+// ============================================
+
+// Estimated duration
+export fn estimatedDuration(minutes, seconds) {
+  return {
+    type: "duration",
+    minutes: minutes,
+    seconds: seconds,
+    total: minutes * 60 + seconds
+  };
+}
+
+// Difficulty rating
+export const DIFFICULTY = {
+  BEGINNER: 1,
+  EASY: 2,
+  INTERMEDIATE: 3,
+  ADVANCED: 4,
+  PROFESSIONAL: 5,
+  VIRTUOSO: 6
+};
+
+export fn difficultyRating(overall, parts) {
+  return {
+    type: "difficulty",
+    overall: overall,
+    parts: parts
+  };
+}
+
+// ============================================
+// Instrumentation
+// ============================================
+
+// Full instrumentation list
+export fn instrumentation(instruments) {
+  return {
+    type: "instrumentation",
+    instruments: instruments
+  };
+}
+
+// Instrument requirement
+export fn instrumentRequirement(name, quantity, notes) {
+  return {
+    name: name,
+    quantity: quantity,
+    notes: notes
+  };
+}
+
+// Standard ensemble types
+export fn soloInstrumentation(instrument) {
+  return instrumentation([instrumentRequirement(instrument, 1, null)]);
+}
+
+export fn duoInstrumentation(inst1, inst2) {
+  return instrumentation([
+    instrumentRequirement(inst1, 1, null),
+    instrumentRequirement(inst2, 1, null)
+  ]);
+}
+
+export fn trioInstrumentation(inst1, inst2, inst3) {
+  return instrumentation([
+    instrumentRequirement(inst1, 1, null),
+    instrumentRequirement(inst2, 1, null),
+    instrumentRequirement(inst3, 1, null)
+  ]);
+}
+
+export fn stringQuartet() {
+  return instrumentation([
+    instrumentRequirement("Violin I", 1, null),
+    instrumentRequirement("Violin II", 1, null),
+    instrumentRequirement("Viola", 1, null),
+    instrumentRequirement("Cello", 1, null)
+  ]);
+}
+
+export fn pianoTrio() {
+  return instrumentation([
+    instrumentRequirement("Piano", 1, null),
+    instrumentRequirement("Violin", 1, null),
+    instrumentRequirement("Cello", 1, null)
+  ]);
+}
+
+// ============================================
+// Export Settings
+// ============================================
+
+// PDF export settings
+export fn pdfSettings(options) {
+  return {
+    type: "pdfSettings",
+    pageSize: options.pageSize,  // "A4", "Letter", etc.
+    orientation: options.orientation,  // "portrait", "landscape"
+    margins: options.margins,
+    staffSize: options.staffSize,
+    fontSize: options.fontSize
+  };
+}
+
+// Audio export settings
+export fn audioSettings(options) {
+  return {
+    type: "audioSettings",
+    format: options.format,  // "wav", "mp3", "flac"
+    sampleRate: options.sampleRate,
+    bitDepth: options.bitDepth,
+    channels: options.channels
+  };
+}
+
+// MIDI export settings
+export fn midiSettings(options) {
+  return {
+    type: "midiSettings",
+    format: options.format,  // 0, 1, or 2
+    ppqn: options.ppqn,
+    includeTempo: options.includeTempo,
+    includeMarkers: options.includeMarkers
+  };
+}

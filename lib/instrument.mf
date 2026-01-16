@@ -1,0 +1,446 @@
+// std:instrument (v5)
+// Instrument groups, layers, routing, and orchestration
+
+import core;
+
+// ============================================
+// Instrument Groups
+// ============================================
+
+// Define an instrument group
+export fn instrumentGroup(name, instruments) {
+  return {
+    type: "group",
+    name: name,
+    instruments: instruments
+  };
+}
+
+// Standard orchestral groups
+export fn strings() {
+  return instrumentGroup("Strings", [
+    "violin1", "violin2", "viola", "cello", "contrabass"
+  ]);
+}
+
+export fn woodwinds() {
+  return instrumentGroup("Woodwinds", [
+    "flute", "oboe", "clarinet", "bassoon"
+  ]);
+}
+
+export fn brass() {
+  return instrumentGroup("Brass", [
+    "horn", "trumpet", "trombone", "tuba"
+  ]);
+}
+
+export fn percussion() {
+  return instrumentGroup("Percussion", [
+    "timpani", "snare", "bass_drum", "cymbals", "triangle",
+    "xylophone", "glockenspiel", "marimba", "vibraphone"
+  ]);
+}
+
+// Band groups
+export fn rhythmSection() {
+  return instrumentGroup("Rhythm Section", [
+    "drums", "bass", "guitar", "keys"
+  ]);
+}
+
+// ============================================
+// Instrument Layering
+// ============================================
+
+// Create a layered instrument (multiple sounds playing together)
+export fn layer(name, sounds, weights) {
+  let layerSounds = [];
+  for (i in 0..(sounds.length - 1)) {
+    let weight = 1.0;
+    if (weights != null && i < weights.length) {
+      weight = weights[i];
+    }
+    layerSounds[layerSounds.length] = {
+      sound: sounds[i],
+      weight: weight
+    };
+  }
+  return {
+    type: "layer",
+    name: name,
+    sounds: layerSounds
+  };
+}
+
+// Layer with velocity splits
+export fn velocityLayer(name, layers) {
+  // layers = [{ sound: "piano_soft", minVel: 0, maxVel: 0.4 }, ...]
+  return {
+    type: "velocityLayer",
+    name: name,
+    layers: layers
+  };
+}
+
+// Common velocity layer configurations
+export fn velocitySplit2(softSound, loudSound) {
+  return velocityLayer("velocity_split", [
+    { sound: softSound, minVel: 0.0, maxVel: 0.5 },
+    { sound: loudSound, minVel: 0.5, maxVel: 1.0 }
+  ]);
+}
+
+export fn velocitySplit3(soft, medium, loud) {
+  return velocityLayer("velocity_split", [
+    { sound: soft, minVel: 0.0, maxVel: 0.33 },
+    { sound: medium, minVel: 0.33, maxVel: 0.66 },
+    { sound: loud, minVel: 0.66, maxVel: 1.0 }
+  ]);
+}
+
+// ============================================
+// Bus Routing
+// ============================================
+
+// Define an audio bus
+export fn bus(name, inputs, effects) {
+  return {
+    type: "bus",
+    name: name,
+    inputs: inputs,
+    effects: effects
+  };
+}
+
+// Send track to bus
+export fn sendToBus(trackName, busName, level) {
+  let sendLevel = level;
+  if (sendLevel == null) {
+    sendLevel = 1.0;
+  }
+  return {
+    type: "send",
+    from: trackName,
+    to: busName,
+    level: sendLevel
+  };
+}
+
+// Create submix bus
+export fn submix(name, tracks) {
+  return bus(name, tracks, []);
+}
+
+// Create effect return bus
+export fn effectReturn(name, effectChain) {
+  return {
+    type: "effectReturn",
+    name: name,
+    effects: effectChain
+  };
+}
+
+// ============================================
+// Effect Chains
+// ============================================
+
+// Define an effect chain
+export fn effectChain(effects) {
+  return {
+    type: "effectChain",
+    effects: effects
+  };
+}
+
+// Common effect presets
+export fn reverbBus() {
+  return effectChain([
+    { type: "reverb", size: 0.7, decay: 2.0 }
+  ]);
+}
+
+export fn delayBus() {
+  return effectChain([
+    { type: "delay", time: "1/4", feedback: 0.4 }
+  ]);
+}
+
+export fn compressionBus() {
+  return effectChain([
+    { type: "compressor", threshold: -12, ratio: 4, attack: 10, release: 100 }
+  ]);
+}
+
+// ============================================
+// Track Templates
+// ============================================
+
+// Create track with standard settings
+export fn trackTemplate(name, sound, role, settings) {
+  let mix = { gain: 0, pan: 0 };
+  if (settings != null) {
+    if (settings.gain != null) {
+      mix.gain = settings.gain;
+    }
+    if (settings.pan != null) {
+      mix.pan = settings.pan;
+    }
+  }
+  return {
+    name: name,
+    role: role,
+    sound: sound,
+    mix: mix,
+    placements: []
+  };
+}
+
+// Quick track creators
+export fn instrumentTrack(name, sound, settings) {
+  return trackTemplate(name, sound, "Instrument", settings);
+}
+
+export fn drumTrack(name, sound, settings) {
+  return trackTemplate(name, sound, "Drums", settings);
+}
+
+export fn vocalTrack(name, sound, settings) {
+  return trackTemplate(name, sound, "Vocal", settings);
+}
+
+export fn automationTrack(name, settings) {
+  return trackTemplate(name, null, "Automation", settings);
+}
+
+// ============================================
+// Divisi
+// ============================================
+
+// Split a part into divisi (multiple voices)
+export fn divisi(clip, numVoices) {
+  let voices = [];
+  for (i in 0..(numVoices - 1)) {
+    let voiceEvents = [];
+    for (ev in clip.events) {
+      if (ev.voice == i || ev.voice == null) {
+        voiceEvents[voiceEvents.length] = ev;
+      }
+    }
+    voices[voices.length] = { events: voiceEvents, length: clip.length };
+  }
+  return voices;
+}
+
+// Merge divisi parts
+export fn mergeDivisi(voices) {
+  let events = [];
+  let maxLen = 0 / 1;
+
+  let voiceNum = 0;
+  for (voice in voices) {
+    for (ev in voice.events) {
+      let newEv = core.cloneEvent(ev);
+      newEv.voice = voiceNum;
+      events[events.length] = newEv;
+    }
+    const len = core.clipLen(voice);
+    if (len > maxLen) {
+      maxLen = len;
+    }
+    voiceNum = voiceNum + 1;
+  }
+
+  return { events: events, length: maxLen };
+}
+
+// ============================================
+// Doubling
+// ============================================
+
+// Double a part with another instrument at same pitch
+export fn double(clip, transposition) {
+  let trans = transposition;
+  if (trans == null) {
+    trans = 0;
+  }
+
+  let events = [];
+  for (ev in clip.events) {
+    events[events.length] = core.cloneEvent(ev);
+    if (ev.type == "note") {
+      let doubled = core.cloneEvent(ev);
+      doubled.pitch = ev.pitch + trans;
+      doubled.voice = 1;
+      events[events.length] = doubled;
+    } else if (ev.type == "chord") {
+      let doubled = core.cloneEvent(ev);
+      let newPitches = [];
+      for (p in ev.pitches) {
+        newPitches[newPitches.length] = p + trans;
+      }
+      doubled.pitches = newPitches;
+      doubled.voice = 1;
+      events[events.length] = doubled;
+    }
+  }
+
+  return { events: events, length: clip.length };
+}
+
+// Double at octave
+export fn doubleOctave(clip, direction) {
+  let trans = 12;
+  if (direction == "down") {
+    trans = -12;
+  }
+  return double(clip, trans);
+}
+
+// Double at multiple intervals
+export fn doubleMultiple(clip, intervals) {
+  let events = [];
+  for (ev in clip.events) {
+    events[events.length] = core.cloneEvent(ev);
+  }
+
+  let voiceNum = 1;
+  for (interval in intervals) {
+    for (ev in clip.events) {
+      if (ev.type == "note") {
+        let doubled = core.cloneEvent(ev);
+        doubled.pitch = ev.pitch + interval;
+        doubled.voice = voiceNum;
+        events[events.length] = doubled;
+      } else if (ev.type == "chord") {
+        let doubled = core.cloneEvent(ev);
+        let newPitches = [];
+        for (p in ev.pitches) {
+          newPitches[newPitches.length] = p + interval;
+        }
+        doubled.pitches = newPitches;
+        doubled.voice = voiceNum;
+        events[events.length] = doubled;
+      }
+    }
+    voiceNum = voiceNum + 1;
+  }
+
+  return { events: events, length: clip.length };
+}
+
+// ============================================
+// Orchestration Helpers
+// ============================================
+
+// Distribute chord across multiple voices/instruments
+export fn voicedChord(pitches, startPos, dur, velocities) {
+  let events = [];
+  for (i in 0..(pitches.length - 1)) {
+    let vel = 0.8;
+    if (velocities != null && i < velocities.length) {
+      vel = velocities[i];
+    }
+    events[events.length] = {
+      type: "note",
+      start: startPos,
+      dur: dur,
+      pitch: pitches[i],
+      velocity: vel,
+      voice: i
+    };
+  }
+  return { events: events, length: startPos + dur };
+}
+
+// Create tutti (all instruments playing)
+export fn tutti(clip, instruments) {
+  let tracks = [];
+  for (inst in instruments) {
+    tracks[tracks.length] = {
+      instrument: inst,
+      clip: clip
+    };
+  }
+  return tracks;
+}
+
+// Create solo passage (one instrument featured)
+export fn solo(clip, soloInstrument, accompInstruments, accompClip) {
+  let tracks = [];
+  tracks[tracks.length] = {
+    instrument: soloInstrument,
+    clip: clip,
+    role: "solo"
+  };
+  for (inst in accompInstruments) {
+    tracks[tracks.length] = {
+      instrument: inst,
+      clip: accompClip,
+      role: "accompaniment"
+    };
+  }
+  return tracks;
+}
+
+// ============================================
+// Range Checking
+// ============================================
+
+// Check if pitch is within instrument range
+export fn inRange(pitch, low, high) {
+  return pitch >= low && pitch <= high;
+}
+
+// Standard instrument ranges (MIDI note numbers)
+export const RANGES = {
+  violin: { low: 55, high: 103 },
+  viola: { low: 48, high: 91 },
+  cello: { low: 36, high: 84 },
+  contrabass: { low: 28, high: 67 },
+  flute: { low: 60, high: 96 },
+  oboe: { low: 58, high: 91 },
+  clarinet: { low: 50, high: 94 },
+  bassoon: { low: 34, high: 75 },
+  horn: { low: 34, high: 77 },
+  trumpet: { low: 52, high: 82 },
+  trombone: { low: 40, high: 72 },
+  tuba: { low: 28, high: 58 },
+  piano: { low: 21, high: 108 },
+  guitar: { low: 40, high: 88 },
+  bass: { low: 28, high: 60 },
+  soprano: { low: 60, high: 84 },
+  alto: { low: 53, high: 77 },
+  tenor: { low: 48, high: 72 },
+  baritone: { low: 45, high: 67 },
+  bass_voice: { low: 40, high: 64 }
+};
+
+// Validate clip against instrument range
+export fn validateRange(clip, instrument) {
+  const range = RANGES[instrument];
+  if (range == null) {
+    return { valid: true, outOfRange: [] };
+  }
+
+  let outOfRange = [];
+  for (ev in clip.events) {
+    if (ev.type == "note") {
+      if (!inRange(ev.pitch, range.low, range.high)) {
+        outOfRange[outOfRange.length] = ev;
+      }
+    } else if (ev.type == "chord") {
+      for (p in ev.pitches) {
+        if (!inRange(p, range.low, range.high)) {
+          outOfRange[outOfRange.length] = ev;
+          break;
+        }
+      }
+    }
+  }
+
+  return {
+    valid: outOfRange.length == 0,
+    outOfRange: outOfRange
+  };
+}

@@ -1,0 +1,461 @@
+// std:lyrics (v5)
+// Lyrics, phonetics, pronunciation, and vocal text handling
+
+import core;
+
+// ============================================
+// Basic Lyric Events
+// ============================================
+
+// Create a syllable lyric span
+export fn syllable(text, wordPos) {
+  let pos = wordPos;
+  if (pos == null) {
+    pos = "single";
+  }
+  return {
+    kind: "syllable",
+    text: text,
+    wordPos: pos
+  };
+}
+
+// Create an extend lyric (melisma continuation)
+export fn extend() {
+  return {
+    kind: "extend",
+    text: null,
+    wordPos: null
+  };
+}
+
+// Word positions
+export const WORD_BEGIN = "begin";
+export const WORD_MIDDLE = "middle";
+export const WORD_END = "end";
+export const WORD_SINGLE = "single";
+
+// ============================================
+// Word Processing
+// ============================================
+
+// Split a word into syllables with proper word positions
+export fn wordToSyllables(syllables) {
+  let result = [];
+  const len = syllables.length;
+
+  for (i in 0..(len - 1)) {
+    let pos = "middle";
+    if (len == 1) {
+      pos = "single";
+    } else if (i == 0) {
+      pos = "begin";
+    } else if (i == len - 1) {
+      pos = "end";
+    }
+    result[result.length] = syllable(syllables[i], pos);
+  }
+
+  return result;
+}
+
+// Create note with lyric
+export fn noteWithLyric(start, dur, pitch, velocity, lyricText, wordPos) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: pitch,
+    velocity: velocity,
+    lyric: syllable(lyricText, wordPos)
+  };
+}
+
+// ============================================
+// Melisma (multiple notes per syllable)
+// ============================================
+
+// Create a melisma - one syllable over multiple notes
+// firstNote gets the syllable, rest get extends
+export fn melisma(notes, lyricText, wordPos) {
+  let events = [];
+  let isFirst = true;
+
+  for (note in notes) {
+    let ev = core.cloneEvent(note);
+    if (isFirst) {
+      ev.lyric = syllable(lyricText, wordPos);
+      isFirst = false;
+    } else {
+      ev.lyric = extend();
+    }
+    events[events.length] = ev;
+  }
+
+  // Calculate length from notes
+  let maxEnd = 0 / 1;
+  for (note in notes) {
+    const end = note.start + note.dur;
+    if (end > maxEnd) {
+      maxEnd = end;
+    }
+  }
+
+  return { events: events, length: maxEnd };
+}
+
+// Mark notes as melismatic extension
+export fn addMelisma(clip, startPos, endPos) {
+  let events = [];
+  for (ev in clip.events) {
+    let newEv = core.cloneEvent(ev);
+    if (ev.type == "note" && ev.start > startPos && ev.start < endPos) {
+      newEv.lyric = extend();
+    }
+    events[events.length] = newEv;
+  }
+  return { events: events, length: clip.length };
+}
+
+// ============================================
+// IPA (International Phonetic Alphabet)
+// ============================================
+
+// Create IPA phoneme annotation
+export fn ipa(phonemes) {
+  return {
+    kind: "phonemes",
+    alphabet: "IPA",
+    text: phonemes
+  };
+}
+
+// Common IPA symbols as constants
+export const IPA = {
+  // Vowels
+  a: "a",       // open front unrounded
+  e: "e",       // close-mid front unrounded
+  i: "i",       // close front unrounded
+  o: "o",       // close-mid back rounded
+  u: "u",       // close back rounded
+  schwa: "\u0259",  // schwa
+  ae: "\u00E6",     // ash (cat)
+  ɔ: "\u0254",      // open-o (thought)
+  ɛ: "\u025B",      // epsilon (bed)
+  ɪ: "\u026A",      // small-cap i (kit)
+  ʊ: "\u028A",      // upsilon (foot)
+  ʌ: "\u028C",      // turned v (strut)
+  ɑ: "\u0251",      // script a (father)
+
+  // Consonants
+  p: "p", b: "b", t: "t", d: "d", k: "k", g: "g",
+  f: "f", v: "v", s: "s", z: "z",
+  θ: "\u03B8",      // theta (think)
+  ð: "\u00F0",      // eth (this)
+  ʃ: "\u0283",      // esh (ship)
+  ʒ: "\u0292",      // ezh (measure)
+  tʃ: "t\u0283",    // t-esh (church)
+  dʒ: "d\u0292",    // d-ezh (judge)
+  m: "m", n: "n",
+  ŋ: "\u014B",      // eng (sing)
+  l: "l", r: "r",
+  j: "j",           // palatal approximant (yes)
+  w: "w",
+  h: "h",
+  ʔ: "\u0294",      // glottal stop
+
+  // Stress markers
+  primary: "\u02C8",    // primary stress
+  secondary: "\u02CC",  // secondary stress
+
+  // Length
+  long: "\u02D0"        // length mark
+};
+
+// Create note with IPA phonemes
+export fn noteWithIPA(start, dur, pitch, velocity, phonemes, wordPos) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: pitch,
+    velocity: velocity,
+    lyric: {
+      kind: "phonemes",
+      alphabet: "IPA",
+      text: phonemes,
+      wordPos: wordPos
+    }
+  };
+}
+
+// ============================================
+// X-SAMPA (ASCII-compatible phonetic alphabet)
+// ============================================
+
+export fn xsampa(phonemes) {
+  return {
+    kind: "phonemes",
+    alphabet: "X-SAMPA",
+    text: phonemes
+  };
+}
+
+// ============================================
+// ARPAbet (for English synthesis)
+// ============================================
+
+export fn arpabet(phonemes) {
+  return {
+    kind: "phonemes",
+    alphabet: "ARPAbet",
+    text: phonemes
+  };
+}
+
+// Common ARPAbet phonemes
+export const ARPA = {
+  // Vowels
+  AA: "AA",   // odd
+  AE: "AE",   // at
+  AH: "AH",   // hut
+  AO: "AO",   // ought
+  AW: "AW",   // cow
+  AY: "AY",   // hide
+  EH: "EH",   // Ed
+  ER: "ER",   // hurt
+  EY: "EY",   // ate
+  IH: "IH",   // it
+  IY: "IY",   // eat
+  OW: "OW",   // oat
+  OY: "OY",   // toy
+  UH: "UH",   // hood
+  UW: "UW",   // two
+
+  // Consonants
+  B: "B", CH: "CH", D: "D", DH: "DH",
+  F: "F", G: "G", HH: "HH", JH: "JH",
+  K: "K", L: "L", M: "M", N: "N",
+  NG: "NG", P: "P", R: "R", S: "S",
+  SH: "SH", T: "T", TH: "TH", V: "V",
+  W: "W", Y: "Y", Z: "Z", ZH: "ZH"
+};
+
+// ============================================
+// Pinyin (Chinese)
+// ============================================
+
+export fn pinyin(text, tone) {
+  return {
+    kind: "syllable",
+    alphabet: "Pinyin",
+    text: text,
+    tone: tone
+  };
+}
+
+// ============================================
+// Romaji (Japanese)
+// ============================================
+
+export fn romaji(text) {
+  return {
+    kind: "syllable",
+    alphabet: "Romaji",
+    text: text
+  };
+}
+
+// ============================================
+// Hiragana/Katakana
+// ============================================
+
+export fn hiragana(text) {
+  return {
+    kind: "syllable",
+    alphabet: "Hiragana",
+    text: text
+  };
+}
+
+export fn katakana(text) {
+  return {
+    kind: "syllable",
+    alphabet: "Katakana",
+    text: text
+  };
+}
+
+// ============================================
+// Hangul (Korean)
+// ============================================
+
+export fn hangul(text) {
+  return {
+    kind: "syllable",
+    alphabet: "Hangul",
+    text: text
+  };
+}
+
+// ============================================
+// Breath and Articulation Marks
+// ============================================
+
+// Breath mark in lyrics
+export fn breathMark() {
+  return {
+    kind: "breath",
+    text: null
+  };
+}
+
+// Glottal stop
+export fn glottalStop() {
+  return {
+    kind: "articulation",
+    text: "\u0294"  // IPA glottal stop
+  };
+}
+
+// ============================================
+// Lyric Line Processing
+// ============================================
+
+// Assign lyrics to a series of notes
+// lyrics = array of syllable strings
+// notes = array of notes
+export fn assignLyrics(notes, lyrics) {
+  let events = [];
+  let lyricIdx = 0;
+
+  for (note in notes) {
+    let newNote = core.cloneEvent(note);
+    if (lyricIdx < lyrics.length) {
+      const lyricItem = lyrics[lyricIdx];
+      if (lyricItem == "_" || lyricItem == "-") {
+        newNote.lyric = extend();
+      } else {
+        newNote.lyric = syllable(lyricItem, null);
+      }
+      lyricIdx = lyricIdx + 1;
+    }
+    events[events.length] = newNote;
+  }
+
+  // Calculate length
+  let maxEnd = 0 / 1;
+  for (note in notes) {
+    const end = note.start + note.dur;
+    if (end > maxEnd) {
+      maxEnd = end;
+    }
+  }
+
+  return { events: events, length: maxEnd };
+}
+
+// Parse lyrics line (space-separated syllables, - for hyphenation)
+export fn parseLyricLine(line) {
+  let syllables = [];
+  let current = "";
+  let inWord = false;
+
+  for (i in 0..(line.length - 1)) {
+    const ch = line[i];
+    if (ch == " ") {
+      if (current != "") {
+        syllables[syllables.length] = current;
+        current = "";
+      }
+      inWord = false;
+    } else if (ch == "-") {
+      if (current != "") {
+        syllables[syllables.length] = current;
+        current = "";
+      }
+      // Hyphen indicates word continuation
+      inWord = true;
+    } else if (ch == "_") {
+      // Underscore is melisma extension
+      syllables[syllables.length] = "_";
+    } else {
+      current = current + ch;
+    }
+  }
+
+  if (current != "") {
+    syllables[syllables.length] = current;
+  }
+
+  return syllables;
+}
+
+// ============================================
+// Vocal Expression Marks
+// ============================================
+
+// Spoken word indication
+export fn spoken(text) {
+  return {
+    kind: "spoken",
+    text: text
+  };
+}
+
+// Whispered
+export fn whispered(text) {
+  return {
+    kind: "whispered",
+    text: text
+  };
+}
+
+// Humming (no text)
+export fn humming() {
+  return {
+    kind: "humming",
+    text: null
+  };
+}
+
+// Vocalize (ah, oh, etc.)
+export fn vocalize(sound) {
+  return {
+    kind: "vocalize",
+    text: sound
+  };
+}
+
+// ============================================
+// Multi-language Support
+// ============================================
+
+// Set language context
+export fn setLanguage(pos, langCode) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "language",
+    data: { lang: langCode }
+  };
+}
+
+// Common language codes
+export const LANG = {
+  EN: "en",
+  EN_US: "en-US",
+  EN_GB: "en-GB",
+  JA: "ja",
+  ZH: "zh",
+  ZH_CN: "zh-CN",
+  ZH_TW: "zh-TW",
+  KO: "ko",
+  DE: "de",
+  FR: "fr",
+  IT: "it",
+  ES: "es",
+  PT: "pt",
+  RU: "ru",
+  LA: "la"  // Latin
+};

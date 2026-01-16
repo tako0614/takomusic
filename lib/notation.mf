@@ -1,0 +1,470 @@
+// std:notation (v5)
+// Staff control, clefs, key signatures, and notation-specific features
+
+import core;
+
+// ============================================
+// Clef Definitions
+// ============================================
+
+export const CLEF = {
+  TREBLE: "treble",
+  BASS: "bass",
+  ALTO: "alto",
+  TENOR: "tenor",
+  SOPRANO: "soprano",
+  MEZZO_SOPRANO: "mezzo-soprano",
+  BARITONE: "baritone",
+  PERCUSSION: "percussion",
+  TAB: "tab",
+  // Octave variants
+  TREBLE_8VA: "treble-8va",
+  TREBLE_8VB: "treble-8vb",
+  BASS_8VA: "bass-8va",
+  BASS_8VB: "bass-8vb"
+};
+
+// Create clef change event
+export fn clefChange(pos, clef) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "clef",
+    data: { clef: clef }
+  };
+}
+
+// Common clef changes
+export fn toTreble(pos) {
+  return clefChange(pos, CLEF.TREBLE);
+}
+
+export fn toBass(pos) {
+  return clefChange(pos, CLEF.BASS);
+}
+
+export fn toAlto(pos) {
+  return clefChange(pos, CLEF.ALTO);
+}
+
+export fn toTenor(pos) {
+  return clefChange(pos, CLEF.TENOR);
+}
+
+// ============================================
+// Key Signatures
+// ============================================
+
+// Key signature modes
+export const MODE = {
+  MAJOR: "major",
+  MINOR: "minor",
+  DORIAN: "dorian",
+  PHRYGIAN: "phrygian",
+  LYDIAN: "lydian",
+  MIXOLYDIAN: "mixolydian",
+  AEOLIAN: "aeolian",
+  LOCRIAN: "locrian"
+};
+
+// Create key signature event
+export fn keySignature(pos, root, mode) {
+  let modeVal = mode;
+  if (modeVal == null) {
+    modeVal = MODE.MAJOR;
+  }
+  return {
+    type: "control",
+    start: pos,
+    kind: "keySignature",
+    data: {
+      root: root,
+      mode: modeVal
+    }
+  };
+}
+
+// Major keys
+export fn cMajor(pos) { return keySignature(pos, "C", MODE.MAJOR); }
+export fn gMajor(pos) { return keySignature(pos, "G", MODE.MAJOR); }
+export fn dMajor(pos) { return keySignature(pos, "D", MODE.MAJOR); }
+export fn aMajor(pos) { return keySignature(pos, "A", MODE.MAJOR); }
+export fn eMajor(pos) { return keySignature(pos, "E", MODE.MAJOR); }
+export fn bMajor(pos) { return keySignature(pos, "B", MODE.MAJOR); }
+export fn fSharpMajor(pos) { return keySignature(pos, "F#", MODE.MAJOR); }
+export fn cSharpMajor(pos) { return keySignature(pos, "C#", MODE.MAJOR); }
+export fn fMajor(pos) { return keySignature(pos, "F", MODE.MAJOR); }
+export fn bFlatMajor(pos) { return keySignature(pos, "Bb", MODE.MAJOR); }
+export fn eFlatMajor(pos) { return keySignature(pos, "Eb", MODE.MAJOR); }
+export fn aFlatMajor(pos) { return keySignature(pos, "Ab", MODE.MAJOR); }
+export fn dFlatMajor(pos) { return keySignature(pos, "Db", MODE.MAJOR); }
+export fn gFlatMajor(pos) { return keySignature(pos, "Gb", MODE.MAJOR); }
+export fn cFlatMajor(pos) { return keySignature(pos, "Cb", MODE.MAJOR); }
+
+// Minor keys
+export fn aMinor(pos) { return keySignature(pos, "A", MODE.MINOR); }
+export fn eMinor(pos) { return keySignature(pos, "E", MODE.MINOR); }
+export fn bMinor(pos) { return keySignature(pos, "B", MODE.MINOR); }
+export fn fSharpMinor(pos) { return keySignature(pos, "F#", MODE.MINOR); }
+export fn cSharpMinor(pos) { return keySignature(pos, "C#", MODE.MINOR); }
+export fn gSharpMinor(pos) { return keySignature(pos, "G#", MODE.MINOR); }
+export fn dSharpMinor(pos) { return keySignature(pos, "D#", MODE.MINOR); }
+export fn aSharpMinor(pos) { return keySignature(pos, "A#", MODE.MINOR); }
+export fn dMinor(pos) { return keySignature(pos, "D", MODE.MINOR); }
+export fn gMinor(pos) { return keySignature(pos, "G", MODE.MINOR); }
+export fn cMinor(pos) { return keySignature(pos, "C", MODE.MINOR); }
+export fn fMinor(pos) { return keySignature(pos, "F", MODE.MINOR); }
+export fn bFlatMinor(pos) { return keySignature(pos, "Bb", MODE.MINOR); }
+export fn eFlatMinor(pos) { return keySignature(pos, "Eb", MODE.MINOR); }
+export fn aFlatMinor(pos) { return keySignature(pos, "Ab", MODE.MINOR); }
+
+// ============================================
+// Microtonal Accidentals
+// ============================================
+
+// Microtonal accidental types
+export const MICRO_ACC = {
+  QUARTER_FLAT: "quarter-flat",
+  QUARTER_SHARP: "quarter-sharp",
+  THREE_QUARTER_FLAT: "three-quarter-flat",
+  THREE_QUARTER_SHARP: "three-quarter-sharp",
+  SIXTH_FLAT: "sixth-flat",
+  SIXTH_SHARP: "sixth-sharp",
+  THIRD_FLAT: "third-flat",
+  THIRD_SHARP: "third-sharp",
+  // Arrow accidentals
+  ARROW_UP: "arrow-up",
+  ARROW_DOWN: "arrow-down",
+  // Stein-Zimmermann
+  NATURAL_UP: "natural-up",
+  NATURAL_DOWN: "natural-down",
+  SHARP_UP: "sharp-up",
+  SHARP_DOWN: "sharp-down",
+  FLAT_UP: "flat-up",
+  FLAT_DOWN: "flat-down"
+};
+
+// Add microtonal accidental to note
+export fn withMicroAccidental(note, accidental) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.microAccidental = accidental;
+  return newNote;
+}
+
+// Quarter tone helpers
+export fn quarterFlat(note) {
+  return withMicroAccidental(note, MICRO_ACC.QUARTER_FLAT);
+}
+
+export fn quarterSharp(note) {
+  return withMicroAccidental(note, MICRO_ACC.QUARTER_SHARP);
+}
+
+export fn threeQuarterFlat(note) {
+  return withMicroAccidental(note, MICRO_ACC.THREE_QUARTER_FLAT);
+}
+
+export fn threeQuarterSharp(note) {
+  return withMicroAccidental(note, MICRO_ACC.THREE_QUARTER_SHARP);
+}
+
+// ============================================
+// Staff Systems
+// ============================================
+
+// Create a staff definition
+export fn staff(name, clef, transposition) {
+  let trans = transposition;
+  if (trans == null) {
+    trans = 0;
+  }
+  return {
+    name: name,
+    clef: clef,
+    transposition: trans
+  };
+}
+
+// Grand staff (piano)
+export fn grandStaff(name) {
+  return {
+    type: "grandStaff",
+    name: name,
+    staves: [
+      staff("treble", CLEF.TREBLE, 0),
+      staff("bass", CLEF.BASS, 0)
+    ]
+  };
+}
+
+// Staff group
+export fn staffGroup(name, staves, bracket) {
+  let bracketType = bracket;
+  if (bracketType == null) {
+    bracketType = "bracket";
+  }
+  return {
+    type: "staffGroup",
+    name: name,
+    staves: staves,
+    bracket: bracketType
+  };
+}
+
+// Common bracket types
+export const BRACKET = {
+  BRACKET: "bracket",
+  BRACE: "brace",
+  SQUARE: "square",
+  LINE: "line",
+  NONE: "none"
+};
+
+// ============================================
+// Cross-Staff Notation
+// ============================================
+
+// Move note to different staff (piano cross-staff)
+export fn crossStaff(note, targetStaff) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.staff = targetStaff;
+  return newNote;
+}
+
+// ============================================
+// Beaming
+// ============================================
+
+// Start a beam group
+export fn beamStart(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "beamStart",
+    data: {}
+  };
+}
+
+// End a beam group
+export fn beamEnd(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "beamEnd",
+    data: {}
+  };
+}
+
+// Force no beam
+export fn noBeam(note) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.beam = "none";
+  return newNote;
+}
+
+// ============================================
+// Stem Direction
+// ============================================
+
+// Force stem up
+export fn stemUp(note) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.stem = "up";
+  return newNote;
+}
+
+// Force stem down
+export fn stemDown(note) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.stem = "down";
+  return newNote;
+}
+
+// Auto stem (default)
+export fn stemAuto(note) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.stem = "auto";
+  return newNote;
+}
+
+// ============================================
+// Ottava (8va/8vb/15ma)
+// ============================================
+
+// Start ottava
+export fn ottavaStart(pos, octaves) {
+  let oct = octaves;
+  if (oct == null) {
+    oct = 1;
+  }
+  return {
+    type: "control",
+    start: pos,
+    kind: "ottavaStart",
+    data: { octaves: oct }
+  };
+}
+
+// End ottava
+export fn ottavaEnd(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "ottavaEnd",
+    data: {}
+  };
+}
+
+// 8va (octave higher)
+export fn ottavaAlta(pos) {
+  return ottavaStart(pos, 1);
+}
+
+// 8vb (octave lower)
+export fn ottavaBassa(pos) {
+  return ottavaStart(pos, -1);
+}
+
+// 15ma (two octaves higher)
+export fn quindicesimaAlta(pos) {
+  return ottavaStart(pos, 2);
+}
+
+// 15mb (two octaves lower)
+export fn quindicesimaBassa(pos) {
+  return ottavaStart(pos, -2);
+}
+
+// ============================================
+// Cue Notes
+// ============================================
+
+// Mark note as cue note (small, for reference)
+export fn cueNote(note) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.cue = true;
+  return newNote;
+}
+
+// Mark notes as ossia (alternative passage)
+export fn ossia(clip) {
+  let events = [];
+  for (ev in clip.events) {
+    let newEv = core.cloneEvent(ev);
+    if (newEv.ext == null) {
+      newEv.ext = {};
+    }
+    newEv.ext.ossia = true;
+    events[events.length] = newEv;
+  }
+  return { events: events, length: clip.length };
+}
+
+// ============================================
+// Text Annotations
+// ============================================
+
+// Text expression marking
+export fn textExpression(pos, text) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "textExpression",
+    label: text
+  };
+}
+
+// Tempo text
+export fn tempoText(pos, text) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "tempoText",
+    label: text
+  };
+}
+
+// Common tempo markings
+export fn adagio(pos) { return tempoText(pos, "Adagio"); }
+export fn andante(pos) { return tempoText(pos, "Andante"); }
+export fn moderato(pos) { return tempoText(pos, "Moderato"); }
+export fn allegro(pos) { return tempoText(pos, "Allegro"); }
+export fn vivace(pos) { return tempoText(pos, "Vivace"); }
+export fn presto(pos) { return tempoText(pos, "Presto"); }
+export fn largo(pos) { return tempoText(pos, "Largo"); }
+export fn lento(pos) { return tempoText(pos, "Lento"); }
+export fn grave(pos) { return tempoText(pos, "Grave"); }
+
+// Tempo modifiers
+export fn aTempo(pos) { return tempoText(pos, "a tempo"); }
+export fn ritardando(pos) { return tempoText(pos, "rit."); }
+export fn accelerando(pos) { return tempoText(pos, "accel."); }
+export fn rallentando(pos) { return tempoText(pos, "rall."); }
+export fn rubato(pos) { return tempoText(pos, "rubato"); }
+
+// ============================================
+// System/Page Breaks
+// ============================================
+
+// Force system break
+export fn systemBreak(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "systemBreak",
+    data: {}
+  };
+}
+
+// Force page break
+export fn pageBreak(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "pageBreak",
+    data: {}
+  };
+}
+
+// ============================================
+// Transposition (for parts)
+// ============================================
+
+// Set written vs sounding pitch transposition
+export fn transposition(pos, semitones) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "transposition",
+    data: { semitones: semitones }
+  };
+}
+
+// Common transposing instruments
+export fn clarinetBb(pos) { return transposition(pos, 2); }
+export fn clarinetA(pos) { return transposition(pos, 3); }
+export fn trumpetBb(pos) { return transposition(pos, 2); }
+export fn hornF(pos) { return transposition(pos, 7); }
+export fn saxAlto(pos) { return transposition(pos, 9); }
+export fn saxTenor(pos) { return transposition(pos, 14); }

@@ -1,0 +1,520 @@
+// std:structure (v5)
+// Musical form, sections, and repeat structures
+
+import core;
+
+// ============================================
+// Section Markers
+// ============================================
+
+// Create a section marker event
+export fn sectionMarker(pos, name) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "section",
+    label: name
+  };
+}
+
+// Mark common section types
+export fn verse(pos, num) {
+  let label = "Verse";
+  if (num != null) {
+    label = "Verse " + num;
+  }
+  return sectionMarker(pos, label);
+}
+
+export fn chorus(pos, num) {
+  let label = "Chorus";
+  if (num != null) {
+    label = "Chorus " + num;
+  }
+  return sectionMarker(pos, label);
+}
+
+export fn bridge(pos) {
+  return sectionMarker(pos, "Bridge");
+}
+
+export fn intro(pos) {
+  return sectionMarker(pos, "Intro");
+}
+
+export fn outro(pos) {
+  return sectionMarker(pos, "Outro");
+}
+
+export fn preChorus(pos) {
+  return sectionMarker(pos, "Pre-Chorus");
+}
+
+export fn interlude(pos) {
+  return sectionMarker(pos, "Interlude");
+}
+
+export fn solo(pos, instrument) {
+  let label = "Solo";
+  if (instrument != null) {
+    label = instrument + " Solo";
+  }
+  return sectionMarker(pos, label);
+}
+
+export fn coda(pos) {
+  return sectionMarker(pos, "Coda");
+}
+
+// ============================================
+// Navigation Markers (D.C., D.S., etc.)
+// ============================================
+
+// Segno marker (sign)
+export fn segno(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "segno",
+    label: "Segno"
+  };
+}
+
+// Fine marker (end)
+export fn fine(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "fine",
+    label: "Fine"
+  };
+}
+
+// Coda marker (jump target)
+export fn codaMarker(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "coda",
+    label: "Coda"
+  };
+}
+
+// Da Capo (from the beginning)
+export fn daCapo(pos, withRepeat) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "dc",
+    label: if (withRepeat == true) { "D.C." } else { "D.C. senza rep." }
+  };
+}
+
+// Da Capo al Fine
+export fn daCapoAlFine(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "dc_fine",
+    label: "D.C. al Fine"
+  };
+}
+
+// Da Capo al Coda
+export fn daCapoAlCoda(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "dc_coda",
+    label: "D.C. al Coda"
+  };
+}
+
+// Dal Segno (from the sign)
+export fn dalSegno(pos, withRepeat) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "ds",
+    label: if (withRepeat == true) { "D.S." } else { "D.S. senza rep." }
+  };
+}
+
+// Dal Segno al Fine
+export fn dalSegnoAlFine(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "ds_fine",
+    label: "D.S. al Fine"
+  };
+}
+
+// Dal Segno al Coda
+export fn dalSegnoAlCoda(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "ds_coda",
+    label: "D.S. al Coda"
+  };
+}
+
+// To Coda (jump to coda)
+export fn toCoda(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "to_coda",
+    label: "To Coda"
+  };
+}
+
+// ============================================
+// Repeat Structures
+// ============================================
+
+// Simple repeat - repeat a clip n times
+// Same as core.repeat but with repeat markers
+export fn repeatSection(c, count) {
+  if (count <= 0) {
+    return { events: [], length: 0 / 1 };
+  }
+
+  let events = [];
+  const len = core.clipLen(c);
+
+  // Add repeat start marker
+  events[events.length] = {
+    type: "marker",
+    pos: 0 / 1,
+    kind: "repeat_start",
+    label: ":|"
+  };
+
+  // Copy events
+  for (i in 0..(count - 1)) {
+    const offset = len * i;
+    for (ev in c.events) {
+      events[events.length] = core.shiftEvent(ev, offset);
+    }
+  }
+
+  // Add repeat end marker
+  events[events.length] = {
+    type: "marker",
+    pos: len * count,
+    kind: "repeat_end",
+    label: ":|"
+  };
+
+  return { events: events, length: len * count };
+}
+
+// First and second ending (volta brackets)
+// clip1 = first time content, clip2 = second time content
+export fn volta(mainClip, endings) {
+  let events = [];
+  let pos = 0 / 1;
+  const mainLen = core.clipLen(mainClip);
+
+  // Add main content
+  for (ev in mainClip.events) {
+    events[events.length] = core.cloneEvent(ev);
+  }
+
+  // Add repeat start
+  events[events.length] = {
+    type: "marker",
+    pos: 0 / 1,
+    kind: "repeat_start",
+    label: "|:"
+  };
+
+  pos = mainLen;
+
+  // Process each ending
+  let endingNum = 1;
+  for (ending in endings) {
+    const endingLen = core.clipLen(ending);
+
+    // Mark volta bracket start
+    events[events.length] = {
+      type: "marker",
+      pos: pos,
+      kind: "volta_start",
+      label: "" + endingNum + "."
+    };
+
+    // Add ending content
+    for (ev in ending.events) {
+      events[events.length] = core.shiftEvent(ev, pos);
+    }
+
+    // Mark volta bracket end
+    events[events.length] = {
+      type: "marker",
+      pos: pos + endingLen,
+      kind: "volta_end",
+      label: "" + endingNum + "."
+    };
+
+    pos = pos + endingLen;
+    endingNum = endingNum + 1;
+  }
+
+  return { events: events, length: pos };
+}
+
+// Create first/second ending with explicit clip definitions
+export fn firstSecondEnding(main, first, second) {
+  return volta(main, [first, second]);
+}
+
+// ============================================
+// Form Expansion
+// ============================================
+
+// Expand a form structure into a flat clip
+// form = array of section references or clips
+// sections = object mapping section names to clips
+export fn expandForm(form, sections) {
+  let result = { events: [], length: 0 / 1 };
+
+  for (item in form) {
+    let sectionClip = null;
+
+    if (item.events != null) {
+      // It's already a clip
+      sectionClip = item;
+    } else if (typeof(item) == "string") {
+      // It's a section name
+      sectionClip = sections[item];
+    } else if (item.section != null) {
+      // It's a section reference with optional properties
+      sectionClip = sections[item.section];
+      if (item.repeat != null && item.repeat > 1) {
+        sectionClip = core.repeat(sectionClip, item.repeat);
+      }
+    }
+
+    if (sectionClip != null) {
+      result = core.concat(result, sectionClip);
+    }
+  }
+
+  return result;
+}
+
+// Common song forms
+export fn aaba(a, b) {
+  return expandForm(["A", "A", "B", "A"], { A: a, B: b });
+}
+
+export fn abab(a, b) {
+  return expandForm(["A", "B", "A", "B"], { A: a, B: b });
+}
+
+export fn abac(a, b, c) {
+  return expandForm(["A", "B", "A", "C"], { A: a, B: b, C: c });
+}
+
+export fn rondo(a, b, c) {
+  // ABACABA form
+  return expandForm(["A", "B", "A", "C", "A", "B", "A"], { A: a, B: b, C: c });
+}
+
+export fn ternary(a, b) {
+  // ABA form
+  return expandForm(["A", "B", "A"], { A: a, B: b });
+}
+
+export fn binary(a, b) {
+  // AB form
+  return expandForm(["A", "B"], { A: a, B: b });
+}
+
+export fn throughComposed(sections) {
+  // Each section played once in order
+  let result = { events: [], length: 0 / 1 };
+  for (section in sections) {
+    result = core.concat(result, section);
+  }
+  return result;
+}
+
+// Pop/Rock song structure
+export fn popForm(intro, verse, chorus, bridge, outro) {
+  let form = [];
+  if (intro != null) {
+    form[form.length] = "intro";
+  }
+  form[form.length] = "verse";
+  form[form.length] = "chorus";
+  form[form.length] = "verse";
+  form[form.length] = "chorus";
+  if (bridge != null) {
+    form[form.length] = "bridge";
+  }
+  form[form.length] = "chorus";
+  form[form.length] = "chorus";
+  if (outro != null) {
+    form[form.length] = "outro";
+  }
+
+  let sections = {
+    verse: verse,
+    chorus: chorus
+  };
+  if (intro != null) {
+    sections.intro = intro;
+  }
+  if (bridge != null) {
+    sections.bridge = bridge;
+  }
+  if (outro != null) {
+    sections.outro = outro;
+  }
+
+  return expandForm(form, sections);
+}
+
+// Blues 12-bar structure
+export fn blues12Bar(i, iv, v) {
+  // I - I - I - I - IV - IV - I - I - V - IV - I - V
+  return expandForm([
+    "I", "I", "I", "I",
+    "IV", "IV", "I", "I",
+    "V", "IV", "I", "V"
+  ], { I: i, IV: iv, V: v });
+}
+
+// ============================================
+// Section Utilities
+// ============================================
+
+// Add section marker to beginning of clip
+export fn markSection(c, name) {
+  let events = [sectionMarker(0 / 1, name)];
+  for (ev in c.events) {
+    events[events.length] = ev;
+  }
+  return { events: events, length: c.length };
+}
+
+// Find markers in a clip by kind
+export fn findMarkers(c, kind) {
+  let result = [];
+  for (ev in c.events) {
+    if (ev.type == "marker" && ev.kind == kind) {
+      result[result.length] = ev;
+    }
+  }
+  return result;
+}
+
+// Get all section markers
+export fn getSections(c) {
+  return findMarkers(c, "section");
+}
+
+// ============================================
+// Rehearsal Marks
+// ============================================
+
+// Rehearsal letter (A, B, C, etc.)
+export fn rehearsalLetter(pos, letter) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "rehearsal",
+    label: letter
+  };
+}
+
+// Rehearsal number
+export fn rehearsalNumber(pos, num) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "rehearsal",
+    label: "" + num
+  };
+}
+
+// Auto-generate rehearsal marks at regular intervals
+export fn autoRehearsal(c, interval, startLetter) {
+  const len = core.clipLen(c);
+  let events = [];
+
+  // Copy original events
+  for (ev in c.events) {
+    events[events.length] = ev;
+  }
+
+  // Add rehearsal marks
+  let pos = 0 / 1;
+  let letterCode = 65; // 'A'
+  if (startLetter != null) {
+    letterCode = startLetter;
+  }
+
+  for (_ in 0..100) {
+    if (pos >= len) {
+      return { events: events, length: len };
+    }
+    const letter = chr(letterCode);
+    events[events.length] = rehearsalLetter(pos, letter);
+    pos = pos + interval;
+    letterCode = letterCode + 1;
+    if (letterCode > 90) { // 'Z'
+      letterCode = 65;
+    }
+  }
+
+  return { events: events, length: len };
+}
+
+// ============================================
+// Fermata and Pauses
+// ============================================
+
+// Fermata (hold/pause on a note)
+export fn fermata(pos, duration) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "fermata",
+    label: if (duration != null) { "fermata:" + duration } else { "fermata" }
+  };
+}
+
+// General pause (G.P.)
+export fn generalPause(pos, duration) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "gp",
+    label: "G.P."
+  };
+}
+
+// Caesura (breath mark / railroad tracks)
+export fn caesura(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "caesura",
+    label: "//"
+  };
+}
+
+// Breath mark
+export fn breathMark(pos) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "breath",
+    label: "'"
+  };
+}

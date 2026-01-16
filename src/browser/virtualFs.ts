@@ -3122,6 +3122,22 @@ export fn accent(pattern, strongVel, weakVel) {
 /**
  * Map of stdlib module names to their source code
  */
+// New v5 libraries (stubs for now - need to be populated for browser builds)
+export const STDLIB_STRUCTURE = `// std:structure - see lib/structure.mf for full implementation`;
+export const STDLIB_TUPLET = `// std:tuplet - see lib/tuplet.mf for full implementation`;
+export const STDLIB_SPATIAL = `// std:spatial - see lib/spatial.mf for full implementation`;
+export const STDLIB_EFFECTS = `// std:effects - see lib/effects.mf for full implementation`;
+export const STDLIB_INSTRUMENT = `// std:instrument - see lib/instrument.mf for full implementation`;
+export const STDLIB_LYRICS = `// std:lyrics - see lib/lyrics.mf for full implementation`;
+export const STDLIB_NOTATION = `// std:notation - see lib/notation.mf for full implementation`;
+export const STDLIB_EXPRESSION = `// std:expression - see lib/expression.mf for full implementation`;
+export const STDLIB_ALGORITHM = `// std:algorithm - see lib/algorithm.mf for full implementation`;
+export const STDLIB_SYNC = `// std:sync - see lib/sync.mf for full implementation`;
+export const STDLIB_METADATA = `// std:metadata - see lib/metadata.mf for full implementation`;
+
+/**
+ * Map of stdlib module names to their source code
+ */
 export const STDLIB_MODULES: Record<string, string> = {
   core: STDLIB_CORE,
   drums: STDLIB_DRUMS,
@@ -3133,6 +3149,18 @@ export const STDLIB_MODULES: Record<string, string> = {
   random: STDLIB_RANDOM,
   result: STDLIB_RESULT,
   rhythm: STDLIB_RHYTHM,
+  // New v5 libraries
+  structure: STDLIB_STRUCTURE,
+  tuplet: STDLIB_TUPLET,
+  spatial: STDLIB_SPATIAL,
+  effects: STDLIB_EFFECTS,
+  instrument: STDLIB_INSTRUMENT,
+  lyrics: STDLIB_LYRICS,
+  notation: STDLIB_NOTATION,
+  expression: STDLIB_EXPRESSION,
+  algorithm: STDLIB_ALGORITHM,
+  sync: STDLIB_SYNC,
+  metadata: STDLIB_METADATA,
 };
 
 /**
