@@ -3144,6 +3144,12 @@ export const STDLIB_PROB = `// std:prob - see lib/prob.mf for full implementatio
 export const STDLIB_MODULATION = `// std:modulation - see lib/modulation.mf for full implementation`;
 export const STDLIB_ROUTING = `// std:routing - see lib/routing.mf for full implementation`;
 
+// v5.3 modules
+export const STDLIB_EUCLIDEAN = `// std:euclidean - see lib/euclidean.mf for full implementation`;
+export const STDLIB_MICROTONAL = `// std:microtonal - see lib/microtonal.mf for full implementation`;
+export const STDLIB_SPECTRAL = `// std:spectral - see lib/spectral.mf for full implementation`;
+export const STDLIB_MOTIF = `// std:motif - see lib/motif.mf for full implementation`;
+
 /**
  * Map of stdlib module names to their source code
  */
@@ -3177,6 +3183,11 @@ export const STDLIB_MODULES: Record<string, string> = {
   prob: STDLIB_PROB,
   modulation: STDLIB_MODULATION,
   routing: STDLIB_ROUTING,
+  // v5.3 libraries
+  euclidean: STDLIB_EUCLIDEAN,
+  microtonal: STDLIB_MICROTONAL,
+  spectral: STDLIB_SPECTRAL,
+  motif: STDLIB_MOTIF,
 };
 
 /**
