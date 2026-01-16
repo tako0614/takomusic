@@ -61,6 +61,7 @@ export interface TypeRef extends BaseNode {
   kind: 'TypeRef';
   name: string;
   typeArgs?: TypeRef[];  // Generic type arguments: Box<Number>, Map<String, Number>
+  optional?: boolean;    // Optional type: Number?, String?
 }
 
 export interface TypeAliasDecl extends BaseNode {

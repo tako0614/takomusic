@@ -85,6 +85,7 @@ interface TypeInfo {
   variantName?: string;    // For enumVariant types: the variant name
   variantPayload?: TypeInfo; // For enumVariant types: the payload type (if any)
   variants?: Map<string, TypeInfo>; // For enum types: map of variant names to their types
+  optional?: boolean;      // For optional types: Number?, String?
 }
 
 const UNKNOWN: TypeInfo = { kind: 'unknown' };
@@ -722,10 +723,25 @@ class TypeChecker {
         return NUMBER;
       case '==':
       case '!=':
+        // Check enum variant comparison - must be same enum
+        if (left.kind === 'enumVariant' && right.kind === 'enumVariant') {
+          if (left.enumName !== right.enumName) {
+            this.report(
+              `Cannot compare enum variants from different enums: ${left.enumName} vs ${right.enumName}`,
+              expr.position
+            );
+          }
+        }
+        return BOOL;
       case '<':
       case '<=':
       case '>':
       case '>=':
+        // Ordering comparison - not valid for enum variants
+        if (left.kind === 'enumVariant' || right.kind === 'enumVariant') {
+          this.report('Ordering comparison is not valid for enum variants', expr.position);
+        }
+        return BOOL;
       case '&&':
       case '||':
         return BOOL;
@@ -742,15 +758,21 @@ class TypeChecker {
     for (const arm of expr.arms) {
       if (arm.pattern) {
         const patternType = this.inferPattern(arm.pattern, env, moduleAliases);
-        if (
-          targetType.kind !== 'unknown' &&
-          patternType.kind !== 'unknown' &&
-          targetType.kind !== patternType.kind
-        ) {
-          this.report(
-            `Match pattern type mismatch: expected ${targetType.kind}, got ${patternType.kind}`,
-            arm.position
-          );
+        if (targetType.kind !== 'unknown' && patternType.kind !== 'unknown') {
+          // Check for enum variant mismatch (different enum types)
+          if (targetType.kind === 'enumVariant' && patternType.kind === 'enumVariant') {
+            if (targetType.enumName !== patternType.enumName) {
+              this.report(
+                `Match pattern enum mismatch: expected ${targetType.enumName}, got ${patternType.enumName}`,
+                arm.position
+              );
+            }
+          } else if (targetType.kind !== patternType.kind) {
+            this.report(
+              `Match pattern type mismatch: expected ${targetType.kind}, got ${patternType.kind}`,
+              arm.position
+            );
+          }
         }
       }
       const valueType = this.inferExpr(arm.value, env, moduleAliases);
@@ -1136,7 +1158,9 @@ class TypeChecker {
 function typeFromTypeRef(ref: TypeRef, typeAliases?: Map<string, TypeRef>, typeParams?: Set<string>): TypeInfo {
   // Check if this is a type parameter (e.g., T, U in fn identity<T, U>)
   if (typeParams && typeParams.has(ref.name)) {
-    return { kind: 'typeParam', typeParamName: ref.name };
+    const result: TypeInfo = { kind: 'typeParam', typeParamName: ref.name };
+    if (ref.optional) result.optional = true;
+    return result;
   }
 
   // Check if this is a type alias first
@@ -1144,7 +1168,10 @@ function typeFromTypeRef(ref: TypeRef, typeAliases?: Map<string, TypeRef>, typeP
     const aliasedType = typeAliases.get(ref.name);
     if (aliasedType) {
       // Recursively resolve to prevent infinite loops (simple case only)
-      return typeFromTypeRef(aliasedType, typeAliases, typeParams);
+      const result = typeFromTypeRef(aliasedType, typeAliases, typeParams);
+      // Preserve optional from the reference, not the alias
+      if (ref.optional) return { ...result, optional: true };
+      return result;
     }
   }
 
@@ -1154,52 +1181,58 @@ function typeFromTypeRef(ref: TypeRef, typeAliases?: Map<string, TypeRef>, typeP
     typeArgs = ref.typeArgs.map(arg => typeFromTypeRef(arg, typeAliases, typeParams));
   }
 
+  // Helper to add optional flag to result
+  const makeResult = (info: TypeInfo): TypeInfo => {
+    if (ref.optional) return { ...info, optional: true };
+    return info;
+  };
+
   switch (ref.name) {
     case 'Score':
-      return SCORE;
+      return makeResult(SCORE);
     case 'Clip':
-      return CLIP;
+      return makeResult(CLIP);
     case 'Pos':
-      return POS;
+      return makeResult(POS);
     case 'Dur':
     case 'Rat':
-      return TIME;
+      return makeResult(TIME);
     case 'Pitch':
-      return PITCH;
+      return makeResult(PITCH);
     case 'Int':
     case 'Float':
     case 'Number':
-      return NUMBER;
+      return makeResult(NUMBER);
     case 'String':
-      return STRING;
+      return makeResult(STRING);
     case 'Bool':
-      return BOOL;
+      return makeResult(BOOL);
     case 'Curve':
-      return CURVE;
+      return makeResult(CURVE);
     case 'Rng':
-      return RNG;
+      return makeResult(RNG);
     case 'Lyric':
-      return LYRIC;
+      return makeResult(LYRIC);
     case 'LyricToken':
-      return LYRIC_TOKEN;
+      return makeResult(LYRIC_TOKEN);
     case 'Array':
       // Array<T> - use type argument if provided
       if (typeArgs && typeArgs.length > 0) {
-        return { kind: 'array', element: typeArgs[0], typeArgs };
+        return makeResult({ kind: 'array', element: typeArgs[0], typeArgs });
       }
-      return { kind: 'array', element: UNKNOWN };
+      return makeResult({ kind: 'array', element: UNKNOWN });
     case 'Tuple':
       // Tuple<T, U, ...> - use type arguments
       if (typeArgs && typeArgs.length > 0) {
-        return { kind: 'tuple', elements: typeArgs, typeArgs };
+        return makeResult({ kind: 'tuple', elements: typeArgs, typeArgs });
       }
-      return { kind: 'tuple', elements: [] };
+      return makeResult({ kind: 'tuple', elements: [] });
     default:
       // For unknown types, return unknown but preserve type args if any
       if (typeArgs) {
-        return { kind: 'unknown', typeArgs };
+        return makeResult({ kind: 'unknown', typeArgs });
       }
-      return UNKNOWN;
+      return makeResult(UNKNOWN);
   }
 }
 
@@ -1235,6 +1268,28 @@ function isCompatible(expected: TypeInfo, actual: TypeInfo): boolean {
   if (expected.kind === 'unknown' || actual.kind === 'unknown') return true;
   // Type parameters are compatible with any type (will be inferred)
   if (expected.kind === 'typeParam' || actual.kind === 'typeParam') return true;
+
+  // Optional type handling:
+  // - Optional type T? accepts null
+  // - Optional type T? accepts T
+  // - Non-optional type T accepts T? (widening - actual value might be null at runtime)
+  if (expected.optional && actual.kind === 'null') return true;
+  if (expected.optional && !actual.optional) {
+    // T? accepts T - compare base types
+    const baseExpected = { ...expected, optional: undefined };
+    return isCompatible(baseExpected, actual);
+  }
+  if (!expected.optional && actual.optional) {
+    // T does not accept T? (potential null)
+    return false;
+  }
+  if (expected.optional && actual.optional) {
+    // T? accepts U? if T accepts U
+    const baseExpected = { ...expected, optional: undefined };
+    const baseActual = { ...actual, optional: undefined };
+    return isCompatible(baseExpected, baseActual);
+  }
+
   if (expected.kind === actual.kind) {
     // For enum variants, also check that they're from the same enum and variant
     if (expected.kind === 'enumVariant' && actual.kind === 'enumVariant') {
