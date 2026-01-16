@@ -3150,6 +3150,12 @@ export const STDLIB_MICROTONAL = `// std:microtonal - see lib/microtonal.mf for 
 export const STDLIB_SPECTRAL = `// std:spectral - see lib/spectral.mf for full implementation`;
 export const STDLIB_MOTIF = `// std:motif - see lib/motif.mf for full implementation`;
 
+// v5.4 modules
+export const STDLIB_TEXTURE = `// std:texture - see lib/texture.mf for full implementation`;
+export const STDLIB_FORM = `// std:form - see lib/form.mf for full implementation`;
+export const STDLIB_CLUSTER = `// std:cluster - see lib/cluster.mf for full implementation`;
+export const STDLIB_CANON = `// std:canon - see lib/canon.mf for full implementation`;
+
 /**
  * Map of stdlib module names to their source code
  */
@@ -3188,6 +3194,11 @@ export const STDLIB_MODULES: Record<string, string> = {
   microtonal: STDLIB_MICROTONAL,
   spectral: STDLIB_SPECTRAL,
   motif: STDLIB_MOTIF,
+  // v5.4 libraries
+  texture: STDLIB_TEXTURE,
+  form: STDLIB_FORM,
+  cluster: STDLIB_CLUSTER,
+  canon: STDLIB_CANON,
 };
 
 /**
