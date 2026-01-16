@@ -103,7 +103,8 @@ export type Event =
   | AutomationEvent
   | MarkerEvent
   | GraceNoteEvent
-  | GlissandoEvent;
+  | GlissandoEvent
+  | PedalEvent;
 
 export interface NoteEvent {
   type: 'note';
@@ -207,6 +208,15 @@ export interface GlissandoEvent {
   toPitch: Pitch;
   style: 'continuous' | 'discrete';
   velocity?: number;
+  ext?: Record<string, unknown>;
+}
+
+export interface PedalEvent {
+  type: 'pedal';
+  start: Rat;
+  end?: Rat;
+  pedal: 'sustain' | 'sostenuto' | 'una_corda';
+  action: 'down' | 'up' | 'change';
   ext?: Record<string, unknown>;
 }
 

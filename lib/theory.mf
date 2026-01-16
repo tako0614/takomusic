@@ -854,16 +854,8 @@ export fn analyze(pitches) {
       unique[unique.length] = iv;
     }
   }
-  // Simple bubble sort
-  for (i in 0..(unique.length - 1)) {
-    for (j in 0..(unique.length - i - 2)) {
-      if (unique[j] > unique[j + 1]) {
-        const tmp = unique[j];
-        unique[j] = unique[j + 1];
-        unique[j + 1] = tmp;
-      }
-    }
-  }
+  // Sort using native O(n log n) sort
+  unique = sort(unique);
 
   // Determine quality based on intervals
   let quality = "unknown";

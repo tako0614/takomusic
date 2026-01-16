@@ -560,16 +560,8 @@ export fn autoBreath(c, opts) {
     }
   }
 
-  // Sort notes by start time (simple bubble sort)
-  for (i in 0..(notes.length - 1)) {
-    for (j in 0..(notes.length - i - 2)) {
-      if (notes[j].start > notes[j + 1].start) {
-        const tmp = notes[j];
-        notes[j] = notes[j + 1];
-        notes[j + 1] = tmp;
-      }
-    }
-  }
+  // Sort notes by start time using native O(n log n) sort
+  notes = sortBy(notes, "start");
 
   // Build result with breaths inserted
   let result = [];

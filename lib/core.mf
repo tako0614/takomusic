@@ -1,6 +1,11 @@
 // std:core (v4)
 
-fn posToRat(pos) {
+// ============================================
+// Position and Event Utilities (exported for other stdlib modules)
+// ============================================
+
+// Convert position value to rational
+export fn posToRat(pos) {
   if (pos == null) {
     return null;
   }
@@ -147,6 +152,105 @@ fn shiftEvent(ev, offset) {
     };
   }
   return ev;
+}
+
+// Clone an event (create a copy without modifying position)
+// Handles all event types with all their properties
+export fn cloneEvent(ev) {
+  if (ev.type == "note") {
+    return {
+      type: "note",
+      start: ev.start,
+      dur: ev.dur,
+      pitch: ev.pitch,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      lyric: ev.lyric,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "chord") {
+    return {
+      type: "chord",
+      start: ev.start,
+      dur: ev.dur,
+      pitches: ev.pitches,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "drumHit") {
+    return {
+      type: "drumHit",
+      start: ev.start,
+      dur: ev.dur,
+      key: ev.key,
+      velocity: ev.velocity,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "control") {
+    return {
+      type: "control",
+      start: ev.start,
+      kind: ev.kind,
+      data: ev.data,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "automation") {
+    return {
+      type: "automation",
+      param: ev.param,
+      start: ev.start,
+      end: ev.end,
+      curve: ev.curve,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "marker") {
+    return {
+      type: "marker",
+      pos: ev.pos,
+      kind: ev.kind,
+      label: ev.label
+    };
+  }
+  if (ev.type == "breath") {
+    return {
+      type: "breath",
+      start: ev.start,
+      dur: ev.dur,
+      intensity: ev.intensity,
+      ext: ev.ext
+    };
+  }
+  return ev;
+}
+
+// Calculate clip length from events
+export fn clipLen(c) {
+  if (c.length != null) {
+    return c.length;
+  }
+  let max = null;
+  for (ev in c.events) {
+    const end = eventEndRat(ev);
+    if (end == null) {
+      return null;
+    }
+    if (max == null || end > max) {
+      max = end;
+    }
+  }
+  if (max == null) {
+    return 0 / 1;
+  }
+  return max;
 }
 
 export fn concat(a, b) {
@@ -760,16 +864,8 @@ export fn split(c, positions) {
   for (p in positions) {
     sorted[sorted.length] = posToRat(p);
   }
-  // Simple bubble sort
-  for (i in 0..(sorted.length - 1)) {
-    for (j in 0..(sorted.length - i - 2)) {
-      if (sorted[j] > sorted[j + 1]) {
-        const tmp = sorted[j];
-        sorted[j] = sorted[j + 1];
-        sorted[j + 1] = tmp;
-      }
-    }
-  }
+  // Sort using native O(n log n) sort
+  sorted = sort(sorted);
 
   let result = [];
   let prevPos = 0 / 1;

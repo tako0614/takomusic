@@ -1,6 +1,8 @@
 // std:dynamics (v4)
 // Standard dynamic levels and crescendo/diminuendo generators
 
+use std:core { cloneEvent, posToRat, clipLen };
+
 // ============================================================
 // Dynamic Level Constants (velocity 0.0 - 1.0)
 // ============================================================
@@ -64,68 +66,6 @@ export fn parseDynamic(name) {
 // Helper Functions
 // ============================================================
 
-fn cloneEvent(ev) {
-  if (ev.type == "note") {
-    return {
-      type: "note",
-      start: ev.start,
-      dur: ev.dur,
-      pitch: ev.pitch,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      lyric: ev.lyric,
-      ext: ev.ext
-    };
-  }
-  if (ev.type == "chord") {
-    return {
-      type: "chord",
-      start: ev.start,
-      dur: ev.dur,
-      pitches: ev.pitches,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      ext: ev.ext
-    };
-  }
-  if (ev.type == "drumHit") {
-    return {
-      type: "drumHit",
-      start: ev.start,
-      dur: ev.dur,
-      key: ev.key,
-      velocity: ev.velocity,
-      techniques: ev.techniques,
-      ext: ev.ext
-    };
-  }
-  return ev;
-}
-
-fn posToRat(pos) {
-  if (pos == null) { return null; }
-  if (pos.kind == "rat") { return pos.rat; }
-  if (pos.n != null && pos.d != null) { return pos; }
-  return null;
-}
-
-fn clipLength(c) {
-  if (c.length != null) { return c.length; }
-  let max = 0 / 1;
-  for (ev in c.events) {
-    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit" || ev.type == "breath") {
-      const start = posToRat(ev.start);
-      if (start != null) {
-        const end = start + ev.dur;
-        if (end > max) { max = end; }
-      }
-    }
-  }
-  return max;
-}
-
 fn linearInterpolate(t, fromVal, toVal) {
   return fromVal + (toVal - fromVal) * t;
 }
@@ -147,7 +87,7 @@ export fn crescendo(c, from, to, start, end) {
   let startPos = start;
   if (startPos == null) { startPos = 0 / 1; }
   let endPos = end;
-  if (endPos == null) { endPos = clipLength(c); }
+  if (endPos == null) { endPos = clipLen(c); }
 
   const duration = endPos - startPos;
   if (duration <= 0 / 1) {
@@ -267,7 +207,7 @@ export fn hairpin(c, startLevel, peakLevel, endLevel, peakPosition) {
   let eLevel = endLevel;
   if (eLevel == null) { eLevel = p; }
 
-  const len = clipLength(c);
+  const len = clipLen(c);
   let peakPos = peakPosition;
   if (peakPos == null) { peakPos = len / 2; }
 

@@ -1,0 +1,142 @@
+// std:pedal (v4)
+// Functions for piano pedal markings (sustain, sostenuto, una corda)
+
+// Create a sustain pedal down event at current cursor position
+export fn sustainDown() {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: "sustain",
+    action: "down"
+  };
+}
+
+// Create a sustain pedal up event at current cursor position
+export fn sustainUp() {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: "sustain",
+    action: "up"
+  };
+}
+
+// Create a sustain pedal change (retake) event at current cursor position
+export fn sustainChange() {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: "sustain",
+    action: "change"
+  };
+}
+
+// Create a sostenuto pedal down event at current cursor position
+export fn sostenutoDown() {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: "sostenuto",
+    action: "down"
+  };
+}
+
+// Create a sostenuto pedal up event at current cursor position
+export fn sostenutoUp() {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: "sostenuto",
+    action: "up"
+  };
+}
+
+// Create an una corda (soft) pedal down event at current cursor position
+export fn unaCordaDown() {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: "una_corda",
+    action: "down"
+  };
+}
+
+// Create an una corda (soft) pedal up event at current cursor position
+export fn unaCordaUp() {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: "una_corda",
+    action: "up"
+  };
+}
+
+// Create a pedal event with explicit parameters
+// pedal: "sustain" | "sostenuto" | "una_corda"
+// action: "down" | "up" | "change"
+export fn pedal(pedalType, action) {
+  return {
+    type: "pedal",
+    start: @,
+    pedal: pedalType,
+    action: action
+  };
+}
+
+// Create pedal span (down at start, up at end) for a given duration
+// Returns a clip with both pedal events
+export fn sustainSpan(dur) {
+  const startPos = @;
+  return {
+    events: [
+      { type: "pedal", start: startPos, pedal: "sustain", action: "down" },
+      { type: "pedal", start: startPos + dur, pedal: "sustain", action: "up" }
+    ],
+    length: dur
+  };
+}
+
+// Wrap a clip with sustain pedal (pedal down at start, up at end)
+export fn withSustain(c) {
+  let events = [];
+
+  // Add pedal down at start
+  events[0] = { type: "pedal", start: 0 / 1, pedal: "sustain", action: "down" };
+
+  // Copy all clip events
+  for (ev in c.events) {
+    events[events.length] = ev;
+  }
+
+  // Add pedal up at end
+  events[events.length] = { type: "pedal", start: c.length, pedal: "sustain", action: "up" };
+
+  return { events: events, length: c.length };
+}
+
+// Add sustain pedal changes at regular intervals (for legato pedaling)
+// c: input clip
+// interval: duration between pedal changes (e.g., 1/4 for quarter note)
+export fn legatoPedal(c, interval) {
+  let events = [];
+
+  // Add initial pedal down
+  events[0] = { type: "pedal", start: 0 / 1, pedal: "sustain", action: "down" };
+
+  // Copy all clip events
+  for (ev in c.events) {
+    events[events.length] = ev;
+  }
+
+  // Add pedal changes at intervals
+  let pos = interval;
+  while (pos < c.length) {
+    events[events.length] = { type: "pedal", start: pos, pedal: "sustain", action: "change" };
+    pos = pos + interval;
+  }
+
+  // Add final pedal up
+  events[events.length] = { type: "pedal", start: c.length, pedal: "sustain", action: "up" };
+
+  return { events: events, length: c.length };
+}
