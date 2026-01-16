@@ -1,6 +1,6 @@
 {
   "name": "takomusic",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "TakoMusic - A music composition DSL that evaluates to neutral IR and renders via plugins",
   "type": "module",
   "main": "dist/index.js",
