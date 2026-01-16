@@ -21,7 +21,12 @@ export async function buildCommand(args: string[]): Promise<number> {
     } else if (args[i] === '-w' || args[i] === '--watch') {
       watchMode = true;
     } else if (args[i] === '-o' || args[i] === '--output') {
-      outputFile = args[++i];
+      if (i + 1 >= args.length) {
+        console.error('--output requires a value');
+        return ExitCodes.STATIC_ERROR;
+      }
+      outputFile = args[i + 1];
+      i++;
     } else if (args[i] === '-h' || args[i] === '--help') {
       console.log(`Usage: mf build [file.mf] [options]
 
@@ -75,14 +80,15 @@ Examples:
   }
 
   // Initial build
-  const result = await runBuild(baseDir, entryPath, config);
+  const outputPath = outputFile ? path.resolve(baseDir, outputFile) : null;
+  const result = await runBuild(baseDir, entryPath, config, outputPath);
 
   // Watch mode
   if (watchMode) {
     if (result !== ExitCodes.SUCCESS) {
       console.log('\nWaiting for changes...');
     }
-    return startWatchMode(baseDir, entryPath, config);
+    return startWatchMode(baseDir, entryPath, config, outputPath);
   }
 
   return result;
@@ -125,7 +131,8 @@ async function runStandaloneBuild(
 async function runBuild(
   baseDir: string,
   entryPath: string,
-  config: MFConfig
+  config: MFConfig,
+  outputPath?: string | null
 ): Promise<number> {
   const startTime = Date.now();
 
@@ -139,14 +146,14 @@ async function runBuild(
       console.log(`[warning] ${diag.message}`);
     }
 
-    // Ensure dist directory exists
     const distDir = path.join(baseDir, config.project.dist);
-    if (!fs.existsSync(distDir)) {
-      fs.mkdirSync(distDir, { recursive: true });
+    const irPath = outputPath ?? path.join(distDir, `${path.basename(entryPath)}.score.json`);
+    const irDir = path.dirname(irPath);
+    if (!fs.existsSync(irDir)) {
+      fs.mkdirSync(irDir, { recursive: true });
     }
 
     // Write IR
-    const irPath = path.join(distDir, `${path.basename(entryPath)}.score.json`);
     fs.writeFileSync(irPath, JSON.stringify(ir, null, 2));
     console.log(`Generated: ${path.relative(baseDir, irPath)}`);
 
@@ -164,7 +171,8 @@ async function runBuild(
 function startWatchMode(
   baseDir: string,
   entryPath: string,
-  config: MFConfig
+  config: MFConfig,
+  outputPath?: string | null
 ): Promise<number> {
   return new Promise((resolve) => {
     // Determine watch directory from entry path
@@ -188,7 +196,11 @@ function startWatchMode(
       watcher.close();
     };
 
-    const watcher = fs.watch(srcDir, { recursive: true }, async (eventType, filename) => {
+    const supportsRecursive = process.platform === 'win32' || process.platform === 'darwin';
+    if (!supportsRecursive && srcDir !== baseDir) {
+      console.log('Recursive watch is unavailable on this platform; watching only the entry directory.');
+    }
+    const watcher = fs.watch(srcDir, { recursive: supportsRecursive }, async (eventType, filename) => {
       if (!filename || !filename.endsWith('.mf')) return;
 
       // If already building, mark that we need another build after this one
@@ -208,7 +220,7 @@ function startWatchMode(
 
         try {
           console.log(`\n[${new Date().toLocaleTimeString()}] Change detected: ${filename}`);
-          await runBuild(baseDir, entryPath, config);
+          await runBuild(baseDir, entryPath, config, outputPath);
         } catch (err) {
           console.error(`Build error: ${(err as Error).message}`);
         } finally {

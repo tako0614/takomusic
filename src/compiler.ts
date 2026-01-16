@@ -176,6 +176,7 @@ export class V4Compiler {
     const importPath = path.resolve(path.dirname(module.path), from);
     if (!isPathSafe(importPath, this.baseDir)) {
       this.pushError(`Import path escapes project: ${from}`, importDecl.position, module.path);
+      return;
     }
     const imported = this.loadModule(importPath);
     this.evaluateModule(imported);
