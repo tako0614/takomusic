@@ -1,0 +1,667 @@
+// std:form (v5.4)
+// Musical form structures and large-scale organization
+// Classical and contemporary formal designs
+
+// ============================================
+// Section Representation
+// ============================================
+
+// Create a named section
+export fn section(name, content, properties) {
+  let props = properties;
+  if (props == null) {
+    props = {};
+  }
+
+  return {
+    type: "section",
+    name: name,
+    content: content,
+    duration: props.duration,
+    key: props.key,
+    tempo: props.tempo,
+    dynamics: props.dynamics
+  };
+}
+
+// Create section marker
+export fn marker(name, position) {
+  return {
+    type: "marker",
+    name: name,
+    position: position
+  };
+}
+
+// ============================================
+// Binary Forms
+// ============================================
+
+// Simple binary (AB)
+export fn binarySimple(sectionA, sectionB) {
+  return {
+    type: "form",
+    formType: "binary",
+    structure: ["A", "B"],
+    sections: {
+      A: sectionA,
+      B: sectionB
+    }
+  };
+}
+
+// Rounded binary (ABA')
+export fn binaryRounded(sectionA, sectionB, sectionAPrime) {
+  let aPrime = sectionAPrime;
+  if (aPrime == null) {
+    aPrime = sectionA;  // Use original A if no variation provided
+  }
+
+  return {
+    type: "form",
+    formType: "roundedBinary",
+    structure: ["A", "B", "A'"],
+    sections: {
+      A: sectionA,
+      B: sectionB,
+      "A'": aPrime
+    }
+  };
+}
+
+// ============================================
+// Ternary Forms
+// ============================================
+
+// Simple ternary (ABA)
+export fn ternary(sectionA, sectionB) {
+  return {
+    type: "form",
+    formType: "ternary",
+    structure: ["A", "B", "A"],
+    sections: {
+      A: sectionA,
+      B: sectionB
+    }
+  };
+}
+
+// Compound ternary (minuet and trio)
+export fn compoundTernary(minuet, trio) {
+  return {
+    type: "form",
+    formType: "compoundTernary",
+    structure: ["Minuet", "Trio", "Minuet da capo"],
+    sections: {
+      Minuet: minuet,
+      Trio: trio
+    }
+  };
+}
+
+// ============================================
+// Rondo Forms
+// ============================================
+
+// Five-part rondo (ABACA)
+export fn rondo5(refrain, episodeB, episodeC) {
+  return {
+    type: "form",
+    formType: "rondo5",
+    structure: ["A", "B", "A", "C", "A"],
+    sections: {
+      A: refrain,
+      B: episodeB,
+      C: episodeC
+    }
+  };
+}
+
+// Seven-part rondo (ABACABA)
+export fn rondo7(refrain, episodeB, episodeC) {
+  return {
+    type: "form",
+    formType: "rondo7",
+    structure: ["A", "B", "A", "C", "A", "B", "A"],
+    sections: {
+      A: refrain,
+      B: episodeB,
+      C: episodeC
+    }
+  };
+}
+
+// Sonata-rondo (ABACAB'A)
+export fn sonataRondo(refrain, episodeB, development, episodeBPrime) {
+  return {
+    type: "form",
+    formType: "sonataRondo",
+    structure: ["A", "B", "A", "C", "A", "B'", "A"],
+    sections: {
+      A: refrain,
+      B: episodeB,
+      C: development,
+      "B'": episodeBPrime
+    }
+  };
+}
+
+// ============================================
+// Sonata Form
+// ============================================
+
+// Full sonata form
+export fn sonataForm(exposition, development, recapitulation, coda) {
+  let form = {
+    type: "form",
+    formType: "sonata",
+    structure: ["Exposition", "Development", "Recapitulation"],
+    sections: {
+      Exposition: exposition,
+      Development: development,
+      Recapitulation: recapitulation
+    }
+  };
+
+  if (coda != null) {
+    form.structure[form.structure.length] = "Coda";
+    form.sections.Coda = coda;
+  }
+
+  return form;
+}
+
+// Exposition helper
+export fn exposition(firstTheme, transition, secondTheme, closingTheme) {
+  return {
+    type: "section",
+    name: "Exposition",
+    parts: {
+      firstTheme: firstTheme,
+      transition: transition,
+      secondTheme: secondTheme,
+      closingTheme: closingTheme
+    }
+  };
+}
+
+// Sonatina form (no development)
+export fn sonatinaForm(exposition, recapitulation) {
+  return {
+    type: "form",
+    formType: "sonatina",
+    structure: ["Exposition", "Recapitulation"],
+    sections: {
+      Exposition: exposition,
+      Recapitulation: recapitulation
+    }
+  };
+}
+
+// ============================================
+// Variation Forms
+// ============================================
+
+// Theme and variations
+export fn themeAndVariations(theme, variations) {
+  let structure = ["Theme"];
+  let sections = { Theme: theme };
+
+  for (i in 0..(variations.length - 1)) {
+    const name = "Var" + (i + 1);
+    structure[structure.length] = name;
+    sections[name] = variations[i];
+  }
+
+  return {
+    type: "form",
+    formType: "themeAndVariations",
+    structure: structure,
+    sections: sections
+  };
+}
+
+// Chaconne/Passacaglia (variations over bass)
+export fn chaconne(bassLine, variations) {
+  return {
+    type: "form",
+    formType: "chaconne",
+    bassLine: bassLine,
+    variations: variations,
+    variationCount: variations.length
+  };
+}
+
+// Ground bass
+export fn groundBass(ostinato, upperParts) {
+  return {
+    type: "form",
+    formType: "groundBass",
+    ostinato: ostinato,
+    upperParts: upperParts
+  };
+}
+
+// ============================================
+// Strophic and Verse Forms
+// ============================================
+
+// Strophic form (same music, different text)
+export fn strophic(verse, stropheCount) {
+  let structure = [];
+  for (i in 0..(stropheCount - 1)) {
+    structure[i] = "Verse" + (i + 1);
+  }
+
+  return {
+    type: "form",
+    formType: "strophic",
+    structure: structure,
+    verse: verse
+  };
+}
+
+// Verse-chorus form
+export fn verseChorus(verse, chorus, arrangement) {
+  // arrangement is array of "V" and "C"
+  let structure = [];
+  for (item in arrangement) {
+    if (item == "V") {
+      structure[structure.length] = "Verse";
+    } else if (item == "C") {
+      structure[structure.length] = "Chorus";
+    } else if (item == "B") {
+      structure[structure.length] = "Bridge";
+    }
+  }
+
+  return {
+    type: "form",
+    formType: "verseChorus",
+    structure: structure,
+    sections: {
+      Verse: verse,
+      Chorus: chorus
+    }
+  };
+}
+
+// Pop song form (ABABCB)
+export fn popSongForm(verse, chorus, bridge) {
+  return {
+    type: "form",
+    formType: "popSong",
+    structure: ["Intro", "Verse", "Chorus", "Verse", "Chorus", "Bridge", "Chorus", "Outro"],
+    sections: {
+      Verse: verse,
+      Chorus: chorus,
+      Bridge: bridge
+    }
+  };
+}
+
+// 12-bar blues
+export fn twelveBarBlues(progression) {
+  return {
+    type: "form",
+    formType: "twelveBarBlues",
+    structure: [
+      "I", "I", "I", "I",
+      "IV", "IV", "I", "I",
+      "V", "IV", "I", "V"
+    ],
+    progression: progression,
+    measures: 12
+  };
+}
+
+// ============================================
+// Fugue
+// ============================================
+
+// Fugue exposition
+export fn fugueExposition(subject, answer, countersubject, voices) {
+  return {
+    type: "section",
+    name: "Exposition",
+    subject: subject,
+    answer: answer,
+    countersubject: countersubject,
+    voiceCount: voices
+  };
+}
+
+// Full fugue structure
+export fn fugue(exposition, episodes, stretto, coda) {
+  let structure = ["Exposition"];
+  let sections = { Exposition: exposition };
+
+  for (i in 0..(episodes.length - 1)) {
+    const epName = "Episode" + (i + 1);
+    structure[structure.length] = epName;
+    sections[epName] = episodes[i];
+
+    // Middle entries after episodes
+    const entryName = "MiddleEntry" + (i + 1);
+    structure[structure.length] = entryName;
+  }
+
+  if (stretto != null) {
+    structure[structure.length] = "Stretto";
+    sections.Stretto = stretto;
+  }
+
+  if (coda != null) {
+    structure[structure.length] = "Coda";
+    sections.Coda = coda;
+  }
+
+  return {
+    type: "form",
+    formType: "fugue",
+    structure: structure,
+    sections: sections
+  };
+}
+
+// ============================================
+// Contemporary Forms
+// ============================================
+
+// Through-composed
+export fn throughComposed(sections) {
+  let structure = [];
+  let sectionMap = {};
+
+  for (i in 0..(sections.length - 1)) {
+    const name = "Section" + (i + 1);
+    structure[i] = name;
+    sectionMap[name] = sections[i];
+  }
+
+  return {
+    type: "form",
+    formType: "throughComposed",
+    structure: structure,
+    sections: sectionMap
+  };
+}
+
+// Arch form (ABCBA)
+export fn archForm(sectionA, sectionB, sectionC) {
+  return {
+    type: "form",
+    formType: "arch",
+    structure: ["A", "B", "C", "B'", "A'"],
+    sections: {
+      A: sectionA,
+      B: sectionB,
+      C: sectionC
+    }
+  };
+}
+
+// Palindrome form
+export fn palindrome(sections) {
+  let structure = [];
+  let sectionMap = {};
+
+  // Forward
+  for (i in 0..(sections.length - 1)) {
+    const name = "S" + (i + 1);
+    structure[structure.length] = name;
+    sectionMap[name] = sections[i];
+  }
+
+  // Backward (excluding center)
+  for (i in 0..(sections.length - 2)) {
+    const idx = sections.length - 2 - i;
+    const name = "S" + (idx + 1) + "'";
+    structure[structure.length] = name;
+  }
+
+  return {
+    type: "form",
+    formType: "palindrome",
+    structure: structure,
+    sections: sectionMap
+  };
+}
+
+// Mobile form (performer chooses order)
+export fn mobileForm(modules) {
+  return {
+    type: "form",
+    formType: "mobile",
+    modules: modules,
+    orderDetermined: false
+  };
+}
+
+// Moment form (Stockhausen-style)
+export fn momentForm(moments) {
+  return {
+    type: "form",
+    formType: "moment",
+    moments: moments,
+    autonomous: true
+  };
+}
+
+// ============================================
+// Form Utilities
+// ============================================
+
+// Get total sections count
+export fn sectionCount(form) {
+  return form.structure.length;
+}
+
+// Get section by index
+export fn getSectionByIndex(form, index) {
+  if (index < 0 || index >= form.structure.length) {
+    return null;
+  }
+  const name = form.structure[index];
+  return form.sections[name];
+}
+
+// Get section by name
+export fn getSectionByName(form, name) {
+  return form.sections[name];
+}
+
+// Expand form to linear sequence
+export fn expandForm(form) {
+  let sequence = [];
+
+  for (sectionName in form.structure) {
+    // Handle repeated sections like "A" appearing multiple times
+    let content = form.sections[sectionName];
+
+    // Check for prime variants
+    if (content == null) {
+      const baseName = sectionName[0];
+      content = form.sections[baseName];
+    }
+
+    if (content != null) {
+      sequence[sequence.length] = {
+        name: sectionName,
+        content: content
+      };
+    }
+  }
+
+  return sequence;
+}
+
+// Calculate proportions
+export fn calculateProportions(form, sectionDurations) {
+  let total = 0;
+  for (dur in sectionDurations) {
+    total = total + dur;
+  }
+
+  let proportions = [];
+  for (dur in sectionDurations) {
+    proportions[proportions.length] = dur / total;
+  }
+
+  return proportions;
+}
+
+// Golden ratio proportions
+export fn goldenRatioProportions(totalLength) {
+  const phi = 1.618033988749895;
+  const a = totalLength / phi;
+  const b = totalLength - a;
+
+  return {
+    longer: a,
+    shorter: b,
+    ratio: phi
+  };
+}
+
+// ============================================
+// Form Generation
+// ============================================
+
+// Generate random form from sections
+export fn randomForm(sections, length, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let structure = [];
+  for (_ in 0..(length - 1)) {
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    const idx = ((rng / 2147483648) * sections.length);
+    let i = idx - (idx % 1);
+    structure[structure.length] = sections[i].name;
+  }
+
+  let sectionMap = {};
+  for (s in sections) {
+    sectionMap[s.name] = s;
+  }
+
+  return {
+    type: "form",
+    formType: "generated",
+    structure: structure,
+    sections: sectionMap
+  };
+}
+
+// Generate form with constraints
+export fn constrainedForm(sections, rules, length, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let structure = [];
+  let lastSection = null;
+
+  for (_ in 0..(length - 1)) {
+    // Filter valid next sections
+    let valid = [];
+    for (s in sections) {
+      let isValid = true;
+
+      // Check if allowed after last section
+      if (lastSection != null && rules.transitions != null) {
+        const trans = rules.transitions[lastSection];
+        if (trans != null) {
+          isValid = false;
+          for (allowed in trans) {
+            if (allowed == s.name) {
+              isValid = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // Check max consecutive
+      if (rules.maxConsecutive != null && structure.length > 0) {
+        let consecutive = 0;
+        for (i in 0..(structure.length - 1)) {
+          const idx = structure.length - 1 - i;
+          if (structure[idx] == s.name) {
+            consecutive = consecutive + 1;
+          } else {
+            break;
+          }
+        }
+        if (consecutive >= rules.maxConsecutive) {
+          isValid = false;
+        }
+      }
+
+      if (isValid) {
+        valid[valid.length] = s;
+      }
+    }
+
+    if (valid.length == 0) {
+      valid = sections;  // Fallback
+    }
+
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    const idx = ((rng / 2147483648) * valid.length);
+    let i = idx - (idx % 1);
+
+    structure[structure.length] = valid[i].name;
+    lastSection = valid[i].name;
+  }
+
+  let sectionMap = {};
+  for (s in sections) {
+    sectionMap[s.name] = s;
+  }
+
+  return {
+    type: "form",
+    formType: "constrained",
+    structure: structure,
+    sections: sectionMap
+  };
+}
+
+// ============================================
+// Transitions
+// ============================================
+
+// Create transition between sections
+export fn transition(fromSection, toSection, type) {
+  return {
+    type: "transition",
+    from: fromSection,
+    to: toSection,
+    transitionType: type  // "modulating", "bridge", "attacca", "pause"
+  };
+}
+
+// Bridge section
+export fn bridge(content) {
+  return section("Bridge", content, { role: "transition" });
+}
+
+// Cadenza
+export fn cadenza(content) {
+  return section("Cadenza", content, { tempo: "free", role: "virtuosic" });
+}
+
+// Introduction
+export fn intro(content) {
+  return section("Introduction", content, { role: "opening" });
+}
+
+// Coda
+export fn coda(content) {
+  return section("Coda", content, { role: "closing" });
+}

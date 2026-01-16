@@ -1,0 +1,721 @@
+// std:cluster (v5.4)
+// Tone clusters and sound mass composition
+// Techniques from Cowell, Ligeti, Penderecki, and Xenakis
+
+// ============================================
+// Basic Cluster Generation
+// ============================================
+
+// Create chromatic cluster (all notes between low and high)
+export fn chromatic(lowPitch, highPitch) {
+  let pitches = [];
+  for (p in lowPitch..highPitch) {
+    pitches[pitches.length] = p;
+  }
+  return {
+    type: "cluster",
+    clusterType: "chromatic",
+    pitches: pitches,
+    low: lowPitch,
+    high: highPitch,
+    density: 1.0
+  };
+}
+
+// Create diatonic cluster (white keys)
+export fn diatonic(lowPitch, highPitch) {
+  const whiteKeys = [0, 2, 4, 5, 7, 9, 11];
+  let pitches = [];
+
+  for (p in lowPitch..highPitch) {
+    const pc = p % 12;
+    for (wk in whiteKeys) {
+      if (pc == wk) {
+        pitches[pitches.length] = p;
+        break;
+      }
+    }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "diatonic",
+    pitches: pitches,
+    low: lowPitch,
+    high: highPitch
+  };
+}
+
+// Create pentatonic cluster (black keys)
+export fn pentatonic(lowPitch, highPitch) {
+  const blackKeys = [1, 3, 6, 8, 10];
+  let pitches = [];
+
+  for (p in lowPitch..highPitch) {
+    const pc = p % 12;
+    for (bk in blackKeys) {
+      if (pc == bk) {
+        pitches[pitches.length] = p;
+        break;
+      }
+    }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "pentatonic",
+    pitches: pitches,
+    low: lowPitch,
+    high: highPitch
+  };
+}
+
+// Create whole-tone cluster
+export fn wholeTone(lowPitch, highPitch, set) {
+  // set 0: C, D, E, F#, G#, A#
+  // set 1: C#, D#, F, G, A, B
+  let startingPcs = [0, 1];
+  let s = set;
+  if (s == null) { s = 0; }
+
+  let pitches = [];
+  for (p in lowPitch..highPitch) {
+    const pc = p % 12;
+    const offset = pc - startingPcs[s];
+    if (offset >= 0 && offset % 2 == 0) {
+      pitches[pitches.length] = p;
+    }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "wholeTone",
+    pitches: pitches,
+    low: lowPitch,
+    high: highPitch,
+    set: s
+  };
+}
+
+// Create cluster from scale
+export fn fromScale(scale, lowPitch, highPitch) {
+  let pitches = [];
+
+  for (p in lowPitch..highPitch) {
+    const pc = p % 12;
+    for (scalePc in scale) {
+      if (pc == scalePc % 12) {
+        pitches[pitches.length] = p;
+        break;
+      }
+    }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "scale",
+    pitches: pitches,
+    low: lowPitch,
+    high: highPitch
+  };
+}
+
+// ============================================
+// Cluster with Density Control
+// ============================================
+
+// Create sparse cluster (random selection)
+export fn sparse(lowPitch, highPitch, density, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let pitches = [];
+  for (p in lowPitch..highPitch) {
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    if ((rng / 2147483648) < density) {
+      pitches[pitches.length] = p;
+    }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "sparse",
+    pitches: pitches,
+    low: lowPitch,
+    high: highPitch,
+    density: density
+  };
+}
+
+// Create cluster with interval filter
+export fn withIntervals(lowPitch, highPitch, allowedIntervals) {
+  let pitches = [lowPitch];
+  let current = lowPitch;
+
+  while (current < highPitch) {
+    for (interval in allowedIntervals) {
+      const next = current + interval;
+      if (next <= highPitch) {
+        pitches[pitches.length] = next;
+      }
+    }
+    current = current + 1;  // Simple iteration
+  }
+
+  // Remove duplicates and sort
+  let unique = [];
+  for (p in pitches) {
+    let found = false;
+    for (u in unique) {
+      if (u == p) {
+        found = true;
+        break;
+      }
+    }
+    if (!found && p >= lowPitch && p <= highPitch) {
+      unique[unique.length] = p;
+    }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "intervalFiltered",
+    pitches: unique,
+    low: lowPitch,
+    high: highPitch
+  };
+}
+
+// ============================================
+// Cluster Transformations
+// ============================================
+
+// Transpose cluster
+export fn transpose(cluster, semitones) {
+  let pitches = [];
+  for (p in cluster.pitches) {
+    pitches[pitches.length] = p + semitones;
+  }
+
+  return {
+    type: "cluster",
+    clusterType: cluster.clusterType,
+    pitches: pitches,
+    low: cluster.low + semitones,
+    high: cluster.high + semitones
+  };
+}
+
+// Expand cluster (increase range)
+export fn expand(cluster, amount) {
+  const center = (cluster.low + cluster.high) / 2;
+  let pitches = [];
+
+  for (p in cluster.pitches) {
+    const dist = p - center;
+    const newP = center + dist * amount;
+    let rounded = newP;
+    if (newP >= 0) {
+      rounded = newP - (newP % 1);
+    } else {
+      rounded = newP - 1 - ((newP - 1) % 1);
+    }
+    pitches[pitches.length] = rounded;
+  }
+
+  let newLow = 127;
+  let newHigh = 0;
+  for (p in pitches) {
+    if (p < newLow) { newLow = p; }
+    if (p > newHigh) { newHigh = p; }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: cluster.clusterType + "_expanded",
+    pitches: pitches,
+    low: newLow,
+    high: newHigh
+  };
+}
+
+// Contract cluster (decrease range)
+export fn contract(cluster, amount) {
+  return expand(cluster, 1 / amount);
+}
+
+// Shift cluster (move without changing size)
+export fn shift(cluster, direction, amount) {
+  let pitches = [];
+  const offset = direction * amount;
+
+  for (p in cluster.pitches) {
+    pitches[pitches.length] = p + offset;
+  }
+
+  return {
+    type: "cluster",
+    clusterType: cluster.clusterType,
+    pitches: pitches,
+    low: cluster.low + offset,
+    high: cluster.high + offset
+  };
+}
+
+// Invert cluster around axis
+export fn invert(cluster, axis) {
+  let ax = axis;
+  if (ax == null) {
+    ax = (cluster.low + cluster.high) / 2;
+  }
+
+  let pitches = [];
+  for (p in cluster.pitches) {
+    const inverted = ax * 2 - p;
+    let rounded = inverted;
+    if (inverted >= 0) {
+      rounded = inverted - (inverted % 1);
+    } else {
+      rounded = inverted - 1 - ((inverted - 1) % 1);
+    }
+    pitches[pitches.length] = rounded;
+  }
+
+  let newLow = 127;
+  let newHigh = 0;
+  for (p in pitches) {
+    if (p < newLow) { newLow = p; }
+    if (p > newHigh) { newHigh = p; }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: cluster.clusterType + "_inverted",
+    pitches: pitches,
+    low: newLow,
+    high: newHigh
+  };
+}
+
+// ============================================
+// Cluster Morphing
+// ============================================
+
+// Interpolate between two clusters
+export fn morph(clusterA, clusterB, amount) {
+  // Interpolate boundaries
+  const newLow = clusterA.low + (clusterB.low - clusterA.low) * amount;
+  const newHigh = clusterA.high + (clusterB.high - clusterA.high) * amount;
+
+  let lowRounded = newLow - (newLow % 1);
+  let highRounded = newHigh - (newHigh % 1);
+
+  // Interpolate density
+  const densityA = clusterA.pitches.length / (clusterA.high - clusterA.low + 1);
+  const densityB = clusterB.pitches.length / (clusterB.high - clusterB.low + 1);
+  const newDensity = densityA + (densityB - densityA) * amount;
+
+  // Generate new pitches
+  let pitches = [];
+  for (p in lowRounded..highRounded) {
+    // Probabilistic inclusion based on density
+    if (newDensity >= 1.0) {
+      pitches[pitches.length] = p;
+    } else {
+      // Simple deterministic pattern
+      const range = highRounded - lowRounded + 1;
+      const step = 1 / newDensity;
+      const idx = p - lowRounded;
+      if (idx % step < 1) {
+        pitches[pitches.length] = p;
+      }
+    }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "morphed",
+    pitches: pitches,
+    low: lowRounded,
+    high: highRounded,
+    morphAmount: amount
+  };
+}
+
+// Create morphing sequence
+export fn morphSequence(clusterA, clusterB, steps) {
+  let sequence = [];
+  for (i in 0..steps) {
+    const amount = i / steps;
+    sequence[i] = morph(clusterA, clusterB, amount);
+  }
+  return sequence;
+}
+
+// ============================================
+// Sound Mass Techniques
+// ============================================
+
+// Create glissando cluster (Penderecki-style)
+export fn glissandoCluster(startCluster, endCluster, duration, voiceCount) {
+  let voices = [];
+
+  for (v in 0..(voiceCount - 1)) {
+    const t = v / (voiceCount - 1);
+    const startPitch = startCluster.low + t * (startCluster.high - startCluster.low);
+    const endPitch = endCluster.low + t * (endCluster.high - endCluster.low);
+
+    voices[v] = {
+      type: "glissando",
+      startPitch: startPitch - (startPitch % 1),
+      endPitch: endPitch - (endPitch % 1),
+      duration: duration
+    };
+  }
+
+  return {
+    type: "clusterGlissando",
+    voices: voices,
+    duration: duration
+  };
+}
+
+// Create micropolyphonic texture (Ligeti-style)
+export fn micropolyphony(cluster, voiceCount, rhythmDensity, duration, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let voices = [];
+  const pitchCount = cluster.pitches.length;
+
+  for (v in 0..(voiceCount - 1)) {
+    let events = [];
+    let time = 0 / 1;
+
+    // Assign pitch range to voice
+    const pitchStart = (v * pitchCount) / voiceCount;
+    const pitchEnd = ((v + 1) * pitchCount) / voiceCount;
+    let startIdx = pitchStart - (pitchStart % 1);
+    let endIdx = pitchEnd - (pitchEnd % 1);
+    if (endIdx > pitchCount - 1) { endIdx = pitchCount - 1; }
+
+    while (time < duration) {
+      // Random pitch within voice range
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      const range = endIdx - startIdx + 1;
+      const pitchIdx = startIdx + ((rng / 2147483648) * range);
+      let idx = pitchIdx - (pitchIdx % 1);
+      if (idx > endIdx) { idx = endIdx; }
+      if (idx < startIdx) { idx = startIdx; }
+
+      // Random duration (very short)
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      const noteDur = 1/16 + (rng / 2147483648) * 1/8;
+
+      events[events.length] = {
+        pitch: cluster.pitches[idx],
+        start: time,
+        duration: noteDur
+      };
+
+      // Random gap
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      time = time + noteDur + (rng / 2147483648) * (1 / rhythmDensity);
+    }
+
+    voices[v] = { events: events };
+  }
+
+  return {
+    type: "micropolyphony",
+    cluster: cluster,
+    voices: voices,
+    duration: duration
+  };
+}
+
+// Create aleatoric texture (Lutoslawski-style)
+export fn aleatoricTexture(cluster, cells, duration, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let parts = [];
+  for (cell in cells) {
+    let events = [];
+    let time = 0 / 1;
+
+    while (time < duration) {
+      // Play cell with random timing
+      for (note in cell.notes) {
+        rng = (rng * 1103515245 + 12345) % 2147483648;
+        const jitter = (rng / 2147483648 - 0.5) * 0.1;
+
+        events[events.length] = {
+          pitch: note.pitch,
+          start: time + jitter,
+          duration: note.duration
+        };
+      }
+
+      // Random rest between repetitions
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      time = time + cell.duration + (rng / 2147483648) * cell.duration;
+    }
+
+    parts[parts.length] = { events: events };
+  }
+
+  return {
+    type: "aleatoric",
+    parts: parts,
+    duration: duration
+  };
+}
+
+// ============================================
+// Cluster Arithmetic
+// ============================================
+
+// Union of clusters
+export fn union(clusterA, clusterB) {
+  let pitches = [];
+
+  for (p in clusterA.pitches) {
+    pitches[pitches.length] = p;
+  }
+
+  for (p in clusterB.pitches) {
+    let found = false;
+    for (existing in pitches) {
+      if (existing == p) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      pitches[pitches.length] = p;
+    }
+  }
+
+  // Sort
+  pitches = sort(pitches);
+
+  let low = 127;
+  let high = 0;
+  for (p in pitches) {
+    if (p < low) { low = p; }
+    if (p > high) { high = p; }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "union",
+    pitches: pitches,
+    low: low,
+    high: high
+  };
+}
+
+// Intersection of clusters
+export fn intersection(clusterA, clusterB) {
+  let pitches = [];
+
+  for (pA in clusterA.pitches) {
+    for (pB in clusterB.pitches) {
+      if (pA == pB) {
+        pitches[pitches.length] = pA;
+        break;
+      }
+    }
+  }
+
+  let low = 127;
+  let high = 0;
+  for (p in pitches) {
+    if (p < low) { low = p; }
+    if (p > high) { high = p; }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "intersection",
+    pitches: pitches,
+    low: low,
+    high: high
+  };
+}
+
+// Difference of clusters (A - B)
+export fn difference(clusterA, clusterB) {
+  let pitches = [];
+
+  for (pA in clusterA.pitches) {
+    let found = false;
+    for (pB in clusterB.pitches) {
+      if (pA == pB) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      pitches[pitches.length] = pA;
+    }
+  }
+
+  let low = 127;
+  let high = 0;
+  for (p in pitches) {
+    if (p < low) { low = p; }
+    if (p > high) { high = p; }
+  }
+
+  return {
+    type: "cluster",
+    clusterType: "difference",
+    pitches: pitches,
+    low: low,
+    high: high
+  };
+}
+
+// ============================================
+// Analysis
+// ============================================
+
+// Get cluster statistics
+export fn analyze(cluster) {
+  const range = cluster.high - cluster.low;
+  const count = cluster.pitches.length;
+  const density = count / (range + 1);
+
+  // Calculate center of mass
+  let sum = 0;
+  for (p in cluster.pitches) {
+    sum = sum + p;
+  }
+  const centroid = sum / count;
+
+  // Calculate spread
+  let variance = 0;
+  for (p in cluster.pitches) {
+    const diff = p - centroid;
+    variance = variance + diff * diff;
+  }
+  const spread = (variance / count) ** 0.5;
+
+  return {
+    range: range,
+    noteCount: count,
+    density: density,
+    centroid: centroid,
+    spread: spread
+  };
+}
+
+// Check if pitch is in cluster
+export fn contains(cluster, pitch) {
+  for (p in cluster.pitches) {
+    if (p == pitch) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Get intervals within cluster
+export fn getIntervals(cluster) {
+  let intervals = [];
+
+  for (i in 0..(cluster.pitches.length - 2)) {
+    for (j in (i + 1)..(cluster.pitches.length - 1)) {
+      const interval = cluster.pitches[j] - cluster.pitches[i];
+      intervals[intervals.length] = interval;
+    }
+  }
+
+  return intervals;
+}
+
+// ============================================
+// Voicing and Distribution
+// ============================================
+
+// Distribute cluster across voices
+export fn distribute(cluster, voiceCount) {
+  let voices = [];
+  const pitchesPerVoice = cluster.pitches.length / voiceCount;
+
+  for (v in 0..(voiceCount - 1)) {
+    let voicePitches = [];
+    const startIdx = v * pitchesPerVoice;
+    const endIdx = (v + 1) * pitchesPerVoice;
+
+    for (i in 0..(cluster.pitches.length - 1)) {
+      if (i >= startIdx && i < endIdx) {
+        voicePitches[voicePitches.length] = cluster.pitches[i];
+      }
+    }
+
+    voices[v] = voicePitches;
+  }
+
+  return voices;
+}
+
+// Create arpeggiated cluster
+export fn arpeggiate(cluster, direction, duration) {
+  let events = [];
+  const noteCount = cluster.pitches.length;
+  const noteDur = duration / noteCount;
+
+  let pitches = cluster.pitches;
+  if (direction == "down") {
+    pitches = [];
+    for (i in 0..(cluster.pitches.length - 1)) {
+      pitches[i] = cluster.pitches[cluster.pitches.length - 1 - i];
+    }
+  }
+
+  for (i in 0..(noteCount - 1)) {
+    events[events.length] = {
+      pitch: pitches[i],
+      start: i * noteDur,
+      duration: duration - i * noteDur  // Sustain to end
+    };
+  }
+
+  return {
+    type: "arpeggiatedCluster",
+    events: events,
+    direction: direction,
+    duration: duration
+  };
+}
+
+// Roll cluster (gradual onset)
+export fn roll(cluster, rollDuration, sustainDuration) {
+  let events = [];
+  const noteCount = cluster.pitches.length;
+  const onsetGap = rollDuration / noteCount;
+
+  for (i in 0..(noteCount - 1)) {
+    events[events.length] = {
+      pitch: cluster.pitches[i],
+      start: i * onsetGap,
+      duration: sustainDuration
+    };
+  }
+
+  return {
+    type: "rolledCluster",
+    events: events,
+    rollDuration: rollDuration,
+    sustainDuration: sustainDuration
+  };
+}

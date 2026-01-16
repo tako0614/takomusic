@@ -1,0 +1,771 @@
+// std:canon (v5.4)
+// Canonic techniques and imitative counterpoint
+// Supports various historical and contemporary canonic forms
+
+// ============================================
+// Basic Canon Generation
+// ============================================
+
+// Create simple canon at unison
+export fn canon(subject, voiceCount, delayInterval) {
+  let voices = [];
+
+  for (v in 0..(voiceCount - 1)) {
+    let events = [];
+    const offset = v * delayInterval;
+
+    for (note in subject) {
+      events[events.length] = {
+        pitch: note.pitch,
+        start: note.start + offset,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: v
+      };
+    }
+
+    voices[v] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "unison",
+    subject: subject,
+    voiceCount: voiceCount,
+    delay: delayInterval,
+    voices: voices
+  };
+}
+
+// Canon at the fifth (or any interval)
+export fn canonAtInterval(subject, voiceCount, delayInterval, pitchInterval) {
+  let voices = [];
+
+  for (v in 0..(voiceCount - 1)) {
+    let events = [];
+    const timeOffset = v * delayInterval;
+    const pitchOffset = v * pitchInterval;
+
+    for (note in subject) {
+      events[events.length] = {
+        pitch: note.pitch + pitchOffset,
+        start: note.start + timeOffset,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: v
+      };
+    }
+
+    voices[v] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "interval",
+    subject: subject,
+    voiceCount: voiceCount,
+    delay: delayInterval,
+    interval: pitchInterval,
+    voices: voices
+  };
+}
+
+// ============================================
+// Canonic Transformations
+// ============================================
+
+// Canon in inversion
+export fn canonInversion(subject, voiceCount, delayInterval, axis) {
+  let ax = axis;
+  if (ax == null && subject.length > 0) {
+    ax = subject[0].pitch;
+  }
+
+  let voices = [];
+
+  for (v in 0..(voiceCount - 1)) {
+    let events = [];
+    const timeOffset = v * delayInterval;
+    const isInverted = v % 2 == 1;
+
+    for (note in subject) {
+      let pitch = note.pitch;
+      if (isInverted) {
+        pitch = ax * 2 - pitch;
+      }
+
+      events[events.length] = {
+        pitch: pitch,
+        start: note.start + timeOffset,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: v
+      };
+    }
+
+    voices[v] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "inversion",
+    subject: subject,
+    voiceCount: voiceCount,
+    delay: delayInterval,
+    axis: ax,
+    voices: voices
+  };
+}
+
+// Canon in retrograde (crab canon)
+export fn crabCanon(subject, delayInterval) {
+  let voice1Events = [];
+  let voice2Events = [];
+
+  // Voice 1: original
+  for (note in subject) {
+    voice1Events[voice1Events.length] = {
+      pitch: note.pitch,
+      start: note.start,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 0
+    };
+  }
+
+  // Calculate total duration
+  let totalDur = 0 / 1;
+  for (note in subject) {
+    const end = note.start + note.duration;
+    if (end > totalDur) {
+      totalDur = end;
+    }
+  }
+
+  // Voice 2: retrograde
+  for (i in 0..(subject.length - 1)) {
+    const note = subject[subject.length - 1 - i];
+    const newStart = totalDur - note.start - note.duration + delayInterval;
+
+    voice2Events[voice2Events.length] = {
+      pitch: note.pitch,
+      start: newStart,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 1
+    };
+  }
+
+  return {
+    type: "canon",
+    canonType: "crab",
+    subject: subject,
+    voices: [{ events: voice1Events }, { events: voice2Events }]
+  };
+}
+
+// Canon in retrograde inversion (table canon)
+export fn tableCanon(subject, axis) {
+  let ax = axis;
+  if (ax == null && subject.length > 0) {
+    ax = subject[0].pitch;
+  }
+
+  let voice1Events = [];
+  let voice2Events = [];
+
+  // Voice 1: original
+  for (note in subject) {
+    voice1Events[voice1Events.length] = {
+      pitch: note.pitch,
+      start: note.start,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 0
+    };
+  }
+
+  // Calculate total duration
+  let totalDur = 0 / 1;
+  for (note in subject) {
+    const end = note.start + note.duration;
+    if (end > totalDur) {
+      totalDur = end;
+    }
+  }
+
+  // Voice 2: retrograde inversion
+  for (i in 0..(subject.length - 1)) {
+    const note = subject[subject.length - 1 - i];
+    const newStart = totalDur - note.start - note.duration;
+    const invertedPitch = ax * 2 - note.pitch;
+
+    voice2Events[voice2Events.length] = {
+      pitch: invertedPitch,
+      start: newStart,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 1
+    };
+  }
+
+  return {
+    type: "canon",
+    canonType: "table",
+    subject: subject,
+    axis: ax,
+    voices: [{ events: voice1Events }, { events: voice2Events }]
+  };
+}
+
+// ============================================
+// Mensuration Canon
+// ============================================
+
+// Canon with different tempos (prolation)
+export fn mensurationCanon(subject, tempoRatios) {
+  let voices = [];
+
+  for (i in 0..(tempoRatios.length - 1)) {
+    const ratio = tempoRatios[i];
+    let events = [];
+
+    for (note in subject) {
+      events[events.length] = {
+        pitch: note.pitch,
+        start: note.start * ratio,
+        duration: note.duration * ratio,
+        velocity: note.velocity,
+        voice: i
+      };
+    }
+
+    voices[i] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "mensuration",
+    subject: subject,
+    tempoRatios: tempoRatios,
+    voices: voices
+  };
+}
+
+// Augmentation canon
+export fn augmentationCanon(subject, augmentationFactor, delayInterval) {
+  let voice1Events = [];
+  let voice2Events = [];
+
+  // Voice 1: original
+  for (note in subject) {
+    voice1Events[voice1Events.length] = {
+      pitch: note.pitch,
+      start: note.start,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 0
+    };
+  }
+
+  // Voice 2: augmented
+  for (note in subject) {
+    voice2Events[voice2Events.length] = {
+      pitch: note.pitch,
+      start: note.start * augmentationFactor + delayInterval,
+      duration: note.duration * augmentationFactor,
+      velocity: note.velocity,
+      voice: 1
+    };
+  }
+
+  return {
+    type: "canon",
+    canonType: "augmentation",
+    subject: subject,
+    augmentationFactor: augmentationFactor,
+    voices: [{ events: voice1Events }, { events: voice2Events }]
+  };
+}
+
+// Diminution canon
+export fn diminutionCanon(subject, diminutionFactor, delayInterval) {
+  return augmentationCanon(subject, 1 / diminutionFactor, delayInterval);
+}
+
+// ============================================
+// Special Canon Types
+// ============================================
+
+// Spiral canon (continuous modulation)
+export fn spiralCanon(subject, voiceCount, delayInterval, modulationInterval) {
+  let voices = [];
+
+  for (v in 0..(voiceCount - 1)) {
+    let events = [];
+    const timeOffset = v * delayInterval;
+    const pitchOffset = v * modulationInterval;
+
+    for (note in subject) {
+      events[events.length] = {
+        pitch: note.pitch + pitchOffset,
+        start: note.start + timeOffset,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: v
+      };
+    }
+
+    voices[v] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "spiral",
+    subject: subject,
+    voiceCount: voiceCount,
+    delay: delayInterval,
+    modulationInterval: modulationInterval,
+    voices: voices
+  };
+}
+
+// Mirror canon (palindrome)
+export fn mirrorCanon(subject) {
+  let voice1Events = [];
+  let voice2Events = [];
+
+  // Voice 1: original
+  for (note in subject) {
+    voice1Events[voice1Events.length] = {
+      pitch: note.pitch,
+      start: note.start,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 0
+    };
+  }
+
+  // Get total duration
+  let totalDur = 0 / 1;
+  for (note in subject) {
+    const end = note.start + note.duration;
+    if (end > totalDur) {
+      totalDur = end;
+    }
+  }
+
+  // Voice 2: starts at end going backwards, plays simultaneously
+  for (i in 0..(subject.length - 1)) {
+    const note = subject[subject.length - 1 - i];
+    voice2Events[voice2Events.length] = {
+      pitch: note.pitch,
+      start: totalDur - note.start - note.duration,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 1
+    };
+  }
+
+  return {
+    type: "canon",
+    canonType: "mirror",
+    subject: subject,
+    voices: [{ events: voice1Events }, { events: voice2Events }]
+  };
+}
+
+// Perpetual canon (round)
+export fn round(subject, voiceCount, delayInterval, repetitions) {
+  let voices = [];
+
+  for (v in 0..(voiceCount - 1)) {
+    let events = [];
+    const entryDelay = v * delayInterval;
+
+    // Get subject duration
+    let subjectDur = 0 / 1;
+    for (note in subject) {
+      const end = note.start + note.duration;
+      if (end > subjectDur) {
+        subjectDur = end;
+      }
+    }
+
+    for (rep in 0..(repetitions - 1)) {
+      const repOffset = rep * subjectDur;
+
+      for (note in subject) {
+        events[events.length] = {
+          pitch: note.pitch,
+          start: note.start + entryDelay + repOffset,
+          duration: note.duration,
+          velocity: note.velocity,
+          voice: v
+        };
+      }
+    }
+
+    voices[v] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "round",
+    subject: subject,
+    voiceCount: voiceCount,
+    delay: delayInterval,
+    repetitions: repetitions,
+    voices: voices
+  };
+}
+
+// ============================================
+// Double and Triple Canons
+// ============================================
+
+// Double canon (two canonic pairs)
+export fn doubleCanon(subject1, subject2, delay1, delay2, interval1, interval2) {
+  let voices = [];
+
+  // Canon 1
+  for (v in 0..1) {
+    let events = [];
+    const timeOffset = v * delay1;
+    const pitchOffset = v * interval1;
+
+    for (note in subject1) {
+      events[events.length] = {
+        pitch: note.pitch + pitchOffset,
+        start: note.start + timeOffset,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: v
+      };
+    }
+
+    voices[v] = { events: events };
+  }
+
+  // Canon 2
+  for (v in 0..1) {
+    let events = [];
+    const timeOffset = v * delay2;
+    const pitchOffset = v * interval2;
+
+    for (note in subject2) {
+      events[events.length] = {
+        pitch: note.pitch + pitchOffset,
+        start: note.start + timeOffset,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: v + 2
+      };
+    }
+
+    voices[v + 2] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "double",
+    subjects: [subject1, subject2],
+    voices: voices
+  };
+}
+
+// Triple canon (three canonic pairs)
+export fn tripleCanon(subjects, delays, intervals) {
+  let voices = [];
+  let voiceIdx = 0;
+
+  for (s in 0..(subjects.length - 1)) {
+    const subject = subjects[s];
+    const delay = delays[s];
+    const interval = intervals[s];
+
+    for (v in 0..1) {
+      let events = [];
+      const timeOffset = v * delay;
+      const pitchOffset = v * interval;
+
+      for (note in subject) {
+        events[events.length] = {
+          pitch: note.pitch + pitchOffset,
+          start: note.start + timeOffset,
+          duration: note.duration,
+          velocity: note.velocity,
+          voice: voiceIdx
+        };
+      }
+
+      voices[voiceIdx] = { events: events };
+      voiceIdx = voiceIdx + 1;
+    }
+  }
+
+  return {
+    type: "canon",
+    canonType: "triple",
+    subjects: subjects,
+    voices: voices
+  };
+}
+
+// ============================================
+// Puzzle Canon
+// ============================================
+
+// Create puzzle canon (notation shows one voice, rules derive others)
+export fn puzzleCanon(subject, rules) {
+  let voices = [];
+
+  // Voice 0: original
+  let voice0Events = [];
+  for (note in subject) {
+    voice0Events[voice0Events.length] = {
+      pitch: note.pitch,
+      start: note.start,
+      duration: note.duration,
+      velocity: note.velocity,
+      voice: 0
+    };
+  }
+  voices[0] = { events: voice0Events };
+
+  // Derive other voices from rules
+  for (i in 0..(rules.length - 1)) {
+    const rule = rules[i];
+    let events = [];
+
+    for (note in subject) {
+      let newPitch = note.pitch;
+      let newStart = note.start;
+      let newDur = note.duration;
+
+      // Apply transformations
+      if (rule.transpose != null) {
+        newPitch = newPitch + rule.transpose;
+      }
+      if (rule.invert != null) {
+        newPitch = rule.invert * 2 - newPitch;
+      }
+      if (rule.delay != null) {
+        newStart = newStart + rule.delay;
+      }
+      if (rule.augment != null) {
+        newStart = newStart * rule.augment;
+        newDur = newDur * rule.augment;
+      }
+      if (rule.retrograde == true) {
+        // Handle in post-processing
+      }
+
+      events[events.length] = {
+        pitch: newPitch,
+        start: newStart,
+        duration: newDur,
+        velocity: note.velocity,
+        voice: i + 1
+      };
+    }
+
+    // Handle retrograde
+    if (rule.retrograde == true) {
+      let totalDur = 0 / 1;
+      for (e in events) {
+        const end = e.start + e.duration;
+        if (end > totalDur) { totalDur = end; }
+      }
+
+      let retroEvents = [];
+      for (j in 0..(events.length - 1)) {
+        const e = events[events.length - 1 - j];
+        retroEvents[j] = {
+          pitch: e.pitch,
+          start: totalDur - e.start - e.duration,
+          duration: e.duration,
+          velocity: e.velocity,
+          voice: e.voice
+        };
+      }
+      events = retroEvents;
+    }
+
+    voices[i + 1] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "puzzle",
+    subject: subject,
+    rules: rules,
+    voices: voices
+  };
+}
+
+// ============================================
+// Modern Techniques
+// ============================================
+
+// Isorhythmic canon (talea and color)
+export fn isorhythmicCanon(color, talea, voiceCount, delayInterval) {
+  let voices = [];
+
+  for (v in 0..(voiceCount - 1)) {
+    let events = [];
+    const entryDelay = v * delayInterval;
+
+    let time = entryDelay;
+    let colorIdx = 0;
+    let taleaIdx = 0;
+
+    // Continue until both cycles complete together (or reasonable length)
+    const iterations = color.length * talea.length;
+
+    for (i in 0..(iterations - 1)) {
+      events[events.length] = {
+        pitch: color[colorIdx % color.length],
+        start: time,
+        duration: talea[taleaIdx % talea.length],
+        velocity: 0.75,
+        voice: v
+      };
+
+      time = time + talea[taleaIdx % talea.length];
+      colorIdx = colorIdx + 1;
+      taleaIdx = taleaIdx + 1;
+    }
+
+    voices[v] = { events: events };
+  }
+
+  return {
+    type: "canon",
+    canonType: "isorhythmic",
+    color: color,
+    talea: talea,
+    voices: voices
+  };
+}
+
+// Phasing canon (Reich-style)
+export fn phasingCanon(subject, phaseIncrement, totalPhase) {
+  let voice1Events = [];
+  let voice2Events = [];
+
+  // Voice 1: stable tempo
+  let subjectDur = 0 / 1;
+  for (note in subject) {
+    const end = note.start + note.duration;
+    if (end > subjectDur) {
+      subjectDur = end;
+    }
+  }
+
+  // Calculate repetitions needed
+  const repetitions = totalPhase / phaseIncrement + 2;
+
+  for (rep in 0..(repetitions - 1)) {
+    for (note in subject) {
+      voice1Events[voice1Events.length] = {
+        pitch: note.pitch,
+        start: note.start + rep * subjectDur,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: 0
+      };
+    }
+  }
+
+  // Voice 2: gradually shifting
+  let phaseOffset = 0 / 1;
+  for (rep in 0..(repetitions - 1)) {
+    for (note in subject) {
+      voice2Events[voice2Events.length] = {
+        pitch: note.pitch,
+        start: note.start + rep * subjectDur + phaseOffset,
+        duration: note.duration,
+        velocity: note.velocity,
+        voice: 1
+      };
+    }
+    phaseOffset = phaseOffset + phaseIncrement;
+  }
+
+  return {
+    type: "canon",
+    canonType: "phasing",
+    subject: subject,
+    phaseIncrement: phaseIncrement,
+    voices: [{ events: voice1Events }, { events: voice2Events }]
+  };
+}
+
+// ============================================
+// Utility Functions
+// ============================================
+
+// Merge all voices into single event list
+export fn mergeVoices(canonResult) {
+  let allEvents = [];
+
+  for (voice in canonResult.voices) {
+    for (event in voice.events) {
+      allEvents[allEvents.length] = event;
+    }
+  }
+
+  return allEvents;
+}
+
+// Get voice by index
+export fn getVoice(canonResult, voiceIndex) {
+  if (voiceIndex < 0 || voiceIndex >= canonResult.voices.length) {
+    return null;
+  }
+  return canonResult.voices[voiceIndex];
+}
+
+// Calculate total duration
+export fn totalDuration(canonResult) {
+  let maxEnd = 0 / 1;
+
+  for (voice in canonResult.voices) {
+    for (event in voice.events) {
+      const end = event.start + event.duration;
+      if (end > maxEnd) {
+        maxEnd = end;
+      }
+    }
+  }
+
+  return maxEnd;
+}
+
+// Check vertical intervals at a given time
+export fn verticalIntervalsAt(canonResult, time) {
+  let activePitches = [];
+
+  for (voice in canonResult.voices) {
+    for (event in voice.events) {
+      if (event.start <= time && event.start + event.duration > time) {
+        activePitches[activePitches.length] = event.pitch;
+      }
+    }
+  }
+
+  // Sort pitches
+  activePitches = sort(activePitches);
+
+  // Calculate intervals
+  let intervals = [];
+  for (i in 1..(activePitches.length - 1)) {
+    intervals[intervals.length] = activePitches[i] - activePitches[i - 1];
+  }
+
+  return {
+    pitches: activePitches,
+    intervals: intervals
+  };
+}
