@@ -11,9 +11,7 @@
   },
   "dependencies": {
     "marked": "^17.0.1",
-    "solid-js": "^1.9.10",
-    "y-websocket": "^1.5.4",
-    "yjs": "^13.6.24"
+    "solid-js": "^1.9.10"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",

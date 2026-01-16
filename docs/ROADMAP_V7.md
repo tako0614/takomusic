@@ -80,8 +80,8 @@ type FixedClip(len: Dur) = Clip where length(_) == len;
 
 ```
 Frontend:  Solid.js + Monaco Editor + Tailwind CSS + Web Audio API
-Backend:   Cloudflare Workers / Node.js
-Storage:   IndexedDB (client) + optional R2/S3 exports
+Backend:   none (browser-only)
+Storage:   IndexedDB (client)
 Auth:      Local username (optional)
 ```
 
@@ -90,20 +90,17 @@ Auth:      Local username (optional)
 ```sql
 projects (id, user, name, code, updated_at)
 settings (key, value)
-exports (id, format, file_url, status)
 ```
 
 ### 2.3 Billing
 
 No billing. All features are free.
-### 2.4 API Endpoints
 
-```
-POST /api/exports/audio   # audio export
-GET  /api/exports/{id}    # download
-POST /api/sync/push       # sync upload
-GET  /api/sync/pull       # sync download
-```
+### 2.4 Audio Export (Web)
+
+- OfflineAudioContext render
+- WAV download
+
 ---
 
 ## Part 3: VSCode Extension (Language Features)
@@ -118,7 +115,7 @@ GET  /api/sync/pull       # sync download
 ### 3.2 Extension Scope
 
 - **LSP only**: type inference, diagnostics, formatting, code actions
-- **Playback/sync**: handled in the Web app
+- **Playback**: handled in the Web app
 
 ---
 
@@ -140,12 +137,11 @@ GET  /api/sync/pull       # sync download
 3. [x] LSPコードアクション・フォーマット
 
 ### Phase 3: Platform integration (4-6 weeks) [x] Done
-1. [x] Web platform: basic auth, project save/load, playback, MIDI download, collab connect test
+1. [x] Web platform: basic auth, project save/load, playback, MIDI/WAV download
 2. [x] IndexedDB local storage
 
 ### Phase 4: プレミアム機能 (4-6週間) [x] 完了
-1. [x] オーディオエクスポート (サーバーサイド合成)
-2. [x] リアルタイムコラボレーション (WebSocket + yjs)
+1. [x] オーディオエクスポート (ブラウザ合成)
 
 ### Phase 5: ポリッシュ (2-4週間) [x] 完了
 1. [x] パフォーマンス最適化
@@ -179,14 +175,8 @@ GET  /api/sync/pull       # sync download
 - `website/src/stores/projects.ts` - IndexedDB project storage [x]
 - `website/src/lib/audioPlayer.ts` - 再生ロジック
 - `website/src/lib/midiExport.ts` - MIDIダウンロード [x]
+- `website/src/lib/audioExport.ts` - WAVダウンロード [x]
 - `website/src/lib/compiler.ts` - コンパイル連携
-- `api/routes/` - バックエンドエンドポイント [x]
-- `api/routes/exports.ts` - オーディオエクスポート [x]
-- `api/routes/sync.ts` - クラウド同期 [x]
-- `api/index.ts` - APIハンドラ [x]
-- `api/services/audioExport.ts` - サーバーサイド合成 [x]
-- `api/services/cloudSync.ts` - クラウド同期 [x]
-- `api/collabServer.ts` - コラボレーションサーバー [x]
 
 ### Docs
 - `docs/TUTORIAL_V7.md` - V7 tutorial [x]
@@ -198,16 +188,14 @@ GET  /api/sync/pull       # sync download
 - `vscode-extension/src/server.ts` - LSPクライアント起動
 - `src/lsp/server.ts` - LSPサーバ
 - `vscode-extension/src/playbackPanel.ts` - 再生プレビュー [x]
-- `vscode-extension/src/sync/client.ts` - クラウド同期 [x]
 
 ---
 
 ## 検証方法
 
 1. **Language**: `npm run test` - all tests pass
-2. **Web**: sign-in, project save/load (IndexedDB), playback, MIDI download, collab connect
-3. **API**: `/api/exports` and `/api/sync`
-4. **VSCode**: load extension, verify LSP features
+2. **Web**: sign-in, project save/load (IndexedDB), playback, MIDI/WAV download
+3. **VSCode**: load extension, verify LSP features
 ---
 
 *Last updated: 2026-01-16*
