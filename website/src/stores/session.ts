@@ -1,37 +1,43 @@
 import { createSignal } from 'solid-js'
+import { readSetting, writeSetting } from './db'
 
-const STORAGE_KEY = 'takomusic.user'
+const STORAGE_KEY = 'user'
+let mutationId = 0
 
-const readUser = (): string | null => {
-  if (typeof localStorage === 'undefined') return null
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (!stored) return null
-  const trimmed = stored.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
+const [user, setUser] = createSignal<string | null>(null)
 
-const [user, setUser] = createSignal<string | null>(readUser())
-
-const persistUser = (name: string | null) => {
-  if (typeof localStorage === 'undefined') return
-  if (!name) {
-    localStorage.removeItem(STORAGE_KEY)
-    return
+const hydrateUser = async () => {
+  const snapshot = mutationId
+  const stored = await readSetting(STORAGE_KEY)
+  if (snapshot !== mutationId) return
+  const trimmed = stored?.trim()
+  if (trimmed) {
+    setUser(trimmed)
   }
-  localStorage.setItem(STORAGE_KEY, name)
 }
 
-export const signIn = (name: string): boolean => {
+void hydrateUser()
+
+export const signIn = async (name: string): Promise<boolean> => {
   const trimmed = name.trim()
   if (!trimmed) return false
+  const stored = await writeSetting(STORAGE_KEY, trimmed)
+  if (!stored) {
+    return false
+  }
+  mutationId += 1
   setUser(trimmed)
-  persistUser(trimmed)
   return true
 }
 
-export const signOut = () => {
+export const signOut = async (): Promise<boolean> => {
+  const stored = await writeSetting(STORAGE_KEY, null)
+  if (!stored) {
+    return false
+  }
+  mutationId += 1
   setUser(null)
-  persistUser(null)
+  return true
 }
 
 export { user }

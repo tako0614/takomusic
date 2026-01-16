@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import { exportAudio } from '../services/audioExport.js'
-import { getExportArtifact } from '../services/exportStore.js'
+import { deleteExportArtifact, getExportArtifact } from '../services/exportStore.js'
 
 export type ExportRequestBody = {
   score?: unknown
@@ -48,14 +48,21 @@ export const handleExportRequest = async (request: Request): Promise<Response> =
     if (!artifact) {
       return jsonResponse({ ok: false, error: 'Export not found' }, 404)
     }
-    const data = await fs.readFile(artifact.filePath)
-    return new Response(data, {
-      status: 200,
-      headers: {
-        'content-type': artifact.mimeType,
-        'content-disposition': `attachment; filename="${artifact.fileName}"`,
-      },
-    })
+    try {
+      const data = await fs.readFile(artifact.filePath)
+      deleteExportArtifact(id)
+      await fs.unlink(artifact.filePath).catch(() => undefined)
+      return new Response(data, {
+        status: 200,
+        headers: {
+          'content-type': artifact.mimeType,
+          'content-disposition': `attachment; filename="${artifact.fileName}"`,
+        },
+      })
+    } catch {
+      deleteExportArtifact(id)
+      return jsonResponse({ ok: false, error: 'Export not found' }, 404)
+    }
   }
 
   return jsonResponse({ ok: false, error: 'Not found' }, 404)

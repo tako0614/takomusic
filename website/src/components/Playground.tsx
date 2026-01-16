@@ -3,21 +3,9 @@ import { useI18n } from '../i18n'
 import { compile as takoCompile, type Diagnostic } from '../lib/compiler'
 import { getAudioPlayer, type ScoreIR } from '../lib/audioPlayer'
 import { downloadMidi } from '../lib/midiExport'
-import {
-  composeAi,
-  explainAi,
-  chatAi,
-  inlineAi,
-  agentAi,
-  extractCodeBlock,
-  type AiMessage,
-  type AiFile,
-} from '../lib/aiClient'
+import { downloadWav } from '../lib/audioExport'
 import { user, signIn, signOut } from '../stores/session'
-import { projects, saveProject, deleteProject, getProject } from '../stores/projects'
-import { credits, canAfford, applyCreditSpend, syncCredits, getCreditCost } from '../stores/credits'
-import * as Y from 'yjs'
-import { WebsocketProvider } from 'y-websocket'
+import { projects, projectsError, saveProject, deleteProject, getProject } from '../stores/projects'
 
 // Monaco editor types
 declare global {
@@ -211,17 +199,13 @@ export function Playground() {
   const { t } = useI18n()
   let editorContainer: HTMLDivElement | undefined
   let editor: import('monaco-editor').editor.IStandaloneCodeEditor | undefined
-  let collabDoc: Y.Doc | null = null
-  let collabText: Y.Text | null = null
-  let collabProvider: WebsocketProvider | null = null
-  let collabDispose: (() => void) | null = null
-  let collabApplying = false
   let lastCompiledCode = ''
   let lastCompileResult: { success: boolean; diagnostics: Diagnostic[]; ir?: ScoreIR; ast?: object } | null = null
 
   const [code, setCode] = createSignal(defaultCode)
   const [output, setOutput] = createSignal('')
   const [isCompiling, setIsCompiling] = createSignal(false)
+  const [isRenderingAudio, setIsRenderingAudio] = createSignal(false)
   const [monacoLoaded, setMonacoLoaded] = createSignal(false)
   const [activeTab, setActiveTab] = createSignal<'ir' | 'ast'>('ir')
   const [isPlaying, setIsPlaying] = createSignal(false)
@@ -230,17 +214,6 @@ export function Playground() {
   const [projectName, setProjectName] = createSignal('')
   const [selectedProjectId, setSelectedProjectId] = createSignal<string | null>(null)
   const [statusMessage, setStatusMessage] = createSignal('')
-  const [aiTab, setAiTab] = createSignal<'compose' | 'explain' | 'chat' | 'inline' | 'agent'>('compose')
-  const [aiPrompt, setAiPrompt] = createSignal('')
-  const [aiResponse, setAiResponse] = createSignal('')
-  const [aiMessages, setAiMessages] = createSignal<AiMessage[]>([])
-  const [chatInput, setChatInput] = createSignal('')
-  const [inlineSuggestion, setInlineSuggestion] = createSignal('')
-  const [agentTask, setAgentTask] = createSignal('')
-  const [agentSummary, setAgentSummary] = createSignal('')
-  const [aiBusy, setAiBusy] = createSignal(false)
-  const [collabRoom, setCollabRoom] = createSignal('')
-  const [collabStatus, setCollabStatus] = createSignal<'offline' | 'connecting' | 'connected'>('offline')
 
   const flashStatus = (message: string) => {
     setStatusMessage(message)
@@ -254,19 +227,40 @@ export function Playground() {
   })
 
   createEffect(() => {
+    const error = projectsError()
+    if (error) {
+      flashStatus(error)
+    }
+  })
+
+  createEffect(() => {
     activeTab()
     if (lastCompileResult) {
       renderCompileOutput(lastCompileResult)
     }
   })
 
-  const handleSignIn = () => {
-    if (!signIn(authName())) {
+  const handleSignIn = async () => {
+    if (!authName().trim()) {
       flashStatus('Enter a username to sign in.')
+      return
+    }
+    const ok = await signIn(authName())
+    if (!ok) {
+      flashStatus('Sign-in failed. IndexedDB unavailable.')
       return
     }
     setAuthName('')
     flashStatus('Signed in.')
+  }
+
+  const handleSignOut = async () => {
+    const ok = await signOut()
+    if (!ok) {
+      flashStatus('Sign out failed. IndexedDB unavailable.')
+      return
+    }
+    flashStatus('Signed out.')
   }
 
   const handleSelectProject = (id: string) => {
@@ -286,22 +280,28 @@ export function Playground() {
     flashStatus('Project loaded.')
   }
 
-  const handleSaveProject = () => {
+  const handleSaveProject = async () => {
     if (!user()) {
       flashStatus('Sign in to save projects.')
       return
     }
-    const saved = saveProject(projectName(), code(), selectedProjectId() ?? undefined)
-    if (!saved) return
+    const saved = await saveProject(projectName(), code(), selectedProjectId() ?? undefined)
+    if (!saved) {
+      flashStatus('Project save failed. IndexedDB unavailable.')
+      return
+    }
     setSelectedProjectId(saved.id)
     setProjectName(saved.name)
     flashStatus('Project saved.')
   }
 
-  const handleDeleteProject = () => {
+  const handleDeleteProject = async () => {
     const id = selectedProjectId()
     if (!id) return
-    if (!deleteProject(id)) return
+    if (!(await deleteProject(id))) {
+      flashStatus('Project delete failed. IndexedDB unavailable.')
+      return
+    }
     setSelectedProjectId(null)
     setProjectName('')
     flashStatus('Project deleted.')
@@ -393,249 +393,6 @@ export function Playground() {
     }
     attachCollabBinding()
     flashStatus('Collab connected.')
-  }
-
-  const extractSelection = () => {
-    if (!editor) return ''
-    const selection = editor.getSelection()
-    if (!selection || selection.isEmpty()) return ''
-    const model = editor.getModel()
-    if (!model) return ''
-    return model.getValueInRange(selection)
-  }
-
-  type AgentPayload = {
-    summary?: string
-    files?: AiFile[]
-  }
-
-  const extractJsonBlock = (text: string): string => {
-    const match = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
-    return (match?.[1] ?? text).trim()
-  }
-
-  const parseAgentPayload = (text: string): AgentPayload | null => {
-    const jsonText = extractJsonBlock(text)
-    try {
-      return JSON.parse(jsonText) as AgentPayload
-    } catch {
-      return null
-    }
-  }
-
-  const normalizeInlineText = (text: string): string => {
-    const code = extractCodeBlock(text)
-    return code.replace(/```/g, '').trim()
-  }
-
-  const getInlineContext = () => {
-    if (!editor || !window.monaco) return null
-    const model = editor.getModel()
-    const position = editor.getPosition()
-    if (!model || !position) return null
-    const startLine = Math.max(1, position.lineNumber - 40)
-    const prefixRange = new window.monaco.Range(startLine, 1, position.lineNumber, position.column)
-    const prefix = model.getValueInRange(prefixRange).slice(-2000)
-    const endLine = Math.min(model.getLineCount(), position.lineNumber + 20)
-    const endCol = model.getLineContent(endLine).length + 1
-    const suffixRange = new window.monaco.Range(position.lineNumber, position.column, endLine, endCol)
-    const suffix = model.getValueInRange(suffixRange).slice(0, 800)
-    return { prefix, suffix, position }
-  }
-
-  const buildAgentPath = (): string => {
-    const raw = projectName().trim() || 'main.mf'
-    const safe = raw.replace(/[^A-Za-z0-9._-]/g, '_')
-    if (!safe) return 'main.mf'
-    return safe.endsWith('.mf') ? safe : `${safe}.mf`
-  }
-
-  const handleComposeAi = async () => {
-    const prompt = aiPrompt().trim()
-    if (!prompt) {
-      flashStatus('Enter a prompt to compose.')
-      return
-    }
-    if (!canAfford('compose')) {
-      flashStatus(`Not enough credits. Need ${getCreditCost('compose')}.`)
-      return
-    }
-    setAiBusy(true)
-    setAiResponse('')
-    try {
-      const result = await composeAi(prompt, user() ?? 'guest')
-      if (!result.ok || !result.text) {
-        flashStatus(result.error ?? 'AI compose failed.')
-        return
-      }
-      setAiResponse(result.text)
-      const codeBlock = extractCodeBlock(result.text)
-      if (codeBlock) {
-        setCode(codeBlock)
-        editor?.setValue(codeBlock)
-      }
-      if (typeof result.remainingCredits === 'number') {
-        syncCredits(result.remainingCredits)
-      } else {
-        applyCreditSpend('compose')
-      }
-    } finally {
-      setAiBusy(false)
-    }
-  }
-
-  const handleExplainAi = async () => {
-    const selection = extractSelection()
-    const targetCode = selection || code()
-    if (!targetCode.trim()) {
-      flashStatus('No code to explain.')
-      return
-    }
-    if (!canAfford('explain')) {
-      flashStatus(`Not enough credits. Need ${getCreditCost('explain')}.`)
-      return
-    }
-    setAiBusy(true)
-    setAiResponse('')
-    try {
-      const result = await explainAi(targetCode, aiPrompt().trim() || undefined, user() ?? 'guest')
-      if (!result.ok || !result.text) {
-        flashStatus(result.error ?? 'AI explain failed.')
-        return
-      }
-      setAiResponse(result.text)
-      if (typeof result.remainingCredits === 'number') {
-        syncCredits(result.remainingCredits)
-      } else {
-        applyCreditSpend('explain')
-      }
-    } finally {
-      setAiBusy(false)
-    }
-  }
-
-  const handleChatSend = async () => {
-    const prompt = chatInput().trim()
-    if (!prompt) return
-    if (!canAfford('chat')) {
-      flashStatus(`Not enough credits. Need ${getCreditCost('chat')}.`)
-      return
-    }
-    const nextMessages = [...aiMessages(), { role: 'user', content: prompt }]
-    setAiMessages(nextMessages)
-    setChatInput('')
-    setAiBusy(true)
-    try {
-      const result = await chatAi(nextMessages, user() ?? 'guest')
-      if (!result.ok || !result.text) {
-        flashStatus(result.error ?? 'AI chat failed.')
-        return
-      }
-      setAiMessages([...nextMessages, { role: 'assistant', content: result.text }])
-      if (typeof result.remainingCredits === 'number') {
-        syncCredits(result.remainingCredits)
-      } else {
-        applyCreditSpend('chat')
-      }
-    } finally {
-      setAiBusy(false)
-    }
-  }
-
-  const handleClearChat = () => {
-    setAiMessages([])
-  }
-
-  const handleInlineAi = async () => {
-    if (!canAfford('inline')) {
-      flashStatus(`Not enough credits. Need ${getCreditCost('inline')}.`)
-      return
-    }
-    const context = getInlineContext()
-    if (!context) {
-      flashStatus('Editor not ready.')
-      return
-    }
-    if (context.prefix.trim().length < 8) {
-      flashStatus('Place the cursor after some code to continue.')
-      return
-    }
-    setAiBusy(true)
-    setInlineSuggestion('')
-    try {
-      const result = await inlineAi(context.prefix, context.suffix, user() ?? 'guest')
-      if (!result.ok || !result.text) {
-        flashStatus(result.error ?? 'AI inline failed.')
-        return
-      }
-      const suggestion = normalizeInlineText(result.text)
-      if (!suggestion) {
-        flashStatus('AI returned an empty suggestion.')
-        return
-      }
-      setInlineSuggestion(suggestion)
-      editor?.executeEdits('ai-inline', [
-        {
-          range: new window.monaco.Range(
-            context.position.lineNumber,
-            context.position.column,
-            context.position.lineNumber,
-            context.position.column
-          ),
-          text: suggestion,
-        },
-      ])
-      editor?.focus()
-      if (typeof result.remainingCredits === 'number') {
-        syncCredits(result.remainingCredits)
-      } else {
-        applyCreditSpend('inline')
-      }
-    } finally {
-      setAiBusy(false)
-    }
-  }
-
-  const handleAgentAi = async () => {
-    const task = agentTask().trim()
-    if (!task) {
-      flashStatus('Describe what you want the agent to change.')
-      return
-    }
-    if (!canAfford('agent')) {
-      flashStatus(`Not enough credits. Need ${getCreditCost('agent')}.`)
-      return
-    }
-    const path = buildAgentPath()
-    setAiBusy(true)
-    setAgentSummary('')
-    try {
-      const result = await agentAi(task, [{ path, content: code() }], user() ?? 'guest')
-      if (!result.ok || !result.text) {
-        flashStatus(result.error ?? 'AI agent failed.')
-        return
-      }
-      const payload = parseAgentPayload(result.text)
-      if (!payload?.files || payload.files.length === 0) {
-        flashStatus('AI agent returned no changes.')
-        return
-      }
-      const target = payload.files.find((file) => file.path === path) ?? payload.files[0]
-      if (!target?.content) {
-        flashStatus('AI agent response missing content.')
-        return
-      }
-      setAgentSummary(payload.summary || 'Agent applied updates.')
-      setCode(target.content)
-      editor?.setValue(target.content)
-      if (typeof result.remainingCredits === 'number') {
-        syncCredits(result.remainingCredits)
-      } else {
-        applyCreditSpend('agent')
-      }
-    } finally {
-      setAiBusy(false)
-    }
   }
 
   const handleDownloadMidi = async () => {
@@ -905,16 +662,13 @@ export function Playground() {
                 <span>Signed in as</span>
                 <span class="text-sky-400 font-semibold">{user()}</span>
                 <button
-                  onClick={signOut}
+                  onClick={handleSignOut}
                   class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
                 >
                   Sign out
                 </button>
               </div>
             </Show>
-            <div class="text-xs text-slate-400">
-              AI Credits <span class="text-sky-400 font-semibold">{credits()}</span>
-            </div>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
@@ -1112,181 +866,6 @@ export function Playground() {
               <pre class="text-sm text-slate-300 font-mono whitespace-pre-wrap">
                 <code>{output()}</code>
               </pre>
-            </Show>
-          </div>
-        </div>
-      </div>
-
-      <div class="max-w-6xl mx-auto mt-8">
-        <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 px-4 py-3 border-b border-slate-700">
-            <div class="flex items-center gap-2">
-              <button
-                onClick={() => setAiTab('compose')}
-                class={`px-3 py-1 text-sm rounded transition-colors ${
-                  aiTab() === 'compose' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Compose
-              </button>
-              <button
-                onClick={() => setAiTab('explain')}
-                class={`px-3 py-1 text-sm rounded transition-colors ${
-                  aiTab() === 'explain' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Explain
-              </button>
-              <button
-                onClick={() => setAiTab('chat')}
-                class={`px-3 py-1 text-sm rounded transition-colors ${
-                  aiTab() === 'chat' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Chat
-              </button>
-              <button
-                onClick={() => setAiTab('inline')}
-                class={`px-3 py-1 text-sm rounded transition-colors ${
-                  aiTab() === 'inline' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Inline
-              </button>
-              <button
-                onClick={() => setAiTab('agent')}
-                class={`px-3 py-1 text-sm rounded transition-colors ${
-                  aiTab() === 'agent' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Agent
-              </button>
-            </div>
-            <div class="text-xs text-slate-500">
-              Compose {getCreditCost('compose')} · Explain {getCreditCost('explain')} · Chat {getCreditCost('chat')} · Inline {getCreditCost('inline')} · Agent {getCreditCost('agent')}
-            </div>
-          </div>
-
-          <div class="p-4">
-            <Show when={aiTab() === 'chat'}>
-              <div class="flex flex-col gap-3">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm text-slate-400">Conversation</span>
-                  <button
-                    onClick={handleClearChat}
-                    class="text-xs text-slate-400 hover:text-slate-200"
-                  >
-                    Clear
-                  </button>
-                </div>
-                <div class="max-h-64 overflow-auto rounded-lg border border-slate-700 bg-slate-900 p-3 flex flex-col gap-2">
-                  <Show
-                    when={aiMessages().length > 0}
-                    fallback={<div class="text-xs text-slate-500">No messages yet.</div>}
-                  >
-                    {aiMessages().map((msg) => (
-                      <div
-                        class={`rounded-lg px-3 py-2 text-sm ${
-                          msg.role === 'assistant'
-                            ? 'bg-slate-700 text-slate-100'
-                            : 'bg-slate-950 text-slate-200 self-end'
-                        }`}
-                      >
-                        {msg.content}
-                      </div>
-                    ))}
-                  </Show>
-                </div>
-                <div class="flex flex-col md:flex-row gap-2">
-                  <textarea
-                    value={chatInput()}
-                    onInput={(event) => setChatInput(event.currentTarget.value)}
-                    placeholder="Ask about structure, harmony, or how to improve the code..."
-                    class="flex-1 min-h-[90px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
-                  />
-                  <button
-                    onClick={handleChatSend}
-                    disabled={aiBusy()}
-                    class="px-4 py-2 text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-lg transition-colors"
-                  >
-                    {aiBusy() ? 'Sending...' : 'Send'}
-                  </button>
-                </div>
-              </div>
-            </Show>
-
-            <Show when={aiTab() === 'compose' || aiTab() === 'explain'}>
-              <div class="flex flex-col gap-3">
-                <textarea
-                  value={aiPrompt()}
-                  onInput={(event) => setAiPrompt(event.currentTarget.value)}
-                  placeholder={
-                    aiTab() === 'compose'
-                      ? 'Describe the mood, tempo, instruments, or structure you want...'
-                      : 'Optional: focus on harmony, form, or performance tips...'
-                  }
-                  class="min-h-[120px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
-                />
-                <button
-                  onClick={() => (aiTab() === 'compose' ? handleComposeAi() : handleExplainAi())}
-                  disabled={aiBusy()}
-                  class="self-start px-4 py-2 text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-lg transition-colors"
-                >
-                  {aiBusy() ? 'Thinking...' : aiTab() === 'compose' ? 'Compose' : 'Explain'}
-                </button>
-                <Show when={aiResponse()}>
-                  <div class="rounded-lg border border-slate-700 bg-slate-900 p-3">
-                    <pre class="text-sm text-slate-200 whitespace-pre-wrap">
-                      <code>{aiResponse()}</code>
-                    </pre>
-                  </div>
-                </Show>
-              </div>
-            </Show>
-
-            <Show when={aiTab() === 'inline'}>
-              <div class="flex flex-col gap-3">
-                <p class="text-sm text-slate-400">
-                  Place the cursor where you want a continuation and click Suggest.
-                </p>
-                <button
-                  onClick={handleInlineAi}
-                  disabled={aiBusy()}
-                  class="self-start px-4 py-2 text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-lg transition-colors"
-                >
-                  {aiBusy() ? 'Thinking...' : 'Suggest'}
-                </button>
-                <Show when={inlineSuggestion()}>
-                  <div class="rounded-lg border border-slate-700 bg-slate-900 p-3">
-                    <pre class="text-sm text-slate-200 whitespace-pre-wrap">
-                      <code>{inlineSuggestion()}</code>
-                    </pre>
-                  </div>
-                </Show>
-              </div>
-            </Show>
-
-            <Show when={aiTab() === 'agent'}>
-              <div class="flex flex-col gap-3">
-                <textarea
-                  value={agentTask()}
-                  onInput={(event) => setAgentTask(event.currentTarget.value)}
-                  placeholder="Describe the edits you want applied to the current code..."
-                  class="min-h-[120px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
-                />
-                <button
-                  onClick={handleAgentAi}
-                  disabled={aiBusy()}
-                  class="self-start px-4 py-2 text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-lg transition-colors"
-                >
-                  {aiBusy() ? 'Thinking...' : 'Run Agent'}
-                </button>
-                <Show when={agentSummary()}>
-                  <div class="rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-slate-200">
-                    {agentSummary()}
-                  </div>
-                </Show>
-              </div>
             </Show>
           </div>
         </div>

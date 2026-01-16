@@ -1,15 +1,15 @@
 # TakoMusic v7.0 Roadmap
 
-> 作曲プラットフォーム + AI統合の完全版
+> 作曲プラットフォームの完全版
 
 ## Overview
 
-**Goal**: "完璧な理想の作曲言語" + Web作曲プラットフォーム + Gemini AI統合
+**Goal**: "完璧な理想の作曲言語" + Web作曲プラットフォーム
 
 **Target**:
-- プラットフォーム: Web + VSCode拡張
-- 課金: Freemium
-- ユーザー: 初心者からプロまで全層
+- Platform: Web + VSCode extension
+- Billing: none
+- Users: beginner to pro
 
 ---
 
@@ -80,60 +80,33 @@ type FixedClip(len: Dur) = Clip where length(_) == len;
 
 ```
 Frontend:  Solid.js + Monaco Editor + Tailwind CSS + Web Audio API
-Backend:   Cloudflare Workers / Node.js + PostgreSQL
-Storage:   Cloudflare R2 / S3
-Auth:      Supabase Auth / Clerk
-Payments:  Stripe
-AI:        Gemini API (gemini-2.0-flash)
+Backend:   Cloudflare Workers / Node.js
+Storage:   IndexedDB (client) + optional R2/S3 exports
+Auth:      Local username (optional)
 ```
 
 ### 2.2 データベーススキーマ
 
 ```sql
-users (id, email, name, provider, created_at)
-subscriptions (user_id, tier, stripe_id, ai_credits_remaining)
-projects (id, user_id, title, source_code, compiled_ir, is_public)
-ai_conversations (id, user_id, project_id, messages, tokens_used)
-exports (id, project_id, format, file_url, status)
+projects (id, user, name, code, updated_at)
+settings (key, value)
+exports (id, format, file_url, status)
 ```
 
-### 2.3 料金プラン
+### 2.3 Billing
 
-| 機能 | Free | Premium ($9.99/月) | Team ($29.99/月) |
-|------|------|-------------------|------------------|
-| プロジェクト数 | 5 | 無制限 | 無制限 |
-| MIDI出力 | 5/月 | 無制限 | 無制限 |
-| オーディオ出力 | - | 50/月 | 無制限 |
-| AIクレジット | 50/月 | 1,000/月 | 5,000/月 |
-| コラボレーション | - | - | リアルタイム |
-
-### 2.4 AIクレジットコスト
+No billing. All features are free.
+### 2.4 API Endpoints
 
 ```
-compose: 5 credits
-explain: 3 credits
-chat: 1 credit
-inline: 1 credit
-agent: 8 credits
+POST /api/exports/audio   # audio export
+GET  /api/exports/{id}    # download
+POST /api/sync/push       # sync upload
+GET  /api/sync/pull       # sync download
 ```
-
-### 2.5 APIエンドポイント
-
-```
-POST /api/auth/login          # OAuth
-GET  /api/projects            # projects list
-POST /api/projects            # create
-POST /api/ai/compose          # AI compose
-POST /api/ai/explain          # AI explain
-POST /api/ai/chat             # AI chat
-POST /api/ai/inline           # AI inline
-POST /api/ai/agent            # AI agent
-POST /api/exports             # export request
-```
-
 ---
 
-## Part 3: VSCode拡張
+## Part 3: VSCode Extension (Language Features)
 
 ### 3.1 LSP Features
 
@@ -145,7 +118,7 @@ POST /api/exports             # export request
 ### 3.2 Extension Scope
 
 - **LSP only**: type inference, diagnostics, formatting, code actions
-- **AI/playback/sync**: handled in the Web app
+- **Playback/sync**: handled in the Web app
 
 ---
 
@@ -166,16 +139,13 @@ POST /api/exports             # export request
 2. [x] エクスポート改善 (MIDIダウンロード)
 3. [x] LSPコードアクション・フォーマット
 
-### Phase 3: AI統合 (4-6週間) [x] 完了
-1. [x] Gemini hook (host/API)
-2. Web platform: basic auth, project create/save/load, playback, MIDI download, collab connect test
-3. [x] Web AI panel (compose/explain/chat)
-4. [x] Web inline/agent
-5. [x] Credit system
+### Phase 3: Platform integration (4-6 weeks) [x] Done
+1. [x] Web platform: basic auth, project save/load, playback, MIDI download, collab connect test
+2. [x] IndexedDB local storage
+
 ### Phase 4: プレミアム機能 (4-6週間) [x] 完了
 1. [x] オーディオエクスポート (サーバーサイド合成)
 2. [x] リアルタイムコラボレーション (WebSocket + yjs)
-3. [x] Stripeサブスクリプション統合
 
 ### Phase 5: ポリッシュ (2-4週間) [x] 完了
 1. [x] パフォーマンス最適化
@@ -206,22 +176,15 @@ POST /api/exports             # export request
 - `website/src/components/Editor/` - 強化エディタ [x]
 - `website/src/stores/` - 状態管理 [x]
 - `website/src/stores/session.ts` - ローカル認証
-- `website/src/stores/projects.ts` - プロジェクト保存
+- `website/src/stores/projects.ts` - IndexedDB project storage [x]
 - `website/src/lib/audioPlayer.ts` - 再生ロジック
 - `website/src/lib/midiExport.ts` - MIDIダウンロード [x]
 - `website/src/lib/compiler.ts` - コンパイル連携
-- `website/src/lib/aiClient.ts` - AIクライアント [x]
-- `website/src/stores/credits.ts` - クレジット管理 [x]
 - `api/routes/` - バックエンドエンドポイント [x]
-- `api/routes/ai.ts` - AIルート [x]
 - `api/routes/exports.ts` - オーディオエクスポート [x]
-- `api/routes/billing.ts` - Stripe統合 [x]
 - `api/routes/sync.ts` - クラウド同期 [x]
 - `api/index.ts` - APIハンドラ [x]
-- `api/services/gemini.ts` - AIラッパー [x]
-- `api/services/credits.ts` - クレジット管理 [x]
 - `api/services/audioExport.ts` - サーバーサイド合成 [x]
-- `api/services/stripe.ts` - Stripe統合 [x]
 - `api/services/cloudSync.ts` - クラウド同期 [x]
 - `api/collabServer.ts` - コラボレーションサーバー [x]
 
@@ -234,9 +197,6 @@ POST /api/exports             # export request
 - `vscode-extension/CHANGELOG.md` - Marketplace changelog [x]
 - `vscode-extension/src/server.ts` - LSPクライアント起動
 - `src/lsp/server.ts` - LSPサーバ
-- `vscode-extension/src/ai/` - Gemini統合 [x]
-- `vscode-extension/src/ai/client.ts` - AIクライアント [x]
-- `vscode-extension/src/ai/chatPanel.ts` - AIチャットパネル [x]
 - `vscode-extension/src/playbackPanel.ts` - 再生プレビュー [x]
 - `vscode-extension/src/sync/client.ts` - クラウド同期 [x]
 
@@ -244,17 +204,18 @@ POST /api/exports             # export request
 
 ## 検証方法
 
-1. **言語**: `npm run test` - 全テストパス
-2. **Webプラットフォーム**: 簡易認証、プロジェクト作成/保存/読み込み、再生、MIDIダウンロード、コラボレーション接続をテスト
-3. **AI**: test compose/explain/chat/inline/agent with sample prompts
-4. **VSCode**: load extension and verify LSP features
-5. **サブスクリプション**: Stripe webhookテストモード
-
+1. **Language**: `npm run test` - all tests pass
+2. **Web**: sign-in, project save/load (IndexedDB), playback, MIDI download, collab connect
+3. **API**: `/api/exports` and `/api/sync`
+4. **VSCode**: load extension, verify LSP features
 ---
 
 *Last updated: 2026-01-16*
 *Current version: v6.0.0*
 *Target version: v7.0.0*
+
+
+
 
 
 

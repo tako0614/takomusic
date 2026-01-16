@@ -28,3 +28,10 @@ export const saveExportArtifact = (filePath: string, fileName: string, mimeType:
 }
 
 export const getExportArtifact = (id: string): ExportArtifact | null => store.get(id) ?? null
+
+export const deleteExportArtifact = (id: string): ExportArtifact | null => {
+  const artifact = store.get(id)
+  if (!artifact) return null
+  store.delete(id)
+  return artifact
+}
