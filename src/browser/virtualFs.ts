@@ -3162,6 +3162,10 @@ export const STDLIB_RAGA = `// std:raga - see lib/raga.mf for full implementatio
 export const STDLIB_COUNTERPOINT = `// std:counterpoint - see lib/counterpoint.mf for full implementation`;
 export const STDLIB_ORCHESTRATION = `// std:orchestration - see lib/orchestration.mf for full implementation`;
 
+// v6.0 libraries
+export const STDLIB_HARMONY = `// std:harmony - see lib/harmony.mf for full implementation`;
+export const STDLIB_MELODY = `// std:melody - see lib/melody.mf for full implementation`;
+
 /**
  * Map of stdlib module names to their source code
  */
@@ -3210,6 +3214,9 @@ export const STDLIB_MODULES: Record<string, string> = {
   raga: STDLIB_RAGA,
   counterpoint: STDLIB_COUNTERPOINT,
   orchestration: STDLIB_ORCHESTRATION,
+  // v6.0 libraries
+  harmony: STDLIB_HARMONY,
+  melody: STDLIB_MELODY,
 };
 
 /**
