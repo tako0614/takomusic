@@ -1,0 +1,607 @@
+// std:raga (v5.5)
+// Indian classical music (Hindustani and Carnatic)
+// Ragas, talas, gamakas, and melodic phrases
+
+// ============================================
+// Swara (Notes)
+// ============================================
+
+// Basic swaras (sargam)
+export const SA = 0;   // Shadja (tonic)
+export const RI = 1;   // Rishabha (komal)
+export const RI_SHARP = 2;  // Rishabha (shuddha)
+export const GA = 3;   // Gandhar (komal)
+export const GA_SHARP = 4;  // Gandhar (shuddha)
+export const MA = 5;   // Madhyam (shuddha)
+export const MA_SHARP = 6;  // Madhyam (tivra)
+export const PA = 7;   // Pancham
+export const DHA = 8;  // Dhaivat (komal)
+export const DHA_SHARP = 9;  // Dhaivat (shuddha)
+export const NI = 10;  // Nishad (komal)
+export const NI_SHARP = 11; // Nishad (shuddha)
+
+// Saptak (octaves)
+export const MANDRA = -1;  // Lower octave
+export const MADHYA = 0;   // Middle octave
+export const TAAR = 1;     // Upper octave
+
+// Create swara with octave
+export fn swara(note, octave) {
+  let oct = octave;
+  if (oct == null) {
+    oct = MADHYA;
+  }
+  return {
+    note: note,
+    octave: oct,
+    pitch: note + (oct * 12)
+  };
+}
+
+// ============================================
+// Raga Definition
+// ============================================
+
+// Create a raga
+export fn raga(name, aroha, avaroha, vadi, samvadi, pakad, thaat) {
+  return {
+    type: "raga",
+    name: name,
+    aroha: aroha,      // Ascending scale
+    avaroha: avaroha,  // Descending scale
+    vadi: vadi,        // Most important note
+    samvadi: samvadi,  // Second most important
+    pakad: pakad,      // Characteristic phrase
+    thaat: thaat,      // Parent scale
+    time: null,        // Prahar (time of day)
+    rasa: null         // Mood/emotion
+  };
+}
+
+// ============================================
+// Thaat (Parent Scales - Hindustani)
+// ============================================
+
+export fn thaatBilawal() {
+  return {
+    name: "bilawal",
+    swaras: [SA, RI_SHARP, GA_SHARP, MA, PA, DHA_SHARP, NI_SHARP],
+    western: "major"
+  };
+}
+
+export fn thaatKhamaj() {
+  return {
+    name: "khamaj",
+    swaras: [SA, RI_SHARP, GA_SHARP, MA, PA, DHA_SHARP, NI],
+    western: "mixolydian"
+  };
+}
+
+export fn thaatKafi() {
+  return {
+    name: "kafi",
+    swaras: [SA, RI_SHARP, GA, MA, PA, DHA_SHARP, NI],
+    western: "dorian"
+  };
+}
+
+export fn thaatAsavari() {
+  return {
+    name: "asavari",
+    swaras: [SA, RI_SHARP, GA, MA, PA, DHA, NI],
+    western: "natural minor"
+  };
+}
+
+export fn thaatBhairavi() {
+  return {
+    name: "bhairavi",
+    swaras: [SA, RI, GA, MA, PA, DHA, NI],
+    western: "phrygian"
+  };
+}
+
+export fn thaatBhairav() {
+  return {
+    name: "bhairav",
+    swaras: [SA, RI, GA_SHARP, MA, PA, DHA, NI_SHARP]
+  };
+}
+
+export fn thaatKalyan() {
+  return {
+    name: "kalyan",
+    swaras: [SA, RI_SHARP, GA_SHARP, MA_SHARP, PA, DHA_SHARP, NI_SHARP],
+    western: "lydian"
+  };
+}
+
+export fn thaatMarwa() {
+  return {
+    name: "marwa",
+    swaras: [SA, RI, GA_SHARP, MA_SHARP, PA, DHA_SHARP, NI_SHARP]
+  };
+}
+
+export fn thaatPurvi() {
+  return {
+    name: "purvi",
+    swaras: [SA, RI, GA_SHARP, MA_SHARP, PA, DHA, NI_SHARP]
+  };
+}
+
+export fn thaatTodi() {
+  return {
+    name: "todi",
+    swaras: [SA, RI, GA, MA_SHARP, PA, DHA, NI_SHARP]
+  };
+}
+
+// ============================================
+// Common Ragas
+// ============================================
+
+export fn ragaYaman() {
+  return raga(
+    "yaman",
+    [SA, RI_SHARP, GA_SHARP, MA_SHARP, PA, DHA_SHARP, NI_SHARP],
+    [NI_SHARP, DHA_SHARP, PA, MA_SHARP, GA_SHARP, RI_SHARP, SA],
+    GA_SHARP,  // Vadi
+    NI_SHARP,  // Samvadi
+    [NI_SHARP, RI_SHARP, GA_SHARP, RI_SHARP, SA],  // Pakad
+    "kalyan"
+  );
+}
+
+export fn ragaBhairav() {
+  return raga(
+    "bhairav",
+    [SA, RI, GA_SHARP, MA, PA, DHA, NI_SHARP],
+    [NI_SHARP, DHA, PA, MA, GA_SHARP, RI, SA],
+    DHA,
+    RI,
+    [GA_SHARP, MA, DHA, PA, GA_SHARP, MA, RI, SA],
+    "bhairav"
+  );
+}
+
+export fn ragaBhairavi() {
+  return raga(
+    "bhairavi",
+    [SA, RI, GA, MA, PA, DHA, NI],
+    [NI, DHA, PA, MA, GA, RI, SA],
+    MA,
+    SA,
+    [DHA, NI, SA, RI, GA, MA, GA, RI, SA],
+    "bhairavi"
+  );
+}
+
+export fn ragaKafi() {
+  return raga(
+    "kafi",
+    [SA, RI_SHARP, GA, MA, PA, DHA_SHARP, NI],
+    [NI, DHA_SHARP, PA, MA, GA, RI_SHARP, SA],
+    PA,
+    SA,
+    [MA, PA, GA, MA, RI_SHARP, SA],
+    "kafi"
+  );
+}
+
+export fn ragaDarbari() {
+  return raga(
+    "darbariKanada",
+    [SA, RI_SHARP, GA, MA, PA, DHA, NI],
+    [NI, DHA, PA, MA, GA, RI_SHARP, SA],
+    RI_SHARP,
+    PA,
+    [SA, RI_SHARP, GA, SA, DHA, NI, SA],
+    "asavari"
+  );
+}
+
+export fn ragaMarwa() {
+  return raga(
+    "marwa",
+    [SA, RI, GA_SHARP, MA_SHARP, DHA_SHARP, NI_SHARP],  // No Pa
+    [NI_SHARP, DHA_SHARP, MA_SHARP, GA_SHARP, RI, SA],
+    DHA_SHARP,
+    RI,
+    [DHA_SHARP, NI_SHARP, SA, RI, GA_SHARP, RI],
+    "marwa"
+  );
+}
+
+export fn ragaMalkauns() {
+  return raga(
+    "malkauns",
+    [SA, GA, MA, DHA, NI],  // Pentatonic (no Ri, Pa)
+    [NI, DHA, MA, GA, SA],
+    MA,
+    SA,
+    [MA, GA, MA, DHA, NI, DHA, MA, GA, SA],
+    "bhairavi"
+  );
+}
+
+export fn ragaBageshri() {
+  return raga(
+    "bageshri",
+    [SA, GA, MA, DHA, NI],
+    [NI, DHA, MA, GA, RI_SHARP, SA],
+    MA,
+    SA,
+    [DHA, NI, SA, GA, MA, GA, RI_SHARP, SA],
+    "kafi"
+  );
+}
+
+// ============================================
+// Tala (Rhythm Cycles)
+// ============================================
+
+// Create tala
+export fn tala(name, beats, vibhags, sam, khali) {
+  return {
+    type: "tala",
+    name: name,
+    beats: beats,       // Total beats (matras)
+    vibhags: vibhags,   // Divisions
+    sam: sam,           // Beat 1 (stressed)
+    khali: khali        // Empty beats
+  };
+}
+
+// Common talas
+export fn teental() {
+  return tala("teental", 16, [4, 4, 4, 4], 1, [9]);
+}
+
+export fn jhaptal() {
+  return tala("jhaptal", 10, [2, 3, 2, 3], 1, [6]);
+}
+
+export fn rupak() {
+  return tala("rupak", 7, [3, 2, 2], 1, [1]);  // Khali on sam
+}
+
+export fn ektal() {
+  return tala("ektal", 12, [2, 2, 2, 2, 2, 2], 1, [5, 9]);
+}
+
+export fn dadra() {
+  return tala("dadra", 6, [3, 3], 1, [4]);
+}
+
+export fn keherwa() {
+  return tala("keherwa", 8, [4, 4], 1, [5]);
+}
+
+export fn adichautal() {
+  return tala("adichautal", 14, [2, 4, 4, 4], 1, [7, 11]);
+}
+
+// Carnatic talas
+export fn adiTala() {
+  return tala("adi", 8, [4, 2, 2], 1, []);
+}
+
+export fn rupakaTala() {
+  return tala("rupaka", 6, [2, 4], 1, []);
+}
+
+export fn mishraChapuTala() {
+  return tala("mishraChappu", 7, [3, 4], 1, []);
+}
+
+// ============================================
+// Gamaka (Ornaments)
+// ============================================
+
+// Create gamaka (ornament)
+export fn gamaka(type, notes, duration) {
+  return {
+    type: "gamaka",
+    gamakaType: type,
+    notes: notes,
+    duration: duration
+  };
+}
+
+// Meend (glide between notes)
+export fn meend(fromNote, toNote, duration) {
+  return gamaka("meend", [fromNote, toNote], duration);
+}
+
+// Kan (grace note)
+export fn kan(mainNote, graceNote) {
+  return gamaka("kan", [graceNote, mainNote], null);
+}
+
+// Murki (quick ornament)
+export fn murki(notes) {
+  return gamaka("murki", notes, null);
+}
+
+// Andolan (slow oscillation)
+export fn andolan(note, range, duration) {
+  return gamaka("andolan", [note - range, note, note + range], duration);
+}
+
+// Kampita (vibrato)
+export fn kampita(note, intensity) {
+  return gamaka("kampita", [note], { intensity: intensity });
+}
+
+// Krintan (pull-off)
+export fn krintan(higherNote, lowerNote) {
+  return gamaka("krintan", [higherNote, lowerNote], null);
+}
+
+// Zamzama (phrase repetition with variation)
+export fn zamzama(phrase) {
+  return gamaka("zamzama", phrase, null);
+}
+
+// ============================================
+// Alap Structure
+// ============================================
+
+// Create alap section
+export fn alap(raga, phrases) {
+  return {
+    type: "alap",
+    raga: raga,
+    phrases: phrases,
+    tempo: "free"
+  };
+}
+
+// Sthayi (first part of composition)
+export fn sthayi(melody) {
+  return {
+    type: "sthayi",
+    register: "madhya-mandra",
+    melody: melody
+  };
+}
+
+// Antara (second part)
+export fn antara(melody) {
+  return {
+    type: "antara",
+    register: "madhya-taar",
+    melody: melody
+  };
+}
+
+// Sanchari (third part)
+export fn sanchari(melody) {
+  return {
+    type: "sanchari",
+    register: "all",
+    melody: melody
+  };
+}
+
+// Abhog (concluding part)
+export fn abhog(melody) {
+  return {
+    type: "abhog",
+    register: "madhya",
+    melody: melody
+  };
+}
+
+// ============================================
+// Phrase Generation
+// ============================================
+
+// Generate phrase in raga
+export fn generatePhrase(raga, startNote, direction, length) {
+  let phrase = [];
+  let currentNote = startNote;
+
+  const scale = direction == "up" ? raga.aroha : raga.avaroha;
+
+  // Find starting position in scale
+  let scaleIdx = 0;
+  for (i in 0..(scale.length - 1)) {
+    if (scale[i] == startNote) {
+      scaleIdx = i;
+      break;
+    }
+  }
+
+  for (_ in 0..(length - 1)) {
+    phrase[phrase.length] = scale[scaleIdx];
+
+    if (direction == "up") {
+      scaleIdx = scaleIdx + 1;
+      if (scaleIdx >= scale.length) {
+        scaleIdx = 0;
+      }
+    } else {
+      scaleIdx = scaleIdx - 1;
+      if (scaleIdx < 0) {
+        scaleIdx = scale.length - 1;
+      }
+    }
+  }
+
+  return phrase;
+}
+
+// Add pakad to phrase
+export fn addPakad(raga, phrase) {
+  let result = [];
+  for (note in phrase) {
+    result[result.length] = note;
+  }
+  for (note in raga.pakad) {
+    result[result.length] = note;
+  }
+  return result;
+}
+
+// ============================================
+// Laya (Tempo)
+// ============================================
+
+export const VILAMBIT = "vilambit";  // Slow
+export const MADHYA_LAYA = "madhya"; // Medium
+export const DRUT = "drut";          // Fast
+export const ATI_DRUT = "atiDrut";   // Very fast
+
+// Get tempo multiplier
+export fn layaMultiplier(laya) {
+  if (laya == VILAMBIT) { return 0.5; }
+  if (laya == MADHYA_LAYA) { return 1.0; }
+  if (laya == DRUT) { return 2.0; }
+  if (laya == ATI_DRUT) { return 4.0; }
+  return 1.0;
+}
+
+// ============================================
+// Composition Structure
+// ============================================
+
+// Create bandish (composition)
+export fn bandish(name, raga, tala, sthayi, antara) {
+  return {
+    type: "bandish",
+    name: name,
+    raga: raga,
+    tala: tala,
+    sthayi: sthayi,
+    antara: antara
+  };
+}
+
+// Create taan (fast melodic passage)
+export fn taan(notes, pattern) {
+  return {
+    type: "taan",
+    notes: notes,
+    pattern: pattern,  // "sapat" (straight), "vakra" (zigzag), etc.
+    laya: DRUT
+  };
+}
+
+// ============================================
+// Carnatic Specifics
+// ============================================
+
+// Melakarta (72 parent scales)
+export fn melakarta(number) {
+  // Calculate swaras based on melakarta number
+  const chakra = ((number - 1) / 6);
+  const position = (number - 1) % 6;
+
+  // First 36 have shuddha madhyam, next 36 have prati madhyam
+  const ma = (number <= 36) ? MA : MA_SHARP;
+
+  // Determine ri and ga based on chakra
+  let ri = RI;
+  let ga = GA;
+  if (chakra < 6) {
+    ri = [RI, RI, RI_SHARP, RI_SHARP, GA, GA][chakra % 6];
+    ga = [GA, GA_SHARP, GA_SHARP, GA_SHARP, GA_SHARP, MA][chakra % 6];
+  }
+
+  // Determine dha and ni based on position
+  const dhaOptions = [DHA, DHA, DHA, DHA_SHARP, DHA_SHARP, NI];
+  const niOptions = [NI, NI_SHARP, NI_SHARP, NI_SHARP, NI_SHARP, NI_SHARP];
+  const dha = dhaOptions[position];
+  const ni = niOptions[position];
+
+  return {
+    number: number,
+    swaras: [SA, ri, ga, ma, PA, dha, ni]
+  };
+}
+
+// Kritis structure
+export fn kriti(name, ragam, talam, pallavi, anupallavi, charanam) {
+  return {
+    type: "kriti",
+    name: name,
+    ragam: ragam,
+    talam: talam,
+    pallavi: pallavi,
+    anupallavi: anupallavi,
+    charanam: charanam
+  };
+}
+
+// ============================================
+// Utility Functions
+// ============================================
+
+// Check if note is in raga
+export fn isInRaga(note, raga, direction) {
+  const scale = direction == "up" ? raga.aroha : raga.avaroha;
+  for (s in scale) {
+    if (s == note) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Get note importance in raga
+export fn noteImportance(note, raga) {
+  if (note == raga.vadi) { return 3; }
+  if (note == raga.samvadi) { return 2; }
+  if (note == SA || note == PA) { return 1.5; }
+  return 1;
+}
+
+// Convert to MIDI pitch
+export fn toMidi(swara, basePitch) {
+  let base = basePitch;
+  if (base == null) {
+    base = 60;  // Middle C as Sa
+  }
+
+  if (swara.note != null) {
+    return base + swara.note + (swara.octave * 12);
+  }
+  return base + swara;
+}
+
+// Convert MIDI to swara
+export fn fromMidi(midiNote, basePitch) {
+  let base = basePitch;
+  if (base == null) {
+    base = 60;
+  }
+
+  const diff = midiNote - base;
+  const octave = (diff / 12) - (diff % 12 < 0 ? 1 : 0);
+  const note = ((diff % 12) + 12) % 12;
+
+  return swara(note, octave);
+}
+
+// Get time of day for raga
+export fn ragaTime(raga) {
+  // Common raga-time associations
+  const morningRagas = ["bhairav", "todi", "ahirBhairav"];
+  const afternoonRagas = ["sarang", "bhimpalasi"];
+  const eveningRagas = ["yaman", "purvi", "marwa"];
+  const nightRagas = ["darbariKanada", "malkauns", "bageshri"];
+
+  for (r in morningRagas) {
+    if (raga.name == r) { return "morning"; }
+  }
+  for (r in eveningRagas) {
+    if (raga.name == r) { return "evening"; }
+  }
+  for (r in nightRagas) {
+    if (raga.name == r) { return "night"; }
+  }
+  return "anytime";
+}

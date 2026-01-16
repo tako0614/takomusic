@@ -1,0 +1,892 @@
+// std:counterpoint (v5.5)
+// Species counterpoint and voice leading utilities
+// Based on traditional rules from Fux's Gradus ad Parnassum
+
+// ============================================
+// Intervals
+// ============================================
+
+// Interval classifications
+export const PERFECT_UNISON = 0;
+export const MINOR_SECOND = 1;
+export const MAJOR_SECOND = 2;
+export const MINOR_THIRD = 3;
+export const MAJOR_THIRD = 4;
+export const PERFECT_FOURTH = 5;
+export const TRITONE = 6;
+export const PERFECT_FIFTH = 7;
+export const MINOR_SIXTH = 8;
+export const MAJOR_SIXTH = 9;
+export const MINOR_SEVENTH = 10;
+export const MAJOR_SEVENTH = 11;
+export const PERFECT_OCTAVE = 12;
+
+// Consonance types
+export fn isPerfectConsonance(interval) {
+  const i = interval % 12;
+  return i == 0 || i == 7 || i == 12;
+}
+
+export fn isImperfectConsonance(interval) {
+  const i = interval % 12;
+  return i == 3 || i == 4 || i == 8 || i == 9;
+}
+
+export fn isConsonance(interval) {
+  return isPerfectConsonance(interval) || isImperfectConsonance(interval);
+}
+
+export fn isDissonance(interval) {
+  return !isConsonance(interval);
+}
+
+// Get interval between two pitches
+export fn interval(pitch1, pitch2) {
+  let diff = pitch2 - pitch1;
+  if (diff < 0) {
+    diff = -diff;
+  }
+  return diff;
+}
+
+// Get interval class (mod 12)
+export fn intervalClass(pitch1, pitch2) {
+  return interval(pitch1, pitch2) % 12;
+}
+
+// ============================================
+// Motion Types
+// ============================================
+
+export const MOTION_PARALLEL = "parallel";
+export const MOTION_SIMILAR = "similar";
+export const MOTION_CONTRARY = "contrary";
+export const MOTION_OBLIQUE = "oblique";
+
+// Determine motion type between two voice pairs
+export fn motionType(cf1, cf2, cp1, cp2) {
+  const cfMotion = cf2 - cf1;
+  const cpMotion = cp2 - cp1;
+
+  if (cfMotion == 0 && cpMotion == 0) {
+    return MOTION_OBLIQUE;
+  } else if (cfMotion == 0 || cpMotion == 0) {
+    return MOTION_OBLIQUE;
+  } else if (cfMotion == cpMotion) {
+    return MOTION_PARALLEL;
+  } else if ((cfMotion > 0 && cpMotion > 0) || (cfMotion < 0 && cpMotion < 0)) {
+    return MOTION_SIMILAR;
+  } else {
+    return MOTION_CONTRARY;
+  }
+}
+
+// Check for parallel fifths
+export fn hasParallelFifths(cf1, cf2, cp1, cp2) {
+  const int1 = intervalClass(cf1, cp1);
+  const int2 = intervalClass(cf2, cp2);
+  const motion = motionType(cf1, cf2, cp1, cp2);
+
+  return int1 == 7 && int2 == 7 && motion == MOTION_PARALLEL;
+}
+
+// Check for parallel octaves
+export fn hasParallelOctaves(cf1, cf2, cp1, cp2) {
+  const int1 = intervalClass(cf1, cp1);
+  const int2 = intervalClass(cf2, cp2);
+  const motion = motionType(cf1, cf2, cp1, cp2);
+
+  return (int1 == 0 || int1 == 12) && (int2 == 0 || int2 == 12) && motion == MOTION_PARALLEL;
+}
+
+// Check for hidden (direct) fifths/octaves
+export fn hasHiddenFifths(cf1, cf2, cp1, cp2) {
+  const int2 = intervalClass(cf2, cp2);
+  const motion = motionType(cf1, cf2, cp1, cp2);
+
+  return int2 == 7 && motion == MOTION_SIMILAR;
+}
+
+export fn hasHiddenOctaves(cf1, cf2, cp1, cp2) {
+  const int2 = intervalClass(cf2, cp2);
+  const motion = motionType(cf1, cf2, cp1, cp2);
+
+  return (int2 == 0 || int2 == 12) && motion == MOTION_SIMILAR;
+}
+
+// ============================================
+// First Species (Note against Note)
+// ============================================
+
+// Validate first species counterpoint
+export fn validateFirstSpecies(cantusFirmus, counterpoint) {
+  let errors = [];
+
+  if (cantusFirmus.length != counterpoint.length) {
+    errors[errors.length] = {
+      type: "length",
+      message: "Cantus firmus and counterpoint must be same length"
+    };
+    return errors;
+  }
+
+  for (i in 0..(cantusFirmus.length - 1)) {
+    const cf = cantusFirmus[i];
+    const cp = counterpoint[i];
+    const int = intervalClass(cf, cp);
+
+    // Check consonance
+    if (!isConsonance(int)) {
+      errors[errors.length] = {
+        type: "dissonance",
+        position: i,
+        interval: int,
+        message: "Dissonance not allowed in first species"
+      };
+    }
+
+    // Check parallels (except first note)
+    if (i > 0) {
+      const prevCf = cantusFirmus[i - 1];
+      const prevCp = counterpoint[i - 1];
+
+      if (hasParallelFifths(prevCf, cf, prevCp, cp)) {
+        errors[errors.length] = {
+          type: "parallel_fifths",
+          position: i,
+          message: "Parallel fifths not allowed"
+        };
+      }
+
+      if (hasParallelOctaves(prevCf, cf, prevCp, cp)) {
+        errors[errors.length] = {
+          type: "parallel_octaves",
+          position: i,
+          message: "Parallel octaves not allowed"
+        };
+      }
+    }
+  }
+
+  // Check beginning and ending
+  const firstInt = intervalClass(cantusFirmus[0], counterpoint[0]);
+  if (firstInt != 0 && firstInt != 7 && firstInt != 12) {
+    errors[errors.length] = {
+      type: "opening",
+      message: "Must begin with perfect consonance (unison, fifth, or octave)"
+    };
+  }
+
+  const lastIdx = cantusFirmus.length - 1;
+  const lastInt = intervalClass(cantusFirmus[lastIdx], counterpoint[lastIdx]);
+  if (lastInt != 0 && lastInt != 12) {
+    errors[errors.length] = {
+      type: "cadence",
+      message: "Must end on unison or octave"
+    };
+  }
+
+  return errors;
+}
+
+// Generate first species options for a note
+export fn firstSpeciesOptions(cfNote, prevCf, prevCp, range) {
+  let options = [];
+  let low = range.low;
+  if (low == null) {
+    low = cfNote - 12;
+  }
+  let high = range.high;
+  if (high == null) {
+    high = cfNote + 19;
+  }
+
+  for (pitch in low..high) {
+    const int = intervalClass(cfNote, pitch);
+
+    // Must be consonant
+    if (!isConsonance(int)) {
+      continue;
+    }
+
+    // Check parallels if not first note
+    if (prevCf != null && prevCp != null) {
+      if (hasParallelFifths(prevCf, cfNote, prevCp, pitch)) {
+        continue;
+      }
+      if (hasParallelOctaves(prevCf, cfNote, prevCp, pitch)) {
+        continue;
+      }
+    }
+
+    options[options.length] = pitch;
+  }
+
+  return options;
+}
+
+// ============================================
+// Second Species (Two notes against one)
+// ============================================
+
+// Validate second species
+export fn validateSecondSpecies(cantusFirmus, counterpoint) {
+  let errors = [];
+
+  // Counterpoint should be 2x length of CF
+  if (counterpoint.length != cantusFirmus.length * 2) {
+    errors[errors.length] = {
+      type: "length",
+      message: "Counterpoint must be twice the length of cantus firmus"
+    };
+    return errors;
+  }
+
+  for (i in 0..(cantusFirmus.length - 1)) {
+    const cf = cantusFirmus[i];
+    const cpDownbeat = counterpoint[i * 2];
+    const cpUpbeat = counterpoint[i * 2 + 1];
+
+    // Downbeat must be consonant
+    const downbeatInt = intervalClass(cf, cpDownbeat);
+    if (!isConsonance(downbeatInt)) {
+      errors[errors.length] = {
+        type: "dissonance",
+        position: i * 2,
+        message: "Downbeat must be consonant"
+      };
+    }
+
+    // Upbeat can be dissonant if passing tone
+    const upbeatInt = intervalClass(cf, cpUpbeat);
+    if (isDissonance(upbeatInt)) {
+      // Check if it's a passing tone
+      if (i < cantusFirmus.length - 1) {
+        const nextCp = counterpoint[(i + 1) * 2];
+        const isStepwise = (cpUpbeat - cpDownbeat == 1 || cpUpbeat - cpDownbeat == -1 ||
+                           cpUpbeat - cpDownbeat == 2 || cpUpbeat - cpDownbeat == -2);
+        const continuesDirection = (cpUpbeat - cpDownbeat) * (nextCp - cpUpbeat) > 0;
+
+        if (!(isStepwise && continuesDirection)) {
+          errors[errors.length] = {
+            type: "dissonance",
+            position: i * 2 + 1,
+            message: "Upbeat dissonance must be passing tone"
+          };
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+// ============================================
+// Third Species (Four notes against one)
+// ============================================
+
+// Check if note is a passing tone
+export fn isPassingTone(prev, current, next) {
+  const dir1 = current - prev;
+  const dir2 = next - current;
+
+  // Same direction, stepwise
+  const isStepwise = (dir1 >= -2 && dir1 <= 2 && dir1 != 0);
+  const sameDirection = dir1 * dir2 > 0;
+
+  return isStepwise && sameDirection;
+}
+
+// Check if note is a neighbor tone
+export fn isNeighborTone(prev, current, next) {
+  return prev == next && (current == prev + 1 || current == prev - 1 ||
+                          current == prev + 2 || current == prev - 2);
+}
+
+// Validate third species
+export fn validateThirdSpecies(cantusFirmus, counterpoint) {
+  let errors = [];
+
+  if (counterpoint.length != cantusFirmus.length * 4) {
+    errors[errors.length] = {
+      type: "length",
+      message: "Counterpoint must be 4x length of cantus firmus"
+    };
+    return errors;
+  }
+
+  for (i in 0..(cantusFirmus.length - 1)) {
+    const cf = cantusFirmus[i];
+
+    for (j in 0..3) {
+      const idx = i * 4 + j;
+      const cp = counterpoint[idx];
+      const int = intervalClass(cf, cp);
+
+      // First beat must be consonant
+      if (j == 0 && !isConsonance(int)) {
+        errors[errors.length] = {
+          type: "dissonance",
+          position: idx,
+          message: "First beat must be consonant"
+        };
+      }
+
+      // Other beats: dissonance allowed as passing/neighbor
+      if (j > 0 && isDissonance(int)) {
+        const prev = counterpoint[idx - 1];
+        const hasNext = idx + 1 < counterpoint.length;
+
+        if (hasNext) {
+          const next = counterpoint[idx + 1];
+          const isPassing = isPassingTone(prev, cp, next);
+          const isNeighbor = isNeighborTone(prev, cp, next);
+
+          if (!isPassing && !isNeighbor) {
+            errors[errors.length] = {
+              type: "dissonance",
+              position: idx,
+              message: "Dissonance must be passing or neighbor tone"
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+// ============================================
+// Fourth Species (Syncopation/Suspensions)
+// ============================================
+
+// Suspension types
+export const SUSPENSION_4_3 = "4-3";
+export const SUSPENSION_7_6 = "7-6";
+export const SUSPENSION_9_8 = "9-8";
+export const SUSPENSION_2_3 = "2-3";  // Bass suspension
+
+// Create suspension
+export fn suspension(preparation, dissonance, resolution) {
+  return {
+    type: "suspension",
+    preparation: preparation,
+    dissonance: dissonance,
+    resolution: resolution
+  };
+}
+
+// Validate fourth species
+export fn validateFourthSpecies(cantusFirmus, counterpoint) {
+  let errors = [];
+
+  // Counterpoint is syncopated (tied notes)
+  if (counterpoint.length != cantusFirmus.length * 2) {
+    errors[errors.length] = {
+      type: "length",
+      message: "Counterpoint must be 2x length for syncopation"
+    };
+    return errors;
+  }
+
+  for (i in 0..(cantusFirmus.length - 1)) {
+    const cf = cantusFirmus[i];
+    const cpWeak = counterpoint[i * 2];      // Weak beat (tied from previous)
+    const cpStrong = counterpoint[i * 2 + 1]; // Strong beat (new note)
+
+    // Weak beat can be dissonant (suspension)
+    const weakInt = intervalClass(cf, cpWeak);
+    if (isDissonance(weakInt)) {
+      // Must resolve down by step
+      const resolution = cpStrong - cpWeak;
+      if (resolution != -1 && resolution != -2) {
+        errors[errors.length] = {
+          type: "resolution",
+          position: i * 2,
+          message: "Suspension must resolve down by step"
+        };
+      }
+    }
+
+    // Strong beat must be consonant
+    const strongInt = intervalClass(cf, cpStrong);
+    if (!isConsonance(strongInt)) {
+      errors[errors.length] = {
+        type: "dissonance",
+        position: i * 2 + 1,
+        message: "Strong beat must be consonant"
+      };
+    }
+  }
+
+  return errors;
+}
+
+// ============================================
+// Fifth Species (Florid Counterpoint)
+// ============================================
+
+// Create florid counterpoint structure
+export fn floridCounterpoint(measures) {
+  return {
+    type: "florid",
+    measures: measures
+  };
+}
+
+// Note value types for fifth species
+export const WHOLE = 4;
+export const HALF = 2;
+export const QUARTER = 1;
+
+// Create a measure of florid counterpoint
+export fn floridMeasure(notes) {
+  // notes: array of {pitch, duration} objects
+  return {
+    notes: notes,
+    totalDuration: sumDurations(notes)
+  };
+}
+
+fn sumDurations(notes) {
+  let total = 0;
+  for (n in notes) {
+    total = total + n.duration;
+  }
+  return total;
+}
+
+// ============================================
+// Voice Leading
+// ============================================
+
+// Calculate voice leading distance
+export fn voiceLeadingDistance(chord1, chord2) {
+  let totalDistance = 0;
+  const len = chord1.length;
+
+  for (i in 0..(len - 1)) {
+    let diff = chord2[i] - chord1[i];
+    if (diff < 0) {
+      diff = -diff;
+    }
+    totalDistance = totalDistance + diff;
+  }
+
+  return totalDistance;
+}
+
+// Find smoothest voice leading between chords
+export fn smoothestVoiceLeading(chord1, chord2Options) {
+  let best = null;
+  let bestDistance = 999;
+
+  for (option in chord2Options) {
+    const dist = voiceLeadingDistance(chord1, option);
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      best = option;
+    }
+  }
+
+  return best;
+}
+
+// Check voice crossing
+export fn hasVoiceCrossing(voices) {
+  for (i in 0..(voices.length - 2)) {
+    if (voices[i] > voices[i + 1]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Check voice overlap (voice moves past previous position of adjacent voice)
+export fn hasVoiceOverlap(voices1, voices2) {
+  for (i in 0..(voices1.length - 2)) {
+    // Upper voice shouldn't go below previous lower voice position
+    if (voices2[i + 1] < voices1[i]) {
+      return true;
+    }
+    // Lower voice shouldn't go above previous upper voice position
+    if (voices2[i] > voices1[i + 1]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ============================================
+// Cantus Firmus
+// ============================================
+
+// Create cantus firmus
+export fn cantusFirmus(pitches, mode) {
+  return {
+    type: "cantusFirmus",
+    pitches: pitches,
+    mode: mode,
+    length: pitches.length
+  };
+}
+
+// Validate cantus firmus rules
+export fn validateCantusFirmus(cf) {
+  let errors = [];
+  const pitches = cf.pitches;
+
+  // Should be 8-16 notes
+  if (pitches.length < 8 || pitches.length > 16) {
+    errors[errors.length] = {
+      type: "length",
+      message: "Cantus firmus should be 8-16 notes"
+    };
+  }
+
+  // Should begin and end on finalis
+  const finalis = pitches[0];
+  if (pitches[pitches.length - 1] != finalis) {
+    errors[errors.length] = {
+      type: "cadence",
+      message: "Must end on the same note as beginning (finalis)"
+    };
+  }
+
+  // Check for large leaps
+  for (i in 1..(pitches.length - 1)) {
+    const leap = pitches[i] - pitches[i - 1];
+    let absLeap = leap;
+    if (absLeap < 0) {
+      absLeap = -absLeap;
+    }
+
+    if (absLeap > 8) {
+      errors[errors.length] = {
+        type: "leap",
+        position: i,
+        message: "Leap larger than minor sixth not recommended"
+      };
+    }
+
+    // Large leaps should be followed by contrary motion
+    if (absLeap >= 5 && i < pitches.length - 1) {
+      const nextMotion = pitches[i + 1] - pitches[i];
+      if (leap * nextMotion > 0) {
+        errors[errors.length] = {
+          type: "leap_recovery",
+          position: i,
+          message: "Large leap should be followed by contrary motion"
+        };
+      }
+    }
+  }
+
+  // Find climax (highest note)
+  let climax = pitches[0];
+  let climaxCount = 0;
+  for (p in pitches) {
+    if (p > climax) {
+      climax = p;
+      climaxCount = 1;
+    } else if (p == climax) {
+      climaxCount = climaxCount + 1;
+    }
+  }
+
+  if (climaxCount > 1) {
+    errors[errors.length] = {
+      type: "climax",
+      message: "Climax note should appear only once"
+    };
+  }
+
+  return errors;
+}
+
+// ============================================
+// Modal Counterpoint
+// ============================================
+
+// Church modes for counterpoint
+export fn modeDorian() {
+  return {
+    name: "dorian",
+    finalis: 0,
+    scale: [0, 2, 3, 5, 7, 9, 10],
+    dominant: 7  // Fifth degree
+  };
+}
+
+export fn modePhrygian() {
+  return {
+    name: "phrygian",
+    finalis: 0,
+    scale: [0, 1, 3, 5, 7, 8, 10],
+    dominant: 7
+  };
+}
+
+export fn modeLydian() {
+  return {
+    name: "lydian",
+    finalis: 0,
+    scale: [0, 2, 4, 6, 7, 9, 11],
+    dominant: 7
+  };
+}
+
+export fn modeMixolydian() {
+  return {
+    name: "mixolydian",
+    finalis: 0,
+    scale: [0, 2, 4, 5, 7, 9, 10],
+    dominant: 7
+  };
+}
+
+export fn modeAeolian() {
+  return {
+    name: "aeolian",
+    finalis: 0,
+    scale: [0, 2, 3, 5, 7, 8, 10],
+    dominant: 7
+  };
+}
+
+export fn modeIonian() {
+  return {
+    name: "ionian",
+    finalis: 0,
+    scale: [0, 2, 4, 5, 7, 9, 11],
+    dominant: 7
+  };
+}
+
+// Check if pitch is in mode
+export fn isInMode(pitch, mode, tonic) {
+  const pc = (pitch - tonic) % 12;
+  let normalizedPc = pc;
+  if (normalizedPc < 0) {
+    normalizedPc = normalizedPc + 12;
+  }
+
+  for (degree in mode.scale) {
+    if (degree == normalizedPc) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ============================================
+// Cadences
+// ============================================
+
+export const CADENCE_AUTHENTIC = "authentic";
+export const CADENCE_PLAGAL = "plagal";
+export const CADENCE_HALF = "half";
+export const CADENCE_DECEPTIVE = "deceptive";
+export const CADENCE_PHRYGIAN = "phrygian";
+
+// Create modal cadence
+export fn modalCadence(type, voices) {
+  return {
+    type: type,
+    voices: voices
+  };
+}
+
+// Clausula vera (true cadence) - stepwise contrary motion to octave/unison
+export fn clausulaVera(upperApproach, lowerApproach) {
+  return {
+    type: "clausulaVera",
+    upper: upperApproach,  // e.g., [leading tone, finalis]
+    lower: lowerApproach   // e.g., [supertonic, finalis]
+  };
+}
+
+// ============================================
+// Imitation
+// ============================================
+
+// Create imitative entry
+export fn imitation(subject, intervalOfImitation, timeDelay) {
+  return {
+    type: "imitation",
+    subject: subject,
+    interval: intervalOfImitation,
+    delay: timeDelay
+  };
+}
+
+// Transpose subject for imitation
+export fn transposeSubject(subject, interval) {
+  let result = [];
+  for (pitch in subject) {
+    result[result.length] = pitch + interval;
+  }
+  return result;
+}
+
+// Create stretto (overlapping entries)
+export fn stretto(subject, entries) {
+  // entries: array of {voice, interval, delay}
+  return {
+    type: "stretto",
+    subject: subject,
+    entries: entries
+  };
+}
+
+// ============================================
+// Invertible Counterpoint
+// ============================================
+
+// Check if counterpoint is invertible at the octave
+export fn isInvertibleAtOctave(line1, line2) {
+  for (i in 0..(line1.length - 1)) {
+    const int = intervalClass(line1[i], line2[i]);
+
+    // Fifths become fourths (dissonant in upper voice)
+    if (int == 7) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Check if counterpoint is invertible at the tenth
+export fn isInvertibleAtTenth(line1, line2) {
+  for (i in 0..(line1.length - 1)) {
+    const int = intervalClass(line1[i], line2[i]);
+
+    // Thirds and sixths work well
+    // Avoid seconds and sevenths
+    if (int == 1 || int == 2 || int == 10 || int == 11) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Invert counterpoint at interval
+export fn invertCounterpoint(upperLine, lowerLine, inversionInterval) {
+  // Swap voices and transpose
+  let newUpper = [];
+  let newLower = [];
+
+  for (i in 0..(upperLine.length - 1)) {
+    newUpper[i] = lowerLine[i] + inversionInterval;
+    newLower[i] = upperLine[i];
+  }
+
+  return {
+    upper: newUpper,
+    lower: newLower
+  };
+}
+
+// ============================================
+// Double/Triple Counterpoint
+// ============================================
+
+// Create double counterpoint structure
+export fn doubleCounterpoint(subject, countersubject) {
+  return {
+    type: "doubleCounterpoint",
+    subject: subject,
+    countersubject: countersubject
+  };
+}
+
+// Create triple counterpoint
+export fn tripleCounterpoint(line1, line2, line3) {
+  return {
+    type: "tripleCounterpoint",
+    lines: [line1, line2, line3]
+  };
+}
+
+// Get all permutations for triple counterpoint
+export fn triplePermutations(tc) {
+  const lines = tc.lines;
+  return [
+    [lines[0], lines[1], lines[2]],
+    [lines[0], lines[2], lines[1]],
+    [lines[1], lines[0], lines[2]],
+    [lines[1], lines[2], lines[0]],
+    [lines[2], lines[0], lines[1]],
+    [lines[2], lines[1], lines[0]]
+  ];
+}
+
+// ============================================
+// Utility Functions
+// ============================================
+
+// Find the highest note
+export fn findClimax(pitches) {
+  let highest = pitches[0];
+  let position = 0;
+
+  for (i in 0..(pitches.length - 1)) {
+    if (pitches[i] > highest) {
+      highest = pitches[i];
+      position = i;
+    }
+  }
+
+  return {
+    pitch: highest,
+    position: position
+  };
+}
+
+// Calculate melodic range
+export fn melodicRange(pitches) {
+  let lowest = pitches[0];
+  let highest = pitches[0];
+
+  for (p in pitches) {
+    if (p < lowest) {
+      lowest = p;
+    }
+    if (p > highest) {
+      highest = p;
+    }
+  }
+
+  return {
+    lowest: lowest,
+    highest: highest,
+    range: highest - lowest
+  };
+}
+
+// Count stepwise motion vs leaps
+export fn analyzeMotion(pitches) {
+  let steps = 0;
+  let leaps = 0;
+
+  for (i in 1..(pitches.length - 1)) {
+    const motion = pitches[i] - pitches[i - 1];
+    let absMotion = motion;
+    if (absMotion < 0) {
+      absMotion = -absMotion;
+    }
+
+    if (absMotion <= 2) {
+      steps = steps + 1;
+    } else {
+      leaps = leaps + 1;
+    }
+  }
+
+  return {
+    steps: steps,
+    leaps: leaps,
+    ratio: steps / (steps + leaps)
+  };
+}
