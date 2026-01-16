@@ -1,4 +1,4 @@
-// Kanji to Hiragana conversion utility using kuroshiro
+﻿// Kanji to Hiragana conversion utility using kuroshiro
 
 // @ts-ignore - kuroshiro has no type definitions
 import KuroshiroModule from 'kuroshiro';
@@ -102,7 +102,7 @@ export async function convertKanjiLyrics(
 }
 
 // Small kana that combine with previous character (don't count as separate syllables)
-const SMALL_KANA = /[ゃゅょぁぃぅぇぉっャュョァィゥェォッ]/;
+const SMALL_KANA = /[ぁぃぅぇぉゃゅょゎゕゖっァィゥェォャュョヮヵヶッ]/;
 
 /**
  * Count Japanese syllables (morae) in a string
@@ -169,19 +169,19 @@ export function countPhonemes(lyric: string): number {
   let count = 0;
   for (const char of lyric) {
     // Characters that produce 3 phonemes (consonant + y + vowel)
-    if (/[きぎしじちぢにひびぴみり]/.test(char)) {
+    if (/[きぎしじちぢにひびぴみりキギシジチヂニヒビピミリ]/.test(char)) {
       // Check if followed by small ya/yu/yo
       count += 2; // Base consonant + vowel (may be adjusted by small kana)
-    } else if (/[ゃゅょ]/.test(char)) {
+    } else if (/[ゃゅょャュョ]/.test(char)) {
       // Small ya/yu/yo adds 'y' phoneme and replaces previous vowel
       count += 1; // Just the y sound (vowel already counted)
-    } else if (/[っ]/.test(char)) {
+    } else if (/[っッ]/.test(char)) {
       // Small tsu (geminate consonant) - counts as 1 phoneme
       count += 1;
-    } else if (/[ん]/.test(char)) {
+    } else if (/[んン]/.test(char)) {
       // N sound - 1 phoneme
       count += 1;
-    } else if (/[あいうえお]/.test(char)) {
+    } else if (/[あいうえおアイウエオ]/.test(char)) {
       // Vowels only - 1 phoneme
       count += 1;
     } else if (/[\u3040-\u309F\u30A0-\u30FF]/.test(char)) {
@@ -213,3 +213,4 @@ export function splitLyricBySyllables(lyric: string, maxSyllables: number = 7): 
 
   return chunks;
 }
+
