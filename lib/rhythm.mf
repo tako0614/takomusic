@@ -336,3 +336,642 @@ export fn accent(pattern, strongVel, weakVel) {
   }
   return velocities;
 }
+
+// ============================================================================
+// Extended Polyrhythm Functions
+// ============================================================================
+
+// polyrhythmPitched - create polyrhythm with customizable pitches
+// a: number of beats in first voice
+// pitchesA: array of pitches for first voice (cycled if shorter than a)
+// b: number of beats in second voice
+// pitchesB: array of pitches for second voice (cycled if shorter than b)
+// totalDur: total duration for the polyrhythm
+export fn polyrhythmPitched(a, pitchesA, b, pitchesB, totalDur) {
+  const durA = totalDur / a;
+  const durB = totalDur / b;
+
+  let events = [];
+
+  // First voice
+  for (i in 0..(a - 1)) {
+    const pitchIdx = i % pitchesA.length;
+    events[events.length] = {
+      type: "note",
+      start: durA * i,
+      dur: durA,
+      pitch: pitchesA[pitchIdx],
+      velocity: 0.8,
+      voice: 0
+    };
+  }
+
+  // Second voice
+  for (i in 0..(b - 1)) {
+    const pitchIdx = i % pitchesB.length;
+    events[events.length] = {
+      type: "note",
+      start: durB * i,
+      dur: durB,
+      pitch: pitchesB[pitchIdx],
+      velocity: 0.7,
+      voice: 1
+    };
+  }
+
+  return { events: events, length: totalDur };
+}
+
+// polyrhythmDrums - create drum polyrhythm
+// a: number of hits for first drum
+// keyA: drum key for first voice (e.g., kick)
+// b: number of hits for second drum
+// keyB: drum key for second voice (e.g., snare)
+// totalDur: total duration
+export fn polyrhythmDrums(a, keyA, b, keyB, totalDur) {
+  const durA = totalDur / a;
+  const durB = totalDur / b;
+
+  let events = [];
+
+  // First voice
+  for (i in 0..(a - 1)) {
+    events[events.length] = {
+      type: "drumHit",
+      start: durA * i,
+      dur: durA,
+      key: keyA,
+      velocity: 0.85
+    };
+  }
+
+  // Second voice
+  for (i in 0..(b - 1)) {
+    events[events.length] = {
+      type: "drumHit",
+      start: durB * i,
+      dur: durB,
+      key: keyB,
+      velocity: 0.75
+    };
+  }
+
+  return { events: events, length: totalDur };
+}
+
+// ============================================================================
+// Metric Modulation
+// ============================================================================
+
+// metricModulation - transform clip durations for metric modulation
+// This function scales all durations in a clip based on a pivot note value
+// c: input clip
+// fromUnit: the original unit duration (e.g., q for quarter note)
+// toUnit: the new unit duration (e.g., e. for dotted eighth)
+// returns: clip with all durations scaled by (fromUnit / toUnit)
+export fn metricModulation(c, fromUnit, toUnit) {
+  // Calculate the ratio: how much to scale durations
+  // If fromUnit = q (1/4) and toUnit = e. (3/16)
+  // ratio = (1/4) / (3/16) = 4/3
+  // All durations multiplied by this ratio
+  const ratio = fromUnit / toUnit;
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      events[events.length] = {
+        type: "note",
+        start: ev.start * ratio,
+        dur: ev.dur * ratio,
+        pitch: ev.pitch,
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        lyric: ev.lyric,
+        ext: ev.ext
+      };
+    } else if (ev.type == "chord") {
+      events[events.length] = {
+        type: "chord",
+        start: ev.start * ratio,
+        dur: ev.dur * ratio,
+        pitches: ev.pitches,
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        ext: ev.ext
+      };
+    } else if (ev.type == "drumHit") {
+      events[events.length] = {
+        type: "drumHit",
+        start: ev.start * ratio,
+        dur: ev.dur * ratio,
+        key: ev.key,
+        velocity: ev.velocity,
+        techniques: ev.techniques,
+        ext: ev.ext
+      };
+    } else if (ev.type == "rest") {
+      events[events.length] = {
+        type: "rest",
+        start: ev.start * ratio,
+        dur: ev.dur * ratio
+      };
+    } else {
+      // For other event types, try to scale if they have start/dur
+      let newEv = ev;
+      if (ev.start != null) {
+        newEv.start = ev.start * ratio;
+      }
+      if (ev.dur != null) {
+        newEv.dur = ev.dur * ratio;
+      }
+      events[events.length] = newEv;
+    }
+  }
+
+  let newLength = c.length;
+  if (newLength != null) {
+    newLength = newLength * ratio;
+  }
+
+  return { events: events, length: newLength };
+}
+
+// ============================================================================
+// Isorhythm
+// ============================================================================
+
+// isorhythm - create isorhythmic pattern from talea (rhythm) and color (pitch)
+// talea: array of durations (the rhythmic pattern)
+// color: array of pitches (the melodic pattern)
+// The talea and color cycle independently, creating phase relationships
+// numNotes: total number of notes to generate (default: LCM of lengths)
+export fn isorhythm(talea, color, numNotes) {
+  let total = numNotes;
+  if (total == null) {
+    // Default to enough notes for both patterns to realign
+    // Using a simple approximation: talea.length * color.length
+    total = talea.length * color.length;
+  }
+
+  let events = [];
+  let pos = 0 / 1;
+
+  for (i in 0..(total - 1)) {
+    const taleaIdx = i % talea.length;
+    const colorIdx = i % color.length;
+
+    const dur = talea[taleaIdx];
+    const pitch = color[colorIdx];
+
+    events[events.length] = {
+      type: "note",
+      start: pos,
+      dur: dur,
+      pitch: pitch,
+      velocity: 0.75
+    };
+
+    pos = pos + dur;
+  }
+
+  return { events: events, length: pos };
+}
+
+// isorhythmWithVelocity - isorhythm with additional velocity cycle
+// talea: array of durations
+// color: array of pitches
+// velocities: array of velocities
+// numNotes: total number of notes
+export fn isorhythmWithVelocity(talea, color, velocities, numNotes) {
+  let total = numNotes;
+  if (total == null) {
+    total = talea.length * color.length;
+  }
+
+  let events = [];
+  let pos = 0 / 1;
+
+  for (i in 0..(total - 1)) {
+    const taleaIdx = i % talea.length;
+    const colorIdx = i % color.length;
+    const velIdx = i % velocities.length;
+
+    events[events.length] = {
+      type: "note",
+      start: pos,
+      dur: talea[taleaIdx],
+      pitch: color[colorIdx],
+      velocity: velocities[velIdx]
+    };
+
+    pos = pos + talea[taleaIdx];
+  }
+
+  return { events: events, length: pos };
+}
+
+// ============================================================================
+// Additive Rhythm
+// ============================================================================
+
+// additiveRhythm - create rhythm from additive groupings
+// groups: array of beat counts (e.g., [3, 2, 2] for Bulgarian rhythm)
+// baseUnit: duration of one unit
+// pitch: pitch to use (or array of pitches)
+export fn additiveRhythm(groups, baseUnit, pitch) {
+  let events = [];
+  let pos = 0 / 1;
+
+  for (group in groups) {
+    const dur = baseUnit * group;
+
+    if (pitch.length != null) {
+      // Array of pitches - use one per group (cycled)
+      const pIdx = events.length % pitch.length;
+      events[events.length] = {
+        type: "note",
+        start: pos,
+        dur: dur,
+        pitch: pitch[pIdx],
+        velocity: 0.8
+      };
+    } else {
+      events[events.length] = {
+        type: "note",
+        start: pos,
+        dur: dur,
+        pitch: pitch,
+        velocity: 0.8
+      };
+    }
+
+    pos = pos + dur;
+  }
+
+  return { events: events, length: pos };
+}
+
+// additiveRhythmDrums - additive rhythm for drums
+// groups: array of beat counts
+// baseUnit: duration of one unit
+// key: drum key
+export fn additiveRhythmDrums(groups, baseUnit, key) {
+  let events = [];
+  let pos = 0 / 1;
+
+  for (group in groups) {
+    const dur = baseUnit * group;
+
+    events[events.length] = {
+      type: "drumHit",
+      start: pos,
+      dur: baseUnit,  // Drum hit uses base unit, not full group
+      key: key,
+      velocity: 0.85
+    };
+
+    pos = pos + dur;
+  }
+
+  return { events: events, length: pos };
+}
+
+// ============================================================================
+// Common Additive Rhythm Presets
+// ============================================================================
+
+// Bulgarian rhythms
+export fn aksak7(baseUnit, pitch) {
+  return additiveRhythm([2, 2, 3], baseUnit, pitch);  // 7/8
+}
+
+export fn aksak9(baseUnit, pitch) {
+  return additiveRhythm([2, 2, 2, 3], baseUnit, pitch);  // 9/8
+}
+
+export fn aksak11(baseUnit, pitch) {
+  return additiveRhythm([2, 2, 3, 2, 2], baseUnit, pitch);  // 11/8
+}
+
+// African bell patterns
+export fn bellPattern12(baseUnit, key) {
+  // Standard 12/8 bell pattern
+  return euclideanClip(7, 12, baseUnit, key, 0.9, 0);
+}
+
+// ============================================================================
+// Phasing / Phase Shift
+// ============================================================================
+
+// phaseShift - create two clips with gradual phase offset
+// c: original clip
+// shiftPerRepeat: amount to shift the second voice each repeat
+// numRepeats: number of repetitions
+export fn phaseShift(c, shiftPerRepeat, numRepeats) {
+  let events = [];
+  let totalLength = 0 / 1;
+
+  for (rep in 0..(numRepeats - 1)) {
+    const baseOffset = c.length * rep;
+    const phaseOffset = shiftPerRepeat * rep;
+
+    // First voice (original timing)
+    for (ev in c.events) {
+      if (ev.type == "note") {
+        events[events.length] = {
+          type: "note",
+          start: ev.start + baseOffset,
+          dur: ev.dur,
+          pitch: ev.pitch,
+          velocity: ev.velocity,
+          voice: 0
+        };
+      } else if (ev.type == "drumHit") {
+        events[events.length] = {
+          type: "drumHit",
+          start: ev.start + baseOffset,
+          dur: ev.dur,
+          key: ev.key,
+          velocity: ev.velocity
+        };
+      }
+    }
+
+    // Second voice (with phase offset)
+    for (ev in c.events) {
+      if (ev.type == "note") {
+        events[events.length] = {
+          type: "note",
+          start: ev.start + baseOffset + phaseOffset,
+          dur: ev.dur,
+          pitch: ev.pitch,
+          velocity: ev.velocity * 0.85,  // Slightly softer
+          voice: 1
+        };
+      } else if (ev.type == "drumHit") {
+        events[events.length] = {
+          type: "drumHit",
+          start: ev.start + baseOffset + phaseOffset,
+          dur: ev.dur,
+          key: ev.key,
+          velocity: ev.velocity * 0.85
+        };
+      }
+    }
+
+    totalLength = baseOffset + c.length;
+  }
+
+  return { events: events, length: totalLength };
+}
+
+// ============================================================================
+// Rhythmic Transformation
+// ============================================================================
+
+// retrograde - reverse the order of events in a clip
+export fn retrograde(c) {
+  if (c.events.length == 0) {
+    return c;
+  }
+
+  let events = [];
+  const clipLength = c.length;
+
+  for (i in 0..(c.events.length - 1)) {
+    const ev = c.events[c.events.length - 1 - i];
+
+    if (ev.type == "note") {
+      // Calculate new start: clipLength - (original_start + dur)
+      const newStart = clipLength - ev.start - ev.dur;
+      events[events.length] = {
+        type: "note",
+        start: newStart,
+        dur: ev.dur,
+        pitch: ev.pitch,
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        lyric: ev.lyric,
+        ext: ev.ext
+      };
+    } else if (ev.type == "chord") {
+      const newStart = clipLength - ev.start - ev.dur;
+      events[events.length] = {
+        type: "chord",
+        start: newStart,
+        dur: ev.dur,
+        pitches: ev.pitches,
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        ext: ev.ext
+      };
+    } else if (ev.type == "drumHit") {
+      const newStart = clipLength - ev.start - ev.dur;
+      events[events.length] = {
+        type: "drumHit",
+        start: newStart,
+        dur: ev.dur,
+        key: ev.key,
+        velocity: ev.velocity,
+        techniques: ev.techniques,
+        ext: ev.ext
+      };
+    } else {
+      events[events.length] = ev;
+    }
+  }
+
+  return { events: events, length: clipLength };
+}
+
+// augmentation - double all durations
+export fn augmentation(c) {
+  return metricModulation(c, 1 / 1, 1 / 2);
+}
+
+// diminution - halve all durations
+export fn diminution(c) {
+  return metricModulation(c, 1 / 1, 2 / 1);
+}
+
+// scaleRhythm - scale all durations by a factor
+// c: input clip
+// factor: multiplication factor (2 = twice as long, 0.5 = half as long)
+export fn scaleRhythm(c, factor) {
+  return metricModulation(c, 1 / 1, 1 / factor);
+}
+
+// ============================================================================
+// Swing and Feel Utilities
+// ============================================================================
+
+// swingClip - apply swing feel to a clip
+// c: input clip
+// swingAmount: 0.0 = straight, 0.5 = triplet swing, 1.0 = extreme swing
+// gridSize: the grid to apply swing to (default: eighth note)
+export fn swingClip(c, swingAmount, gridSize) {
+  let grid = gridSize;
+  if (grid == null) {
+    grid = 1 / 8;
+  }
+
+  let amount = swingAmount;
+  if (amount == null) {
+    amount = 0.33;  // Default triplet-ish swing
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      const start = ev.start;
+      if (start != null && start.n != null) {
+        // Calculate position in grid units
+        const gridPos = start / grid;
+        const beatPos = gridPos - (gridPos - (gridPos % 1));  // Floor
+
+        // Check if this is an "off-beat" position (odd grid positions)
+        const isOffBeat = (beatPos % 2) == 1;
+
+        let newStart = start;
+        if (isOffBeat) {
+          // Delay the off-beat by the swing amount
+          newStart = start + (grid * amount);
+        }
+
+        if (ev.type == "note") {
+          events[events.length] = {
+            type: "note",
+            start: newStart,
+            dur: ev.dur,
+            pitch: ev.pitch,
+            velocity: ev.velocity,
+            voice: ev.voice,
+            techniques: ev.techniques,
+            lyric: ev.lyric,
+            ext: ev.ext
+          };
+        } else if (ev.type == "chord") {
+          events[events.length] = {
+            type: "chord",
+            start: newStart,
+            dur: ev.dur,
+            pitches: ev.pitches,
+            velocity: ev.velocity,
+            voice: ev.voice,
+            techniques: ev.techniques,
+            ext: ev.ext
+          };
+        } else if (ev.type == "drumHit") {
+          events[events.length] = {
+            type: "drumHit",
+            start: newStart,
+            dur: ev.dur,
+            key: ev.key,
+            velocity: ev.velocity,
+            techniques: ev.techniques,
+            ext: ev.ext
+          };
+        }
+      } else {
+        events[events.length] = ev;
+      }
+    } else {
+      events[events.length] = ev;
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// humanize - add slight random timing and velocity variations
+// c: input clip
+// timingVariation: max timing offset in beats (e.g., 1/64)
+// velocityVariation: max velocity offset (e.g., 0.1)
+// seed: random seed for reproducibility
+export fn humanize(c, timingVariation, velocityVariation, seed) {
+  let tVar = timingVariation;
+  if (tVar == null) {
+    tVar = 1 / 64;
+  }
+
+  let vVar = velocityVariation;
+  if (vVar == null) {
+    vVar = 0.1;
+  }
+
+  // Simple LCG random
+  let state = seed;
+  if (state == null) {
+    state = 12345;
+  }
+
+  fn nextRandom() {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      // Generate random offsets
+      const tOffset = (nextRandom() - 0.5) * 2 * tVar;
+      const vOffset = (nextRandom() - 0.5) * 2 * vVar;
+
+      let newVel = (ev.velocity ?? 0.75) + vOffset;
+      if (newVel < 0.1) {
+        newVel = 0.1;
+      }
+      if (newVel > 1.0) {
+        newVel = 1.0;
+      }
+
+      let newStart = ev.start + tOffset;
+      if (newStart < 0 / 1) {
+        newStart = 0 / 1;
+      }
+
+      if (ev.type == "note") {
+        events[events.length] = {
+          type: "note",
+          start: newStart,
+          dur: ev.dur,
+          pitch: ev.pitch,
+          velocity: newVel,
+          voice: ev.voice,
+          techniques: ev.techniques,
+          lyric: ev.lyric,
+          ext: ev.ext
+        };
+      } else if (ev.type == "chord") {
+        events[events.length] = {
+          type: "chord",
+          start: newStart,
+          dur: ev.dur,
+          pitches: ev.pitches,
+          velocity: newVel,
+          voice: ev.voice,
+          techniques: ev.techniques,
+          ext: ev.ext
+        };
+      } else if (ev.type == "drumHit") {
+        events[events.length] = {
+          type: "drumHit",
+          start: newStart,
+          dur: ev.dur,
+          key: ev.key,
+          velocity: newVel,
+          techniques: ev.techniques,
+          ext: ev.ext
+        };
+      }
+    } else {
+      events[events.length] = ev;
+    }
+  }
+
+  return { events: events, length: c.length };
+}

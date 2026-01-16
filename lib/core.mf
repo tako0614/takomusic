@@ -203,22 +203,89 @@ export fn repeat(c, count) {
   return { events: events, length: len * count };
 }
 
-export fn slice(c, startPos, endPos) {
+// Slice a clip to extract a time range
+// By default, includes events that START within [start, end)
+// Use mode: "overlap" to include events that overlap with the range
+// Use trim: true to trim events that extend beyond the range
+export fn slice(c, startPos, endPos, mode, trim) {
   const start = posToRat(startPos);
   const end = posToRat(endPos);
   let events = [];
+
   for (ev in c.events) {
-    const pos = eventStartRat(ev);
-    if (pos == null) {
+    const evStart = eventStartRat(ev);
+    if (evStart == null) {
       continue;
     }
-    // Range is [start, end) - end is exclusive per STDLIB.md
-    if (pos < start || pos >= end) {
+    const evEnd = eventEndRat(ev);
+
+    let include = false;
+
+    if (mode == "overlap") {
+      // Include events that overlap with [start, end)
+      // Event overlaps if: evStart < end AND evEnd > start
+      if (evEnd != null) {
+        include = evStart < end && evEnd > start;
+      } else {
+        // Point event - check if it's in range
+        include = evStart >= start && evStart < end;
+      }
+    } else {
+      // Default: include events that START within [start, end)
+      include = evStart >= start && evStart < end;
+    }
+
+    if (!include) {
       continue;
     }
-    events[events.length] = shiftEvent(ev, 0 / 1 - start);
+
+    // Create a copy of the event, shifted to start from 0
+    let outEvent = shiftEvent(ev, 0 / 1 - start);
+
+    // Trim events if requested
+    if (trim == true && evEnd != null) {
+      const newStart = eventStartRat(outEvent);
+      const newEnd = newStart + ev.dur;
+      const sliceEnd = end - start;
+
+      // Trim if event starts before 0 (only in overlap mode)
+      if (newStart < 0 / 1) {
+        const cutAmount = 0 / 1 - newStart;
+        outEvent = shiftEvent(ev, 0 / 1 - (evStart + cutAmount));
+        if (ev.dur != null) {
+          outEvent.dur = ev.dur - cutAmount;
+        }
+      }
+
+      // Trim if event extends beyond slice end
+      if (newEnd > sliceEnd && ev.dur != null) {
+        const newDur = sliceEnd - eventStartRat(outEvent);
+        if (newDur > 0 / 1) {
+          outEvent.dur = newDur;
+        } else {
+          continue;  // Skip events with no duration left
+        }
+      }
+    }
+
+    events[events.length] = outEvent;
   }
   return { events: events, length: end - start };
+}
+
+// Simplified slice - just start position, end exclusive (original behavior)
+export fn sliceFrom(c, startPos, endPos) {
+  return slice(c, startPos, endPos, null, null);
+}
+
+// Slice with overlap mode - includes events that overlap with range
+export fn sliceOverlap(c, startPos, endPos) {
+  return slice(c, startPos, endPos, "overlap", false);
+}
+
+// Slice with trimming - includes overlapping events and trims them to fit
+export fn sliceTrim(c, startPos, endPos) {
+  return slice(c, startPos, endPos, "overlap", true);
 }
 
 export fn mapEvents(c, f) {

@@ -213,21 +213,74 @@ export fn repeat(c, count) {
   return { events: events, length: len * count };
 }
 
-export fn slice(c, startPos, endPos) {
+export fn slice(c, startPos, endPos, mode, trim) {
   const start = posToRat(startPos);
   const end = posToRat(endPos);
   let events = [];
+
   for (ev in c.events) {
-    const pos = eventStartRat(ev);
-    if (pos == null) {
+    const evStart = eventStartRat(ev);
+    if (evStart == null) {
       continue;
     }
-    if (pos < start || pos >= end) {
+    const evEnd = eventEndRat(ev);
+
+    let include = false;
+
+    if (mode == "overlap") {
+      if (evEnd != null) {
+        include = evStart < end && evEnd > start;
+      } else {
+        include = evStart >= start && evStart < end;
+      }
+    } else {
+      include = evStart >= start && evStart < end;
+    }
+
+    if (!include) {
       continue;
     }
-    events[events.length] = shiftEvent(ev, 0 / 1 - start);
+
+    let outEvent = shiftEvent(ev, 0 / 1 - start);
+
+    if (trim == true && evEnd != null) {
+      const newStart = eventStartRat(outEvent);
+      const newEnd = newStart + ev.dur;
+      const sliceEnd = end - start;
+
+      if (newStart < 0 / 1) {
+        const cutAmount = 0 / 1 - newStart;
+        outEvent = shiftEvent(ev, 0 / 1 - (evStart + cutAmount));
+        if (ev.dur != null) {
+          outEvent.dur = ev.dur - cutAmount;
+        }
+      }
+
+      if (newEnd > sliceEnd && ev.dur != null) {
+        const newDur = sliceEnd - eventStartRat(outEvent);
+        if (newDur > 0 / 1) {
+          outEvent.dur = newDur;
+        } else {
+          continue;
+        }
+      }
+    }
+
+    events[events.length] = outEvent;
   }
   return { events: events, length: end - start };
+}
+
+export fn sliceFrom(c, startPos, endPos) {
+  return slice(c, startPos, endPos, null, null);
+}
+
+export fn sliceOverlap(c, startPos, endPos) {
+  return slice(c, startPos, endPos, "overlap", false);
+}
+
+export fn sliceTrim(c, startPos, endPos) {
+  return slice(c, startPos, endPos, "overlap", true);
 }
 
 export fn mapEvents(c, f) {
@@ -2088,10 +2141,76 @@ fn addAutomation(c, param, amount, start, end) {
   return { events: events, length: c.length };
 }
 
-export fn vibrato(c, depth, rate, start, end) {
-  let out = addAutomation(c, "vocal:vibratoDepth", depth, start, end);
+// Vibrato shapes
+export const vibratoSine = "sine";
+export const vibratoTriangle = "triangle";
+export const vibratoSquare = "square";
+export const vibratoRandom = "random";
+
+export fn vibrato(c, depth, rate, delay, shape, start, end) {
+  let actualStart = start;
+  if (actualStart == null) {
+    actualStart = 0 / 1;
+  }
+  if (delay != null && delay > 0 / 1) {
+    actualStart = actualStart + delay;
+  }
+  let out = addAutomation(c, "vocal:vibratoDepth", depth, actualStart, end);
   if (rate != null) {
-    out = addAutomation(out, "vocal:vibratoRate", rate, start, end);
+    out = addAutomation(out, "vocal:vibratoRate", rate, actualStart, end);
+  }
+  if (shape != null) {
+    out = addAutomation(out, "vocal:vibratoShape", shape, actualStart, end);
+  }
+  return out;
+}
+
+export fn vibratoGradual(c, targetDepth, rate, onsetBeats, shape, start, end) {
+  let actualStart = start;
+  if (actualStart == null) {
+    actualStart = 0 / 1;
+  }
+  let actualEnd = end;
+  if (actualEnd == null) {
+    actualEnd = defaultEnd(c);
+  }
+  let onset = onsetBeats;
+  if (onset == null) {
+    onset = 1 / 4;
+  }
+  let events = [];
+  for (ev in c.events) {
+    events[events.length] = cloneEvent(ev);
+  }
+  const onsetEnd = actualStart + onset;
+  events[events.length] = {
+    type: "automation",
+    param: "vocal:vibratoDepth",
+    start: actualStart,
+    end: onsetEnd,
+    curve: {
+      kind: "piecewiseLinear",
+      points: [
+        { t: 0, v: 0 },
+        { t: 1, v: targetDepth }
+      ]
+    }
+  };
+  if (onsetEnd < actualEnd) {
+    events[events.length] = {
+      type: "automation",
+      param: "vocal:vibratoDepth",
+      start: onsetEnd,
+      end: actualEnd,
+      curve: flatCurve(targetDepth)
+    };
+  }
+  let out = { events: events, length: c.length };
+  if (rate != null) {
+    out = addAutomation(out, "vocal:vibratoRate", rate, actualStart, actualEnd);
+  }
+  if (shape != null) {
+    out = addAutomation(out, "vocal:vibratoShape", shape, actualStart, actualEnd);
   }
   return out;
 }

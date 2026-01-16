@@ -18,6 +18,11 @@ This document describes the standard library modules. All std functions are back
 - `std:theory`
 - `std:drums`
 - `std:vocal`
+- `std:rhythm`
+- `std:ornament`
+- `std:tuning`
+- `std:dynamics`
+- `std:articulations`
 
 ---
 
@@ -39,7 +44,8 @@ length = max(endPos(event) for all events)
 |------------|--------------|
 | `NoteEvent`, `ChordEvent`, `DrumHitEvent`, `BreathEvent` | `start + dur` |
 | `ControlEvent`, `MarkerEvent` | `start` (point events) |
-| `AutomationEvent` | `end` (uses the automation's end position) |
+| `AutomationEvent`, `GlissandoEvent` | `end` (uses the event's end position) |
+| `GraceNoteEvent` | `start + mainDur` |
 
 An empty clip has length `0`.
 
@@ -124,97 +130,82 @@ const c = padTo(clip { note(C4, q); }, h);
 // length(c) returns h (2 quarters), not q (1 quarter)
 ```
 
-### slice() Boundary Rules
+### slice() Functions
 
-`slice(c, start, end)` extracts events from the range `[start, end)` (start-inclusive, end-exclusive).
+The `slice` function extracts events from a clip within a time range. Multiple variants are available for different use cases:
 
-**Event handling by type:**
+**Basic Signature:**
+```mf
+slice(c: Clip, start: Pos, end: Pos, mode?: String, trim?: Bool) -> Clip
+```
+
+**Convenience Functions:**
+- `sliceFrom(c, start, end)` — Default behavior: include events that START within `[start, end)`
+- `sliceOverlap(c, start, end)` — Include events that OVERLAP with `[start, end)` (events starting before but extending into range)
+- `sliceTrim(c, start, end)` — Like `sliceOverlap`, but also trims events to fit exactly within the range
+
+**Parameters:**
+- `mode`: `"overlap"` to include overlapping events, or omit/`null` for start-position-only matching
+- `trim`: `true` to trim events that extend beyond boundaries
+
+**Default Behavior (`slice` or `sliceFrom`):**
+
+Events are included if they START within `[start, end)` (start-inclusive, end-exclusive).
 
 | Event Type | Behavior |
 |------------|----------|
-| `NoteEvent`, `ChordEvent`, `DrumHitEvent`, `BreathEvent` | Included if event starts within range. Events spanning the boundary are **trimmed** to fit. |
-| `ControlEvent`, `MarkerEvent` | Included if `pos` is within `[start, end)`. |
-| `AutomationEvent` | Included if `[event.start, event.end)` overlaps with `[start, end)`. Trimmed to fit. |
-
-**Trimming rules:**
-
-1. If an event starts before `start`: **dropped** (not trimmed)
-2. If an event starts within range but extends past `end`: duration is shortened to `end - event.pos`
-3. If an automation event overlaps: both start and end are clamped to `[start, end]`. **Note:** The standard `slice()` does NOT automatically rescale curves; for correct automation behavior, use custom logic (see `std:curves` documentation)
-
-**Important:** Rule 1 means that notes starting before the slice range are completely excluded, even if they would still be sounding within the range. This is a simplification for clip-based editing. If you need to preserve "sounding" notes that started earlier, consider using `overlay` with adjusted positions instead.
+| `NoteEvent`, `ChordEvent`, `DrumHitEvent`, `BreathEvent` | Included if event starts within range (NOT trimmed by default) |
+| `ControlEvent`, `MarkerEvent` | Included if position is within `[start, end)` |
+| `AutomationEvent` | Included if start is within range |
 
 ```mf
 // Example: note starts at 0, extends to position 2
 const c = clip { note(C4, h); };  // h = 2 quarters
 
-// Slice from position 1 onwards
+// Default slice: only includes events starting in range
 const s = slice(c, q, h);  // Range [1, 2)
-
-// Result: empty clip!
-// The note starts at 0, which is before the slice start (1),
-// so it is dropped entirely, not trimmed.
+// Result: empty clip! (note starts at 0, outside range)
 ```
 
-**Workaround for preserving ongoing notes:**
+**Overlap Mode (`sliceOverlap`):**
+
+Events are included if they OVERLAP with the range `[start, end)`:
 
 ```mf
-import { max, min, mapEvents, updateEvent } from "std:core";
+const c = clip { note(C4, h); };  // Note from 0 to 2
 
-// To keep notes that are still sounding, manually check and include them:
-fn sliceWithSounding(c, start, end) {
-  // Filter events that overlap with [start, end)
-  return mapEvents(c, fn(e) {
-    // Handle timed events (have dur field)
-    return match (e.type) {
-      "note" -> sliceTimedEvent(e, start, end);
-      "chord" -> sliceTimedEvent(e, start, end);
-      "drumHit" -> sliceTimedEvent(e, start, end);
-      "breath" -> sliceTimedEvent(e, start, end);
-      // Point events: include if within range
-      "control" -> if (e.start >= start && e.start < end) {
-        return updateEvent(e, { start: e.start - start });
-      } else {
-        return null;
-      };
-      "marker" -> if (e.pos >= start && e.pos < end) {
-        return updateEvent(e, { start: e.pos - start });
-      } else {
-        return null;
-      };
-      // Automation: check overlap with [start, end)
-      "automation" -> sliceAutomation(e, start, end);
-      else -> null;
-    };
-  });
-}
-
-// Helper for timed events (Note, Chord, DrumHit, Breath)
-fn sliceTimedEvent(e, start, end) {
-  if (e.start + e.dur <= start) {
-    return null;  // Ends before range
-  }
-  if (e.start >= end) {
-    return null;  // Starts after range
-  }
-  const newStart = max(e.start, start) - start;
-  const newEnd = min(e.start + e.dur, end) - start;
-  return updateEvent(e, { start: newStart, dur: newEnd - newStart });
-}
-
-// Helper for automation events
-fn sliceAutomation(a, start, end) {
-  if (a.end <= start || a.start >= end) {
-    return null;  // No overlap
-  }
-  const newStart = max(a.start, start) - start;
-  const newEnd = min(a.end, end) - start;
-  // Note: curve scaling would need additional logic
-  return updateEvent(a, { start: newStart, end: newEnd });
-}
+// Overlap mode: includes events that span into the range
+const s = sliceOverlap(c, q, h);  // Range [1, 2)
+// Result: includes the note (starts at 0 in output, original duration h)
+// Note: positions are shifted so slice start becomes 0
 ```
 
-**Note:** This example uses `match` on the `type` field to handle each event type appropriately, since only timed events have the `dur` field.
+**Trim Mode (`sliceTrim`):**
+
+Events are trimmed to fit exactly within the slice boundaries:
+
+```mf
+const c = clip { note(C4, h); };  // Note from 0 to 2
+
+// Trim mode: includes overlapping events AND trims them
+const s = sliceTrim(c, q, h);  // Range [1, 2)
+// Result: note at position 0, duration q (trimmed from h)
+// Original note [0, 2) → trimmed to [1, 2) → shifted to [0, 1)
+```
+
+**Position Shifting:**
+
+All positions in the resulting clip are shifted so that `start` becomes `0`:
+
+```mf
+const c = clip { note(C4, w); };  // Note at pos 0, dur w (4 quarters)
+const s = slice(c, q, h + q);     // Extract [1, 3)
+// Result: note at pos 0 (shifted from 1)
+```
+
+**Notes on Automation Events:**
+
+The standard slice functions do NOT automatically rescale automation curves. For correct automation slicing with curve rescaling, see `std:curves` documentation.
 
 ### Event Types and Manipulation
 
@@ -223,13 +214,14 @@ fn sliceAutomation(a, start, end) {
 ```
 Event = NoteEvent | ChordEvent | DrumHitEvent | BreathEvent
       | ControlEvent | AutomationEvent | MarkerEvent
+      | GraceNoteEvent | GlissandoEvent
 ```
 
 **Common fields (all events):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `type` | `String` | Event type: `"note"`, `"chord"`, `"drumHit"`, `"breath"`, `"control"`, `"automation"`, `"marker"` |
+| `type` | `String` | Event type: `"note"`, `"chord"`, `"drumHit"`, `"breath"`, `"control"`, `"automation"`, `"marker"`, `"graceNote"`, `"glissando"` |
 | `start` | `Pos` | Start position within clip |
 
 **Timed event fields (NoteEvent, ChordEvent, DrumHitEvent, BreathEvent):**
@@ -252,6 +244,8 @@ Event = NoteEvent | ChordEvent | DrumHitEvent | BreathEvent
 | `ControlEvent` | `kind: String`, `data: Object` |
 | `AutomationEvent` | `param: String`, `end: Pos`, `curve: Curve` |
 | `MarkerEvent` | `kind: String`, `label: String` |
+| `GraceNoteEvent` | `mainPitch: Pitch`, `mainDur: Dur`, `graces: [{pitch: Pitch, dur: Dur}]`, `style: String`, `stealFrom: String` |
+| `GlissandoEvent` | `end: Pos`, `fromPitch: Pitch`, `toPitch: Pitch`, `style: String` |
 
 **Type narrowing in mapEvents:**
 
@@ -901,7 +895,22 @@ Current implementations may ignore `policy` values.
 
 ### Expression (vocal:* automation)
 
-- `vibrato(c: Clip, depth: Float, rate?: Float, start?: Pos, end?: Pos) -> Clip`
+**Vibrato:**
+
+- `vibrato(c: Clip, depth: Float, rate?: Float, delay?: Dur, shape?: String, start?: Pos, end?: Pos) -> Clip`
+- `vibratoGradual(c: Clip, targetDepth: Float, rate?: Float, onsetBeats?: Dur, shape?: String, start?: Pos, end?: Pos) -> Clip`
+
+Vibrato shape constants:
+- `vibratoSine` — Standard sinusoidal vibrato (default)
+- `vibratoTriangle` — Triangle wave vibrato (gentler)
+- `vibratoSquare` — Square wave vibrato (tremolo-like)
+- `vibratoRandom` — Randomized vibrato (natural feel)
+
+The `delay` parameter delays vibrato onset from the start position (common in classical singing).
+The `vibratoGradual` function creates a gradual build-up from 0 to target depth over `onsetBeats`.
+
+**Other Expression:**
+
 - `portamento(c: Clip, amount: Float, start?: Pos, end?: Pos) -> Clip`
 - `breathiness(c: Clip, amount: Float, start?: Pos, end?: Pos) -> Clip`
 - `loudness(c: Clip, curve: Curve, start: Pos, end: Pos) -> Clip`
@@ -956,6 +965,219 @@ c = vocal.autoBreath(c, minGap: e, breathDur: s, intensity: 0.5);
 
 ---
 
+## std:rhythm
+
+Rhythmic pattern generation and manipulation utilities.
+
+### Euclidean Rhythms
+
+- `euclidean(hits: Int, steps: Int, rotation?: Int) -> [Bool]` — Generate Euclidean rhythm pattern
+- `euclideanClip(hits: Int, steps: Int, stepDur: Dur, key: DrumKey, vel?: Float, rotation?: Int) -> Clip` — Generate as drum clip
+
+```mf
+const pattern = euclidean(3, 8);  // [true, false, false, true, false, false, true, false]
+const kick = euclideanClip(4, 16, s, kick, 0.9);  // Four-on-floor in sixteenths
+```
+
+### Polyrhythm
+
+- `polyrhythm(a: Int, b: Int, totalDur: Dur) -> Clip` — Create basic polyrhythm
+- `polyrhythmPitched(a: Int, pitchesA: [Pitch], b: Int, pitchesB: [Pitch], totalDur: Dur) -> Clip` — Polyrhythm with custom pitches
+- `polyrhythmDrums(a: Int, keyA: DrumKey, b: Int, keyB: DrumKey, totalDur: Dur) -> Clip` — Drum polyrhythm
+
+```mf
+// 3 against 4 polyrhythm
+const poly = polyrhythm(3, 4, w);
+
+// With custom pitches
+const melodicPoly = polyrhythmPitched(3, [C4, E4, G4], 4, [D4, F4, A4, C5], w);
+```
+
+### Metric Modulation
+
+- `metricModulation(c: Clip, fromUnit: Dur, toUnit: Dur) -> Clip` — Scale durations for metric modulation
+
+```mf
+// Quarter note = dotted eighth (tempo increase by 4/3)
+const modulated = metricModulation(c, q, dot(e));
+```
+
+### Isorhythm
+
+- `isorhythm(talea: [Dur], color: [Pitch], numNotes?: Int) -> Clip` — Create isorhythmic pattern
+- `isorhythmWithVelocity(talea: [Dur], color: [Pitch], velocities: [Float], numNotes?: Int) -> Clip`
+
+Talea (rhythmic pattern) and color (melodic pattern) cycle independently.
+
+```mf
+const talea = [q, e, e, q, h];
+const color = [C4, D4, E4, F4];
+const isoClip = isorhythm(talea, color);  // Creates 20 notes (5*4)
+```
+
+### Additive Rhythm
+
+- `additiveRhythm(groups: [Int], baseUnit: Dur, pitch: Pitch | [Pitch]) -> Clip`
+- `additiveRhythmDrums(groups: [Int], baseUnit: Dur, key: DrumKey) -> Clip`
+- `aksak7(baseUnit: Dur, pitch: Pitch) -> Clip` — Bulgarian 7/8 (2+2+3)
+- `aksak9(baseUnit: Dur, pitch: Pitch) -> Clip` — Bulgarian 9/8 (2+2+2+3)
+- `aksak11(baseUnit: Dur, pitch: Pitch) -> Clip` — Bulgarian 11/8 (2+2+3+2+2)
+
+```mf
+// Bulgarian 7/8 rhythm
+const folk = aksak7(e, C4);
+
+// Custom additive rhythm
+const custom = additiveRhythm([3, 3, 2], e, [C4, E4, G4]);
+```
+
+### Phase Shifting
+
+- `phaseShift(c: Clip, shiftPerRepeat: Dur, numRepeats: Int) -> Clip` — Steve Reich-style phasing
+
+```mf
+const phased = phaseShift(pattern, s, 16);  // Gradual phase offset
+```
+
+### Rhythmic Transformation
+
+- `retrograde(c: Clip) -> Clip` — Reverse event order
+- `augmentation(c: Clip) -> Clip` — Double all durations
+- `diminution(c: Clip) -> Clip` — Halve all durations
+- `scaleRhythm(c: Clip, factor: Float) -> Clip` — Scale durations by factor
+
+### Groove
+
+- `groove(name: String, intensity?: Float) -> GrooveMap` — Create groove template
+- `applyGroove(c: Clip, gr: GrooveMap, grid?: Dur) -> Clip` — Apply groove timing
+- `swingClip(c: Clip, swingAmount?: Float, gridSize?: Dur) -> Clip` — Apply swing feel
+- `humanize(c: Clip, timingVar?: Dur, velocityVar?: Float, seed?: Int) -> Clip` — Add human timing variations
+
+Groove templates: `"swing"`, `"shuffle"`, `"lazy"`, `"push"`, `"straight"`
+
+```mf
+const swung = swingClip(c, 0.33);  // Triplet swing
+const gr = groove("shuffle", 0.7);
+const grooved = applyGroove(c, gr, e);
+```
+
+### Clave Patterns
+
+- `clave(style: String, dur?: Dur) -> Clip` — Generate clave pattern
+
+Styles: `"son"`, `"3-2"`, `"rumba"`, `"rumba-3-2"`, `"2-3"`, `"bossa"`
+
+---
+
+## std:ornament
+
+Functions for expanding ornaments into individual notes.
+
+### Trill
+
+- `expandTrill(c: Clip, interval?: Int, speed?: Int) -> Clip`
+
+Expands notes into trills. Default: whole step (2 semitones), 16th notes.
+
+```mf
+const trilled = expandTrill(melody, 2, 16);  // Whole-step trill in 16ths
+```
+
+### Mordent
+
+- `expandMordent(c: Clip, interval?: Int) -> Clip` — Lower mordent (main→lower→main)
+- `expandUpperMordent(c: Clip, interval?: Int) -> Clip` — Upper mordent (main→upper→main)
+
+```mf
+const ornament = expandMordent(c, 1);  // Half-step mordent
+```
+
+### Turn
+
+- `expandTurn(c: Clip, upperInterval?: Int, lowerInterval?: Int) -> Clip`
+
+Turn pattern: upper→main→lower→main. Default: upper +2, lower -1 semitones.
+
+### Tremolo
+
+- `expandTremolo(c: Clip, speed?: Int) -> Clip` — Single-note tremolo
+- `expandChordTremolo(c: Clip, speed?: Int) -> Clip` — Chord tremolo (alternating halves)
+
+```mf
+const tremolo = expandTremolo(c, 32);  // 32nd note tremolo
+```
+
+---
+
+## std:tuning
+
+Functions for working with alternative tuning systems and microtonal music.
+
+### Just Intonation
+
+- `justCents(interval: String) -> Int` — Get cents deviation from equal temperament
+- `justPitch(root: Pitch, interval: String) -> Pitch` — Create just-intoned pitch
+- `justChord(root: Pitch, intervals: [String]) -> [Pitch]` — Create just-intoned chord
+- `justMajorTriad(root: Pitch) -> [Pitch]`
+- `justMinorTriad(root: Pitch) -> [Pitch]`
+- `justMajorSeventh(root: Pitch) -> [Pitch]`
+- `justMinorSeventh(root: Pitch) -> [Pitch]`
+- `justDominantSeventh(root: Pitch) -> [Pitch]`
+
+Interval names: `"unison"`, `"minorSecond"`, `"majorSecond"`, `"minorThird"`, `"majorThird"`, `"perfectFourth"`, `"tritone"`, `"perfectFifth"`, `"minorSixth"`, `"majorSixth"`, `"minorSeventh"`, `"majorSeventh"`, `"octave"`
+
+```mf
+const pureTriad = justMajorTriad(C4);  // [C4, E4-14c, G4+2c]
+const third = justPitch(C4, "majorThird");  // E4 - 14 cents
+```
+
+### EDO Systems
+
+- `edoCentsPerStep(divisions: Int) -> Float` — Cents per step
+- `edoStepCents(divisions: Int, step: Int) -> Float` — Cents for a step
+- `edoPitch(root: Pitch, divisions: Int, step: Int) -> Pitch` — Create EDO pitch
+
+Constants: `EDO_19`, `EDO_24`, `EDO_31`, `EDO_53`
+
+```mf
+const quarterTonePitch = edoPitch(C4, 24, 5);  // 24-EDO step 5
+```
+
+### Quarter Tones
+
+- `quarterSharp(pitch: Pitch) -> Pitch` — Add 50 cents
+- `quarterFlat(pitch: Pitch) -> Pitch` — Subtract 50 cents
+- `threeQuarterSharp(pitch: Pitch) -> Pitch` — Add 150 cents
+- `threeQuarterFlat(pitch: Pitch) -> Pitch` — Subtract 150 cents
+- `quarterTone(pitch: Pitch, adjustment: Int) -> Pitch` — Custom cents adjustment
+
+Constants: `QUARTER_SHARP`, `QUARTER_FLAT`, `THREE_QUARTER_SHARP`, `THREE_QUARTER_FLAT`
+
+### Historical Temperaments
+
+Pythagorean tuning (pure fifths):
+- `pythagoreanCents(interval: String) -> Int`
+- `pythagoreanPitch(root: Pitch, interval: String) -> Pitch`
+
+Quarter-comma meantone (pure major thirds):
+- `meantoneCents(interval: String) -> Int`
+- `meantonePitch(root: Pitch, interval: String) -> Pitch`
+
+### Clip Transformation
+
+- `adjustCents(c: Clip, centsAdjust: Int) -> Clip` — Adjust all pitches by fixed cents
+- `applyTuning(c: Clip, reference: Pitch, tuningFn: (Int) -> Int) -> Clip` — Apply custom tuning function
+- `applyJustIntonation(c: Clip, tonic: Pitch) -> Clip` — Apply just intonation
+- `applyPythagorean(c: Clip, tonic: Pitch) -> Clip` — Apply Pythagorean tuning
+- `applyMeantone(c: Clip, tonic: Pitch) -> Clip` — Apply meantone temperament
+
+```mf
+const justMelody = applyJustIntonation(melody, C4);
+const baroque = applyMeantone(chords, D4);
+```
+
+---
+
 ## Example
 
 ```mf
@@ -980,4 +1202,128 @@ export fn main() -> Score {
     }
   };
 }
+```
+
+---
+
+## std:dynamics
+
+Standard dynamic levels and gradual dynamics (crescendo/diminuendo).
+
+### Dynamic Level Constants
+
+All values are normalized velocity (0.0 - 1.0):
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `pppp` | 0.05 | pianissississimo |
+| `ppp` | 0.12 | pianississimo |
+| `pp` | 0.20 | pianissimo |
+| `p` | 0.30 | piano |
+| `mp` | 0.45 | mezzo-piano |
+| `mf` | 0.60 | mezzo-forte |
+| `f` | 0.75 | forte |
+| `ff` | 0.88 | fortissimo |
+| `fff` | 0.95 | fortississimo |
+| `ffff` | 1.0 | fortissississimo |
+| `sfz` | 0.95 | sforzando |
+| `rfz` | 0.85 | rinforzando |
+| `fp` | 0.75 | forte-piano |
+| `sfp` | 0.90 | sforzando-piano |
+
+### Dynamic Functions
+
+- `dynamicName(level: Float) -> String` — Get dynamic marking name for a velocity level
+- `parseDynamic(name: String) -> Float` — Parse dynamic marking name to velocity
+
+### Gradual Dynamics
+
+- `crescendo(c: Clip, from?: Float, to?: Float, start?: Pos, end?: Pos) -> Clip` — Gradual increase
+- `diminuendo(c: Clip, from?: Float, to?: Float, start?: Pos, end?: Pos) -> Clip` — Gradual decrease
+- `decrescendo(c: Clip, from?: Float, to?: Float, start?: Pos, end?: Pos) -> Clip` — Alias for diminuendo
+- `hairpin(c: Clip, startLevel?: Float, peakLevel?: Float, endLevel?: Float, peakPos?: Pos) -> Clip` — Crescendo then diminuendo
+
+### Velocity Modification
+
+- `setDynamic(c: Clip, level?: Float) -> Clip` — Set constant velocity for all notes
+- `scaleVelocity(c: Clip, factor?: Float) -> Clip` — Multiply all velocities by factor
+- `offsetVelocity(c: Clip, offset?: Float) -> Clip` — Add offset to all velocities
+- `fortePiano(c: Clip, forteVel?: Float, pianoVel?: Float) -> Clip` — First note loud, rest soft
+- `sforzandoAt(c: Clip, positions: [Pos], accentVel?: Float) -> Clip` — Accent specific positions
+
+### Example
+
+```mf
+import { crescendo, diminuendo, pp, ff } from "std:dynamics";
+
+// Gradual crescendo from pp to ff
+const phrase = crescendo(myClip, from: pp, to: ff);
+
+// Hairpin (crescendo then diminuendo)
+const dramatic = hairpin(myClip, startLevel: p, peakLevel: ff, endLevel: pp);
+```
+
+---
+
+## std:articulations
+
+Standard articulation techniques for all instruments.
+
+### Articulation Constants
+
+**Basic Articulations:**
+- `staccato`, `staccatissimo`, `legato`, `tenuto`, `accent`, `marcato`
+
+**Dynamic-related:**
+- `sfz`, `rfz`, `fp`, `sfp`
+
+**String-specific:**
+- `pizzicato`, `pizz`, `arco`, `spiccato`, `detache`, `martele`, `ricochet`
+- `colLegno`, `sulPonticello`, `sulTasto`, `conSordino`, `senzaSordino`
+- `tremolo`, `harmonics`
+
+**Wind-specific:**
+- `flutter`, `doubleTongue`, `tripleTongue`
+
+**Ornaments:**
+- `trill`, `mordent`, `upperMordent`, `turn`, `appoggiatura`, `acciaccatura`
+
+**Other:**
+- `fermata`, `breath`, `caesura`, `arpeggiate`, `glissando`, `portamento`, `vibrato`
+
+### Articulation Functions
+
+- `applyArticulation(c: Clip, tech: String) -> Clip` — Add technique to all notes
+- `removeArticulation(c: Clip, tech: String) -> Clip` — Remove technique from all notes
+- `clearArticulations(c: Clip) -> Clip` — Remove all techniques
+- `hasAnyArticulation(c: Clip, tech: String) -> Bool` — Check if any note has technique
+- `getArticulations(c: Clip) -> [String]` — Get list of all techniques used
+
+### Convenience Functions
+
+- `makeStaccato(c: Clip) -> Clip`
+- `makeLegato(c: Clip) -> Clip`
+- `makeAccented(c: Clip) -> Clip`
+- `makeTenuto(c: Clip) -> Clip`
+- `makeMarcato(c: Clip) -> Clip`
+- `makePizzicato(c: Clip) -> Clip` — Also removes arco
+- `makeArco(c: Clip) -> Clip` — Also removes pizz/pizzicato
+- `makeTremolo(c: Clip) -> Clip`
+- `makeHarmonics(c: Clip) -> Clip`
+
+### Duration Modification
+
+- `shortenForStaccato(c: Clip, factor?: Float) -> Clip` — Shorten staccato notes (default: 50%)
+- `extendForLegato(c: Clip) -> Clip` — Extend legato notes to reach next note
+
+### Example
+
+```mf
+import { makeStaccato, makeLegato, shortenForStaccato } from "std:articulations";
+
+// Apply staccato and shorten notes
+const staccatoPhrase = shortenForStaccato(makeStaccato(myClip), 0.3);
+
+// Create legato passage with connected notes
+const legatoPhrase = extendForLegato(makeLegato(myClip));
 ```

@@ -1,0 +1,326 @@
+// std:dynamics (v4)
+// Standard dynamic levels and crescendo/diminuendo generators
+
+// ============================================================
+// Dynamic Level Constants (velocity 0.0 - 1.0)
+// ============================================================
+
+// Piano dynamics
+export const pppp = 0.05;   // pianissississimo
+export const ppp = 0.12;    // pianississimo
+export const pp = 0.20;     // pianissimo
+export const p = 0.30;      // piano
+export const mp = 0.45;     // mezzo-piano
+
+// Forte dynamics
+export const mf = 0.60;     // mezzo-forte
+export const f = 0.75;      // forte
+export const ff = 0.88;     // fortissimo
+export const fff = 0.95;    // fortississimo
+export const ffff = 1.0;    // fortissississimo
+
+// Special dynamics
+export const sfz = 0.95;    // sforzando (sudden accent)
+export const rfz = 0.85;    // rinforzando (reinforced)
+export const fp = 0.75;     // forte-piano (loud then soft)
+export const sfp = 0.90;    // sforzando-piano
+
+// ============================================================
+// Dynamic Name Mapping
+// ============================================================
+
+export fn dynamicName(level) {
+  if (level <= 0.08) { return "pppp"; }
+  if (level <= 0.16) { return "ppp"; }
+  if (level <= 0.25) { return "pp"; }
+  if (level <= 0.37) { return "p"; }
+  if (level <= 0.52) { return "mp"; }
+  if (level <= 0.67) { return "mf"; }
+  if (level <= 0.80) { return "f"; }
+  if (level <= 0.92) { return "ff"; }
+  if (level <= 0.97) { return "fff"; }
+  return "ffff";
+}
+
+export fn parseDynamic(name) {
+  if (name == "pppp") { return pppp; }
+  if (name == "ppp") { return ppp; }
+  if (name == "pp") { return pp; }
+  if (name == "p") { return p; }
+  if (name == "mp") { return mp; }
+  if (name == "mf") { return mf; }
+  if (name == "f") { return f; }
+  if (name == "ff") { return ff; }
+  if (name == "fff") { return fff; }
+  if (name == "ffff") { return ffff; }
+  if (name == "sfz") { return sfz; }
+  if (name == "rfz") { return rfz; }
+  if (name == "fp") { return fp; }
+  if (name == "sfp") { return sfp; }
+  return mf;  // default
+}
+
+// ============================================================
+// Helper Functions
+// ============================================================
+
+fn cloneEvent(ev) {
+  if (ev.type == "note") {
+    return {
+      type: "note",
+      start: ev.start,
+      dur: ev.dur,
+      pitch: ev.pitch,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      lyric: ev.lyric,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "chord") {
+    return {
+      type: "chord",
+      start: ev.start,
+      dur: ev.dur,
+      pitches: ev.pitches,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "drumHit") {
+    return {
+      type: "drumHit",
+      start: ev.start,
+      dur: ev.dur,
+      key: ev.key,
+      velocity: ev.velocity,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  return ev;
+}
+
+fn posToRat(pos) {
+  if (pos == null) { return null; }
+  if (pos.kind == "rat") { return pos.rat; }
+  if (pos.n != null && pos.d != null) { return pos; }
+  return null;
+}
+
+fn clipLength(c) {
+  if (c.length != null) { return c.length; }
+  let max = 0 / 1;
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit" || ev.type == "breath") {
+      const start = posToRat(ev.start);
+      if (start != null) {
+        const end = start + ev.dur;
+        if (end > max) { max = end; }
+      }
+    }
+  }
+  return max;
+}
+
+fn linearInterpolate(t, fromVal, toVal) {
+  return fromVal + (toVal - fromVal) * t;
+}
+
+// ============================================================
+// Crescendo / Diminuendo Generators
+// ============================================================
+
+// Apply crescendo (gradual increase in velocity) to a clip
+// from: starting dynamic level (default: current velocity or p)
+// to: ending dynamic level (default: f)
+// start: start position (default: 0)
+// end: end position (default: clip length)
+export fn crescendo(c, from, to, start, end) {
+  let fromVel = from;
+  if (fromVel == null) { fromVel = p; }
+  let toVel = to;
+  if (toVel == null) { toVel = f; }
+  let startPos = start;
+  if (startPos == null) { startPos = 0 / 1; }
+  let endPos = end;
+  if (endPos == null) { endPos = clipLength(c); }
+
+  const duration = endPos - startPos;
+  if (duration <= 0 / 1) {
+    return c;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      let out = cloneEvent(ev);
+      const evStart = posToRat(ev.start);
+      if (evStart != null && evStart >= startPos && evStart <= endPos) {
+        const t = (evStart - startPos) / duration;
+        out.velocity = linearInterpolate(t, fromVel, toVel);
+      }
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Apply diminuendo (gradual decrease in velocity) to a clip
+export fn diminuendo(c, from, to, start, end) {
+  let fromVel = from;
+  if (fromVel == null) { fromVel = f; }
+  let toVel = to;
+  if (toVel == null) { toVel = p; }
+  return crescendo(c, fromVel, toVel, start, end);
+}
+
+// Alias for diminuendo
+export fn decrescendo(c, from, to, start, end) {
+  return diminuendo(c, from, to, start, end);
+}
+
+// Apply constant dynamic level to entire clip
+export fn setDynamic(c, level) {
+  let vel = level;
+  if (vel == null) { vel = mf; }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      let out = cloneEvent(ev);
+      out.velocity = vel;
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Apply forte-piano: first note loud, rest soft
+export fn fortePiano(c, forteVel, pianoVel) {
+  let fVel = forteVel;
+  if (fVel == null) { fVel = f; }
+  let pVel = pianoVel;
+  if (pVel == null) { pVel = p; }
+
+  let first = true;
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      let out = cloneEvent(ev);
+      if (first) {
+        out.velocity = fVel;
+        first = false;
+      } else {
+        out.velocity = pVel;
+      }
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Apply sforzando accent to specific events
+export fn sforzandoAt(c, positions, accentVel) {
+  let aVel = accentVel;
+  if (aVel == null) { aVel = sfz; }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      let out = cloneEvent(ev);
+      const evStart = posToRat(ev.start);
+      let isAccent = false;
+      if (evStart != null && positions != null) {
+        for (pos in positions) {
+          if (evStart == pos) {
+            isAccent = true;
+          }
+        }
+      }
+      if (isAccent) {
+        out.velocity = aVel;
+      }
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Apply hairpin dynamics (crescendo then diminuendo)
+export fn hairpin(c, startLevel, peakLevel, endLevel, peakPosition) {
+  let sLevel = startLevel;
+  if (sLevel == null) { sLevel = p; }
+  let pLevel = peakLevel;
+  if (pLevel == null) { pLevel = f; }
+  let eLevel = endLevel;
+  if (eLevel == null) { eLevel = p; }
+
+  const len = clipLength(c);
+  let peakPos = peakPosition;
+  if (peakPos == null) { peakPos = len / 2; }
+
+  // First half: crescendo
+  let result = crescendo(c, sLevel, pLevel, 0 / 1, peakPos);
+  // Second half: diminuendo
+  result = diminuendo(result, pLevel, eLevel, peakPos, len);
+
+  return result;
+}
+
+// Scale all velocities by a factor
+export fn scaleVelocity(c, factor) {
+  let f = factor;
+  if (f == null) { f = 1; }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      let out = cloneEvent(ev);
+      let vel = out.velocity;
+      if (vel == null) { vel = mf; }
+      vel = vel * f;
+      if (vel > 1) { vel = 1; }
+      if (vel < 0) { vel = 0; }
+      out.velocity = vel;
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Add velocity offset (can be positive or negative)
+export fn offsetVelocity(c, offset) {
+  let off = offset;
+  if (off == null) { off = 0; }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
+      let out = cloneEvent(ev);
+      let vel = out.velocity;
+      if (vel == null) { vel = mf; }
+      vel = vel + off;
+      if (vel > 1) { vel = 1; }
+      if (vel < 0) { vel = 0; }
+      out.velocity = vel;
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}

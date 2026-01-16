@@ -51,6 +51,13 @@ import type {
   MatchArm,
   MatchPattern,
   RangePattern,
+  BindingPattern,
+  ArrayPattern,
+  ArrayPatternElement,
+  ObjectPattern,
+  ObjectPatternProperty,
+  WildcardPattern,
+  TryExpr,
   ScoreExpr,
   ScoreItem,
   MetaBlock,
@@ -80,6 +87,11 @@ import type {
   AutomationStmt,
   MarkerStmt,
   ArpStmt,
+  GraceStmt,
+  GraceStyle,
+  GraceStealFrom,
+  GlissStmt,
+  GlissStyle,
   ArpDirection,
   NamedArg,
   TripletStmt,
@@ -663,6 +675,8 @@ export class V4Parser {
         return this.parseClipExpr();
       case TokenType.MATCH:
         return this.parseMatchExpr();
+      case TokenType.TRY:
+        return this.parseTryExpr();
       default:
         throw this.error('Unexpected token in expression', token.position);
     }
@@ -743,7 +757,36 @@ export class V4Parser {
     return { kind: 'MatchExpr', position: pos, value, arms };
   }
 
+  private parseTryExpr(): TryExpr {
+    const pos = this.peek().position;
+    this.expect(TokenType.TRY, "Expected 'try'");
+    const tryBlock = this.parseBlock();
+    this.expect(TokenType.CATCH, "Expected 'catch' after try block");
+
+    let catchParam: string | undefined;
+    if (this.match(TokenType.LPAREN)) {
+      const paramToken = this.expect(TokenType.IDENT, "Expected error parameter name");
+      catchParam = paramToken.value as string;
+      this.expect(TokenType.RPAREN, "Expected ')' after catch parameter");
+    }
+
+    const catchBlock = this.parseBlock();
+    return {
+      kind: 'TryExpr',
+      position: pos,
+      tryBlock,
+      catchParam,
+      catchBlock,
+    };
+  }
+
   private parseMatchPattern(): MatchPattern {
+    // Check for wildcard pattern: _
+    if (this.check(TokenType.IDENT) && this.peek().value === '_') {
+      const pos = this.advance().position;
+      return { kind: 'WildcardPattern', position: pos } as WildcardPattern;
+    }
+
     // Check for range pattern: NUMBER..NUMBER
     if (this.check(TokenType.NUMBER) && this.checkNext(TokenType.DOTDOT)) {
       const startToken = this.advance();
@@ -767,8 +810,109 @@ export class V4Parser {
       };
       return rangePattern;
     }
+
+    // Check for array pattern: [pattern, pattern, ...rest]
+    if (this.check(TokenType.LBRACKET)) {
+      return this.parseArrayPattern();
+    }
+
+    // Check for object pattern: { key, key: pattern, ...rest }
+    if (this.check(TokenType.LBRACE)) {
+      return this.parseObjectPattern();
+    }
+
+    // Check for binding pattern: name @ pattern
+    if (this.check(TokenType.IDENT) && this.checkNext(TokenType.AT)) {
+      const nameToken = this.advance();
+      this.advance(); // consume @
+      const innerPattern = this.parseMatchPattern();
+      return {
+        kind: 'BindingPattern',
+        position: nameToken.position,
+        name: nameToken.value as string,
+        pattern: innerPattern,
+      } as BindingPattern;
+    }
+
     // Otherwise, parse as regular expression
     return this.parseExpression();
+  }
+
+  private parseArrayPattern(): ArrayPattern {
+    const pos = this.peek().position;
+    this.expect(TokenType.LBRACKET, "Expected '['");
+    const elements: ArrayPatternElement[] = [];
+
+    if (!this.check(TokenType.RBRACKET)) {
+      do {
+        const elemPos = this.peek().position;
+        if (this.match(TokenType.SPREAD)) {
+          // Rest pattern: ...name
+          const nameToken = this.expect(TokenType.IDENT, "Expected identifier after '...'");
+          const bindingPattern: BindingPattern = {
+            kind: 'BindingPattern',
+            position: nameToken.position,
+            name: nameToken.value as string,
+          };
+          elements.push({
+            kind: 'ArrayPatternElement',
+            position: elemPos,
+            pattern: bindingPattern,
+            rest: true,
+          });
+        } else {
+          const pattern = this.parseMatchPattern();
+          elements.push({
+            kind: 'ArrayPatternElement',
+            position: elemPos,
+            pattern,
+            rest: false,
+          });
+        }
+      } while (this.match(TokenType.COMMA));
+    }
+
+    this.expect(TokenType.RBRACKET, "Expected ']'");
+    return { kind: 'ArrayPattern', position: pos, elements };
+  }
+
+  private parseObjectPattern(): ObjectPattern {
+    const pos = this.peek().position;
+    this.expect(TokenType.LBRACE, "Expected '{'");
+    const properties: ObjectPatternProperty[] = [];
+    let rest: string | undefined;
+
+    if (!this.check(TokenType.RBRACE)) {
+      do {
+        const propPos = this.peek().position;
+        if (this.match(TokenType.SPREAD)) {
+          // Rest pattern: ...name
+          const nameToken = this.expect(TokenType.IDENT, "Expected identifier after '...'");
+          rest = nameToken.value as string;
+          break; // Rest must be last
+        } else {
+          const keyToken = this.expect(TokenType.IDENT, "Expected property name");
+          const key = keyToken.value as string;
+          let pattern: MatchPattern | undefined;
+
+          if (this.match(TokenType.COLON)) {
+            // key: pattern
+            pattern = this.parseMatchPattern();
+          }
+          // If no colon, key becomes both property name and binding name
+
+          properties.push({
+            kind: 'ObjectPatternProperty',
+            position: propPos,
+            key,
+            pattern,
+          });
+        }
+      } while (this.match(TokenType.COMMA));
+    }
+
+    this.expect(TokenType.RBRACE, "Expected '}'");
+    return { kind: 'ObjectPattern', position: pos, properties, rest };
   }
 
   private parseArrayLiteral(): ArrayLiteral {
@@ -1073,7 +1217,18 @@ export class V4Parser {
 
   private parseClipStmt(): ClipStmt {
     const pos = this.peek().position;
-    const ident = this.expect(TokenType.IDENT, 'Expected clip statement').value as string;
+
+    // Handle grace and gliss which are keyword tokens, not identifiers
+    let ident: string;
+    if (this.check(TokenType.GRACE)) {
+      this.advance();
+      ident = 'grace';
+    } else if (this.check(TokenType.GLISS)) {
+      this.advance();
+      ident = 'gliss';
+    } else {
+      ident = this.expect(TokenType.IDENT, 'Expected clip statement').value as string;
+    }
 
     // Handle triplet and tuplet which use { } instead of ( )
     if (ident === 'triplet' || ident === 'tuplet') {
@@ -1184,6 +1339,73 @@ export class V4Parser {
         this.expect(TokenType.RPAREN, "Expected ')'");
         this.expect(TokenType.SEMI, "Expected ';'");
         const stmt: ArpStmt = { kind: 'ArpStmt', position: pos, pitches, duration, direction, opts };
+        return stmt;
+      }
+      case 'grace': {
+        // grace(mainPitch, mainDur, graces: [pitches], style: acciaccatura, stealFrom: main)
+        const mainPitch = this.parseExpression();
+        this.expect(TokenType.COMMA, "Expected ','");
+        const mainDur = this.parseExpression();
+        let graces: Expr | null = null;
+        let style: GraceStyle = 'acciaccatura';
+        let stealFrom: GraceStealFrom = 'main';
+        const opts = this.parseNamedArgs();
+
+        // Extract special named args
+        for (const opt of opts) {
+          if (opt.name === 'graces') {
+            graces = opt.value;
+          } else if (opt.name === 'style') {
+            if (opt.value.kind === 'Identifier') {
+              const styleVal = opt.value.name;
+              if (styleVal === 'acciaccatura' || styleVal === 'appoggiatura') {
+                style = styleVal;
+              }
+            }
+          } else if (opt.name === 'stealFrom') {
+            if (opt.value.kind === 'Identifier') {
+              const stealVal = opt.value.name;
+              if (stealVal === 'main' || stealVal === 'previous') {
+                stealFrom = stealVal;
+              }
+            }
+          }
+        }
+
+        if (!graces) {
+          throw this.error('grace() requires graces: [pitches] argument', pos);
+        }
+
+        this.expect(TokenType.RPAREN, "Expected ')'");
+        this.expect(TokenType.SEMI, "Expected ';'");
+        const stmt: GraceStmt = { kind: 'GraceStmt', position: pos, mainPitch, mainDur, graces, style, stealFrom, opts };
+        return stmt;
+      }
+      case 'gliss': {
+        // gliss(fromPitch, toPitch, dur, style: continuous)
+        const fromPitch = this.parseExpression();
+        this.expect(TokenType.COMMA, "Expected ','");
+        const toPitch = this.parseExpression();
+        this.expect(TokenType.COMMA, "Expected ','");
+        const dur = this.parseExpression();
+        let style: GlissStyle = 'continuous';
+        const opts = this.parseNamedArgs();
+
+        // Extract special named args
+        for (const opt of opts) {
+          if (opt.name === 'style') {
+            if (opt.value.kind === 'Identifier') {
+              const styleVal = opt.value.name;
+              if (styleVal === 'continuous' || styleVal === 'discrete') {
+                style = styleVal;
+              }
+            }
+          }
+        }
+
+        this.expect(TokenType.RPAREN, "Expected ')'");
+        this.expect(TokenType.SEMI, "Expected ';'");
+        const stmt: GlissStmt = { kind: 'GlissStmt', position: pos, fromPitch, toPitch, dur, style, opts };
         return stmt;
       }
       default:

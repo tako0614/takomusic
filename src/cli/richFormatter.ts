@@ -9,9 +9,24 @@ import {
   formatLocation,
   formatHelp,
   formatNote,
+  wrapText,
   type SourceSpan,
 } from './sourceSnippet.js';
 import type { Diagnostic, DiagnosticSeverity } from '../diagnostics.js';
+
+/**
+ * Get terminal width for text wrapping
+ */
+function getTerminalWidth(): number {
+  try {
+    if (process.stdout.columns) {
+      return Math.max(40, process.stdout.columns);
+    }
+  } catch {
+    // Ignore errors
+  }
+  return 80; // Default width
+}
 
 /**
  * Get the color function for a severity level
@@ -48,11 +63,17 @@ function getSeverityColor(severity: DiagnosticSeverity): (text: string) => strin
 export function formatRichDiagnostic(diag: Diagnostic): string {
   const lines: string[] = [];
   const severityColor = getSeverityColor(diag.severity);
+  const termWidth = getTerminalWidth();
 
   // Header: error[E500]: message
   const severityLabel = severityColor(diag.severity);
   const codeStr = diag.code ? severityColor(`[${diag.code}]`) : '';
-  lines.push(`${severityLabel}${codeStr}: ${colors.bold(diag.message)}`);
+  const headerPrefix = `${severityLabel}${codeStr}: `;
+  const headerPrefixLen = diag.severity.length + (diag.code ? diag.code.length + 2 : 0) + 2;
+
+  // Wrap long messages
+  const wrappedMessage = wrapText(diag.message, termWidth, headerPrefixLen);
+  lines.push(`${headerPrefix}${colors.bold(wrappedMessage)}`);
 
   // Location: --> src/main.mf:15:12
   if (diag.position || diag.filePath) {
@@ -92,16 +113,18 @@ export function formatRichDiagnostic(diag: Diagnostic): string {
     }
   }
 
-  // Notes
+  // Notes (with wrapping)
   if (diag.notes) {
     for (const note of diag.notes) {
-      lines.push(formatNote(note));
+      const wrappedNote = wrapText(note, termWidth - 10, 10);
+      lines.push(formatNote(wrappedNote));
     }
   }
 
-  // Help suggestion
+  // Help suggestion (with wrapping)
   if (diag.suggestion) {
-    lines.push(formatHelp(diag.suggestion));
+    const wrappedHelp = wrapText(diag.suggestion, termWidth - 10, 10);
+    lines.push(formatHelp(wrappedHelp));
   }
 
   return lines.join('\n');

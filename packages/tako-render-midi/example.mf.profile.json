@@ -1,0 +1,43 @@
+{
+  "tako": {
+    "profileVersion": 1
+  },
+  "profileName": "MIDI Example",
+  "renderer": "tako-render-midi",
+  "output": {
+    "path": "./output.mid"
+  },
+  "degradePolicy": "Approx",
+  "bindings": [
+    {
+      "selector": { "role": "Instrument" },
+      "config": {
+        "program": 0
+      }
+    },
+    {
+      "selector": { "role": "Drums" },
+      "config": {
+        "channel": 10,
+        "drumMap": {
+          "kick": 36,
+          "snare": 38,
+          "hhc": 42,
+          "hho": 46,
+          "crash": 49,
+          "ride": 51
+        }
+      }
+    },
+    {
+      "selector": { "role": "Vocal" },
+      "config": {
+        "program": 52
+      }
+    },
+    {
+      "selector": { "role": "Automation" },
+      "config": {}
+    }
+  ]
+}

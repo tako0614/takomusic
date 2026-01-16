@@ -4,6 +4,7 @@ import type { Curve, LyricSpan } from './ir.js';
 import {
   ClipEventValue,
   ClipValueData,
+  GraceNotePitchValue,
   MarkerEventValue,
   MeterEventValue,
   ObjectValue,
@@ -146,6 +147,25 @@ function eventToObject(event: ClipEventValue): ObjectValue {
   if (event.type === 'control') {
     props.set('kind', makeString(event.kind));
     props.set('data', plainToValue(event.data));
+  }
+  if (event.type === 'graceNote') {
+    props.set('mainPitch', makePitchValue(event.mainPitch));
+    props.set('mainDur', makeRatValue(event.mainDur));
+    const gracesArray = event.graces.map((g) => {
+      const graceProps = new Map<string, RuntimeValue>();
+      graceProps.set('pitch', makePitchValue(g.pitch));
+      graceProps.set('dur', makeRatValue(g.dur));
+      return makeObject(graceProps);
+    });
+    props.set('graces', makeArray(gracesArray));
+    props.set('style', makeString(event.style));
+    props.set('stealFrom', makeString(event.stealFrom));
+  }
+  if (event.type === 'glissando') {
+    props.set('end', event.end as RuntimeValue);
+    props.set('fromPitch', makePitchValue(event.fromPitch));
+    props.set('toPitch', makePitchValue(event.toPitch));
+    props.set('style', makeString(event.style));
   }
   return makeObject(props);
 }
@@ -477,6 +497,53 @@ function coerceEvent(obj: ObjectValue): ClipEventValue {
     const dataValue = obj.props.get('data');
     const data = dataValue ? (valueToPlain(dataValue) as Record<string, unknown>) : {};
     const event: ClipEventValue = { type: 'control', start, kind, data };
+    const ext = obj.props.get('ext');
+    if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
+    return event;
+  }
+  if (type === 'graceNote') {
+    const mainPitch = coercePitch(expectValue(obj.props.get('mainPitch'), 'mainPitch'));
+    const mainDur = coerceRat(expectValue(obj.props.get('mainDur'), 'mainDur'));
+    const gracesValue = expectValue(obj.props.get('graces'), 'graces');
+    let graces: GraceNotePitchValue[] = [];
+    if (gracesValue.type === 'array') {
+      graces = gracesValue.elements.map((g: RuntimeValue) => {
+        if (g.type === 'object') {
+          return {
+            pitch: coercePitch(expectValue(g.props.get('pitch'), 'pitch')),
+            dur: coerceRat(expectValue(g.props.get('dur'), 'dur')),
+          };
+        }
+        throw new Error('Grace must be an object with pitch and dur');
+      });
+    }
+    const styleValue = obj.props.get('style');
+    const style = styleValue && styleValue.type === 'string'
+      ? (styleValue.value as 'acciaccatura' | 'appoggiatura')
+      : 'acciaccatura';
+    const stealFromValue = obj.props.get('stealFrom');
+    const stealFrom = stealFromValue && stealFromValue.type === 'string'
+      ? (stealFromValue.value as 'main' | 'previous')
+      : 'main';
+    const event: ClipEventValue = { type: 'graceNote', start, mainPitch, mainDur, graces, style, stealFrom };
+    const velocity = obj.props.get('velocity');
+    if (velocity && velocity.type === 'number') (event as any).velocity = velocity.value;
+    const ext = obj.props.get('ext');
+    if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
+    return event;
+  }
+  if (type === 'glissando') {
+    const endValue = obj.props.get('end');
+    const end = endValue ? coercePos(endValue) : start;
+    const fromPitch = coercePitch(expectValue(obj.props.get('fromPitch'), 'fromPitch'));
+    const toPitch = coercePitch(expectValue(obj.props.get('toPitch'), 'toPitch'));
+    const styleValue = obj.props.get('style');
+    const style = styleValue && styleValue.type === 'string'
+      ? (styleValue.value as 'continuous' | 'discrete')
+      : 'continuous';
+    const event: ClipEventValue = { type: 'glissando', start, end, fromPitch, toPitch, style };
+    const velocity = obj.props.get('velocity');
+    if (velocity && velocity.type === 'number') (event as any).velocity = velocity.value;
     const ext = obj.props.get('ext');
     if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
     return event;

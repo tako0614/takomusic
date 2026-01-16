@@ -324,11 +324,102 @@ fn addAutomation(c, param, amount, start, end) {
   return { events: events, length: c.length };
 }
 
-export fn vibrato(c, depth, rate, start, end) {
-  let out = addAutomation(c, "vocal:vibratoDepth", depth, start, end);
-  if (rate != null) {
-    out = addAutomation(out, "vocal:vibratoRate", rate, start, end);
+// Vibrato shapes
+export const vibratoSine = "sine";           // Standard sinusoidal vibrato
+export const vibratoTriangle = "triangle";   // Triangle wave vibrato (gentler)
+export const vibratoSquare = "square";       // Square wave vibrato (tremoloish)
+export const vibratoRandom = "random";       // Randomized vibrato (natural feel)
+
+// Apply vibrato with extended options
+// c: clip to apply vibrato to
+// depth: vibrato depth (0.0-1.0, default 0.5)
+// rate: vibrato rate in Hz (default 5.0)
+// delay: onset delay in beats before vibrato starts (default 0)
+// shape: vibrato shape - one of vibratoSine, vibratoTriangle, vibratoSquare, vibratoRandom
+// start: start position (default: beginning of clip)
+// end: end position (default: end of clip)
+export fn vibrato(c, depth, rate, delay, shape, start, end) {
+  let actualStart = start;
+  if (actualStart == null) {
+    actualStart = 0 / 1;
   }
+
+  // Apply delay to the start position
+  if (delay != null && delay > 0 / 1) {
+    actualStart = actualStart + delay;
+  }
+
+  let out = addAutomation(c, "vocal:vibratoDepth", depth, actualStart, end);
+  if (rate != null) {
+    out = addAutomation(out, "vocal:vibratoRate", rate, actualStart, end);
+  }
+  if (shape != null) {
+    out = addAutomation(out, "vocal:vibratoShape", shape, actualStart, end);
+  }
+  return out;
+}
+
+// Convenience function for vibrato with gradual onset (common technique)
+// The vibrato builds up from 0 to target depth over the onset duration
+export fn vibratoGradual(c, targetDepth, rate, onsetBeats, shape, start, end) {
+  let actualStart = start;
+  if (actualStart == null) {
+    actualStart = 0 / 1;
+  }
+  let actualEnd = end;
+  if (actualEnd == null) {
+    actualEnd = defaultEnd(c);
+  }
+  let onset = onsetBeats;
+  if (onset == null) {
+    onset = 1 / 4; // Default: quarter note onset
+  }
+
+  // Build up curve for depth
+  let events = [];
+  for (ev in c.events) {
+    events[events.length] = cloneEvent(ev);
+  }
+
+  // Add automation for gradual depth increase
+  const onsetEnd = actualStart + onset;
+  events[events.length] = {
+    type: "automation",
+    param: "vocal:vibratoDepth",
+    start: actualStart,
+    end: onsetEnd,
+    curve: {
+      kind: "piecewiseLinear",
+      points: [
+        { t: 0, v: 0 },
+        { t: 1, v: targetDepth }
+      ]
+    }
+  };
+
+  // Maintain depth after onset
+  if (onsetEnd < actualEnd) {
+    events[events.length] = {
+      type: "automation",
+      param: "vocal:vibratoDepth",
+      start: onsetEnd,
+      end: actualEnd,
+      curve: flatCurve(targetDepth)
+    };
+  }
+
+  let out = { events: events, length: c.length };
+
+  // Add rate if specified
+  if (rate != null) {
+    out = addAutomation(out, "vocal:vibratoRate", rate, actualStart, actualEnd);
+  }
+
+  // Add shape if specified
+  if (shape != null) {
+    out = addAutomation(out, "vocal:vibratoShape", shape, actualStart, actualEnd);
+  }
+
   return out;
 }
 

@@ -186,6 +186,8 @@ Statements:
 - `arp([pitches], dur, direction, opts?)` -> add arpeggiated notes; cursor += dur (see Arpeggio below)
 - `triplet(n) { ... }` / `triplet(n, inTime) { ... }` -> tuplet grouping (see Triplets below)
 - `tuplet(n, inTime) { ... }` -> general tuplet grouping (see Triplets below)
+- `grace(mainPitch, mainDur, graces: [pitches], opts?)` -> add grace note event; cursor += mainDur (see Grace Notes below)
+- `gliss(fromPitch, toPitch, dur, opts?)` -> add glissando event; cursor += dur (see Glissando below)
 
 ### Validation Constraints
 
@@ -259,6 +261,40 @@ chord([C4, E4, G4], h, tech: [arpeggiate]);
 | `arpeggiate` | Chord notes played in sequence | Harp, guitar style |
 | `pizzicato` | Plucked string | Strings |
 | `harmonics` | Harmonic overtones | Strings, guitar |
+
+**Dynamics techniques:**
+
+| Technique | Description | Typical Use |
+|-----------|-------------|-------------|
+| `sfz` | Sforzando - sudden strong accent | Dramatic emphasis |
+| `rfz` | Rinforzando - reinforced accent | Moderate emphasis |
+| `fp` | Forte-piano - loud then soft | Dynamic contrast |
+
+**String-specific techniques:**
+
+| Technique | Description | Typical Use |
+|-----------|-------------|-------------|
+| `spiccato` | Bouncing bow, short notes | Fast passages |
+| `col_legno` | Strike with wood of bow | Percussive effect |
+| `pizz` | Pizzicato (plucked) | Alternative to bowed |
+| `arco` | Return to bowed playing | After pizzicato |
+| `sul_pont` | Play near bridge | Glassy, harmonic tone |
+| `sul_tasto` | Play over fingerboard | Soft, flute-like tone |
+| `con_sord` | With mute | Muted, veiled sound |
+| `senza_sord` | Without mute | Return to normal |
+| `detache` | Separate bow strokes | Articulated passages |
+| `martele` | Hammered bow strokes | Accented notes |
+| `ricochet` | Bouncing bow (multiple notes) | Fast repeated notes |
+
+**Ornaments:**
+
+| Technique | Description | Typical Use |
+|-----------|-------------|-------------|
+| `mordent` | Quick lower neighbor | Baroque ornament |
+| `upper_mordent` | Quick upper neighbor | Baroque ornament |
+| `turn` | Upper-main-lower-main | Classical ornament |
+| `appoggiatura` | Accented grace note | Expressive ornament |
+| `acciaccatura` | Quick grace note | Light ornament |
 
 **Renderer behavior:**
 
@@ -406,6 +442,150 @@ triplet(3) {
 }
 ```
 
+### Grace Notes (`grace`)
+
+Grace notes are ornamental notes that precede or "steal time" from a main note. TakoMusic supports both acciaccatura (quick, unaccented) and appoggiatura (accented, on the beat) styles.
+
+**Syntax:**
+
+```
+grace(mainPitch, mainDur, graces: [pitches], style?, stealFrom?, opts?);
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mainPitch` | `Pitch` | The principal note pitch |
+| `mainDur` | `Duration` | Duration of the main note |
+| `graces` | `[Pitch]` | Array of grace note pitches (required named arg) |
+| `style` | `acciaccatura \| appoggiatura` | Grace note style (default: `acciaccatura`) |
+| `stealFrom` | `main \| previous` | Where to steal time from (default: `main`) |
+| `opts` | Named args | Optional: `vel`, `voice`, `tech` |
+
+**Style values:**
+
+| Style | Description | Notation |
+|-------|-------------|----------|
+| `acciaccatura` | Quick, unaccented grace note(s) played just before the beat | Slashed stem |
+| `appoggiatura` | Accented grace note(s) played on the beat, stealing time from main note | No slash |
+
+**Time stealing:**
+
+| stealFrom | Behavior |
+|-----------|----------|
+| `main` | Grace notes take time from the main note duration |
+| `previous` | Grace notes are played before the beat, "stealing" from the previous time slot |
+
+**Examples:**
+
+```mf
+// Simple acciaccatura (default style)
+grace(C4, q, graces: [B3]);
+
+// Appoggiatura - accented grace note
+grace(C4, q, graces: [D4], style: appoggiatura);
+
+// Multiple grace notes
+grace(E4, h, graces: [C4, D4], style: acciaccatura);
+
+// With velocity and voice
+grace(G4, q, graces: [F4], vel: 0.8, voice: 1);
+
+// Steal from previous (grace notes before the beat)
+grace(C4, q, graces: [B3], stealFrom: previous);
+```
+
+**Grace note duration:**
+
+Grace note durations are calculated automatically:
+- For `stealFrom: main`: Grace notes share a portion of the main note's duration
+- Each grace note typically gets 1/8 to 1/16 of a beat
+- The main note's sounding duration is reduced accordingly
+
+**Musical examples:**
+
+```mf
+// Baroque-style trill approach
+grace(D4, q, graces: [C4, D4, C4], style: acciaccatura);
+
+// Classical appoggiatura (expressive)
+grace(E4, h, graces: [F4], style: appoggiatura);
+
+// Jazz grace note
+grace(Bb4, q, graces: [A4], vel: 0.6);
+```
+
+### Glissando (`gliss`)
+
+Glissando creates a sliding pitch transition between two notes. TakoMusic supports both continuous (smooth slide) and discrete (chromatic steps) styles.
+
+**Syntax:**
+
+```
+gliss(fromPitch, toPitch, dur, style?, opts?);
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fromPitch` | `Pitch` | Starting pitch |
+| `toPitch` | `Pitch` | Ending pitch |
+| `dur` | `Duration` | Total duration of the glissando |
+| `style` | `continuous \| discrete` | Glissando style (default: `continuous`) |
+| `opts` | Named args | Optional: `vel`, `voice`, `tech` |
+
+**Style values:**
+
+| Style | Description | Typical Use |
+|-------|-------------|-------------|
+| `continuous` | Smooth pitch bend between notes | Strings, voice, trombone |
+| `discrete` | Chromatic/diatonic steps | Piano, harp, xylophone |
+
+**Examples:**
+
+```mf
+// Simple upward glissando
+gliss(C4, G4, q);
+
+// Downward glissando with style
+gliss(C5, C4, h, style: discrete);
+
+// Continuous slide (portamento)
+gliss(E4, A4, q, style: continuous, vel: 0.7);
+
+// Wide glissando
+gliss(C3, C5, w, style: discrete);
+```
+
+**Renderer interpretation:**
+
+- `continuous`: Renderers should use pitch bend or portamento
+  - MIDI: Pitch bend messages interpolated over duration
+  - Audio: Continuous pitch interpolation
+- `discrete`: Renderers should play individual chromatic notes
+  - MIDI: Rapid note-on/off sequence
+  - Audio: Stepped pitch sequence
+
+**Musical examples:**
+
+```mf
+// Harp glissando
+gliss(C4, C6, h, style: discrete);
+
+// String portamento
+gliss(A4, D5, q, style: continuous);
+
+// Trombone slide
+gliss(Bb3, F4, e, style: continuous, vel: 0.8);
+
+// Piano glissando (white keys implied by discrete)
+gliss(C4, C5, q, style: discrete);
+```
+
+**Note:** The glissando event advances the cursor by the full duration.
+
 ## Event Mapping (IR)
 
 - `note` -> `NoteEvent`
@@ -415,6 +595,8 @@ triplet(3) {
 - `cc` -> `ControlEvent`
 - `automation` -> `AutomationEvent`
 - `marker` -> `MarkerEvent`
+- `grace` -> `GraceNoteEvent`
+- `gliss` -> `GlissandoEvent`
 
 ### DSL to IR Field Name Mapping
 

@@ -1,5 +1,14 @@
-﻿import type { Rat } from './rat.js';
-import type { Pitch } from './pitch.js';
+// TakoMusic IR types (v4) - subset needed for MIDI rendering
+
+export interface Rat {
+  n: number;
+  d: number;
+}
+
+export interface Pitch {
+  midi: number;
+  cents?: number;
+}
 
 export interface ScoreIR {
   tako: {
@@ -180,7 +189,6 @@ export interface MarkerEvent {
   label: string;
 }
 
-// Grace note event - ornamental notes that precede the main note
 export interface GraceNoteEvent {
   type: 'graceNote';
   start: Rat;
@@ -198,7 +206,6 @@ export interface GraceNotePitch {
   dur: Rat;
 }
 
-// Glissando event - slide between two pitches
 export interface GlissandoEvent {
   type: 'glissando';
   start: Rat;
@@ -214,4 +221,84 @@ export interface LyricSpan {
   kind: 'syllable' | 'extend';
   text?: string;
   wordPos?: 'single' | 'begin' | 'middle' | 'end';
+}
+
+// Render Profile types
+
+export interface RenderProfile {
+  tako: {
+    profileVersion: 1;
+  };
+  profileName: string;
+  renderer: string;
+  output: OutputConfig;
+  degradePolicy?: 'Error' | 'Drop' | 'Approx';
+  bindings: Binding[];
+}
+
+export interface OutputConfig {
+  path?: string;
+  format?: string;
+  [key: string]: unknown;
+}
+
+export interface Binding {
+  selector: Selector;
+  config: BindingConfig;
+}
+
+export interface Selector {
+  trackName?: string;
+  sound?: string;
+  role?: 'Instrument' | 'Drums' | 'Vocal' | 'Automation';
+}
+
+export interface BindingConfig {
+  channel?: number;
+  program?: number;
+  bank?: number;
+  drumMap?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+// Plugin protocol types
+
+export interface Capabilities {
+  protocolVersion: 1;
+  id: string;
+  name?: string;
+  version?: string;
+  supportedRoles?: ('Instrument' | 'Drums' | 'Vocal' | 'Automation')[];
+  supportedEvents?: string[];
+  lyricSupport?: {
+    modes?: ('text' | 'syllables' | 'phonemes')[];
+    languages?: string[];
+  };
+  paramSupport?: string[];
+  techniqueSupport?: string[];
+  degradeDefaults?: {
+    unknownParam?: 'Error' | 'Drop' | 'Approx';
+    unknownTechnique?: 'Error' | 'Drop' | 'Approx';
+    unboundTrack?: 'Error' | 'Drop' | 'Approx';
+  };
+}
+
+export interface Diagnostic {
+  level: 'error' | 'warning' | 'info';
+  code?: string;
+  message: string;
+  location?: {
+    trackName?: string;
+    placementIndex?: number;
+    eventIndex?: number;
+    pos?: Rat;
+  };
+  context?: Record<string, unknown>;
+}
+
+export interface Artifact {
+  kind: 'file' | 'dir' | 'bundle' | 'stream';
+  path?: string;
+  mediaType?: string;
+  description?: string;
 }

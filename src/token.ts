@@ -4,6 +4,30 @@
   offset: number;
 }
 
+// Span represents a range in the source code (start to end)
+export interface Span {
+  start: Position;
+  end: Position;
+}
+
+// Create a span from start position to end position
+export function makeSpan(start: Position, end: Position): Span {
+  return { start, end };
+}
+
+// Create a span from a single position (zero-width)
+export function pointSpan(pos: Position): Span {
+  return { start: pos, end: pos };
+}
+
+// Create a span covering a token
+export function tokenSpan(pos: Position, length: number): Span {
+  return {
+    start: pos,
+    end: { line: pos.line, column: pos.column + length, offset: pos.offset + length },
+  };
+}
+
 export enum TokenType {
   NUMBER = 'NUMBER',
   STRING = 'STRING',
@@ -45,6 +69,10 @@ export enum TokenType {
   AS = 'AS',
   TYPE = 'TYPE',
   ENUM = 'ENUM',
+  TRY = 'TRY',
+  CATCH = 'CATCH',
+  GRACE = 'GRACE',
+  GLISS = 'GLISS',
 
   PLUS = 'PLUS',
   MINUS = 'MINUS',
@@ -117,4 +145,8 @@ export const KEYWORDS: Record<string, TokenType> = {
   as: TokenType.AS,
   type: TokenType.TYPE,
   enum: TokenType.ENUM,
+  try: TokenType.TRY,
+  catch: TokenType.CATCH,
+  grace: TokenType.GRACE,
+  gliss: TokenType.GLISS,
 };
