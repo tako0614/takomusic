@@ -1,0 +1,613 @@
+// std:expression (v5)
+// Advanced expression: vibrato, bow techniques, breath control, extended techniques
+
+import core;
+import curves;
+
+// ============================================
+// Vibrato (detailed control)
+// ============================================
+
+// Create vibrato automation
+export fn vibrato(start, end, depth, rate, shape) {
+  let shapeVal = shape;
+  if (shapeVal == null) {
+    shapeVal = "sine";
+  }
+
+  let events = [];
+
+  events[events.length] = {
+    type: "automation",
+    param: "vibratoDepth",
+    start: start,
+    end: end,
+    curve: curves.linear(depth, depth)
+  };
+
+  events[events.length] = {
+    type: "automation",
+    param: "vibratoRate",
+    start: start,
+    end: end,
+    curve: curves.linear(rate, rate)
+  };
+
+  events[events.length] = {
+    type: "control",
+    start: start,
+    kind: "vibratoShape",
+    data: { shape: shapeVal }
+  };
+
+  return { events: events, length: end };
+}
+
+// Vibrato with gradual onset (delayed start)
+export fn vibratoDelayed(start, end, depth, rate, delay) {
+  let events = [];
+  const onsetEnd = start + delay;
+
+  // No vibrato during onset period
+  events[events.length] = {
+    type: "automation",
+    param: "vibratoDepth",
+    start: start,
+    end: onsetEnd,
+    curve: curves.linear(0, 0)
+  };
+
+  // Ramp up vibrato
+  events[events.length] = {
+    type: "automation",
+    param: "vibratoDepth",
+    start: onsetEnd,
+    end: end,
+    curve: curves.easeIn(0, depth)
+  };
+
+  events[events.length] = {
+    type: "automation",
+    param: "vibratoRate",
+    start: start,
+    end: end,
+    curve: curves.linear(rate, rate)
+  };
+
+  return { events: events, length: end };
+}
+
+// Vibrato with intensity curve
+export fn vibratoContour(start, end, depthCurve, rate) {
+  let events = [];
+
+  events[events.length] = {
+    type: "automation",
+    param: "vibratoDepth",
+    start: start,
+    end: end,
+    curve: depthCurve
+  };
+
+  events[events.length] = {
+    type: "automation",
+    param: "vibratoRate",
+    start: start,
+    end: end,
+    curve: curves.linear(rate, rate)
+  };
+
+  return { events: events, length: end };
+}
+
+// Wide vibrato
+export fn wideVibrato(start, end) {
+  return vibrato(start, end, 0.8, 5.5, "sine");
+}
+
+// Narrow/fast vibrato
+export fn narrowVibrato(start, end) {
+  return vibrato(start, end, 0.3, 7.0, "sine");
+}
+
+// No vibrato (straight tone)
+export fn nonVibrato(start, end) {
+  return {
+    type: "automation",
+    param: "vibratoDepth",
+    start: start,
+    end: end,
+    curve: curves.linear(0, 0)
+  };
+}
+
+// ============================================
+// Bow Techniques (Strings)
+// ============================================
+
+// Bow pressure
+export fn bowPressure(start, end, fromPressure, toPressure) {
+  return {
+    type: "automation",
+    param: "bowPressure",
+    start: start,
+    end: end,
+    curve: curves.linear(fromPressure, toPressure)
+  };
+}
+
+// Bow speed
+export fn bowSpeed(start, end, fromSpeed, toSpeed) {
+  return {
+    type: "automation",
+    param: "bowSpeed",
+    start: start,
+    end: end,
+    curve: curves.linear(fromSpeed, toSpeed)
+  };
+}
+
+// Bow position (sul tasto to sul pont)
+// 0 = sul tasto (over fingerboard), 0.5 = normal, 1 = sul ponticello (near bridge)
+export fn bowPosition(start, end, fromPos, toPos) {
+  return {
+    type: "automation",
+    param: "bowPosition",
+    start: start,
+    end: end,
+    curve: curves.linear(fromPos, toPos)
+  };
+}
+
+// Sul tasto (over fingerboard - softer tone)
+export fn sulTasto(start, end) {
+  return bowPosition(start, end, 0.0, 0.0);
+}
+
+// Sul ponticello (near bridge - glassy, harmonic-rich)
+export fn sulPonticello(start, end) {
+  return bowPosition(start, end, 1.0, 1.0);
+}
+
+// Ordinary position
+export fn ordinario(start, end) {
+  return bowPosition(start, end, 0.5, 0.5);
+}
+
+// Bow direction
+export fn bowDown(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "bowDirection",
+    data: { direction: "down" }
+  };
+}
+
+export fn bowUp(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "bowDirection",
+    data: { direction: "up" }
+  };
+}
+
+// Col legno (with wood of bow)
+export fn colLegno(pos, colType) {
+  let cType = colType;
+  if (cType == null) {
+    cType = "battuto";  // struck
+  }
+  return {
+    type: "control",
+    start: pos,
+    kind: "colLegno",
+    data: { type: cType }  // "battuto" or "tratto" (drawn)
+  };
+}
+
+// Flautando (flute-like bowing)
+export fn flautando(start, end) {
+  let events = [];
+  events[events.length] = bowPosition(start, end, 0.15, 0.15);
+  events[events.length] = bowPressure(start, end, 0.3, 0.3);
+  return { events: events, length: end };
+}
+
+// ============================================
+// Portamento (with duration control)
+// ============================================
+
+// Create portamento between two pitches with timing control
+export fn portamento(start, end, fromPitch, toPitch, slideTime) {
+  let slideT = slideTime;
+  if (slideT == null) {
+    slideT = end - start;
+  }
+
+  return {
+    type: "glissando",
+    start: start,
+    end: start + slideT,
+    fromPitch: fromPitch,
+    toPitch: toPitch,
+    style: "continuous",
+    ext: { portamento: true }
+  };
+}
+
+// Portamento with timing specification
+// timing: "early" (slide at start), "late" (slide at end), "throughout"
+export fn portamentoTimed(start, end, fromPitch, toPitch, timing, slideDuration) {
+  let slideStart = start;
+  let slideEnd = end;
+
+  if (timing == "early") {
+    slideEnd = start + slideDuration;
+  } else if (timing == "late") {
+    slideStart = end - slideDuration;
+  }
+
+  return {
+    type: "glissando",
+    start: slideStart,
+    end: slideEnd,
+    fromPitch: fromPitch,
+    toPitch: toPitch,
+    style: "continuous",
+    ext: { portamento: true, timing: timing }
+  };
+}
+
+// ============================================
+// Breath Control (Winds/Brass)
+// ============================================
+
+// Air pressure/support
+export fn airPressure(start, end, fromPressure, toPressure) {
+  return {
+    type: "automation",
+    param: "airPressure",
+    start: start,
+    end: end,
+    curve: curves.linear(fromPressure, toPressure)
+  };
+}
+
+// Air speed (for dynamics and tone color)
+export fn airSpeed(start, end, fromSpeed, toSpeed) {
+  return {
+    type: "automation",
+    param: "airSpeed",
+    start: start,
+    end: end,
+    curve: curves.linear(fromSpeed, toSpeed)
+  };
+}
+
+// Embouchure tightness
+export fn embouchure(start, end, fromTight, toTight) {
+  return {
+    type: "automation",
+    param: "embouchure",
+    start: start,
+    end: end,
+    curve: curves.linear(fromTight, toTight)
+  };
+}
+
+// Breath intensity for vocals
+export fn breathiness(start, end, fromBreath, toBreath) {
+  return {
+    type: "automation",
+    param: "breathiness",
+    start: start,
+    end: end,
+    curve: curves.linear(fromBreath, toBreath)
+  };
+}
+
+// ============================================
+// Extended Techniques
+// ============================================
+
+// Multiphonics (multiple simultaneous pitches)
+export fn multiphonic(start, dur, pitches, fingering) {
+  let events = [];
+  for (pitch in pitches) {
+    events[events.length] = {
+      type: "note",
+      start: start,
+      dur: dur,
+      pitch: pitch,
+      velocity: 0.7,
+      techniques: ["multiphonic"],
+      ext: { fingering: fingering }
+    };
+  }
+  return { events: events, length: start + dur };
+}
+
+// Key clicks (woodwinds)
+export fn keyClicks(start, dur, pattern) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: 0,  // Unpitched
+    velocity: 0.5,
+    techniques: ["keyClicks"],
+    ext: { pattern: pattern }
+  };
+}
+
+// Air sound (blowing without pitch)
+export fn airSound(start, dur, intensity) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: 0,
+    velocity: intensity,
+    techniques: ["airSound"]
+  };
+}
+
+// Tongue ram (brass)
+export fn tongueRam(start, dur) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: 0,
+    velocity: 0.9,
+    techniques: ["tongueRam"]
+  };
+}
+
+// Flutter tongue
+export fn flutterTongue(start, end, rate) {
+  let events = [];
+  events[events.length] = {
+    type: "control",
+    start: start,
+    kind: "flutterTongue",
+    data: { enabled: true, rate: rate }
+  };
+  events[events.length] = {
+    type: "control",
+    start: end,
+    kind: "flutterTongue",
+    data: { enabled: false }
+  };
+  return { events: events, length: end };
+}
+
+// Growl (brass/sax)
+export fn growl(start, end, intensity) {
+  return {
+    type: "automation",
+    param: "growl",
+    start: start,
+    end: end,
+    curve: curves.linear(intensity, intensity)
+  };
+}
+
+// Subtone (sax)
+export fn subtone(start, end) {
+  return {
+    type: "automation",
+    param: "subtone",
+    start: start,
+    end: end,
+    curve: curves.linear(1.0, 1.0)
+  };
+}
+
+// ============================================
+// String Extended Techniques
+// ============================================
+
+// Behind the bridge
+export fn behindBridge(start, dur) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: 0,
+    velocity: 0.6,
+    techniques: ["behindBridge"]
+  };
+}
+
+// Bartok pizzicato (snap)
+export fn bartokPizz(start, dur, pitch) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: pitch,
+    velocity: 0.95,
+    techniques: ["bartokPizz"]
+  };
+}
+
+// Left-hand pizzicato
+export fn leftHandPizz(start, dur, pitch) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: pitch,
+    velocity: 0.6,
+    techniques: ["leftHandPizz"]
+  };
+}
+
+// Bowed tremolo speed
+export fn tremoloSpeed(start, end, fromSpeed, toSpeed) {
+  return {
+    type: "automation",
+    param: "tremoloSpeed",
+    start: start,
+    end: end,
+    curve: curves.linear(fromSpeed, toSpeed)
+  };
+}
+
+// Jeté / ricochet
+export fn jete(start, dur, numBounces) {
+  return {
+    type: "control",
+    start: start,
+    kind: "jete",
+    data: { bounces: numBounces, duration: dur }
+  };
+}
+
+// ============================================
+// Piano Extended Techniques
+// ============================================
+
+// Prepared piano (object placement)
+export fn preparedPiano(pos, preparation) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "preparation",
+    data: preparation
+  };
+}
+
+// String muting (inside piano)
+export fn stringMute(pos, strings, material) {
+  return preparedPiano(pos, {
+    type: "mute",
+    strings: strings,
+    material: material
+  });
+}
+
+// Plucking strings inside piano
+export fn pizzicatoInside(start, dur, pitch) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: pitch,
+    velocity: 0.7,
+    techniques: ["pizzicatoInside"]
+  };
+}
+
+// Harmonics on piano strings
+export fn pianoHarmonic(start, dur, pitch, node) {
+  return {
+    type: "note",
+    start: start,
+    dur: dur,
+    pitch: pitch,
+    velocity: 0.5,
+    techniques: ["harmonic"],
+    ext: { node: node }
+  };
+}
+
+// ============================================
+// Vocal Extended Techniques
+// ============================================
+
+// Sprechstimme (speech-song)
+export fn sprechstimme(note) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.techniques == null) {
+    newNote.techniques = [];
+  }
+  newNote.techniques[newNote.techniques.length] = "sprechstimme";
+  return newNote;
+}
+
+// Falsetto
+export fn falsetto(start, end) {
+  return {
+    type: "control",
+    start: start,
+    kind: "vocalRegister",
+    data: { register: "falsetto" }
+  };
+}
+
+// Chest voice
+export fn chestVoice(start, end) {
+  return {
+    type: "control",
+    start: start,
+    kind: "vocalRegister",
+    data: { register: "chest" }
+  };
+}
+
+// Head voice
+export fn headVoice(start, end) {
+  return {
+    type: "control",
+    start: start,
+    kind: "vocalRegister",
+    data: { register: "head" }
+  };
+}
+
+// Belting
+export fn belt(start, end) {
+  return {
+    type: "control",
+    start: start,
+    kind: "vocalRegister",
+    data: { register: "belt" }
+  };
+}
+
+// Vocal fry
+export fn vocalFry(start, end) {
+  return {
+    type: "automation",
+    param: "vocalFry",
+    start: start,
+    end: end,
+    curve: curves.linear(1.0, 1.0)
+  };
+}
+
+// ============================================
+// Microtiming/Expression Timing
+// ============================================
+
+// Micro-timing offset (slight push/pull)
+export fn timing(note, offset) {
+  let newNote = core.cloneEvent(note);
+  if (newNote.ext == null) {
+    newNote.ext = {};
+  }
+  newNote.ext.timingOffset = offset;
+  return newNote;
+}
+
+// Rush (slightly early)
+export fn rush(note, amount) {
+  let amt = amount;
+  if (amt == null) {
+    amt = -0.02;  // -20ms
+  }
+  return timing(note, amt);
+}
+
+// Lay back (slightly late)
+export fn layBack(note, amount) {
+  let amt = amount;
+  if (amt == null) {
+    amt = 0.03;  // 30ms
+  }
+  return timing(note, amt);
+}

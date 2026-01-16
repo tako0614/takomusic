@@ -1,0 +1,332 @@
+// std:tuplet (v5)
+// Generic tuplet support for any n:m ratio
+
+import core;
+
+// ============================================
+// Core Tuplet Functions
+// ============================================
+
+// Create a tuplet - n notes in the time of m notes
+// n = number of notes to play
+// m = number of notes worth of time (default: next power of 2 less than n, or n-1)
+// baseDur = base note duration
+// Returns the duration of each note in the tuplet
+export fn tupletDur(n, m, baseDur) {
+  let mVal = m;
+  if (mVal == null) {
+    // Default: use the most common convention
+    if (n == 3) {
+      mVal = 2;  // Triplet
+    } else if (n == 5) {
+      mVal = 4;  // Quintuplet
+    } else if (n == 6) {
+      mVal = 4;  // Sextuplet
+    } else if (n == 7) {
+      mVal = 4;  // Septuplet (can also be 8)
+    } else if (n == 9) {
+      mVal = 8;  // Nonuplet
+    } else {
+      // Find largest power of 2 less than n
+      mVal = 1;
+      for (_ in 0..10) {
+        if (mVal * 2 >= n) {
+          return (baseDur * mVal) / n;
+        }
+        mVal = mVal * 2;
+      }
+    }
+  }
+  return (baseDur * mVal) / n;
+}
+
+// Get total duration of a tuplet group
+export fn tupletTotalDur(n, m, baseDur) {
+  let mVal = m;
+  if (mVal == null) {
+    if (n == 3) { mVal = 2; }
+    else if (n == 5) { mVal = 4; }
+    else if (n == 6) { mVal = 4; }
+    else if (n == 7) { mVal = 4; }
+    else if (n == 9) { mVal = 8; }
+    else {
+      mVal = 1;
+      for (_ in 0..10) {
+        if (mVal * 2 >= n) {
+          return baseDur * mVal;
+        }
+        mVal = mVal * 2;
+      }
+    }
+  }
+  return baseDur * mVal;
+}
+
+// ============================================
+// Common Tuplet Types
+// ============================================
+
+// Triplet (3:2)
+export fn triplet(baseDur) {
+  return tupletDur(3, 2, baseDur);
+}
+
+// Duplet (2:3) - two notes in the time of three
+export fn duplet(baseDur) {
+  return tupletDur(2, 3, baseDur);
+}
+
+// Quintuplet (5:4)
+export fn quintuplet(baseDur) {
+  return tupletDur(5, 4, baseDur);
+}
+
+// Sextuplet (6:4)
+export fn sextuplet(baseDur) {
+  return tupletDur(6, 4, baseDur);
+}
+
+// Septuplet (7:4 or 7:8)
+export fn septuplet(baseDur, inTimeOf) {
+  return tupletDur(7, inTimeOf, baseDur);
+}
+
+// Nonuplet (9:8)
+export fn nonuplet(baseDur) {
+  return tupletDur(9, 8, baseDur);
+}
+
+// ============================================
+// Tuplet Clip Generators
+// ============================================
+
+// Create a clip with n equal notes fitting in m beats
+// pitches = array of pitches (will cycle if fewer than n)
+// n = number of notes
+// m = time span in beats (null for default)
+// baseDur = base beat duration
+export fn tupletClip(pitches, n, m, baseDur, velocity) {
+  const noteDur = tupletDur(n, m, baseDur);
+  let vel = velocity;
+  if (vel == null) {
+    vel = 0.8;
+  }
+
+  let events = [];
+  let pos = 0 / 1;
+
+  for (i in 0..(n - 1)) {
+    const pitchIdx = i % pitches.length;
+    const pitch = pitches[pitchIdx];
+
+    if (pitch != null) {
+      events[events.length] = {
+        type: "note",
+        start: pos,
+        dur: noteDur,
+        pitch: pitch,
+        velocity: vel
+      };
+    }
+    pos = pos + noteDur;
+  }
+
+  return { events: events, length: pos };
+}
+
+// Create triplet clip
+export fn tripletClip(pitches, baseDur, velocity) {
+  return tupletClip(pitches, 3, 2, baseDur, velocity);
+}
+
+// Create quintuplet clip
+export fn quintupletClip(pitches, baseDur, velocity) {
+  return tupletClip(pitches, 5, 4, baseDur, velocity);
+}
+
+// Create sextuplet clip
+export fn sextupletClip(pitches, baseDur, velocity) {
+  return tupletClip(pitches, 6, 4, baseDur, velocity);
+}
+
+// Create septuplet clip
+export fn septupletClip(pitches, baseDur, velocity, inTimeOf) {
+  return tupletClip(pitches, 7, inTimeOf, baseDur, velocity);
+}
+
+// ============================================
+// Nested Tuplets
+// ============================================
+
+// Create nested tuplet - a tuplet within a tuplet
+// outerN:outerM containing innerN:innerM notes
+export fn nestedTupletDur(outerN, outerM, innerN, innerM, baseDur) {
+  const outerDur = tupletDur(outerN, outerM, baseDur);
+  return tupletDur(innerN, innerM, outerDur);
+}
+
+// ============================================
+// Irrational Tuplets
+// ============================================
+
+// Create an irrational rhythm - n notes over arbitrary duration
+// Useful for complex contemporary music
+export fn irrationalTuplet(n, totalDur) {
+  return totalDur / n;
+}
+
+// ============================================
+// Tuplet with Rests
+// ============================================
+
+// Create tuplet clip with rest pattern
+// pattern = array of true/false (true = note, false = rest)
+// pitch = pitch for all notes
+export fn tupletWithRests(pattern, pitch, m, baseDur, velocity) {
+  const n = pattern.length;
+  const noteDur = tupletDur(n, m, baseDur);
+  let vel = velocity;
+  if (vel == null) {
+    vel = 0.8;
+  }
+
+  let events = [];
+  let pos = 0 / 1;
+
+  for (hasNote in pattern) {
+    if (hasNote) {
+      events[events.length] = {
+        type: "note",
+        start: pos,
+        dur: noteDur,
+        pitch: pitch,
+        velocity: vel
+      };
+    }
+    pos = pos + noteDur;
+  }
+
+  return { events: events, length: pos };
+}
+
+// ============================================
+// Tuplet Rhythmic Transformations
+// ============================================
+
+// Convert a clip to tuplet time
+// Scales all durations and positions to fit in tuplet ratio
+export fn toTuplet(c, n, m, baseDur) {
+  const targetLen = tupletTotalDur(n, m, baseDur);
+  const currentLen = core.clipLen(c);
+
+  if (currentLen == null || currentLen == 0 / 1) {
+    return c;
+  }
+
+  const scale = targetLen / currentLen;
+  return core.augment(c, scale);
+}
+
+// ============================================
+// Drum Tuplets
+// ============================================
+
+// Create drum tuplet clip
+export fn drumTupletClip(keys, n, m, baseDur, velocity) {
+  const noteDur = tupletDur(n, m, baseDur);
+  let vel = velocity;
+  if (vel == null) {
+    vel = 0.8;
+  }
+
+  let events = [];
+  let pos = 0 / 1;
+
+  for (i in 0..(n - 1)) {
+    const keyIdx = i % keys.length;
+    const key = keys[keyIdx];
+
+    if (key != null) {
+      events[events.length] = {
+        type: "drumHit",
+        start: pos,
+        dur: noteDur,
+        key: key,
+        velocity: vel
+      };
+    }
+    pos = pos + noteDur;
+  }
+
+  return { events: events, length: pos };
+}
+
+// ============================================
+// Tuplet Utilities
+// ============================================
+
+// Get tuplet ratio as string (for display)
+export fn tupletRatio(n, m) {
+  return "" + n + ":" + m;
+}
+
+// Check if a duration represents a tuplet
+export fn isTupletDur(dur, baseDur) {
+  const ratio = dur / baseDur;
+  // Check common tuplet ratios
+  const tripletRatio = 2 / 3;
+  const quintRatio = 4 / 5;
+  const septRatio = 4 / 7;
+
+  if (ratio == tripletRatio) { return true; }
+  if (ratio == quintRatio) { return true; }
+  if (ratio == septRatio) { return true; }
+  return false;
+}
+
+// ============================================
+// Metric Modulation via Tuplets
+// ============================================
+
+// Create metric modulation using tuplet relationship
+// oldTempo in BPM, tuplet ratio n:m
+// Returns new effective tempo
+export fn tupletMetricMod(oldTempo, n, m) {
+  return oldTempo * n / m;
+}
+
+// Generate clip demonstrating metric modulation
+// Shows transition from regular to tuplet feel
+export fn metricModClip(pitch, baseDur, n, m, numBeats) {
+  let events = [];
+  let pos = 0 / 1;
+
+  // First half: regular rhythm
+  const halfBeats = numBeats / 2;
+  for (i in 0..(halfBeats - 1)) {
+    events[events.length] = {
+      type: "note",
+      start: pos,
+      dur: baseDur,
+      pitch: pitch,
+      velocity: 0.8
+    };
+    pos = pos + baseDur;
+  }
+
+  // Second half: tuplet rhythm at same tempo
+  const tupDur = tupletDur(n, m, baseDur);
+  const tupletNotes = halfBeats * n / m;
+  for (i in 0..(tupletNotes - 1)) {
+    events[events.length] = {
+      type: "note",
+      start: pos,
+      dur: tupDur,
+      pitch: pitch,
+      velocity: 0.8
+    };
+    pos = pos + tupDur;
+  }
+
+  return { events: events, length: pos };
+}

@@ -1,0 +1,515 @@
+// std:algorithm (v5)
+// Algorithmic composition: voice leading, Markov chains, counterpoint, constraints
+
+import core;
+
+// ============================================
+// Voice Leading Rules
+// ============================================
+
+// Check for parallel fifths between two voice pairs
+export fn hasParallelFifths(voice1From, voice1To, voice2From, voice2To) {
+  const interval1 = (voice1From - voice2From) % 12;
+  const interval2 = (voice1To - voice2To) % 12;
+
+  // Perfect fifth = 7 semitones
+  const isFifthBefore = interval1 == 7 || interval1 == -5;
+  const isFifthAfter = interval2 == 7 || interval2 == -5;
+
+  // Check if both voices move in same direction
+  const voice1Motion = voice1To - voice1From;
+  const voice2Motion = voice2To - voice2From;
+  const sameDirection = (voice1Motion > 0 && voice2Motion > 0) ||
+                        (voice1Motion < 0 && voice2Motion < 0);
+
+  return isFifthBefore && isFifthAfter && sameDirection && voice1Motion != 0;
+}
+
+// Check for parallel octaves
+export fn hasParallelOctaves(voice1From, voice1To, voice2From, voice2To) {
+  const interval1 = (voice1From - voice2From) % 12;
+  const interval2 = (voice1To - voice2To) % 12;
+
+  const isOctaveBefore = interval1 == 0;
+  const isOctaveAfter = interval2 == 0;
+
+  const voice1Motion = voice1To - voice1From;
+  const voice2Motion = voice2To - voice2From;
+  const sameDirection = (voice1Motion > 0 && voice2Motion > 0) ||
+                        (voice1Motion < 0 && voice2Motion < 0);
+
+  return isOctaveBefore && isOctaveAfter && sameDirection && voice1Motion != 0;
+}
+
+// Check for hidden fifths/octaves (direct motion to perfect interval)
+export fn hasHiddenFifths(voice1From, voice1To, voice2From, voice2To) {
+  const interval2 = (voice1To - voice2To) % 12;
+  const isFifthAfter = interval2 == 7 || interval2 == -5;
+
+  const voice1Motion = voice1To - voice1From;
+  const voice2Motion = voice2To - voice2From;
+  const sameDirection = (voice1Motion > 0 && voice2Motion > 0) ||
+                        (voice1Motion < 0 && voice2Motion < 0);
+
+  return isFifthAfter && sameDirection;
+}
+
+// Analyze voice leading issues in a chord progression
+export fn analyzeVoiceLeading(chord1, chord2) {
+  let issues = [];
+
+  for (i in 0..(chord1.length - 1)) {
+    for (j in (i + 1)..(chord1.length - 1)) {
+      if (hasParallelFifths(chord1[i], chord2[i], chord1[j], chord2[j])) {
+        issues[issues.length] = {
+          type: "parallelFifths",
+          voices: [i, j]
+        };
+      }
+      if (hasParallelOctaves(chord1[i], chord2[i], chord1[j], chord2[j])) {
+        issues[issues.length] = {
+          type: "parallelOctaves",
+          voices: [i, j]
+        };
+      }
+    }
+  }
+
+  return issues;
+}
+
+// Get voice motion type
+export fn voiceMotion(voice1From, voice1To, voice2From, voice2To) {
+  const motion1 = voice1To - voice1From;
+  const motion2 = voice2To - voice2From;
+
+  if (motion1 == 0 && motion2 == 0) {
+    return "none";
+  }
+  if (motion1 == 0 || motion2 == 0) {
+    return "oblique";
+  }
+  if ((motion1 > 0 && motion2 > 0) || (motion1 < 0 && motion2 < 0)) {
+    return "parallel";
+  }
+  return "contrary";
+}
+
+// Smooth voice leading - find closest voice assignment
+export fn smoothVoiceLeading(fromChord, toChordPitchClasses) {
+  // Simple greedy algorithm for minimal voice movement
+  let result = [];
+  let usedPitches = [];
+
+  for (fromPitch in fromChord) {
+    let bestPitch = null;
+    let bestDist = 1000;
+
+    for (pc in toChordPitchClasses) {
+      // Find closest octave of this pitch class
+      let targetPitch = (fromPitch / 12) * 12 + pc;
+      if (targetPitch < fromPitch - 6) {
+        targetPitch = targetPitch + 12;
+      }
+      if (targetPitch > fromPitch + 6) {
+        targetPitch = targetPitch - 12;
+      }
+
+      // Check if already used
+      let used = false;
+      for (u in usedPitches) {
+        if (u == targetPitch) {
+          used = true;
+        }
+      }
+
+      if (!used) {
+        let dist = targetPitch - fromPitch;
+        if (dist < 0) { dist = 0 - dist; }
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestPitch = targetPitch;
+        }
+      }
+    }
+
+    result[result.length] = bestPitch;
+    usedPitches[usedPitches.length] = bestPitch;
+  }
+
+  return result;
+}
+
+// ============================================
+// Markov Chains
+// ============================================
+
+// Create a Markov chain from a sequence
+export fn buildMarkovChain(sequence, order) {
+  let ord = order;
+  if (ord == null) {
+    ord = 1;
+  }
+
+  let transitions = {};
+
+  for (i in 0..(sequence.length - ord - 1)) {
+    // Build state key
+    let state = "";
+    for (j in 0..(ord - 1)) {
+      if (j > 0) {
+        state = state + ",";
+      }
+      state = state + sequence[i + j];
+    }
+
+    const nextVal = sequence[i + ord];
+
+    if (transitions[state] == null) {
+      transitions[state] = {};
+    }
+    if (transitions[state][nextVal] == null) {
+      transitions[state][nextVal] = 0;
+    }
+    transitions[state][nextVal] = transitions[state][nextVal] + 1;
+  }
+
+  return {
+    order: ord,
+    transitions: transitions
+  };
+}
+
+// Generate sequence from Markov chain
+export fn generateFromMarkov(chain, startState, length, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let result = [];
+  // Parse start state
+  let currentState = startState;
+
+  for (_ in 0..(length - 1)) {
+    const trans = chain.transitions[currentState];
+    if (trans == null) {
+      break;
+    }
+
+    // Calculate total weight
+    let total = 0;
+    let options = [];
+    for (key in trans) {
+      total = total + trans[key];
+      options[options.length] = { value: key, weight: trans[key] };
+    }
+
+    // Random selection
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    let r = (rng / 2147483648) * total;
+
+    let selected = options[0].value;
+    for (opt in options) {
+      r = r - opt.weight;
+      if (r <= 0) {
+        selected = opt.value;
+        break;
+      }
+    }
+
+    result[result.length] = selected;
+
+    // Update state
+    if (chain.order == 1) {
+      currentState = selected;
+    } else {
+      // Shift state
+      let parts = [];
+      let current = "";
+      for (i in 0..(currentState.length - 1)) {
+        const ch = currentState[i];
+        if (ch == ",") {
+          parts[parts.length] = current;
+          current = "";
+        } else {
+          current = current + ch;
+        }
+      }
+      parts[parts.length] = current;
+
+      // Remove first, add new
+      let newState = "";
+      for (i in 1..(parts.length - 1)) {
+        if (i > 1) {
+          newState = newState + ",";
+        }
+        newState = newState + parts[i];
+      }
+      newState = newState + "," + selected;
+      currentState = newState;
+    }
+  }
+
+  return result;
+}
+
+// ============================================
+// Counterpoint Rules
+// ============================================
+
+// Species counterpoint intervals (first species)
+export const CP_CONSONANCES = [0, 3, 4, 7, 8, 9, 12];  // Unison, 3rd, 4th, 5th, 6th, octave
+
+// Check if interval is consonant
+export fn isConsonant(interval) {
+  let intv = interval % 12;
+  if (intv < 0) {
+    intv = intv + 12;
+  }
+  for (c in CP_CONSONANCES) {
+    if (intv == c || intv == 12 - c) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Check if interval is a perfect consonance
+export fn isPerfectConsonance(interval) {
+  let intv = interval % 12;
+  if (intv < 0) {
+    intv = intv + 12;
+  }
+  return intv == 0 || intv == 7 || intv == 12 || intv == 5;  // Unison, 5th, octave, 4th
+}
+
+// Generate first species counterpoint candidate
+export fn generateCounterpoint(cantusFirmus, above) {
+  let result = [];
+  let direction = 1;
+  if (!above) {
+    direction = -1;
+  }
+
+  for (note in cantusFirmus) {
+    // Find consonant pitch
+    let candidates = [];
+    for (offset in 0..24) {
+      let pitch = note + (offset * direction);
+      if (isConsonant(pitch - note)) {
+        candidates[candidates.length] = pitch;
+      }
+    }
+
+    // Simple selection (could be improved with voice leading)
+    if (result.length == 0) {
+      result[result.length] = candidates[2];  // Start with a nice interval
+    } else {
+      // Find smoothest motion
+      const prev = result[result.length - 1];
+      let best = candidates[0];
+      let bestDist = 100;
+      for (c in candidates) {
+        let dist = c - prev;
+        if (dist < 0) { dist = 0 - dist; }
+        if (dist < bestDist && dist > 0) {
+          bestDist = dist;
+          best = c;
+        }
+      }
+      result[result.length] = best;
+    }
+  }
+
+  return result;
+}
+
+// ============================================
+// Pitch Set Operations
+// ============================================
+
+// Get pitch class (0-11)
+export fn pitchClass(pitch) {
+  let pc = pitch % 12;
+  if (pc < 0) {
+    pc = pc + 12;
+  }
+  return pc;
+}
+
+// Transpose pitch set
+export fn transposePitchSet(pitchSet, semitones) {
+  let result = [];
+  for (pc in pitchSet) {
+    result[result.length] = (pc + semitones) % 12;
+  }
+  return result;
+}
+
+// Invert pitch set
+export fn invertPitchSet(pitchSet, axis) {
+  let ax = axis;
+  if (ax == null) {
+    ax = 0;
+  }
+  let result = [];
+  for (pc in pitchSet) {
+    result[result.length] = (ax * 2 - pc + 12) % 12;
+  }
+  return result;
+}
+
+// Get interval vector
+export fn intervalVector(pitchSet) {
+  let vector = [0, 0, 0, 0, 0, 0];
+
+  for (i in 0..(pitchSet.length - 1)) {
+    for (j in (i + 1)..(pitchSet.length - 1)) {
+      let interval = (pitchSet[j] - pitchSet[i]) % 12;
+      if (interval < 0) {
+        interval = interval + 12;
+      }
+      if (interval > 6) {
+        interval = 12 - interval;
+      }
+      if (interval > 0) {
+        vector[interval - 1] = vector[interval - 1] + 1;
+      }
+    }
+  }
+
+  return vector;
+}
+
+// ============================================
+// Probability-based Generation
+// ============================================
+
+// Weighted random selection
+export fn weightedRandom(options, weights, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let total = 0;
+  for (w in weights) {
+    total = total + w;
+  }
+
+  rng = (rng * 1103515245 + 12345) % 2147483648;
+  let r = (rng / 2147483648) * total;
+
+  for (i in 0..(options.length - 1)) {
+    r = r - weights[i];
+    if (r <= 0) {
+      return { value: options[i], newSeed: rng };
+    }
+  }
+
+  return { value: options[options.length - 1], newSeed: rng };
+}
+
+// Generate melodic sequence with probability
+export fn generateMelody(scale, startPitch, length, weights, seed) {
+  let result = [];
+  let currentPitch = startPitch;
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  // Default weights: favor stepwise motion
+  let w = weights;
+  if (w == null) {
+    w = [0.1, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1];  // -3, -2, -1, 0, +1, +2, +3 scale steps
+  }
+
+  for (_ in 0..(length - 1)) {
+    result[result.length] = currentPitch;
+
+    // Choose next interval
+    let intervals = [-3, -2, -1, 0, 1, 2, 3];
+    let selection = weightedRandom(intervals, w, rng);
+    let step = selection.value;
+    rng = selection.newSeed;
+
+    // Find pitch in scale
+    let scaleIdx = 0;
+    for (i in 0..(scale.length - 1)) {
+      if (pitchClass(currentPitch) == scale[i]) {
+        scaleIdx = i;
+        break;
+      }
+    }
+
+    let newIdx = scaleIdx + step;
+    let octaveShift = 0;
+    for (_ in 0..10) {
+      if (newIdx >= scale.length) {
+        newIdx = newIdx - scale.length;
+        octaveShift = octaveShift + 12;
+      } else if (newIdx < 0) {
+        newIdx = newIdx + scale.length;
+        octaveShift = octaveShift - 12;
+      } else {
+        break;
+      }
+    }
+
+    const newPC = scale[newIdx];
+    currentPitch = (currentPitch / 12) * 12 + newPC + octaveShift;
+  }
+
+  return result;
+}
+
+// ============================================
+// Cellular Automata
+// ============================================
+
+// Rule 30 cellular automaton (chaotic)
+export fn rule30(initial, steps) {
+  let state = initial;
+  let result = [state];
+
+  for (_ in 0..(steps - 1)) {
+    let newState = [];
+    for (i in 0..(state.length - 1)) {
+      let left = 0;
+      let center = state[i];
+      let right = 0;
+      if (i > 0) { left = state[i - 1]; }
+      if (i < state.length - 1) { right = state[i + 1]; }
+
+      // Rule 30: 111->0, 110->0, 101->0, 100->1, 011->1, 010->1, 001->1, 000->0
+      const pattern = left * 4 + center * 2 + right;
+      let newVal = 0;
+      if (pattern == 4 || pattern == 3 || pattern == 2 || pattern == 1) {
+        newVal = 1;
+      }
+      newState[newState.length] = newVal;
+    }
+    state = newState;
+    result[result.length] = state;
+  }
+
+  return result;
+}
+
+// Convert CA output to pitches
+export fn caToMelody(caOutput, scale, basePitch) {
+  let result = [];
+  for (row in caOutput) {
+    // Sum active cells to determine pitch
+    let sum = 0;
+    for (cell in row) {
+      sum = sum + cell;
+    }
+    const scaleIdx = sum % scale.length;
+    const octave = (sum / scale.length) % 3;
+    result[result.length] = basePitch + scale[scaleIdx] + octave * 12;
+  }
+  return result;
+}

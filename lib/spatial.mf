@@ -1,0 +1,485 @@
+// std:spatial (v5)
+// Spatial audio, panning, and surround sound support
+
+import core;
+import curves;
+
+// ============================================
+// Pan Constants
+// ============================================
+
+export const PAN_LEFT = -1.0;
+export const PAN_CENTER = 0.0;
+export const PAN_RIGHT = 1.0;
+
+// ============================================
+// Basic Pan Automation
+// ============================================
+
+// Create pan automation event
+export fn panAuto(start, end, fromPan, toPan) {
+  return {
+    type: "automation",
+    param: "pan",
+    start: start,
+    end: end,
+    curve: curves.linear(fromPan, toPan)
+  };
+}
+
+// Static pan position
+export fn pan(start, end, value) {
+  return panAuto(start, end, value, value);
+}
+
+// Pan left to right
+export fn panLeftToRight(start, end) {
+  return panAuto(start, end, PAN_LEFT, PAN_RIGHT);
+}
+
+// Pan right to left
+export fn panRightToLeft(start, end) {
+  return panAuto(start, end, PAN_RIGHT, PAN_LEFT);
+}
+
+// Pan center to left
+export fn panToLeft(start, end) {
+  return panAuto(start, end, PAN_CENTER, PAN_LEFT);
+}
+
+// Pan center to right
+export fn panToRight(start, end) {
+  return panAuto(start, end, PAN_CENTER, PAN_RIGHT);
+}
+
+// ============================================
+// Pan Curves
+// ============================================
+
+// Pan with easing
+export fn panEaseIn(start, end, fromPan, toPan) {
+  return {
+    type: "automation",
+    param: "pan",
+    start: start,
+    end: end,
+    curve: curves.easeIn(fromPan, toPan)
+  };
+}
+
+export fn panEaseOut(start, end, fromPan, toPan) {
+  return {
+    type: "automation",
+    param: "pan",
+    start: start,
+    end: end,
+    curve: curves.easeOut(fromPan, toPan)
+  };
+}
+
+export fn panEaseInOut(start, end, fromPan, toPan) {
+  return {
+    type: "automation",
+    param: "pan",
+    start: start,
+    end: end,
+    curve: curves.easeInOut(fromPan, toPan)
+  };
+}
+
+// Oscillating pan (LFO-like)
+export fn panOscillate(start, end, center, width, cycles) {
+  let points = [];
+  const numPoints = cycles * 4 + 1;
+
+  for (i in 0..(numPoints - 1)) {
+    const t = i / (numPoints - 1);
+    const phase = t * cycles * 2 * 3.14159;
+    // Approximate sine
+    let sine = 0;
+    let x = phase;
+    // Normalize to -pi to pi
+    for (_ in 0..10) {
+      if (x > 3.14159) {
+        x = x - 6.28318;
+      } else if (x < -3.14159) {
+        x = x + 6.28318;
+      } else {
+        break;
+      }
+    }
+    // Taylor series approximation for sin
+    sine = x - (x * x * x) / 6 + (x * x * x * x * x) / 120;
+    const v = center + width * sine;
+    points[points.length] = { t: t, v: v };
+  }
+
+  return {
+    type: "automation",
+    param: "pan",
+    start: start,
+    end: end,
+    curve: { kind: "piecewiseLinear", points: points }
+  };
+}
+
+// Random pan movement (wandering)
+export fn panWander(start, end, center, maxDeviation, seed) {
+  let points = [];
+  const numPoints = 16;
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  for (i in 0..(numPoints - 1)) {
+    const t = i / (numPoints - 1);
+    // Simple LCG random
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    const rand = (rng / 2147483648) * 2 - 1;  // -1 to 1
+    let v = center + rand * maxDeviation;
+    if (v < -1) { v = -1; }
+    if (v > 1) { v = 1; }
+    points[points.length] = { t: t, v: v };
+  }
+
+  return {
+    type: "automation",
+    param: "pan",
+    start: start,
+    end: end,
+    curve: { kind: "piecewiseLinear", points: points }
+  };
+}
+
+// ============================================
+// Stereo Width
+// ============================================
+
+// Stereo width automation (0 = mono, 1 = full stereo, >1 = widened)
+export fn widthAuto(start, end, fromWidth, toWidth) {
+  return {
+    type: "automation",
+    param: "stereoWidth",
+    start: start,
+    end: end,
+    curve: curves.linear(fromWidth, toWidth)
+  };
+}
+
+// Narrow to mono
+export fn toMono(start, end) {
+  return widthAuto(start, end, 1.0, 0.0);
+}
+
+// Widen stereo
+export fn widenStereo(start, end, targetWidth) {
+  let width = targetWidth;
+  if (width == null) {
+    width = 1.5;
+  }
+  return widthAuto(start, end, 1.0, width);
+}
+
+// ============================================
+// Distance/Depth
+// ============================================
+
+// Distance from listener (affects reverb, volume)
+// 0 = very close, 1 = far away
+export fn distanceAuto(start, end, fromDist, toDist) {
+  return {
+    type: "automation",
+    param: "distance",
+    start: start,
+    end: end,
+    curve: curves.linear(fromDist, toDist)
+  };
+}
+
+// Move closer
+export fn moveCloser(start, end) {
+  return distanceAuto(start, end, 0.7, 0.2);
+}
+
+// Move away
+export fn moveAway(start, end) {
+  return distanceAuto(start, end, 0.3, 0.8);
+}
+
+// ============================================
+// Surround Sound (5.1, 7.1, Atmos)
+// ============================================
+
+// Surround channel positions
+export const SURROUND = {
+  L: { x: -1.0, y: 1.0 },
+  R: { x: 1.0, y: 1.0 },
+  C: { x: 0.0, y: 1.0 },
+  LFE: { x: 0.0, y: 0.0 },
+  LS: { x: -1.0, y: -1.0 },
+  RS: { x: 1.0, y: -1.0 },
+  // 7.1 additional
+  LB: { x: -0.7, y: -0.7 },
+  RB: { x: 0.7, y: -0.7 }
+};
+
+// 2D position in surround field
+// x: -1 (left) to 1 (right)
+// y: -1 (rear) to 1 (front)
+export fn surroundPos(start, end, fromX, fromY, toX, toY) {
+  let events = [];
+
+  events[events.length] = {
+    type: "automation",
+    param: "surroundX",
+    start: start,
+    end: end,
+    curve: curves.linear(fromX, toX)
+  };
+
+  events[events.length] = {
+    type: "automation",
+    param: "surroundY",
+    start: start,
+    end: end,
+    curve: curves.linear(fromY, toY)
+  };
+
+  return { events: events, length: end };
+}
+
+// Circular pan in surround field
+export fn surroundCircle(start, end, radius, startAngle, revolutions) {
+  let xPoints = [];
+  let yPoints = [];
+  const numPoints = 32;
+  let startAng = startAngle;
+  if (startAng == null) {
+    startAng = 0;
+  }
+  let revs = revolutions;
+  if (revs == null) {
+    revs = 1;
+  }
+
+  for (i in 0..(numPoints - 1)) {
+    const t = i / (numPoints - 1);
+    const angle = startAng + t * revs * 6.28318;
+    // Approximate cos/sin
+    let cosVal = 1 - (angle * angle) / 2 + (angle * angle * angle * angle) / 24;
+    let sinVal = angle - (angle * angle * angle) / 6 + (angle * angle * angle * angle * angle) / 120;
+    xPoints[xPoints.length] = { t: t, v: radius * cosVal };
+    yPoints[yPoints.length] = { t: t, v: radius * sinVal };
+  }
+
+  let events = [];
+  events[events.length] = {
+    type: "automation",
+    param: "surroundX",
+    start: start,
+    end: end,
+    curve: { kind: "piecewiseLinear", points: xPoints }
+  };
+  events[events.length] = {
+    type: "automation",
+    param: "surroundY",
+    start: start,
+    end: end,
+    curve: { kind: "piecewiseLinear", points: yPoints }
+  };
+
+  return { events: events, length: end };
+}
+
+// ============================================
+// Height (Atmos/Auro-3D)
+// ============================================
+
+// Height automation for 3D audio
+// 0 = floor level, 1 = ceiling
+export fn heightAuto(start, end, fromHeight, toHeight) {
+  return {
+    type: "automation",
+    param: "height",
+    start: start,
+    end: end,
+    curve: curves.linear(fromHeight, toHeight)
+  };
+}
+
+// Rise up
+export fn riseUp(start, end) {
+  return heightAuto(start, end, 0.0, 1.0);
+}
+
+// Drop down
+export fn dropDown(start, end) {
+  return heightAuto(start, end, 1.0, 0.0);
+}
+
+// ============================================
+// Ambisonics
+// ============================================
+
+// Ambisonic azimuth (horizontal angle) -180 to 180 degrees
+export fn ambiAzimuth(start, end, fromAz, toAz) {
+  return {
+    type: "automation",
+    param: "ambiAzimuth",
+    start: start,
+    end: end,
+    curve: curves.linear(fromAz, toAz)
+  };
+}
+
+// Ambisonic elevation -90 to 90 degrees
+export fn ambiElevation(start, end, fromEl, toEl) {
+  return {
+    type: "automation",
+    param: "ambiElevation",
+    start: start,
+    end: end,
+    curve: curves.linear(fromEl, toEl)
+  };
+}
+
+// Ambisonic distance
+export fn ambiDistance(start, end, fromDist, toDist) {
+  return {
+    type: "automation",
+    param: "ambiDistance",
+    start: start,
+    end: end,
+    curve: curves.linear(fromDist, toDist)
+  };
+}
+
+// Full 3D ambisonic position
+export fn ambiPos(start, end, fromAz, fromEl, fromDist, toAz, toEl, toDist) {
+  let events = [];
+  events[events.length] = ambiAzimuth(start, end, fromAz, toAz);
+  events[events.length] = ambiElevation(start, end, fromEl, toEl);
+  events[events.length] = ambiDistance(start, end, fromDist, toDist);
+  return { events: events, length: end };
+}
+
+// ============================================
+// Spatial Presets
+// ============================================
+
+// Concert hall positioning (orchestra)
+export fn orchestraPosition(instrument) {
+  if (instrument == "violin1") {
+    return { pan: -0.7, distance: 0.5 };
+  }
+  if (instrument == "violin2") {
+    return { pan: -0.4, distance: 0.5 };
+  }
+  if (instrument == "viola") {
+    return { pan: 0.3, distance: 0.5 };
+  }
+  if (instrument == "cello") {
+    return { pan: 0.6, distance: 0.5 };
+  }
+  if (instrument == "bass") {
+    return { pan: 0.8, distance: 0.6 };
+  }
+  if (instrument == "flute") {
+    return { pan: -0.5, distance: 0.7 };
+  }
+  if (instrument == "oboe") {
+    return { pan: -0.2, distance: 0.7 };
+  }
+  if (instrument == "clarinet") {
+    return { pan: 0.2, distance: 0.7 };
+  }
+  if (instrument == "bassoon") {
+    return { pan: 0.5, distance: 0.7 };
+  }
+  if (instrument == "horn") {
+    return { pan: -0.6, distance: 0.8 };
+  }
+  if (instrument == "trumpet") {
+    return { pan: -0.3, distance: 0.8 };
+  }
+  if (instrument == "trombone") {
+    return { pan: 0.3, distance: 0.8 };
+  }
+  if (instrument == "tuba") {
+    return { pan: 0.6, distance: 0.8 };
+  }
+  if (instrument == "timpani") {
+    return { pan: 0.0, distance: 0.9 };
+  }
+  if (instrument == "percussion") {
+    return { pan: 0.4, distance: 0.9 };
+  }
+  // Default center
+  return { pan: 0.0, distance: 0.5 };
+}
+
+// Band/ensemble positioning
+export fn bandPosition(instrument) {
+  if (instrument == "drums") {
+    return { pan: 0.0, distance: 0.6 };
+  }
+  if (instrument == "bass") {
+    return { pan: 0.2, distance: 0.4 };
+  }
+  if (instrument == "guitar_rhythm") {
+    return { pan: -0.5, distance: 0.3 };
+  }
+  if (instrument == "guitar_lead") {
+    return { pan: 0.5, distance: 0.3 };
+  }
+  if (instrument == "keys") {
+    return { pan: -0.3, distance: 0.4 };
+  }
+  if (instrument == "vocal") {
+    return { pan: 0.0, distance: 0.2 };
+  }
+  if (instrument == "backing_vocals") {
+    return { pan: 0.0, distance: 0.5, width: 0.8 };
+  }
+  return { pan: 0.0, distance: 0.5 };
+}
+
+// ============================================
+// Doppler Effect
+// ============================================
+
+// Simulate Doppler effect (pitch shift based on movement)
+// Returns automation for pitch bend
+export fn dopplerEffect(start, end, direction, intensity) {
+  let intens = intensity;
+  if (intens == null) {
+    intens = 0.5;
+  }
+
+  let points = [];
+  const numPoints = 16;
+
+  for (i in 0..(numPoints - 1)) {
+    const t = i / (numPoints - 1);
+    let v = 0;
+    if (direction == "approach") {
+      // Higher pitch approaching, lower leaving
+      v = intens * (1 - t * 2);
+    } else if (direction == "recede") {
+      v = intens * (t * 2 - 1);
+    } else {
+      // Pass by - high to low
+      v = intens * (1 - t * 2);
+    }
+    points[points.length] = { t: t, v: v };
+  }
+
+  return {
+    type: "automation",
+    param: "pitchBend",
+    start: start,
+    end: end,
+    curve: { kind: "piecewiseLinear", points: points }
+  };
+}

@@ -1,0 +1,362 @@
+// std:sync (v5)
+// Synchronization: timecode, SMPTE, MTC, OSC, video sync
+
+import core;
+
+// ============================================
+// SMPTE Timecode
+// ============================================
+
+// SMPTE frame rates
+export const SMPTE = {
+  FPS_24: 24,
+  FPS_25: 25,
+  FPS_29_97: 29.97,
+  FPS_29_97_DF: "29.97df",  // Drop-frame
+  FPS_30: 30,
+  FPS_30_DF: "30df"         // Drop-frame
+};
+
+// Convert SMPTE timecode to beats
+// timecode format: "HH:MM:SS:FF" or { h, m, s, f }
+export fn smpteToBeats(timecode, fps, bpm) {
+  let h = 0;
+  let m = 0;
+  let s = 0;
+  let f = 0;
+
+  if (timecode.h != null) {
+    h = timecode.h;
+    m = timecode.m;
+    s = timecode.s;
+    f = timecode.f;
+  } else {
+    // Parse string "HH:MM:SS:FF"
+    // Simple parsing (assuming format is correct)
+    h = 0; m = 0; s = 0; f = 0;
+  }
+
+  const totalSeconds = h * 3600 + m * 60 + s + f / fps;
+  const beatsPerSecond = bpm / 60;
+  return totalSeconds * beatsPerSecond;
+}
+
+// Convert beats to SMPTE timecode
+export fn beatsToSmpte(beats, fps, bpm) {
+  const beatsPerSecond = bpm / 60;
+  const totalSeconds = beats / beatsPerSecond;
+
+  const h = core.floor(totalSeconds / 3600);
+  const remaining1 = totalSeconds - h * 3600;
+  const m = core.floor(remaining1 / 60);
+  const remaining2 = remaining1 - m * 60;
+  const s = core.floor(remaining2);
+  const f = core.floor((remaining2 - s) * fps);
+
+  return { h: h, m: m, s: s, f: f };
+}
+
+// Format SMPTE to string
+export fn formatSmpte(tc) {
+  let hStr = "" + tc.h;
+  let mStr = "" + tc.m;
+  let sStr = "" + tc.s;
+  let fStr = "" + tc.f;
+
+  if (tc.h < 10) { hStr = "0" + hStr; }
+  if (tc.m < 10) { mStr = "0" + mStr; }
+  if (tc.s < 10) { sStr = "0" + sStr; }
+  if (tc.f < 10) { fStr = "0" + fStr; }
+
+  return hStr + ":" + mStr + ":" + sStr + ":" + fStr;
+}
+
+// SMPTE sync marker
+export fn smpteMarker(pos, timecode, fps) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "smpte",
+    label: formatSmpte(timecode),
+    ext: {
+      fps: fps,
+      timecode: timecode
+    }
+  };
+}
+
+// ============================================
+// MTC (MIDI Time Code)
+// ============================================
+
+// MTC quarter-frame message types
+export const MTC_TYPE = {
+  FRAME_LSN: 0,
+  FRAME_MSN: 1,
+  SEC_LSN: 2,
+  SEC_MSN: 3,
+  MIN_LSN: 4,
+  MIN_MSN: 5,
+  HOUR_LSN: 6,
+  HOUR_MSN_TYPE: 7
+};
+
+// Create MTC sync point
+export fn mtcSync(pos, timecode, fps) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "mtcSync",
+    data: {
+      timecode: timecode,
+      fps: fps
+    }
+  };
+}
+
+// ============================================
+// Video Sync
+// ============================================
+
+// Create video sync point (hit point)
+export fn videoSync(pos, description) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "videoSync",
+    label: description
+  };
+}
+
+// Hit point with frame number
+export fn hitPoint(pos, frameNumber, fps, description) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "hitPoint",
+    label: description,
+    ext: {
+      frame: frameNumber,
+      fps: fps
+    }
+  };
+}
+
+// Cue list for video
+export fn cueList(cues) {
+  // cues = [{ pos, label, type }]
+  let events = [];
+  for (cue in cues) {
+    events[events.length] = {
+      type: "marker",
+      pos: cue.pos,
+      kind: "videoCue",
+      label: cue.label,
+      ext: { cueType: cue.type }
+    };
+  }
+  return { events: events };
+}
+
+// Calculate tempo for hit point
+// Given a start position, a target position (hit), and desired bar count
+export fn tempoForHit(startPos, hitPos, numBars, beatsPerBar) {
+  const totalBeats = numBars * beatsPerBar;
+  const duration = hitPos - startPos;  // In some time unit (e.g., seconds)
+  return (totalBeats / duration) * 60;  // BPM
+}
+
+// ============================================
+// OSC (Open Sound Control)
+// ============================================
+
+// OSC message event
+export fn oscMessage(pos, address, args) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "osc",
+    data: {
+      address: address,
+      args: args
+    }
+  };
+}
+
+// Common OSC addresses
+export fn oscPlay(pos) {
+  return oscMessage(pos, "/transport/play", []);
+}
+
+export fn oscStop(pos) {
+  return oscMessage(pos, "/transport/stop", []);
+}
+
+export fn oscTempo(pos, bpm) {
+  return oscMessage(pos, "/tempo", [bpm]);
+}
+
+export fn oscVolume(pos, channel, level) {
+  return oscMessage(pos, "/mixer/channel/" + channel + "/volume", [level]);
+}
+
+export fn oscMute(pos, channel, muted) {
+  return oscMessage(pos, "/mixer/channel/" + channel + "/mute", [muted]);
+}
+
+// Custom OSC bundle
+export fn oscBundle(pos, messages) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "oscBundle",
+    data: {
+      messages: messages
+    }
+  };
+}
+
+// ============================================
+// External Sync Markers
+// ============================================
+
+// Bar/beat sync marker (for DAW integration)
+export fn barBeatMarker(pos, bar, beat) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "barBeat",
+    label: "" + bar + "." + beat
+  };
+}
+
+// Click track marker
+export fn clickMarker(pos, isDownbeat) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "click",
+    label: if (isDownbeat) { "1" } else { "+" }
+  };
+}
+
+// Generate click track markers
+export fn generateClickTrack(startPos, numBars, beatsPerBar) {
+  let events = [];
+  let pos = startPos;
+  const beatDur = 1 / 1;  // Assuming quarter note beats
+
+  for (bar in 1..numBars) {
+    for (beat in 1..beatsPerBar) {
+      events[events.length] = clickMarker(pos, beat == 1);
+      events[events.length] = barBeatMarker(pos, bar, beat);
+      pos = pos + beatDur;
+    }
+  }
+
+  return { events: events, length: pos - startPos };
+}
+
+// ============================================
+// Tempo Map Sync
+// ============================================
+
+// Create tempo change for video sync
+export fn tempoSync(pos, bpm, reason) {
+  return {
+    type: "marker",
+    pos: pos,
+    kind: "tempoSync",
+    label: "" + bpm + " BPM",
+    ext: { bpm: bpm, reason: reason }
+  };
+}
+
+// Calculate tempos to hit multiple cue points
+export fn calculateTemposForCues(cues, beatsPerBar) {
+  let tempos = [];
+
+  for (i in 0..(cues.length - 2)) {
+    const currentCue = cues[i];
+    const nextCue = cues[i + 1];
+
+    const duration = nextCue.time - currentCue.time;  // In seconds
+    const bars = nextCue.bar - currentCue.bar;
+    const beats = bars * beatsPerBar;
+
+    const bpm = (beats / duration) * 60;
+
+    tempos[tempos.length] = {
+      pos: currentCue.pos,
+      bpm: bpm,
+      cue: currentCue.label
+    };
+  }
+
+  return tempos;
+}
+
+// ============================================
+// Ableton Link
+// ============================================
+
+// Link session control
+export fn linkEnable(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "linkEnable",
+    data: { enabled: true }
+  };
+}
+
+export fn linkDisable(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "linkEnable",
+    data: { enabled: false }
+  };
+}
+
+// Link tempo change
+export fn linkTempo(pos, bpm) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "linkTempo",
+    data: { bpm: bpm }
+  };
+}
+
+// ============================================
+// ReWire
+// ============================================
+
+// ReWire transport control
+export fn rewirePlay(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "rewireTransport",
+    data: { command: "play" }
+  };
+}
+
+export fn rewireStop(pos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "rewireTransport",
+    data: { command: "stop" }
+  };
+}
+
+export fn rewireLocate(pos, targetPos) {
+  return {
+    type: "control",
+    start: pos,
+    kind: "rewireTransport",
+    data: { command: "locate", position: targetPos }
+  };
+}
