@@ -1,7 +1,7 @@
 ﻿import { createSignal, For, Show } from 'solid-js'
 import { useI18n } from './i18n'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
-import { Playground } from './components/Playground'
+import { ProjectEditor } from './components/Editor'
 import { Docs } from './components/Docs'
 
 type Page = 'home' | 'docs'
@@ -292,7 +292,7 @@ function App() {
       </section>
 
       {/* Playground Section */}
-      <Playground />
+      <ProjectEditor />
 
       {/* Standard Library Section */}
       <section id="stdlib" class="container mx-auto px-6 py-24">
@@ -370,4 +370,3 @@ function App() {
 }
 
 export default App
-

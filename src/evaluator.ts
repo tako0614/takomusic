@@ -246,7 +246,7 @@ export class V4Evaluator {
       case 'PosRefLiteral':
         return makePosValue(makePosRef(expr.bar, expr.beat));
       case 'Identifier':
-        return scope.get(expr.name);
+        return scope.get(expr.name, expr.position, this.filePath);
       case 'ArrayLiteral': {
         const elements: RuntimeValue[] = [];
         for (const el of expr.elements) {
@@ -546,7 +546,7 @@ export class V4Evaluator {
   private evaluateAssignment(stmt: { target: Expr; value: Expr }, scope: Scope): void {
     if (stmt.target.kind === 'Identifier') {
       const value = this.evaluateExpr(stmt.value, scope);
-      scope.assign(stmt.target.name, value);
+      scope.assign(stmt.target.name, value, stmt.target.position, this.filePath);
       return;
     }
     if (stmt.target.kind === 'MemberExpr') {

@@ -1,83 +1,82 @@
 # TakoMusic v7.0 Roadmap
 
-> ä½œæ›²ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ  + AIçµ±åˆã®å®Œå…¨ç‰ˆ
+> ì‹Èƒvƒ‰ƒbƒgƒtƒH[ƒ€ + AI“‡‚ÌŠ®‘S”Å
 
 ## Overview
 
-**Goal**: "å®Œç’§ãªç†æƒ³ã®ä½œæ›²è¨€èª" + Webä½œæ›²ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ  + Gemini AIçµ±åˆ
+**Goal**: "Š®àø‚È—‘z‚Ìì‹ÈŒ¾Œê" + Webì‹Èƒvƒ‰ƒbƒgƒtƒH[ƒ€ + Gemini AI“‡
 
 **Target**:
-- ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ : Web + VSCodeæ‹¡å¼µ
-- èª²é‡‘: Freemium
-- ãƒ¦ãƒ¼ã‚¶ãƒ¼: åˆå¿ƒè€…ã‹ã‚‰ãƒ—ãƒ­ã¾ã§å…¨å±¤
+- ƒvƒ‰ƒbƒgƒtƒH[ƒ€: Web + VSCodeŠg’£
+- ‰Û‹à: Freemium
+- ƒ†[ƒU[: ‰SÒ‚©‚çƒvƒ‚Ü‚Å‘S‘w
 
 ---
 
-## Part 1: è¨€èªæ©Ÿèƒ½å¼·åŒ–
+## Part 1: Œ¾Œê‹@”\‹­‰»
 
-### 1.1 æ–°ã—ã„æ§‹æ–‡
+### 1.1 V‚µ‚¢\•¶
 
 ```mf
-// ãƒã‚¯ãƒ­ã‚·ã‚¹ãƒ†ãƒ 
+// ƒ}ƒNƒƒVƒXƒeƒ€
 macro pattern!(notes, dur) {
   clip { for (p in notes) { note(p, dur); } }
 }
 
-// ãƒªã‚¹ãƒˆå†…åŒ…è¡¨è¨˜
+// ƒŠƒXƒg“à•ï•\‹L
 const notes = [note(p, q) for p in scale if p > C4];
 
-// åˆ¶ç´„å¼
+// §–ñ®
 fn compose(pitches: [Pitch] where len >= 2) -> Clip { ... }
 
-// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³å¼·åŒ–
+// ƒpƒCƒvƒ‰ƒCƒ“‹­‰»
 melody |?> (mode == "jazz") swing(_, e, 0.5);
 
-// ãƒ‘ã‚¿ãƒ¼ãƒ³ãƒãƒƒãƒãƒ³ã‚°å¼·åŒ–
+// ƒpƒ^[ƒ“ƒ}ƒbƒ`ƒ“ƒO‹­‰»
 if let { pitch, dur } = event { ... }
 ```
 
-### 1.2 å‹ã‚·ã‚¹ãƒ†ãƒ æ‹¡å¼µ
+### 1.2 Œ^ƒVƒXƒeƒ€Šg’£
 
 ```mf
-// ã‚¨ãƒ•ã‚§ã‚¯ãƒˆå‹
+// ƒGƒtƒFƒNƒgŒ^
 fn generateMelody(seed: Int) -> Clip effects [Random] { ... }
 
-// ãƒˆãƒ¬ã‚¤ãƒˆ
+// ƒgƒŒƒCƒg
 trait Transposable {
   fn transpose(self, semitones: Int) -> Self;
 }
 
-// å˜ä½å‹
+// ’PˆÊŒ^
 type BPM = Float<tempo>;
 type Cents = Float<pitch_offset>;
 
-// ä¾å­˜å‹ (lite)
+// ˆË‘¶Œ^ (lite)
 type FixedClip(len: Dur) = Clip where length(_) == len;
 ```
 
-### 1.3 æ–°ã—ã„æ¨™æº–ãƒ©ã‚¤ãƒ–ãƒ©ãƒª
+### 1.3 V‚µ‚¢•W€ƒ‰ƒCƒuƒ‰ƒŠ
 
-| ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ« | æ©Ÿèƒ½ |
+| ƒ‚ƒWƒ…[ƒ‹ | ‹@”\ |
 |-----------|------|
-| `std:harmony` | å’Œå£°åˆ†æã€ã‚­ãƒ¼æ¤œå‡ºã€æ©Ÿèƒ½å’Œå£° |
-| `std:melody` | æ—‹å¾‹åˆ†æã€è¼ªéƒ­ã€ãƒ¢ãƒãƒ¼ãƒ•æ¤œå‡º |
-| `std:markov` | ãƒãƒ«ã‚³ãƒ•é€£é–ã€çµ±è¨ˆãƒ¢ãƒ‡ãƒ« |
-| `std:structure` | å½¢å¼åˆ†æã€ã‚»ã‚°ãƒ¡ãƒ³ãƒ†ãƒ¼ã‚·ãƒ§ãƒ³ |
-| `std:constraint` | CSPã‚½ãƒ«ãƒãƒ¼ã€å¯¾ä½æ³•åˆ¶ç´„ |
-| `std:autogen` | è‡ªå‹•ç”Ÿæˆ (å¯¾æ—‹å¾‹ã€ãƒ™ãƒ¼ã‚¹ã€ä¼´å¥) |
-| `std:ai` | Geminiçµ±åˆãƒ•ãƒƒã‚¯ |
+| `std:harmony` | ˜aº•ªÍAƒL[ŒŸoA‹@”\˜aº |
+| `std:melody` | ù—¥•ªÍA—ÖŠsAƒ‚ƒ`[ƒtŒŸo |
+| `std:markov` | ƒ}ƒ‹ƒRƒt˜A½A“Œvƒ‚ƒfƒ‹ |
+| `std:structure` | Œ`®•ªÍAƒZƒOƒƒ“ƒe[ƒVƒ‡ƒ“ |
+| `std:constraint` | CSPƒ\ƒ‹ƒo[A‘ÎˆÊ–@§–ñ |
+| `std:autogen` | ©“®¶¬ (‘Îù—¥Aƒx[ƒXA”º‘t) |
 
-### 1.4 é–‹ç™ºè€…ä½“é¨“
+### 1.4 ŠJ”­Ò‘ÌŒ±
 
-- **ãƒªãƒƒãƒãªã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸**: ã‚½ãƒ¼ã‚¹ã‚³ãƒ¼ãƒ‰è¡¨ç¤ºã€"ã‚‚ã—ã‹ã—ã¦?" ææ¡ˆ
-- **ãƒ‡ãƒãƒƒã‚¬**: ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã€ã‚¹ãƒ†ãƒƒãƒ—å®Ÿè¡Œã€å€¤æ¤œæŸ»
-- **LSPå¼·åŒ–**: ã‚³ãƒ¼ãƒ‰ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã€ã‚»ãƒãƒ³ãƒ†ã‚£ãƒƒã‚¯ãƒã‚¤ãƒ©ã‚¤ãƒˆã€ãƒªãƒãƒ¼ãƒ 
+- **ƒŠƒbƒ`‚ÈƒGƒ‰[ƒƒbƒZ[ƒW**: ƒ\[ƒXƒR[ƒh•\¦A"‚à‚µ‚©‚µ‚Ä?" ’ñˆÄ
+- **ƒfƒoƒbƒK**: ƒuƒŒ[ƒNƒ|ƒCƒ“ƒgAƒXƒeƒbƒvÀsA’lŒŸ¸
+- **LSP‹­‰»**: ƒR[ƒhƒAƒNƒVƒ‡ƒ“AƒZƒ}ƒ“ƒeƒBƒbƒNƒnƒCƒ‰ƒCƒgAƒŠƒl[ƒ€
 
 ---
 
-## Part 2: Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ 
+## Part 2: Webƒvƒ‰ƒbƒgƒtƒH[ƒ€
 
-### 2.1 æŠ€è¡“ã‚¹ã‚¿ãƒƒã‚¯
+### 2.1 ‹ZpƒXƒ^ƒbƒN
 
 ```
 Frontend:  Solid.js + Monaco Editor + Tailwind CSS + Web Audio API
@@ -88,7 +87,7 @@ Payments:  Stripe
 AI:        Gemini API (gemini-2.0-flash)
 ```
 
-### 2.2 ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã‚¹ã‚­ãƒ¼ãƒ
+### 2.2 ƒf[ƒ^ƒx[ƒXƒXƒL[ƒ}
 
 ```sql
 users (id, email, name, provider, created_at)
@@ -98,147 +97,164 @@ ai_conversations (id, user_id, project_id, messages, tokens_used)
 exports (id, project_id, format, file_url, status)
 ```
 
-### 2.3 æ–™é‡‘ãƒ—ãƒ©ãƒ³
+### 2.3 —¿‹àƒvƒ‰ƒ“
 
-| æ©Ÿèƒ½ | Free | Premium ($9.99/æœˆ) | Team ($29.99/æœˆ) |
+| ‹@”\ | Free | Premium ($9.99/Œ) | Team ($29.99/Œ) |
 |------|------|-------------------|------------------|
-| ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆæ•° | 5 | ç„¡åˆ¶é™ | ç„¡åˆ¶é™ |
-| MIDIå‡ºåŠ› | 5/æœˆ | ç„¡åˆ¶é™ | ç„¡åˆ¶é™ |
-| ã‚ªãƒ¼ãƒ‡ã‚£ã‚ªå‡ºåŠ› | - | 50/æœˆ | ç„¡åˆ¶é™ |
-| AIã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ | 50/æœˆ | 1,000/æœˆ | 5,000/æœˆ |
-| ã‚³ãƒ©ãƒœãƒ¬ãƒ¼ã‚·ãƒ§ãƒ³ | - | - | ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ  |
+| ƒvƒƒWƒFƒNƒg” | 5 | –³§ŒÀ | –³§ŒÀ |
+| MIDIo—Í | 5/Œ | –³§ŒÀ | –³§ŒÀ |
+| ƒI[ƒfƒBƒIo—Í | - | 50/Œ | –³§ŒÀ |
+| AIƒNƒŒƒWƒbƒg | 50/Œ | 1,000/Œ | 5,000/Œ |
+| ƒRƒ‰ƒ{ƒŒ[ƒVƒ‡ƒ“ | - | - | ƒŠƒAƒ‹ƒ^ƒCƒ€ |
 
-### 2.4 AIã‚¯ãƒ¬ã‚¸ãƒƒãƒˆã‚³ã‚¹ãƒˆ
+### 2.4 AIƒNƒŒƒWƒbƒgƒRƒXƒg
 
 ```
-compose (çŸ­): 5 ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ
-compose (é•·): 25 ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ
-analyze: 5 ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ
-explain: 3 ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ
-convert (è‡ªç„¶è¨€èªâ†’ã‚³ãƒ¼ãƒ‰): 8 ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ
-suggest (ã‚¤ãƒ³ãƒ©ã‚¤ãƒ³): 1 ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆ
+compose: 5 credits
+explain: 3 credits
+chat: 1 credit
+inline: 1 credit
+agent: 8 credits
 ```
 
-### 2.5 APIã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆ
+### 2.5 APIƒGƒ“ƒhƒ|ƒCƒ“ƒg
 
 ```
 POST /api/auth/login          # OAuth
-GET  /api/projects            # ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆä¸€è¦§
-POST /api/projects            # ä½œæˆ
-POST /api/ai/compose          # AIä½œæ›²
-POST /api/ai/explain          # AIèª¬æ˜
-POST /api/exports             # ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆè¦æ±‚
+GET  /api/projects            # projects list
+POST /api/projects            # create
+POST /api/ai/compose          # AI compose
+POST /api/ai/explain          # AI explain
+POST /api/ai/chat             # AI chat
+POST /api/ai/inline           # AI inline
+POST /api/ai/agent            # AI agent
+POST /api/exports             # export request
 ```
 
 ---
 
-## Part 3: VSCodeæ‹¡å¼µ
+## Part 3: VSCodeŠg’£
 
-### 3.1 LSPæ©Ÿèƒ½å¼·åŒ–
+### 3.1 LSP Features
 
-- **ã‚³ãƒ¼ãƒ‰ã‚¢ã‚¯ã‚·ãƒ§ãƒ³**: ä¸è¶³ã‚¤ãƒ³ãƒãƒ¼ãƒˆè¿½åŠ ã€å‹ã‚¨ãƒ©ãƒ¼ä¿®æ­£
-- **ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆ**: æ—¢å­˜ã®`V4Formatter`çµ±åˆ
-- **ã‚»ãƒãƒ³ãƒ†ã‚£ãƒƒã‚¯ãƒˆãƒ¼ã‚¯ãƒ³**: ãƒ”ãƒƒãƒ/ãƒ‡ãƒ¥ãƒ¬ãƒ¼ã‚·ãƒ§ãƒ³/ãƒã‚¸ã‚·ãƒ§ãƒ³ãƒã‚¤ãƒ©ã‚¤ãƒˆ
-- **ã‚·ãƒ³ãƒœãƒ«ãƒªãƒãƒ¼ãƒ **: ãƒ•ã‚¡ã‚¤ãƒ«æ¨ªæ–­ã®å®‰å…¨ãªãƒªãƒ•ã‚¡ã‚¯ã‚¿ãƒªãƒ³ã‚°
+- **Code actions**: missing import fixes, type error hints
+- **Formatting**: integrate existing `V4Formatter`
+- **Semantic tokens**: pitch/duration/position highlight
+- **Rename symbols**: safe refactoring across files
 
-### 3.2 æ‹¡å¼µæ©Ÿèƒ½
+### 3.2 Extension Scope
 
-- **ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼ãƒ‘ãƒãƒ«**: Web Audioã«ã‚ˆã‚‹å†ç”Ÿ
-- **MIDIå‡ºåŠ›**: node-midiã«ã‚ˆã‚‹ç›´æ¥å‡ºåŠ›
-- **ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã‚¨ã‚¯ã‚¹ãƒ—ãƒ­ãƒ¼ãƒ©ãƒ¼**: .mfãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ„ãƒªãƒ¼ãƒ“ãƒ¥ãƒ¼
-- **ã‚¯ãƒ©ã‚¦ãƒ‰åŒæœŸ**: Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ ã¨ã®ãƒ­ã‚°ã‚¤ãƒ³ãƒ»åŒæœŸ
-
-### 3.3 AIæ©Ÿèƒ½ (Gemini)
-
-```typescript
-// ã‚¤ãƒ³ãƒ©ã‚¤ãƒ³ã‚µã‚¸ã‚§ã‚¹ãƒˆ (Copiloté¢¨)
-TakoMusicInlineCompletionProvider
-
-// ã‚³ãƒãƒ³ãƒ‰
-takomusic.aiExplain   // é¸æŠã‚³ãƒ¼ãƒ‰èª¬æ˜
-takomusic.aiGenerate  // è‡ªç„¶è¨€èªã‹ã‚‰ç”Ÿæˆ
-takomusic.aiChat      // ãƒãƒ£ãƒƒãƒˆãƒ‘ãƒãƒ«
-```
+- **LSP only**: type inference, diagnostics, formatting, code actions
+- **AI/playback/sync**: handled in the Web app
 
 ---
 
-## Part 4: å®Ÿè£…ãƒ•ã‚§ãƒ¼ã‚º
+## Part 4: À‘•ƒtƒF[ƒY
 
-### Phase 1: v6åŸºç›¤ (4-6é€±é–“) âœ… é–‹å§‹æ¸ˆã¿
-1. âœ… `std:harmony` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
-2. âœ… `std:melody` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
-3. â¬œ `std:markov`, `std:structure`, `std:constraint` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
-4. â¬œ `std:autogen` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
-5. â¬œ ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸å¼·åŒ–
-6. â¬œ åŸºæœ¬Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ  (èªè¨¼, ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆä¿å­˜)
+### Phase 1: v6Šî”Õ (4-6TŠÔ) [x] Š®—¹
+1. [x] `std:harmony` ƒ‚ƒWƒ…[ƒ‹
+2. [x] `std:melody` ƒ‚ƒWƒ…[ƒ‹
+3. [x] `std:markov` ƒ‚ƒWƒ…[ƒ‹
+4. [x] `std:structure` ƒ‚ƒWƒ…[ƒ‹
+5. [x] `std:constraint` ƒ‚ƒWƒ…[ƒ‹
+6. [x] `std:autogen` ƒ‚ƒWƒ…[ƒ‹
+7. [x] ƒGƒ‰[ƒƒbƒZ[ƒW‹­‰»
+8. [x] Šî–{Webƒvƒ‰ƒbƒgƒtƒH[ƒ€ (”FØ, ƒvƒƒWƒFƒNƒg•Û‘¶)
 
-### Phase 2: åˆ†æãƒ»ç”Ÿæˆ (4-6é€±é–“)
-1. ã‚ªãƒ¼ãƒ‡ã‚£ã‚ªå†ç”Ÿ (Web Audio + Tone.js)
-2. ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆæ”¹å–„ (MIDIãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰)
-3. LSPã‚³ãƒ¼ãƒ‰ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ãƒ»ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆ
+### Phase 2: •ªÍE¶¬ (4-6TŠÔ) [x] Š®—¹
+1. [x] ƒI[ƒfƒBƒIÄ¶ (Web Audio + Tone.js)
+2. [x] ƒGƒNƒXƒ|[ƒg‰ü‘P (MIDIƒ_ƒEƒ“ƒ[ƒh)
+3. [x] LSPƒR[ƒhƒAƒNƒVƒ‡ƒ“EƒtƒH[ƒ}ƒbƒg
 
-### Phase 3: AIçµ±åˆ (4-6é€±é–“)
-1. `std:ai` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ« + Geminiãƒ•ãƒƒã‚¯
-2. Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ  AIæ©Ÿèƒ½
-3. VSCodeã‚¤ãƒ³ãƒ©ã‚¤ãƒ³ã‚µã‚¸ã‚§ã‚¹ãƒˆ
-4. AIãƒãƒ£ãƒƒãƒˆãƒ‘ãƒãƒ«
-5. ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆã‚·ã‚¹ãƒ†ãƒ 
+### Phase 3: AI“‡ (4-6TŠÔ) [x] Š®—¹
+1. [x] Gemini hook (host/API)
+2. Web platform: basic auth, project create/save/load, playback, MIDI download, collab connect test
+3. [x] Web AI panel (compose/explain/chat)
+4. [x] Web inline/agent
+5. [x] Credit system
+### Phase 4: ƒvƒŒƒ~ƒAƒ€‹@”\ (4-6TŠÔ) [x] Š®—¹
+1. [x] ƒI[ƒfƒBƒIƒGƒNƒXƒ|[ƒg (ƒT[ƒo[ƒTƒCƒh‡¬)
+2. [x] ƒŠƒAƒ‹ƒ^ƒCƒ€ƒRƒ‰ƒ{ƒŒ[ƒVƒ‡ƒ“ (WebSocket + yjs)
+3. [x] StripeƒTƒuƒXƒNƒŠƒvƒVƒ‡ƒ““‡
 
-### Phase 4: ãƒ—ãƒ¬ãƒŸã‚¢ãƒ æ©Ÿèƒ½ (4-6é€±é–“)
-1. ã‚ªãƒ¼ãƒ‡ã‚£ã‚ªã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆ (ã‚µãƒ¼ãƒãƒ¼ã‚µã‚¤ãƒ‰åˆæˆ)
-2. ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ ã‚³ãƒ©ãƒœãƒ¬ãƒ¼ã‚·ãƒ§ãƒ³ (WebSocket + yjs)
-3. Stripeã‚µãƒ–ã‚¹ã‚¯ãƒªãƒ—ã‚·ãƒ§ãƒ³çµ±åˆ
-4. VSCodeã‚¯ãƒ©ã‚¦ãƒ‰åŒæœŸ
-
-### Phase 5: ãƒãƒªãƒƒã‚·ãƒ¥ (2-4é€±é–“)
-1. ãƒ‘ãƒ•ã‚©ãƒ¼ãƒãƒ³ã‚¹æœ€é©åŒ–
-2. ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆãƒ»ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«
-3. ãƒ†ã‚¹ãƒˆã‚«ãƒãƒ¬ãƒƒã‚¸
-4. ãƒãƒ¼ã‚±ãƒƒãƒˆãƒ—ãƒ¬ã‚¤ã‚¹å…¬é–‹
-
----
-
-## é‡è¦ãƒ•ã‚¡ã‚¤ãƒ«
-
-### è¨€èªã‚³ã‚¢
-- `src/ast.ts` - ãƒã‚¯ãƒ­ã€åˆ¶ç´„ã€ãƒˆãƒ¬ã‚¤ãƒˆã®ASTãƒãƒ¼ãƒ‰è¿½åŠ 
-- `src/typecheck.ts` - ã‚¨ãƒ•ã‚§ã‚¯ãƒˆã€ãƒˆãƒ¬ã‚¤ãƒˆã€ä¾å­˜å‹
-- `src/evaluator.ts` - æ–°æ§‹æ–‡ã®è©•ä¾¡
-- `src/errors.ts` - ãƒªãƒƒãƒãªã‚¨ãƒ©ãƒ¼ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆ
-
-### æ¨™æº–ãƒ©ã‚¤ãƒ–ãƒ©ãƒª
-- `lib/harmony.mf` - å’Œå£°åˆ†æ âœ…
-- `lib/melody.mf` - æ—‹å¾‹åˆ†æ âœ…
-- `lib/markov.mf` - çµ±è¨ˆãƒ¢ãƒ‡ãƒ«
-- `lib/structure.mf` - æ§‹é€ åˆ†æ
-- `lib/constraint.mf` - åˆ¶ç´„ã‚½ãƒ«ãƒãƒ¼
-- `lib/autogen.mf` - è‡ªå‹•ç”Ÿæˆ
-- `lib/ai.mf` - Geminiçµ±åˆ
-
-### Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ 
-- `website/src/components/Editor/` - å¼·åŒ–ã‚¨ãƒ‡ã‚£ã‚¿
-- `website/src/stores/` - çŠ¶æ…‹ç®¡ç†
-- `api/routes/` - ãƒãƒƒã‚¯ã‚¨ãƒ³ãƒ‰ã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆ
-- `api/services/gemini.ts` - AIãƒ©ãƒƒãƒ‘ãƒ¼
-
-### VSCodeæ‹¡å¼µ
-- `vscode-extension/src/extension.ts` - ã‚¨ãƒ³ãƒˆãƒªãƒ¼ãƒã‚¤ãƒ³ãƒˆ
-- `src/lsp/server.ts` - LSPå¼·åŒ–
-- `vscode-extension/src/ai/` - Geminiçµ±åˆ
-- `vscode-extension/src/playbackPanel.ts` - å†ç”Ÿãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼
+### Phase 5: ƒ|ƒŠƒbƒVƒ… (2-4TŠÔ) [x] Š®—¹
+1. [x] ƒpƒtƒH[ƒ}ƒ“ƒXÅ“K‰»
+2. [x] ƒhƒLƒ…ƒƒ“ƒgEƒ`ƒ…[ƒgƒŠƒAƒ‹
+3. [x] ƒeƒXƒgƒJƒoƒŒƒbƒW
+4. [x] ƒ}[ƒPƒbƒgƒvƒŒƒCƒXŒöŠJ
 
 ---
 
-## æ¤œè¨¼æ–¹æ³•
+## d—vƒtƒ@ƒCƒ‹
 
-1. **è¨€èª**: `npm run test` - å…¨ãƒ†ã‚¹ãƒˆãƒ‘ã‚¹
-2. **Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ **: ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆä½œæˆã€ä¿å­˜ã€MIDIå‡ºåŠ›ã‚’æ‰‹å‹•ãƒ†ã‚¹ãƒˆ
-3. **AIæ©Ÿèƒ½**: compose/explainã‚’ã‚µãƒ³ãƒ—ãƒ«ãƒ—ãƒ­ãƒ³ãƒ—ãƒˆã§ãƒ†ã‚¹ãƒˆ
-4. **VSCode**: æ‹¡å¼µèª­ã¿è¾¼ã¿ã€LSPå‹•ä½œã€å†ç”Ÿæ©Ÿèƒ½ã‚’ç¢ºèª
-5. **ã‚µãƒ–ã‚¹ã‚¯ãƒªãƒ—ã‚·ãƒ§ãƒ³**: Stripe webhookãƒ†ã‚¹ãƒˆãƒ¢ãƒ¼ãƒ‰
+### Œ¾ŒêƒRƒA
+- `src/ast.ts` - ƒ}ƒNƒA§–ñAƒgƒŒƒCƒg‚ÌASTƒm[ƒh’Ç‰Á
+- `src/typecheck.ts` - ƒGƒtƒFƒNƒgAƒgƒŒƒCƒgAˆË‘¶Œ^
+- `src/evaluator.ts` - V\•¶‚Ì•]‰¿
+- `src/errors.ts` - ƒŠƒbƒ`‚ÈƒGƒ‰[ƒtƒH[ƒ}ƒbƒg
+
+### •W€ƒ‰ƒCƒuƒ‰ƒŠ
+- `lib/harmony.mf` - ˜aº•ªÍ [x]
+- `lib/melody.mf` - ù—¥•ªÍ [x]
+- `lib/markov.mf` - Markov chain helpers [x]
+- `lib/algorithm.mf` - Markov chainÀ‘•‚ÌŒ»ZŠ
+- `lib/structure.mf` - \‘¢•ªÍ [x]
+- `lib/constraint.mf` - §–ñƒ\ƒ‹ƒo[ [x]
+- `lib/autogen.mf` - ©“®¶¬ [x]
+
+### Webƒvƒ‰ƒbƒgƒtƒH[ƒ€
+- `website/src/components/Editor/` - ‹­‰»ƒGƒfƒBƒ^ [x]
+- `website/src/stores/` - ó‘ÔŠÇ— [x]
+- `website/src/stores/session.ts` - ƒ[ƒJƒ‹”FØ
+- `website/src/stores/projects.ts` - ƒvƒƒWƒFƒNƒg•Û‘¶
+- `website/src/lib/audioPlayer.ts` - Ä¶ƒƒWƒbƒN
+- `website/src/lib/midiExport.ts` - MIDIƒ_ƒEƒ“ƒ[ƒh [x]
+- `website/src/lib/compiler.ts` - ƒRƒ“ƒpƒCƒ‹˜AŒg
+- `website/src/lib/aiClient.ts` - AIƒNƒ‰ƒCƒAƒ“ƒg [x]
+- `website/src/stores/credits.ts` - ƒNƒŒƒWƒbƒgŠÇ— [x]
+- `api/routes/` - ƒoƒbƒNƒGƒ“ƒhƒGƒ“ƒhƒ|ƒCƒ“ƒg [x]
+- `api/routes/ai.ts` - AIƒ‹[ƒg [x]
+- `api/routes/exports.ts` - ƒI[ƒfƒBƒIƒGƒNƒXƒ|[ƒg [x]
+- `api/routes/billing.ts` - Stripe“‡ [x]
+- `api/routes/sync.ts` - ƒNƒ‰ƒEƒh“¯Šú [x]
+- `api/index.ts` - APIƒnƒ“ƒhƒ‰ [x]
+- `api/services/gemini.ts` - AIƒ‰ƒbƒp[ [x]
+- `api/services/credits.ts` - ƒNƒŒƒWƒbƒgŠÇ— [x]
+- `api/services/audioExport.ts` - ƒT[ƒo[ƒTƒCƒh‡¬ [x]
+- `api/services/stripe.ts` - Stripe“‡ [x]
+- `api/services/cloudSync.ts` - ƒNƒ‰ƒEƒh“¯Šú [x]
+- `api/collabServer.ts` - ƒRƒ‰ƒ{ƒŒ[ƒVƒ‡ƒ“ƒT[ƒo[ [x]
+
+### Docs
+- `docs/TUTORIAL_V7.md` - V7 tutorial [x]
+
+### VSCodeŠg’£
+- `vscode-extension/src/extension.ts` - ƒGƒ“ƒgƒŠ[ƒ|ƒCƒ“ƒg
+- `vscode-extension/README.md` - Marketplace README [x]
+- `vscode-extension/CHANGELOG.md` - Marketplace changelog [x]
+- `vscode-extension/src/server.ts` - LSPƒNƒ‰ƒCƒAƒ“ƒg‹N“®
+- `src/lsp/server.ts` - LSPƒT[ƒo
+- `vscode-extension/src/ai/` - Gemini“‡ [x]
+- `vscode-extension/src/ai/client.ts` - AIƒNƒ‰ƒCƒAƒ“ƒg [x]
+- `vscode-extension/src/ai/chatPanel.ts` - AIƒ`ƒƒƒbƒgƒpƒlƒ‹ [x]
+- `vscode-extension/src/playbackPanel.ts` - Ä¶ƒvƒŒƒrƒ…[ [x]
+- `vscode-extension/src/sync/client.ts` - ƒNƒ‰ƒEƒh“¯Šú [x]
+
+---
+
+## ŒŸØ•û–@
+
+1. **Œ¾Œê**: `npm run test` - ‘SƒeƒXƒgƒpƒX
+2. **Webƒvƒ‰ƒbƒgƒtƒH[ƒ€**: ŠÈˆÕ”FØAƒvƒƒWƒFƒNƒgì¬/•Û‘¶/“Ç‚İ‚İAÄ¶AMIDIƒ_ƒEƒ“ƒ[ƒhAƒRƒ‰ƒ{ƒŒ[ƒVƒ‡ƒ“Ú‘±‚ğƒeƒXƒg
+3. **AI**: test compose/explain/chat/inline/agent with sample prompts
+4. **VSCode**: load extension and verify LSP features
+5. **ƒTƒuƒXƒNƒŠƒvƒVƒ‡ƒ“**: Stripe webhookƒeƒXƒgƒ‚[ƒh
 
 ---
 
 *Last updated: 2026-01-16*
 *Current version: v6.0.0*
 *Target version: v7.0.0*
+
+
+

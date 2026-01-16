@@ -23,6 +23,9 @@ This document describes the standard library modules. All std functions are back
 - `std:tuning`
 - `std:dynamics`
 - `std:articulations`
+- `std:markov`
+- `std:constraint`
+- `std:autogen`
 
 ---
 
@@ -1327,3 +1330,89 @@ const staccatoPhrase = shortenForStaccato(makeStaccato(myClip), 0.3);
 // Create legato passage with connected notes
 const legatoPhrase = extendForLegato(makeLegato(myClip));
 ```
+
+---
+
+## std:markov
+
+Markov chain helpers for sequence modeling.
+
+### Functions
+
+- `buildMarkovChain(sequence: [Any], order?: Int) -> Object` ? Build transition table
+- `generateFromMarkov(chain: Object, startState: String, length: Int, seed?: Int) -> [String]` ? Generate sequence
+- `stateKey(values: [Any]) -> String` ? Join values into a state key
+- `splitState(state: String) -> [String]` ? Split a state key
+- `startState(sequence: [Any], order?: Int) -> String?` ? First state from sequence
+- `generate(sequence: [Any], order?: Int, length: Int, seed?: Int) -> [String]` ? Build + generate
+
+### Example
+
+```mf
+import * as markov from "std:markov";
+
+const seed = [0, 1, 2, 3, 4, 3, 2, 1];
+const generated = markov.generate(seed, 2, 16, 42);
+```
+
+---
+
+## std:constraint
+
+Simple CSP helpers for small-scale constraint problems.
+
+### Functions
+
+- `problem() -> Object` ? Create empty CSP problem
+- `addVar(p: Object, name: String, domain: [Any]) -> Object` ? Add variable
+- `constraint(scope: [String], test: (Object) -> Bool) -> Object` ? Create constraint
+- `addConstraint(p: Object, c: Object) -> Object` ? Add constraint
+- `solve(p: Object, options?: { maxSolutions?: Int, maxSteps?: Int, varOrder?: String }) -> Result` ? Solve (backtracking)
+- `isComplete(p: Object, assignment: Object) -> Bool` ? All vars assigned
+- `isSatisfied(p: Object, assignment: Object) -> Bool` ? All constraints satisfied
+- `allDifferent(names: [String]) -> Object` ? All vars differ
+- `equalsValue(name: String, value: Any) -> Object` ? var == value
+- `equalsVar(a: String, b: String) -> Object` ? a == b
+- `sumEquals(names: [String], target: Int) -> Object` ? Sum equals target
+
+### Example
+
+```mf
+import * as csp from "std:constraint";
+
+const p = csp.problem();
+csp.addVar(p, "a", [1, 2, 3]);
+csp.addVar(p, "b", [1, 2, 3]);
+csp.addConstraint(p, csp.allDifferent(["a", "b"]));
+csp.addConstraint(p, csp.sumEquals(["a", "b"], 4));
+
+const result = csp.solve(p, { maxSolutions: 2 });
+```
+
+`varOrder` supports `"input"` (default) or `"mrv"` (minimum remaining values).
+
+---
+
+## std:autogen
+
+Automatic generation helpers for countermelody, bass, and accompaniment. These return motifs.
+
+### Functions
+
+- `counterMelody(melody: Motif, interval?: Int, preferContrary?: Bool, velocityScale?: Float) -> Motif`
+- `bassline(chords: [[Pitch]], duration?: Dur, octave?: Int, velocity?: Float) -> Motif`
+- `accompaniment(chords: [[Pitch]], pattern?: [Int], duration?: Dur, octave?: Int, velocity?: Float) -> Motif`
+- `motifToClip(m: Motif, start?: Pos) -> Clip`
+- `generate(spec: Object) -> Result` ? Dispatch by `spec.kind`
+
+### Example
+
+```mf
+import { motifFromPitches } from "std:motif";
+import * as autogen from "std:autogen";
+
+const melody = motifFromPitches([C4, E4, G4, A4], q);
+const counter = autogen.counterMelody(melody, 7, true, 0.7);
+```
+
+---

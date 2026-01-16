@@ -1,0 +1,204 @@
+// std:constraint (v7.0)
+// Simple CSP solver and helpers.
+
+export fn problem() {
+  return { vars: [], constraints: [] };
+}
+
+export fn addVar(p, name, domain) {
+  p.vars[p.vars.length] = { name: name, domain: domain };
+  return p;
+}
+
+export fn constraint(scope, test) {
+  return { scope: scope, test: test };
+}
+
+export fn addConstraint(p, c) {
+  p.constraints[p.constraints.length] = c;
+  return p;
+}
+
+export fn isAvailable() {
+  return true;
+}
+
+fn isAssigned(assignment, name) {
+  return assignment[name] != null;
+}
+
+fn constraintSatisfied(c, assignment, requireAll) {
+  const scope = c.scope;
+  if (scope != null) {
+    for (name in scope) {
+      if (!isAssigned(assignment, name)) {
+        return !requireAll;
+      }
+    }
+  } else if (!requireAll) {
+    return true;
+  }
+  if (c.test == null) {
+    return false;
+  }
+  return c.test(assignment);
+}
+
+fn constraintsOk(constraints, assignment) {
+  for (c in constraints) {
+    if (!constraintSatisfied(c, assignment, false)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+fn copyMap(map) {
+  let out = {};
+  for (key in map) {
+    if (map[key] != null) {
+      out[key] = map[key];
+    }
+  }
+  return out;
+}
+
+export fn isComplete(problem, assignment) {
+  for (v in problem.vars) {
+    if (!isAssigned(assignment, v.name)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export fn isSatisfied(problem, assignment) {
+  for (c in problem.constraints) {
+    if (!constraintSatisfied(c, assignment, true)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export fn solve(problem, options) {
+  let maxSolutions = 1;
+  let maxSteps = null;
+  let varOrder = "input";
+  if (options != null) {
+    if (options.maxSolutions != null) {
+      maxSolutions = options.maxSolutions;
+    }
+    if (options.maxSteps != null) {
+      maxSteps = options.maxSteps;
+    }
+    if (options.varOrder != null) {
+      varOrder = options.varOrder;
+    }
+  }
+
+  let solutions = [];
+  let assignment = {};
+  let steps = 0;
+
+  const vars = problem.vars;
+
+  fn selectVarIndex(vars, assignment, order) {
+    let bestIdx = -1;
+    let bestSize = null;
+    for (i in 0..(vars.length - 1)) {
+      const v = vars[i];
+      if (isAssigned(assignment, v.name)) {
+        continue;
+      }
+      if (order == "mrv") {
+        const size = v.domain.length;
+        if (bestIdx == -1 || size < bestSize) {
+          bestIdx = i;
+          bestSize = size;
+        }
+      } else {
+        return i;
+      }
+    }
+    return bestIdx;
+  }
+
+  fn backtrack() {
+    if (solutions.length >= maxSolutions) {
+      return;
+    }
+    if (maxSteps != null && steps >= maxSteps) {
+      return;
+    }
+    const varIdx = selectVarIndex(vars, assignment, varOrder);
+    if (varIdx == -1) {
+      solutions[solutions.length] = copyMap(assignment);
+      return;
+    }
+
+    const v = vars[varIdx];
+    for (value in v.domain) {
+      assignment[v.name] = value;
+      steps = steps + 1;
+
+      if (constraintsOk(problem.constraints, assignment)) {
+        backtrack();
+        if (solutions.length >= maxSolutions) {
+          return;
+        }
+      }
+    }
+
+    assignment[v.name] = null;
+  }
+
+  backtrack();
+
+  if (solutions.length == 0) {
+    return { kind: "Err", error: "no solution", steps: steps };
+  }
+  return { kind: "Ok", solutions: solutions, steps: steps };
+}
+
+// ============================================
+// Common constraints
+// ============================================
+
+export fn allDifferent(names) {
+  return constraint(names, fn(assignment) {
+    let seen = [];
+    for (name in names) {
+      const value = assignment[name];
+      for (s in seen) {
+        if (s == value) {
+          return false;
+        }
+      }
+      seen[seen.length] = value;
+    }
+    return true;
+  });
+}
+
+export fn equalsValue(name, value) {
+  return constraint([name], fn(assignment) {
+    return assignment[name] == value;
+  });
+}
+
+export fn equalsVar(a, b) {
+  return constraint([a, b], fn(assignment) {
+    return assignment[a] == assignment[b];
+  });
+}
+
+export fn sumEquals(names, target) {
+  return constraint(names, fn(assignment) {
+    let sum = 0;
+    for (name in names) {
+      sum = sum + assignment[name];
+    }
+    return sum == target;
+  });
+}

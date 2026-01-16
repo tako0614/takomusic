@@ -1,0 +1,39 @@
+// TakoMusic - Markov Demo
+
+import * as markov from "std:markov";
+
+fn sequenceToClip(seq, scale, dur, vel) -> Clip {
+  let c = clip {};
+  for (v in seq) {
+    let idx = v - (v % 1);
+    if (idx < 0) { idx = 0 - idx; }
+    const pitch = scale[idx % scale.length];
+    c = concat(c, clip { note(pitch, dur, vel: vel); });
+  }
+  return c;
+}
+
+export fn main() -> Score {
+  const seed = [0, 1, 2, 3, 4, 3, 2, 1, 0, 2, 4, 5, 7, 5, 4, 2];
+  const generated = markov.generate(seed, 2, 16, 42);
+  const scale = [C4, D4, E4, F4, G4, A4, B4, C5];
+
+  const melody = sequenceToClip(generated, scale, e, 0.7);
+
+  return score {
+    meta {
+      title "Markov Demo";
+    }
+    tempo { 1:1 -> 110bpm; }
+    meter { 1:1 -> 4/4; }
+
+    sound "lead" kind instrument {
+      label "Lead";
+      range C3..C6;
+    }
+
+    track "Lead" role Instrument sound "lead" {
+      place 1:1 melody;
+    }
+  };
+}

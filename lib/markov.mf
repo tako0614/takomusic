@@ -1,0 +1,77 @@
+// std:markov (v7.0)
+// Markov chain utilities for sequence modeling.
+// Currently wraps the Markov helpers in std:algorithm.
+
+import algorithm;
+
+// Create a Markov chain from a sequence
+export fn buildMarkovChain(sequence, order) {
+  return algorithm:buildMarkovChain(sequence, order);
+}
+
+// Create a state key from an array of values
+export fn stateKey(values) {
+  if (values == null || values.length == null) {
+    return "";
+  }
+  let out = "";
+  for (i in 0..(values.length - 1)) {
+    if (i > 0) {
+      out = out + ",";
+    }
+    out = out + values[i];
+  }
+  return out;
+}
+
+// Parse a state key into an array of values
+export fn splitState(state) {
+  if (state == null) {
+    return [];
+  }
+  let parts = [];
+  let current = "";
+  for (i in 0..(state.length - 1)) {
+    const ch = state[i];
+    if (ch == ",") {
+      parts[parts.length] = current;
+      current = "";
+    } else {
+      current = current + ch;
+    }
+  }
+  parts[parts.length] = current;
+  return parts;
+}
+
+// Get a starting state from a sequence
+export fn startState(sequence, order) {
+  let ord = order;
+  if (ord == null) {
+    ord = 1;
+  }
+  if (sequence.length < ord) {
+    return null;
+  }
+
+  let values = [];
+  for (i in 0..(ord - 1)) {
+    values[values.length] = sequence[i];
+  }
+  return stateKey(values);
+}
+
+// Generate a sequence from a Markov chain
+export fn generateFromMarkov(chain, startState, length, seed) {
+  return algorithm:generateFromMarkov(chain, startState, length, seed);
+}
+
+// Build a chain and generate from the initial state in the sequence
+export fn generate(sequence, order, length, seed) {
+  const chain = buildMarkovChain(sequence, order);
+  const state = startState(sequence, order);
+  if (state == null) {
+    return [];
+  }
+  return generateFromMarkov(chain, state, length, seed);
+}
