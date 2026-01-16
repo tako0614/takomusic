@@ -430,7 +430,10 @@ export class V4Parser {
       typeArgs = this.parseTypeArgs();
     }
 
-    return { kind: 'TypeRef', position: pos, name, typeArgs };
+    // Parse optional type suffix: TypeName?
+    const optional = this.match(TokenType.QUESTION);
+
+    return { kind: 'TypeRef', position: pos, name, typeArgs, optional: optional || undefined };
   }
 
   private parseTypeArgs(): TypeRef[] {

@@ -90,6 +90,7 @@ export enum TokenType {
   OR = 'OR',
   NOT = 'NOT',
   NULLISH = 'NULLISH',
+  QUESTION = 'QUESTION',
   DOT = 'DOT',
   COMMA = 'COMMA',
   SEMI = 'SEMI',

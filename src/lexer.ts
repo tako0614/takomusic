@@ -205,7 +205,7 @@ export class V4Lexer {
         break;
       case '?':
         if (this.match('?')) return { type: TokenType.NULLISH, position: pos };
-        break;
+        return { type: TokenType.QUESTION, position: pos };
       case '.':
         if (this.peek() === '.' && this.peekNext() === '.') {
           this.advance(); // consume second .
