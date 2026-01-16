@@ -1,0 +1,778 @@
+// std:harmony (v6.0)
+// Harmonic analysis and functional harmony utilities
+// Key detection, chord function analysis, voice leading optimization
+
+// ============================================
+// Pitch Class Operations
+// ============================================
+
+// Pitch class constants (0-11)
+export const PC_C = 0;
+export const PC_CS = 1;
+export const PC_D = 2;
+export const PC_DS = 3;
+export const PC_E = 4;
+export const PC_F = 5;
+export const PC_FS = 6;
+export const PC_G = 7;
+export const PC_GS = 8;
+export const PC_A = 9;
+export const PC_AS = 10;
+export const PC_B = 11;
+
+// Extract pitch class from MIDI note
+export fn pitchClass(midiNote) {
+  return midiNote % 12;
+}
+
+// Extract pitch classes from chord
+export fn chordPitchClasses(chord) {
+  let pcs = [];
+  for (note in chord) {
+    const pc = pitchClass(note);
+    let found = false;
+    for (existing in pcs) {
+      if (existing == pc) {
+        found = true;
+      }
+    }
+    if (!found) {
+      pcs[pcs.length] = pc;
+    }
+  }
+  return pcs;
+}
+
+// ============================================
+// Key Detection
+// ============================================
+
+// Major key profiles (Krumhansl-Kessler)
+fn majorProfile() {
+  return [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+}
+
+// Minor key profiles (Krumhansl-Kessler)
+fn minorProfile() {
+  return [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+}
+
+// Rotate array by n positions
+fn rotateArray(arr, n) {
+  let result = [];
+  const len = arr.length;
+  for (i in 0..(len - 1)) {
+    const idx = (i + n) % len;
+    result[i] = arr[idx];
+  }
+  return result;
+}
+
+// Calculate correlation between pitch distribution and profile
+fn correlate(distribution, profile) {
+  let sumXY = 0;
+  let sumX = 0;
+  let sumY = 0;
+  let sumX2 = 0;
+  let sumY2 = 0;
+  const n = 12;
+
+  for (i in 0..11) {
+    sumXY = sumXY + distribution[i] * profile[i];
+    sumX = sumX + distribution[i];
+    sumY = sumY + profile[i];
+    sumX2 = sumX2 + distribution[i] * distribution[i];
+    sumY2 = sumY2 + profile[i] * profile[i];
+  }
+
+  const numerator = n * sumXY - sumX * sumY;
+  const denominator = ((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY)) ** 0.5;
+
+  if (denominator == 0) {
+    return 0;
+  }
+  return numerator / denominator;
+}
+
+// Build pitch class distribution from notes
+fn buildDistribution(notes) {
+  let dist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  for (note in notes) {
+    const pc = pitchClass(note);
+    dist[pc] = dist[pc] + 1;
+  }
+  return dist;
+}
+
+// Detect key from a collection of pitches
+export fn detectKey(pitches) {
+  const dist = buildDistribution(pitches);
+  const major = majorProfile();
+  const minor = minorProfile();
+
+  let bestKey = null;
+  let bestScore = -2;
+
+  // Try all major keys
+  for (root in 0..11) {
+    const rotated = rotateArray(major, root);
+    const score = correlate(dist, rotated);
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = { root: root, mode: "major", confidence: score };
+    }
+  }
+
+  // Try all minor keys
+  for (root in 0..11) {
+    const rotated = rotateArray(minor, root);
+    const score = correlate(dist, rotated);
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = { root: root, mode: "minor", confidence: score };
+    }
+  }
+
+  return bestKey;
+}
+
+// Detect key from chord progression
+export fn detectKeyFromChords(chords) {
+  let allPitches = [];
+  for (chord in chords) {
+    for (note in chord) {
+      allPitches[allPitches.length] = note;
+    }
+  }
+  return detectKey(allPitches);
+}
+
+// Get key name from key object
+export fn keyName(key) {
+  const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  return names[key.root] + " " + key.mode;
+}
+
+// ============================================
+// Chord Identification
+// ============================================
+
+// Chord quality templates (intervals from root)
+fn chordTemplates() {
+  return {
+    major: [0, 4, 7],
+    minor: [0, 3, 7],
+    diminished: [0, 3, 6],
+    augmented: [0, 4, 8],
+    major7: [0, 4, 7, 11],
+    minor7: [0, 3, 7, 10],
+    dominant7: [0, 4, 7, 10],
+    diminished7: [0, 3, 6, 9],
+    halfDiminished7: [0, 3, 6, 10],
+    augmented7: [0, 4, 8, 10],
+    majorMajor7: [0, 4, 7, 11],
+    minorMajor7: [0, 3, 7, 11],
+    sus2: [0, 2, 7],
+    sus4: [0, 5, 7],
+    add9: [0, 4, 7, 14],
+    sixth: [0, 4, 7, 9],
+    minor6: [0, 3, 7, 9]
+  };
+}
+
+// Normalize chord to pitch classes relative to bass
+fn normalizeChord(chord) {
+  if (chord.length == 0) {
+    return [];
+  }
+
+  // Find lowest note as bass
+  let bass = chord[0];
+  for (note in chord) {
+    if (note < bass) {
+      bass = note;
+    }
+  }
+
+  let normalized = [];
+  for (note in chord) {
+    const interval = (note - bass) % 12;
+    let found = false;
+    for (existing in normalized) {
+      if (existing == interval) {
+        found = true;
+      }
+    }
+    if (!found) {
+      normalized[normalized.length] = interval;
+    }
+  }
+
+  // Sort ascending
+  for (i in 0..(normalized.length - 2)) {
+    for (j in 0..(normalized.length - i - 2)) {
+      if (normalized[j] > normalized[j + 1]) {
+        const temp = normalized[j];
+        normalized[j] = normalized[j + 1];
+        normalized[j + 1] = temp;
+      }
+    }
+  }
+
+  return normalized;
+}
+
+// Check if two arrays match
+fn arraysMatch(a, b) {
+  if (a.length != b.length) {
+    return false;
+  }
+  for (i in 0..(a.length - 1)) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Identify chord quality
+export fn identifyChord(chord) {
+  if (chord.length == 0) {
+    return null;
+  }
+
+  const templates = chordTemplates();
+  const templateNames = ["major", "minor", "diminished", "augmented",
+                         "major7", "minor7", "dominant7", "diminished7",
+                         "halfDiminished7", "augmented7", "majorMajor7",
+                         "minorMajor7", "sus2", "sus4", "add9", "sixth", "minor6"];
+
+  // Find bass note
+  let bass = chord[0];
+  for (note in chord) {
+    if (note < bass) {
+      bass = note;
+    }
+  }
+
+  const normalized = normalizeChord(chord);
+
+  // Try each template
+  for (name in templateNames) {
+    const template = templates[name];
+    if (arraysMatch(normalized, template)) {
+      return {
+        root: pitchClass(bass),
+        quality: name,
+        bass: pitchClass(bass),
+        inversion: 0
+      };
+    }
+  }
+
+  // Try inversions
+  for (inv in 1..3) {
+    for (name in templateNames) {
+      const template = templates[name];
+      if (template.length <= inv) {
+        continue;
+      }
+
+      // Rotate template for inversion
+      let rotated = [];
+      for (i in 0..(template.length - 1)) {
+        const idx = (i + inv) % template.length;
+        let val = template[idx] - template[inv];
+        if (val < 0) {
+          val = val + 12;
+        }
+        rotated[i] = val;
+      }
+
+      // Sort rotated
+      for (i in 0..(rotated.length - 2)) {
+        for (j in 0..(rotated.length - i - 2)) {
+          if (rotated[j] > rotated[j + 1]) {
+            const temp = rotated[j];
+            rotated[j] = rotated[j + 1];
+            rotated[j + 1] = temp;
+          }
+        }
+      }
+
+      if (arraysMatch(normalized, rotated)) {
+        const actualRoot = (pitchClass(bass) - template[inv] + 12) % 12;
+        return {
+          root: actualRoot,
+          quality: name,
+          bass: pitchClass(bass),
+          inversion: inv
+        };
+      }
+    }
+  }
+
+  return { root: pitchClass(bass), quality: "unknown", bass: pitchClass(bass), inversion: 0 };
+}
+
+// Get chord symbol (e.g., "Cmaj7", "Am")
+export fn chordSymbol(chordInfo) {
+  const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const root = names[chordInfo.root];
+
+  const qualityMap = {
+    major: "",
+    minor: "m",
+    diminished: "dim",
+    augmented: "aug",
+    major7: "maj7",
+    minor7: "m7",
+    dominant7: "7",
+    diminished7: "dim7",
+    halfDiminished7: "m7b5",
+    augmented7: "aug7",
+    majorMajor7: "maj7",
+    minorMajor7: "mMaj7",
+    sus2: "sus2",
+    sus4: "sus4",
+    add9: "add9",
+    sixth: "6",
+    minor6: "m6",
+    unknown: "?"
+  };
+
+  let symbol = root + qualityMap[chordInfo.quality];
+
+  if (chordInfo.inversion > 0) {
+    const bassName = names[chordInfo.bass];
+    symbol = symbol + "/" + bassName;
+  }
+
+  return symbol;
+}
+
+// ============================================
+// Functional Harmony
+// ============================================
+
+// Chord function types
+export const FUNC_TONIC = "tonic";
+export const FUNC_SUBDOMINANT = "subdominant";
+export const FUNC_DOMINANT = "dominant";
+export const FUNC_PREDOMINANT = "predominant";
+
+// Get scale degree from root in key
+fn scaleDegree(chordRoot, keyRoot) {
+  return (chordRoot - keyRoot + 12) % 12;
+}
+
+// Determine chord function in major key
+fn majorChordFunction(degree, quality) {
+  // I, iii, vi = tonic
+  if (degree == 0) { return FUNC_TONIC; }
+  if (degree == 4) { return FUNC_TONIC; }  // iii (E in C)
+  if (degree == 9) { return FUNC_TONIC; }  // vi (A in C)
+
+  // ii, IV = subdominant/predominant
+  if (degree == 2) { return FUNC_PREDOMINANT; }  // ii
+  if (degree == 5) { return FUNC_SUBDOMINANT; }  // IV
+
+  // V, vii° = dominant
+  if (degree == 7) { return FUNC_DOMINANT; }  // V
+  if (degree == 11) { return FUNC_DOMINANT; } // vii°
+
+  return FUNC_TONIC;  // Default
+}
+
+// Determine chord function in minor key
+fn minorChordFunction(degree, quality) {
+  // i, III, VI = tonic
+  if (degree == 0) { return FUNC_TONIC; }
+  if (degree == 3) { return FUNC_TONIC; }  // III
+  if (degree == 8) { return FUNC_TONIC; }  // VI
+
+  // ii°, iv = predominant
+  if (degree == 2) { return FUNC_PREDOMINANT; }
+  if (degree == 5) { return FUNC_SUBDOMINANT; }
+
+  // V, vii° = dominant
+  if (degree == 7) { return FUNC_DOMINANT; }
+  if (degree == 11) { return FUNC_DOMINANT; }
+
+  return FUNC_TONIC;
+}
+
+// Get Roman numeral for chord
+export fn romanNumeral(chordInfo, key) {
+  const degree = scaleDegree(chordInfo.root, key.root);
+
+  const majorNumerals = ["I", "bII", "II", "bIII", "III", "IV", "#IV", "V", "bVI", "VI", "bVII", "VII"];
+  const minorNumerals = ["i", "bii", "ii", "biii", "iii", "iv", "#iv", "v", "bvi", "vi", "bvii", "vii"];
+
+  let numeral = majorNumerals[degree];
+
+  // Lowercase for minor chords
+  if (chordInfo.quality == "minor" || chordInfo.quality == "minor7" ||
+      chordInfo.quality == "diminished" || chordInfo.quality == "diminished7" ||
+      chordInfo.quality == "halfDiminished7") {
+    numeral = minorNumerals[degree];
+  }
+
+  // Add quality suffix
+  if (chordInfo.quality == "diminished") {
+    numeral = numeral + "°";
+  } else if (chordInfo.quality == "augmented") {
+    numeral = numeral + "+";
+  } else if (chordInfo.quality == "dominant7") {
+    numeral = numeral + "7";
+  } else if (chordInfo.quality == "major7" || chordInfo.quality == "majorMajor7") {
+    numeral = numeral + "maj7";
+  } else if (chordInfo.quality == "minor7") {
+    numeral = numeral + "7";
+  } else if (chordInfo.quality == "halfDiminished7") {
+    numeral = numeral + "ø7";
+  } else if (chordInfo.quality == "diminished7") {
+    numeral = numeral + "°7";
+  }
+
+  return numeral;
+}
+
+// Analyze functional harmony of progression
+export fn functionalAnalysis(chords, key) {
+  let analysis = [];
+
+  for (chord in chords) {
+    const info = identifyChord(chord);
+    if (info == null) {
+      analysis[analysis.length] = { chord: chord, function: null, numeral: "?" };
+      continue;
+    }
+
+    const degree = scaleDegree(info.root, key.root);
+    let func = null;
+
+    if (key.mode == "major") {
+      func = majorChordFunction(degree, info.quality);
+    } else {
+      func = minorChordFunction(degree, info.quality);
+    }
+
+    analysis[analysis.length] = {
+      chord: chord,
+      chordInfo: info,
+      symbol: chordSymbol(info),
+      numeral: romanNumeral(info, key),
+      function: func,
+      degree: degree
+    };
+  }
+
+  return analysis;
+}
+
+// ============================================
+// Tension Analysis
+// ============================================
+
+// Calculate dissonance score for a chord (0 = consonant, 1 = very dissonant)
+export fn calculateDissonance(chord) {
+  if (chord.length < 2) {
+    return 0;
+  }
+
+  let total = 0;
+  let count = 0;
+
+  // Dissonance values for intervals (in semitones mod 12)
+  const dissonanceValues = [0, 1, 0.8, 0.2, 0.15, 0.1, 0.9, 0.05, 0.2, 0.15, 0.7, 0.85];
+
+  for (i in 0..(chord.length - 2)) {
+    for (j in (i + 1)..(chord.length - 1)) {
+      const interval = (chord[j] - chord[i]) % 12;
+      let absInterval = interval;
+      if (absInterval < 0) {
+        absInterval = absInterval + 12;
+      }
+      total = total + dissonanceValues[absInterval];
+      count = count + 1;
+    }
+  }
+
+  if (count == 0) {
+    return 0;
+  }
+  return total / count;
+}
+
+// Analyze tension curve for progression
+export fn analyzeTension(chords) {
+  let tensions = [];
+  for (chord in chords) {
+    const info = identifyChord(chord);
+    let tension = calculateDissonance(chord);
+
+    // Dominant function adds tension
+    if (info != null && (info.quality == "dominant7" || info.quality == "diminished7")) {
+      tension = tension + 0.2;
+    }
+
+    tensions[tensions.length] = tension;
+  }
+  return tensions;
+}
+
+// ============================================
+// Voice Leading
+// ============================================
+
+// Calculate voice leading distance between two chords
+export fn voiceLeadingDistance(chord1, chord2) {
+  let total = 0;
+  const len = chord1.length;
+
+  if (len != chord2.length) {
+    return 999;  // Different voice count
+  }
+
+  for (i in 0..(len - 1)) {
+    let diff = chord2[i] - chord1[i];
+    if (diff < 0) {
+      diff = -diff;
+    }
+    total = total + diff;
+  }
+
+  return total;
+}
+
+// Find optimal voice leading between chord pitch classes
+export fn optimalVoiceLead(fromChord, toPitchClasses, voiceCount) {
+  // Generate all possible voicings of target within an octave of from
+  let best = null;
+  let bestDist = 999;
+
+  fn generateVoicings(pcs, baseOctave, count) {
+    if (count == 1) {
+      let result = [];
+      for (pc in pcs) {
+        result[result.length] = [baseOctave * 12 + pc];
+        result[result.length] = [(baseOctave + 1) * 12 + pc];
+      }
+      return result;
+    }
+
+    let result = [];
+    const subVoicings = generateVoicings(pcs, baseOctave, count - 1);
+
+    for (pc in pcs) {
+      for (sub in subVoicings) {
+        const note1 = baseOctave * 12 + pc;
+        const note2 = (baseOctave + 1) * 12 + pc;
+
+        let v1 = [note1];
+        let v2 = [note2];
+        for (s in sub) {
+          v1[v1.length] = s;
+          v2[v2.length] = s;
+        }
+        result[result.length] = v1;
+        result[result.length] = v2;
+      }
+    }
+
+    return result;
+  }
+
+  // Get base octave from fromChord
+  let avgOctave = 0;
+  for (note in fromChord) {
+    avgOctave = avgOctave + (note / 12);
+  }
+  avgOctave = avgOctave / fromChord.length;
+  const baseOct = avgOctave - 0.5;
+
+  // Simple approach: move each voice to nearest target pitch class
+  let result = [];
+  for (i in 0..(voiceCount - 1)) {
+    const fromNote = fromChord[i];
+    let bestNote = fromNote;
+    let bestMove = 12;
+
+    for (pc in toPitchClasses) {
+      // Try octave above and below
+      for (oct in -1..1) {
+        const candidate = (fromNote / 12) * 12 + oct * 12 + pc;
+        let move = candidate - fromNote;
+        if (move < 0) { move = -move; }
+        if (move < bestMove) {
+          bestMove = move;
+          bestNote = candidate;
+        }
+      }
+    }
+    result[i] = bestNote;
+  }
+
+  return result;
+}
+
+// Check for parallel fifths
+export fn hasParallelFifths(chord1, chord2) {
+  const len = chord1.length;
+  if (len < 2) { return false; }
+
+  for (i in 0..(len - 2)) {
+    for (j in (i + 1)..(len - 1)) {
+      const int1 = (chord1[j] - chord1[i]) % 12;
+      const int2 = (chord2[j] - chord2[i]) % 12;
+
+      // Both are perfect fifths and both voices move in same direction
+      if (int1 == 7 && int2 == 7) {
+        const motion1 = chord2[i] - chord1[i];
+        const motion2 = chord2[j] - chord1[j];
+        if (motion1 != 0 && motion2 != 0 && motion1 * motion2 > 0) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Check for parallel octaves
+export fn hasParallelOctaves(chord1, chord2) {
+  const len = chord1.length;
+  if (len < 2) { return false; }
+
+  for (i in 0..(len - 2)) {
+    for (j in (i + 1)..(len - 1)) {
+      const int1 = (chord1[j] - chord1[i]) % 12;
+      const int2 = (chord2[j] - chord2[i]) % 12;
+
+      if (int1 == 0 && int2 == 0) {
+        const motion1 = chord2[i] - chord1[i];
+        const motion2 = chord2[j] - chord1[j];
+        if (motion1 != 0 && motion2 != 0 && motion1 * motion2 > 0) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Voice leading quality score (0-1, higher is better)
+export fn voiceLeadingQuality(progression) {
+  if (progression.length < 2) {
+    return 1.0;
+  }
+
+  let score = 1.0;
+
+  for (i in 1..(progression.length - 1)) {
+    const prev = progression[i - 1];
+    const curr = progression[i];
+
+    // Penalize parallel fifths
+    if (hasParallelFifths(prev, curr)) {
+      score = score - 0.2;
+    }
+
+    // Penalize parallel octaves
+    if (hasParallelOctaves(prev, curr)) {
+      score = score - 0.2;
+    }
+
+    // Penalize large leaps
+    const dist = voiceLeadingDistance(prev, curr);
+    if (dist > curr.length * 4) {
+      score = score - 0.1;
+    }
+  }
+
+  if (score < 0) { score = 0; }
+  return score;
+}
+
+// ============================================
+// Common Progressions
+// ============================================
+
+// Standard jazz ii-V-I
+export fn iiVI(key) {
+  const root = key.root;
+  if (key.mode == "major") {
+    return [
+      [root + 2, root + 5, root + 9, root + 12],  // ii7
+      [root + 7, root + 11, root + 14, root + 17], // V7
+      [root, root + 4, root + 7, root + 11]        // Imaj7
+    ];
+  } else {
+    return [
+      [root + 2, root + 5, root + 8, root + 12],  // iiø7
+      [root + 7, root + 11, root + 14, root + 17], // V7
+      [root, root + 3, root + 7, root + 10]        // i7
+    ];
+  }
+}
+
+// Circle of fifths progression
+export fn circleOfFifths(startRoot, steps, quality) {
+  let progression = [];
+  let current = startRoot;
+
+  for (i in 0..(steps - 1)) {
+    if (quality == "major") {
+      progression[i] = [current, current + 4, current + 7];
+    } else if (quality == "minor") {
+      progression[i] = [current, current + 3, current + 7];
+    } else if (quality == "dominant7") {
+      progression[i] = [current, current + 4, current + 7, current + 10];
+    }
+    current = (current + 5) % 12;  // Move down a fifth (up a fourth)
+  }
+
+  return progression;
+}
+
+// Analyze cadence type
+export fn analyzeCadence(lastTwoChords, key) {
+  if (lastTwoChords.length < 2) {
+    return "incomplete";
+  }
+
+  const first = identifyChord(lastTwoChords[0]);
+  const second = identifyChord(lastTwoChords[1]);
+
+  if (first == null || second == null) {
+    return "unknown";
+  }
+
+  const firstDegree = scaleDegree(first.root, key.root);
+  const secondDegree = scaleDegree(second.root, key.root);
+
+  // Authentic cadence: V -> I
+  if (firstDegree == 7 && secondDegree == 0) {
+    if (first.quality == "dominant7" || first.quality == "major") {
+      return "authentic";
+    }
+  }
+
+  // Plagal cadence: IV -> I
+  if (firstDegree == 5 && secondDegree == 0) {
+    return "plagal";
+  }
+
+  // Half cadence: ? -> V
+  if (secondDegree == 7) {
+    return "half";
+  }
+
+  // Deceptive cadence: V -> vi
+  if (firstDegree == 7 && secondDegree == 9) {
+    return "deceptive";
+  }
+
+  return "other";
+}
