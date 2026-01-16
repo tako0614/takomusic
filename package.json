@@ -47,7 +47,6 @@
     "ajv": "^8.12.0",
     "kuroshiro": "^1.2.0",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
-    "lib0": "^0.2.99",
     "toml": "^3.0.0",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.11"

@@ -1,10 +1,10 @@
 # TakoMusic v7.0 Roadmap
 
-> ì‹Èƒvƒ‰ƒbƒgƒtƒH[ƒ€‚ÌŠ®‘S”Å
+> ä½œæ›²ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ ã®å®Œå…¨ç‰ˆ
 
 ## Overview
 
-**Goal**: "Š®àø‚È—‘z‚Ìì‹ÈŒ¾Œê" + Webì‹Èƒvƒ‰ƒbƒgƒtƒH[ƒ€
+**Goal**: "å®Œç’§ãªç†æƒ³ã®ä½œæ›²è¨€èª" + Webä½œæ›²ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ 
 
 **Target**:
 - Platform: Web + VSCode extension
@@ -13,70 +13,70 @@
 
 ---
 
-## Part 1: Œ¾Œê‹@”\‹­‰»
+## Part 1: è¨€èªæ©Ÿèƒ½å¼·åŒ–
 
-### 1.1 V‚µ‚¢\•¶
+### 1.1 æ–°ã—ã„æ§‹æ–‡
 
 ```mf
-// ƒ}ƒNƒƒVƒXƒeƒ€
+// ãƒã‚¯ãƒ­ã‚·ã‚¹ãƒ†ãƒ 
 macro pattern!(notes, dur) {
   clip { for (p in notes) { note(p, dur); } }
 }
 
-// ƒŠƒXƒg“à•ï•\‹L
+// ãƒªã‚¹ãƒˆå†…åŒ…è¡¨è¨˜
 const notes = [note(p, q) for p in scale if p > C4];
 
-// §–ñ®
+// åˆ¶ç´„å¼
 fn compose(pitches: [Pitch] where len >= 2) -> Clip { ... }
 
-// ƒpƒCƒvƒ‰ƒCƒ“‹­‰»
+// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³å¼·åŒ–
 melody |?> (mode == "jazz") swing(_, e, 0.5);
 
-// ƒpƒ^[ƒ“ƒ}ƒbƒ`ƒ“ƒO‹­‰»
+// ãƒ‘ã‚¿ãƒ¼ãƒ³ãƒãƒƒãƒãƒ³ã‚°å¼·åŒ–
 if let { pitch, dur } = event { ... }
 ```
 
-### 1.2 Œ^ƒVƒXƒeƒ€Šg’£
+### 1.2 å‹ã‚·ã‚¹ãƒ†ãƒ æ‹¡å¼µ
 
 ```mf
-// ƒGƒtƒFƒNƒgŒ^
+// ã‚¨ãƒ•ã‚§ã‚¯ãƒˆå‹
 fn generateMelody(seed: Int) -> Clip effects [Random] { ... }
 
-// ƒgƒŒƒCƒg
+// ãƒˆãƒ¬ã‚¤ãƒˆ
 trait Transposable {
   fn transpose(self, semitones: Int) -> Self;
 }
 
-// ’PˆÊŒ^
+// å˜ä½å‹
 type BPM = Float<tempo>;
 type Cents = Float<pitch_offset>;
 
-// ˆË‘¶Œ^ (lite)
+// ä¾å­˜å‹ (lite)
 type FixedClip(len: Dur) = Clip where length(_) == len;
 ```
 
-### 1.3 V‚µ‚¢•W€ƒ‰ƒCƒuƒ‰ƒŠ
+### 1.3 æ–°ã—ã„æ¨™æº–ãƒ©ã‚¤ãƒ–ãƒ©ãƒª
 
-| ƒ‚ƒWƒ…[ƒ‹ | ‹@”\ |
+| ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ« | æ©Ÿèƒ½ |
 |-----------|------|
-| `std:harmony` | ˜aº•ªÍAƒL[ŒŸoA‹@”\˜aº |
-| `std:melody` | ù—¥•ªÍA—ÖŠsAƒ‚ƒ`[ƒtŒŸo |
-| `std:markov` | ƒ}ƒ‹ƒRƒt˜A½A“Œvƒ‚ƒfƒ‹ |
-| `std:structure` | Œ`®•ªÍAƒZƒOƒƒ“ƒe[ƒVƒ‡ƒ“ |
-| `std:constraint` | CSPƒ\ƒ‹ƒo[A‘ÎˆÊ–@§–ñ |
-| `std:autogen` | ©“®¶¬ (‘Îù—¥Aƒx[ƒXA”º‘t) |
+| `std:harmony` | å’Œå£°åˆ†æã€ã‚­ãƒ¼æ¤œå‡ºã€æ©Ÿèƒ½å’Œå£° |
+| `std:melody` | æ—‹å¾‹åˆ†æã€è¼ªéƒ­ã€ãƒ¢ãƒãƒ¼ãƒ•æ¤œå‡º |
+| `std:markov` | ãƒãƒ«ã‚³ãƒ•é€£é–ã€çµ±è¨ˆãƒ¢ãƒ‡ãƒ« |
+| `std:structure` | å½¢å¼åˆ†æã€ã‚»ã‚°ãƒ¡ãƒ³ãƒ†ãƒ¼ã‚·ãƒ§ãƒ³ |
+| `std:constraint` | CSPã‚½ãƒ«ãƒãƒ¼ã€å¯¾ä½æ³•åˆ¶ç´„ |
+| `std:autogen` | è‡ªå‹•ç”Ÿæˆ (å¯¾æ—‹å¾‹ã€ãƒ™ãƒ¼ã‚¹ã€ä¼´å¥) |
 
-### 1.4 ŠJ”­Ò‘ÌŒ±
+### 1.4 é–‹ç™ºè€…ä½“é¨“
 
-- **ƒŠƒbƒ`‚ÈƒGƒ‰[ƒƒbƒZ[ƒW**: ƒ\[ƒXƒR[ƒh•\¦A"‚à‚µ‚©‚µ‚Ä?" ’ñˆÄ
-- **ƒfƒoƒbƒK**: ƒuƒŒ[ƒNƒ|ƒCƒ“ƒgAƒXƒeƒbƒvÀsA’lŒŸ¸
-- **LSP‹­‰»**: ƒR[ƒhƒAƒNƒVƒ‡ƒ“AƒZƒ}ƒ“ƒeƒBƒbƒNƒnƒCƒ‰ƒCƒgAƒŠƒl[ƒ€
+- **ãƒªãƒƒãƒãªã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸**: ã‚½ãƒ¼ã‚¹ã‚³ãƒ¼ãƒ‰è¡¨ç¤ºã€"ã‚‚ã—ã‹ã—ã¦?" ææ¡ˆ
+- **ãƒ‡ãƒãƒƒã‚¬**: ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã€ã‚¹ãƒ†ãƒƒãƒ—å®Ÿè¡Œã€å€¤æ¤œæŸ»
+- **LSPå¼·åŒ–**: ã‚³ãƒ¼ãƒ‰ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã€ã‚»ãƒãƒ³ãƒ†ã‚£ãƒƒã‚¯ãƒã‚¤ãƒ©ã‚¤ãƒˆã€ãƒªãƒãƒ¼ãƒ 
 
 ---
 
-## Part 2: Webƒvƒ‰ƒbƒgƒtƒH[ƒ€
+## Part 2: Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ 
 
-### 2.1 ‹ZpƒXƒ^ƒbƒN
+### 2.1 æŠ€è¡“ã‚¹ã‚¿ãƒƒã‚¯
 
 ```
 Frontend:  Solid.js + Monaco Editor + Tailwind CSS + Web Audio API
@@ -85,7 +85,7 @@ Storage:   IndexedDB (client)
 Auth:      Local username (optional)
 ```
 
-### 2.2 ƒf[ƒ^ƒx[ƒXƒXƒL[ƒ}
+### 2.2 ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã‚¹ã‚­ãƒ¼ãƒ
 
 ```sql
 projects (id, user, name, code, updated_at)
@@ -119,79 +119,78 @@ No billing. All features are free.
 
 ---
 
-## Part 4: À‘•ƒtƒF[ƒY
+## Part 4: å®Ÿè£…ãƒ•ã‚§ãƒ¼ã‚º
 
-### Phase 1: v6Šî”Õ (4-6TŠÔ) [x] Š®—¹
-1. [x] `std:harmony` ƒ‚ƒWƒ…[ƒ‹
-2. [x] `std:melody` ƒ‚ƒWƒ…[ƒ‹
-3. [x] `std:markov` ƒ‚ƒWƒ…[ƒ‹
-4. [x] `std:structure` ƒ‚ƒWƒ…[ƒ‹
-5. [x] `std:constraint` ƒ‚ƒWƒ…[ƒ‹
-6. [x] `std:autogen` ƒ‚ƒWƒ…[ƒ‹
-7. [x] ƒGƒ‰[ƒƒbƒZ[ƒW‹­‰»
-8. [x] Šî–{Webƒvƒ‰ƒbƒgƒtƒH[ƒ€ (”FØ, ƒvƒƒWƒFƒNƒg•Û‘¶)
+### Phase 1: v7åŸºç›¤ (4-6é€±é–“) [x] å®Œäº†
+1. [x] `std:harmony` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+2. [x] `std:melody` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+3. [x] `std:markov` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+4. [x] `std:structure` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+5. [x] `std:constraint` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+6. [x] `std:autogen` ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+7. [x] ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸å¼·åŒ–
+8. [x] åŸºæœ¬Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ  (èªè¨¼, ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆä¿å­˜)
 
-### Phase 2: •ªÍE¶¬ (4-6TŠÔ) [x] Š®—¹
-1. [x] ƒI[ƒfƒBƒIÄ¶ (Web Audio + Tone.js)
-2. [x] ƒGƒNƒXƒ|[ƒg‰ü‘P (MIDIƒ_ƒEƒ“ƒ[ƒh)
-3. [x] LSPƒR[ƒhƒAƒNƒVƒ‡ƒ“EƒtƒH[ƒ}ƒbƒg
+### Phase 2: åˆ†æãƒ»ç”Ÿæˆ (4-6é€±é–“) [x] å®Œäº†
+1. [x] ã‚ªãƒ¼ãƒ‡ã‚£ã‚ªå†ç”Ÿ (Web Audio)
+2. [x] ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆæ”¹å–„ (MIDIãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰)
+3. [x] LSPã‚³ãƒ¼ãƒ‰ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ãƒ»ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆ
 
 ### Phase 3: Platform integration (4-6 weeks) [x] Done
 1. [x] Web platform: basic auth, project save/load, playback, MIDI/WAV download
 2. [x] IndexedDB local storage
 
-### Phase 4: ƒvƒŒƒ~ƒAƒ€‹@”\ (4-6TŠÔ) [x] Š®—¹
-1. [x] ƒI[ƒfƒBƒIƒGƒNƒXƒ|[ƒg (ƒuƒ‰ƒEƒU‡¬)
+### Phase 4: ãƒ—ãƒ¬ãƒŸã‚¢ãƒ æ©Ÿèƒ½ (4-6é€±é–“) [x] å®Œäº†
+1. [x] ã‚ªãƒ¼ãƒ‡ã‚£ã‚ªã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆ (ãƒ–ãƒ©ã‚¦ã‚¶åˆæˆ)
 
-### Phase 5: ƒ|ƒŠƒbƒVƒ… (2-4TŠÔ) [x] Š®—¹
-1. [x] ƒpƒtƒH[ƒ}ƒ“ƒXÅ“K‰»
-2. [x] ƒhƒLƒ…ƒƒ“ƒgEƒ`ƒ…[ƒgƒŠƒAƒ‹
-3. [x] ƒeƒXƒgƒJƒoƒŒƒbƒW
-4. [x] ƒ}[ƒPƒbƒgƒvƒŒƒCƒXŒöŠJ
+### Phase 5: ãƒãƒªãƒƒã‚·ãƒ¥ (2-4é€±é–“) [x] å®Œäº†
+1. [x] ãƒ‘ãƒ•ã‚©ãƒ¼ãƒãƒ³ã‚¹æœ€é©åŒ–
+2. [x] ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆãƒ»ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«
+3. [x] ãƒ†ã‚¹ãƒˆã‚«ãƒãƒ¬ãƒƒã‚¸
+4. [x] ãƒãƒ¼ã‚±ãƒƒãƒˆãƒ—ãƒ¬ã‚¤ã‚¹å…¬é–‹
 
 ---
 
-## d—vƒtƒ@ƒCƒ‹
+## é‡è¦ãƒ•ã‚¡ã‚¤ãƒ«
 
-### Œ¾ŒêƒRƒA
-- `src/ast.ts` - ƒ}ƒNƒA§–ñAƒgƒŒƒCƒg‚ÌASTƒm[ƒh’Ç‰Á
-- `src/typecheck.ts` - ƒGƒtƒFƒNƒgAƒgƒŒƒCƒgAˆË‘¶Œ^
-- `src/evaluator.ts` - V\•¶‚Ì•]‰¿
-- `src/errors.ts` - ƒŠƒbƒ`‚ÈƒGƒ‰[ƒtƒH[ƒ}ƒbƒg
+### è¨€èªã‚³ã‚¢
+- `src/ast.ts` - ãƒã‚¯ãƒ­ã€åˆ¶ç´„ã€ãƒˆãƒ¬ã‚¤ãƒˆã®ASTãƒãƒ¼ãƒ‰è¿½åŠ 
+- `src/typecheck.ts` - ã‚¨ãƒ•ã‚§ã‚¯ãƒˆã€ãƒˆãƒ¬ã‚¤ãƒˆã€ä¾å­˜å‹
+- `src/evaluator.ts` - æ–°æ§‹æ–‡ã®è©•ä¾¡
+- `src/errors.ts` - ãƒªãƒƒãƒãªã‚¨ãƒ©ãƒ¼ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆ
 
-### •W€ƒ‰ƒCƒuƒ‰ƒŠ
-- `lib/harmony.mf` - ˜aº•ªÍ [x]
-- `lib/melody.mf` - ù—¥•ªÍ [x]
+### æ¨™æº–ãƒ©ã‚¤ãƒ–ãƒ©ãƒª
+- `lib/harmony.mf` - å’Œå£°åˆ†æ [x]
+- `lib/melody.mf` - æ—‹å¾‹åˆ†æ [x]
 - `lib/markov.mf` - Markov chain helpers [x]
-- `lib/algorithm.mf` - Markov chainÀ‘•‚ÌŒ»ZŠ
-- `lib/structure.mf` - \‘¢•ªÍ [x]
-- `lib/constraint.mf` - §–ñƒ\ƒ‹ƒo[ [x]
-- `lib/autogen.mf` - ©“®¶¬ [x]
+- `lib/algorithm.mf` - Markov chainå®Ÿè£…ã®ç¾ä½æ‰€
+- `lib/structure.mf` - æ§‹é€ åˆ†æ [x]
+- `lib/constraint.mf` - åˆ¶ç´„ã‚½ãƒ«ãƒãƒ¼ [x]
+- `lib/autogen.mf` - è‡ªå‹•ç”Ÿæˆ [x]
 
-### Webƒvƒ‰ƒbƒgƒtƒH[ƒ€
-- `website/src/components/Editor/` - ‹­‰»ƒGƒfƒBƒ^ [x]
-- `website/src/stores/` - ó‘ÔŠÇ— [x]
-- `website/src/stores/session.ts` - ƒ[ƒJƒ‹”FØ
+### Webãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ 
+- `website/src/components/Editor/` - å¼·åŒ–ã‚¨ãƒ‡ã‚£ã‚¿ [x]
+- `website/src/stores/` - çŠ¶æ…‹ç®¡ç† [x]
+- `website/src/stores/session.ts` - ãƒ­ãƒ¼ã‚«ãƒ«èªè¨¼
 - `website/src/stores/projects.ts` - IndexedDB project storage [x]
-- `website/src/lib/audioPlayer.ts` - Ä¶ƒƒWƒbƒN
-- `website/src/lib/midiExport.ts` - MIDIƒ_ƒEƒ“ƒ[ƒh [x]
-- `website/src/lib/audioExport.ts` - WAVƒ_ƒEƒ“ƒ[ƒh [x]
-- `website/src/lib/compiler.ts` - ƒRƒ“ƒpƒCƒ‹˜AŒg
+- `website/src/lib/audioPlayer.ts` - å†ç”Ÿãƒ­ã‚¸ãƒƒã‚¯
+- `website/src/lib/midiExport.ts` - MIDIãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ [x]
+- `website/src/lib/audioExport.ts` - WAVãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ [x]
+- `website/src/lib/compiler.ts` - ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«é€£æº
 
 ### Docs
 - `docs/TUTORIAL_V7.md` - V7 tutorial [x]
 
-### VSCodeŠg’£
-- `vscode-extension/src/extension.ts` - ƒGƒ“ƒgƒŠ[ƒ|ƒCƒ“ƒg
+### VSCodeæ‹¡å¼µ
+- `vscode-extension/src/extension.ts` - ã‚¨ãƒ³ãƒˆãƒªãƒ¼ãƒã‚¤ãƒ³ãƒˆ
 - `vscode-extension/README.md` - Marketplace README [x]
 - `vscode-extension/CHANGELOG.md` - Marketplace changelog [x]
-- `vscode-extension/src/server.ts` - LSPƒNƒ‰ƒCƒAƒ“ƒg‹N“®
-- `src/lsp/server.ts` - LSPƒT[ƒo
-- `vscode-extension/src/playbackPanel.ts` - Ä¶ƒvƒŒƒrƒ…[ [x]
+- `vscode-extension/src/server.ts` - LSPã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆèµ·å‹•
+- `src/lsp/server.ts` - LSPã‚µãƒ¼ãƒ
 
 ---
 
-## ŒŸØ•û–@
+## æ¤œè¨¼æ–¹æ³•
 
 1. **Language**: `npm run test` - all tests pass
 2. **Web**: sign-in, project save/load (IndexedDB), playback, MIDI/WAV download
@@ -199,7 +198,7 @@ No billing. All features are free.
 ---
 
 *Last updated: 2026-01-16*
-*Current version: v6.0.0*
+*Current version: v7.0.0*
 *Target version: v7.0.0*
 
 
