@@ -1,8 +1,8 @@
 {
   "name": "takomusic",
   "displayName": "TakoMusic",
-  "description": "Language support for TakoMusic v4 (.mf files)",
-  "version": "4.2.1",
+  "description": "Language support for TakoMusic v7 (.mf files)",
+  "version": "7.0.0",
   "publisher": "tako0614",
   "icon": "icon.png",
   "engines": {

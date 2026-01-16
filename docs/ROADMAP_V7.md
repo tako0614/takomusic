@@ -108,7 +108,7 @@ No billing. All features are free.
 ### 3.1 LSP Features
 
 - **Code actions**: missing import fixes, type error hints
-- **Formatting**: integrate existing `V4Formatter`
+- **Formatting**: integrate existing `Formatter`
 - **Semantic tokens**: pitch/duration/position highlight
 - **Rename symbols**: safe refactoring across files
 

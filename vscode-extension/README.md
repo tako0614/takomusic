@@ -1,6 +1,6 @@
-# TakoMusic VSCode Extension
+# TakoMusic VSCode Extension (v7)
 
-Language support for `.mf` files:
+Language support for TakoMusic v7 `.mf` files:
 
 - Syntax highlighting
 - LSP diagnostics, hover, completion

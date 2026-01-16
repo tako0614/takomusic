@@ -1,13 +1,22 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to TakoMusic are documented in this file.
+
+## [7.0.0] - 2026-01-17
+
+### Highlights
+
+- Web platform runs browser-only with IndexedDB storage.
+- Added in-browser WAV export and kept MIDI export.
+- Removed AI, billing, and server-side dependencies from the web stack.
+- Updated v7 docs and VSCode extension metadata.
 
 ## [4.0.0] - 2026-01-01
 
 ### Breaking Changes
 
 - **Versioning**: Package version updated from 3.x to 4.0.0
-- **Class Naming**: Internal classes renamed (V3Lexer → V4Lexer, V3Parser → V4Parser, etc.)
+- **Class Naming**: Internal classes renamed (V3Lexer -> V4Lexer, V3Parser -> V4Parser, etc.)
 - **IR Version**: Output IR uses `irVersion: 4`
 
 ### Language Features (v4)
@@ -236,3 +245,4 @@ All v4 language features are now stable:
 - v3 specification and docs refreshed
 - v3 examples and profile filenames aligned to `.mf`
 - Website copy updated for the v3 pipeline and std modules
+

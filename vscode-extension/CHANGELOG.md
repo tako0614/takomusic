@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.0.0
+
+- Align extension metadata with the v7 release.
+- LSP-only workflow (AI, playback preview, and sync remain removed).
+
 ## 4.2.1
 
 - Remove AI, playback preview, and sync from the extension.
