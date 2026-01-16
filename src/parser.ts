@@ -22,9 +22,13 @@ import type {
   ReturnStmt,
   IfStmt,
   ForStmt,
+  WhileStmt,
+  BreakStmt,
+  ContinueStmt,
   AssignmentStmt,
   ExprStmt,
   Expr,
+  ArrowExpr,
   NumberLiteral,
   StringLiteral,
   TemplateLiteral,
@@ -145,8 +149,11 @@ export class V4Parser {
         case TokenType.TYPE:
         case TokenType.ENUM:
         case TokenType.FOR:
+        case TokenType.WHILE:
         case TokenType.IF:
         case TokenType.RETURN:
+        case TokenType.BREAK:
+        case TokenType.CONTINUE:
         case TokenType.SCORE:
         case TokenType.CLIP:
         case TokenType.TRACK:
@@ -327,15 +334,23 @@ export class V4Parser {
 
     this.expect(TokenType.LPAREN, "Expected '('");
     const params: Param[] = [];
+    let hasSeenDefault = false;
     if (!this.check(TokenType.RPAREN)) {
       do {
         const paramPos = this.peek().position;
         const paramName = this.expect(TokenType.IDENT, 'Expected parameter').value as string;
         let type: TypeRef | undefined;
+        let defaultValue: Expr | undefined;
         if (this.match(TokenType.COLON)) {
           type = this.parseTypeRef();
         }
-        params.push({ kind: 'Param', position: paramPos, name: paramName, type });
+        if (this.match(TokenType.EQ)) {
+          defaultValue = this.parseExpression();
+          hasSeenDefault = true;
+        } else if (hasSeenDefault) {
+          throw this.error('Required parameter cannot follow optional parameter', paramPos);
+        }
+        params.push({ kind: 'Param', position: paramPos, name: paramName, type, defaultValue });
       } while (this.match(TokenType.COMMA));
     }
     this.expect(TokenType.RPAREN, "Expected ')'");
@@ -448,17 +463,52 @@ export class V4Parser {
     };
   }
 
-  // Parse either a parenthesized expression (expr) or a tuple literal (expr, expr, ...)
+  // Parse either a parenthesized expression (expr), a tuple literal (expr, expr, ...), or arrow function params
   private parseParenOrTuple(): Expr {
     const pos = this.peek().position;
     this.expect(TokenType.LPAREN, "Expected '('");
 
-    // Empty parens - error
+    // Empty parens - check for arrow function () => expr
     if (this.check(TokenType.RPAREN)) {
+      this.advance(); // consume )
+      if (this.match(TokenType.FATARROW)) {
+        // Empty parameter arrow function
+        const body = this.parseArrowBody();
+        return {
+          kind: 'ArrowExpr',
+          position: pos,
+          params: [],
+          body,
+        } as ArrowExpr;
+      }
       throw this.error('Empty parentheses are not allowed', pos);
     }
 
-    // Parse the first expression
+    // Try to parse as potential arrow function parameters
+    // Save position in case we need to backtrack
+    const startCurrent = this.current;
+    const potentialParams = this.tryParseArrowParams();
+
+    if (potentialParams !== null && this.check(TokenType.RPAREN)) {
+      this.advance(); // consume )
+      if (this.match(TokenType.FATARROW)) {
+        // It's an arrow function!
+        const body = this.parseArrowBody();
+        return {
+          kind: 'ArrowExpr',
+          position: pos,
+          params: potentialParams,
+          body,
+        } as ArrowExpr;
+      }
+      // Not an arrow function, backtrack
+      this.current = startCurrent;
+    } else if (potentialParams !== null) {
+      // Failed to match ), backtrack
+      this.current = startCurrent;
+    }
+
+    // Parse as regular expression(s)
     const first = this.parseExpression();
 
     // Check if this is a tuple (has comma) or just a grouped expression
@@ -486,6 +536,69 @@ export class V4Parser {
     // Just a grouped expression
     this.expect(TokenType.RPAREN, "Expected ')'");
     return first;
+  }
+
+  // Try to parse as arrow function parameters (returns null if not valid param syntax)
+  private tryParseArrowParams(): Param[] | null {
+    const params: Param[] = [];
+    let hasSeenDefault = false;
+
+    do {
+      // Must be an identifier
+      if (!this.check(TokenType.IDENT)) {
+        return null;
+      }
+      const paramPos = this.peek().position;
+      const paramName = this.advance().value as string;
+      let type: TypeRef | undefined;
+      let defaultValue: Expr | undefined;
+
+      // Optional type annotation
+      if (this.match(TokenType.COLON)) {
+        if (!this.check(TokenType.IDENT)) {
+          return null; // Invalid type
+        }
+        type = this.parseTypeRef();
+      }
+
+      // Optional default value
+      if (this.match(TokenType.EQ)) {
+        // Need to be careful parsing default value - stop at comma or rparen
+        defaultValue = this.parseExpression();
+        hasSeenDefault = true;
+      } else if (hasSeenDefault) {
+        return null; // Required param after optional
+      }
+
+      params.push({ kind: 'Param', position: paramPos, name: paramName, type, defaultValue });
+    } while (this.match(TokenType.COMMA));
+
+    return params;
+  }
+
+  // Parse single-parameter arrow function: x => expr
+  private parseArrowFunction(): ArrowExpr {
+    const pos = this.peek().position;
+    const paramName = this.expect(TokenType.IDENT, 'Expected parameter name').value as string;
+    this.expect(TokenType.FATARROW, "Expected '=>'");
+
+    const param: Param = { kind: 'Param', position: pos, name: paramName };
+    const body = this.parseArrowBody();
+
+    return {
+      kind: 'ArrowExpr',
+      position: pos,
+      params: [param],
+      body,
+    };
+  }
+
+  // Parse arrow function body (expression or block)
+  private parseArrowBody(): Expr | Block {
+    if (this.check(TokenType.LBRACE)) {
+      return this.parseBlock();
+    }
+    return this.parseExpression();
   }
 
   private parseTypeRef(): TypeRef {
@@ -546,6 +659,19 @@ export class V4Parser {
     if (this.match(TokenType.FOR)) {
       return this.parseFor();
     }
+    if (this.match(TokenType.WHILE)) {
+      return this.parseWhile();
+    }
+    if (this.match(TokenType.BREAK)) {
+      const pos = this.previous().position;
+      this.expect(TokenType.SEMI, "Expected ';' after break");
+      return { kind: 'BreakStmt', position: pos } as BreakStmt;
+    }
+    if (this.match(TokenType.CONTINUE)) {
+      const pos = this.previous().position;
+      this.expect(TokenType.SEMI, "Expected ';' after continue");
+      return { kind: 'ContinueStmt', position: pos } as ContinueStmt;
+    }
 
     const expr = this.parseExpression();
     if (this.match(TokenType.EQ)) {
@@ -591,6 +717,15 @@ export class V4Parser {
     return { kind: 'ForStmt', position: pos, iterator, iterable, body };
   }
 
+  private parseWhile(): WhileStmt {
+    const pos = this.previous().position;
+    this.expect(TokenType.LPAREN, "Expected '('");
+    const test = this.parseExpression();
+    this.expect(TokenType.RPAREN, "Expected ')'");
+    const body = this.parseBlock();
+    return { kind: 'WhileStmt', position: pos, test, body };
+  }
+
   private parseExpression(): Expr {
     return this.parsePipe();
   }
@@ -620,10 +755,13 @@ export class V4Parser {
   private parseBinary(minPrec: number): Expr {
     let expr = this.parseUnary();
     while (true) {
-      const precedence = this.getPrecedence(this.peek().type);
+      const tokenType = this.peek().type;
+      const precedence = this.getPrecedence(tokenType);
       if (precedence < minPrec) break;
       const opToken = this.advance();
-      const right = this.parseBinary(precedence + 1);
+      // ** is right-associative, all others are left-associative
+      const nextPrec = tokenType === TokenType.STARSTAR ? precedence : precedence + 1;
+      const right = this.parseBinary(nextPrec);
       const node: BinaryExpr = {
         kind: 'BinaryExpr',
         position: opToken.position,
@@ -731,6 +869,10 @@ export class V4Parser {
         } as PosRefLiteral;
       }
       case TokenType.IDENT:
+        // Check for single-parameter arrow function: x => expr
+        if (this.checkNext(TokenType.FATARROW)) {
+          return this.parseArrowFunction();
+        }
         this.advance();
         return { kind: 'Identifier', position: token.position, name: token.value as string } as Identifier;
       case TokenType.LPAREN: {
@@ -1554,7 +1696,7 @@ export class V4Parser {
 
   private getPrecedence(type: TokenType): number {
     // Precedence (high number = binds tighter):
-    // || < && < ?? < == != < < <= > >= < + - < * / % < ..
+    // || < && < ?? < == != < < <= > >= < + - < * / % < ** < ..
     switch (type) {
       case TokenType.OR: return 1;
       case TokenType.AND: return 2;
@@ -1570,7 +1712,8 @@ export class V4Parser {
       case TokenType.STAR:
       case TokenType.SLASH:
       case TokenType.PERCENT: return 7;
-      case TokenType.DOTDOT: return 8;
+      case TokenType.STARSTAR: return 8;  // ** exponentiation (right-associative)
+      case TokenType.DOTDOT: return 9;
       default: return -1;
     }
   }
@@ -1580,6 +1723,7 @@ export class V4Parser {
       case TokenType.PLUS: return '+';
       case TokenType.MINUS: return '-';
       case TokenType.STAR: return '*';
+      case TokenType.STARSTAR: return '**';
       case TokenType.SLASH: return '/';
       case TokenType.PERCENT: return '%';
       case TokenType.EQEQ: return '==';

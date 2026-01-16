@@ -1,0 +1,687 @@
+// std:serial (v5.1)
+// Serialism: twelve-tone technique, tone rows, matrix operations, set theory
+
+import core;
+
+// ============================================
+// Tone Row Creation
+// ============================================
+
+// Create a twelve-tone row from pitch classes (0-11)
+// Validates that all 12 pitch classes are present exactly once
+export fn toneRow(pitchClasses) {
+  // Validate that we have exactly 12 pitch classes
+  if (pitchClasses.length != 12) {
+    return null;  // Invalid row
+  }
+
+  // Check for unique pitch classes
+  let used = [];
+  for (i in 0..11) {
+    used[i] = false;
+  }
+
+  for (pc in pitchClasses) {
+    let normalizedPc = pc % 12;
+    if (normalizedPc < 0) {
+      normalizedPc = normalizedPc + 12;
+    }
+    if (used[normalizedPc]) {
+      return null;  // Duplicate pitch class
+    }
+    used[normalizedPc] = true;
+  }
+
+  return {
+    type: "toneRow",
+    pitchClasses: pitchClasses
+  };
+}
+
+// Create a random twelve-tone row (seeded for reproducibility)
+export fn randomToneRow(seed) {
+  let pcs = [];
+  for (i in 0..11) {
+    pcs[i] = i;
+  }
+
+  // Fisher-Yates shuffle with LCG
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  for (i in 0..10) {
+    let idx = 11 - i;
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    let swapIdx = (rng / 2147483648) * (idx + 1);
+    let j = core.floor(swapIdx);
+
+    // Swap
+    let temp = pcs[idx];
+    pcs[idx] = pcs[j];
+    pcs[j] = temp;
+  }
+
+  return toneRow(pcs);
+}
+
+// ============================================
+// Row Transformations (Prime, Retrograde, Inversion, RI)
+// ============================================
+
+// Get prime form (original row)
+export fn prime(row, transposition) {
+  let trans = transposition;
+  if (trans == null) {
+    trans = 0;
+  }
+
+  let result = [];
+  for (pc in row.pitchClasses) {
+    result[result.length] = (pc + trans) % 12;
+  }
+
+  return {
+    type: "rowForm",
+    form: "P",
+    transposition: trans,
+    pitchClasses: result
+  };
+}
+
+// Get retrograde (reversed row)
+export fn retrograde(row, transposition) {
+  let trans = transposition;
+  if (trans == null) {
+    trans = 0;
+  }
+
+  let result = [];
+  for (i in 0..(row.pitchClasses.length - 1)) {
+    let idx = row.pitchClasses.length - 1 - i;
+    result[result.length] = (row.pitchClasses[idx] + trans) % 12;
+  }
+
+  return {
+    type: "rowForm",
+    form: "R",
+    transposition: trans,
+    pitchClasses: result
+  };
+}
+
+// Get inversion (intervallic mirror)
+export fn inversion(row, transposition) {
+  let trans = transposition;
+  if (trans == null) {
+    trans = 0;
+  }
+
+  let result = [];
+  let first = row.pitchClasses[0];
+
+  for (pc in row.pitchClasses) {
+    let interval = pc - first;
+    let inverted = (first - interval + trans + 24) % 12;
+    result[result.length] = inverted;
+  }
+
+  return {
+    type: "rowForm",
+    form: "I",
+    transposition: trans,
+    pitchClasses: result
+  };
+}
+
+// Get retrograde inversion
+export fn retrogradeInversion(row, transposition) {
+  let inv = inversion(row, transposition);
+  let result = [];
+
+  for (i in 0..(inv.pitchClasses.length - 1)) {
+    let idx = inv.pitchClasses.length - 1 - i;
+    result[result.length] = inv.pitchClasses[idx];
+  }
+
+  return {
+    type: "rowForm",
+    form: "RI",
+    transposition: transposition,
+    pitchClasses: result
+  };
+}
+
+// Short aliases
+export fn P(row, n) { return prime(row, n); }
+export fn R(row, n) { return retrograde(row, n); }
+export fn I(row, n) { return inversion(row, n); }
+export fn RI(row, n) { return retrogradeInversion(row, n); }
+
+// ============================================
+// Twelve-Tone Matrix
+// ============================================
+
+// Generate the complete 12x12 matrix
+export fn matrix(row) {
+  let result = [];
+
+  // First column is the inversion of the row
+  let inversionPcs = [];
+  let first = row.pitchClasses[0];
+  for (pc in row.pitchClasses) {
+    inversionPcs[inversionPcs.length] = (first - (pc - first) + 12) % 12;
+  }
+
+  // Generate each row: transpose prime by inversion amount
+  for (i in 0..11) {
+    let trans = inversionPcs[i];
+    let matrixRow = [];
+    for (pc in row.pitchClasses) {
+      matrixRow[matrixRow.length] = (pc + trans - first + 12) % 12;
+    }
+    result[result.length] = matrixRow;
+  }
+
+  return {
+    type: "matrix",
+    rows: result,
+    originalRow: row
+  };
+}
+
+// Get a specific row form from the matrix
+export fn getRowForm(mat, form, index) {
+  let idx = index % 12;
+  if (idx < 0) {
+    idx = idx + 12;
+  }
+
+  if (form == "P") {
+    return {
+      type: "rowForm",
+      form: "P",
+      transposition: idx,
+      pitchClasses: mat.rows[idx]
+    };
+  }
+
+  if (form == "R") {
+    let reversed = [];
+    for (i in 0..11) {
+      reversed[reversed.length] = mat.rows[idx][11 - i];
+    }
+    return {
+      type: "rowForm",
+      form: "R",
+      transposition: idx,
+      pitchClasses: reversed
+    };
+  }
+
+  if (form == "I") {
+    let col = [];
+    for (i in 0..11) {
+      col[col.length] = mat.rows[i][idx];
+    }
+    return {
+      type: "rowForm",
+      form: "I",
+      transposition: idx,
+      pitchClasses: col
+    };
+  }
+
+  if (form == "RI") {
+    let col = [];
+    for (i in 0..11) {
+      col[col.length] = mat.rows[11 - i][idx];
+    }
+    return {
+      type: "rowForm",
+      form: "RI",
+      transposition: idx,
+      pitchClasses: col
+    };
+  }
+
+  return null;
+}
+
+// ============================================
+// Row Segmentation
+// ============================================
+
+// Split row into segments (e.g., hexachords, tetrachords, trichords)
+export fn segment(row, size) {
+  let segments = [];
+  let current = [];
+
+  for (pc in row.pitchClasses) {
+    current[current.length] = pc;
+    if (current.length == size) {
+      segments[segments.length] = current;
+      current = [];
+    }
+  }
+
+  if (current.length > 0) {
+    segments[segments.length] = current;
+  }
+
+  return segments;
+}
+
+// Get hexachords (6-note segments)
+export fn hexachords(row) {
+  return segment(row, 6);
+}
+
+// Get tetrachords (4-note segments)
+export fn tetrachords(row) {
+  return segment(row, 4);
+}
+
+// Get trichords (3-note segments)
+export fn trichords(row) {
+  return segment(row, 3);
+}
+
+// ============================================
+// Combinatoriality
+// ============================================
+
+// Check if two hexachords are complementary (form the aggregate)
+export fn areComplementary(hex1, hex2) {
+  if (hex1.length != 6 || hex2.length != 6) {
+    return false;
+  }
+
+  let allPcs = [];
+  for (pc in hex1) {
+    allPcs[allPcs.length] = pc;
+  }
+  for (pc in hex2) {
+    allPcs[allPcs.length] = pc;
+  }
+
+  // Check all 12 pitch classes present
+  let used = [];
+  for (i in 0..11) {
+    used[i] = false;
+  }
+
+  for (pc in allPcs) {
+    let normalizedPc = pc % 12;
+    if (normalizedPc < 0) {
+      normalizedPc = normalizedPc + 12;
+    }
+    used[normalizedPc] = true;
+  }
+
+  for (i in 0..11) {
+    if (!used[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Check I-combinatoriality: row's first hexachord + inversion's first hexachord = aggregate
+export fn isICombinatorialAt(row, transposition) {
+  let prime = P(row, 0);
+  let inv = I(row, transposition);
+
+  let hex1 = [];
+  let hex2 = [];
+
+  for (i in 0..5) {
+    hex1[hex1.length] = prime.pitchClasses[i];
+    hex2[hex2.length] = inv.pitchClasses[i];
+  }
+
+  return areComplementary(hex1, hex2);
+}
+
+// Find all I-combinatorial transpositions
+export fn findICombinatorialTranspositions(row) {
+  let result = [];
+  for (t in 0..11) {
+    if (isICombinatorialAt(row, t)) {
+      result[result.length] = t;
+    }
+  }
+  return result;
+}
+
+// Check P-combinatoriality
+export fn isPCombinatorialAt(row, transposition) {
+  let prime1 = P(row, 0);
+  let prime2 = P(row, transposition);
+
+  let hex1 = [];
+  let hex2 = [];
+
+  for (i in 0..5) {
+    hex1[hex1.length] = prime1.pitchClasses[i];
+    hex2[hex2.length] = prime2.pitchClasses[i];
+  }
+
+  return areComplementary(hex1, hex2);
+}
+
+// ============================================
+// Pitch Class Set Theory
+// ============================================
+
+// Get normal form of a pitch class set
+export fn normalForm(pcs) {
+  if (pcs.length == 0) {
+    return [];
+  }
+
+  // Normalize to 0-11
+  let normalized = [];
+  for (pc in pcs) {
+    let n = pc % 12;
+    if (n < 0) {
+      n = n + 12;
+    }
+    // Add if not already present
+    let found = false;
+    for (existing in normalized) {
+      if (existing == n) {
+        found = true;
+      }
+    }
+    if (!found) {
+      normalized[normalized.length] = n;
+    }
+  }
+
+  // Sort ascending
+  for (i in 0..(normalized.length - 2)) {
+    for (j in (i + 1)..(normalized.length - 1)) {
+      if (normalized[i] > normalized[j]) {
+        let temp = normalized[i];
+        normalized[i] = normalized[j];
+        normalized[j] = temp;
+      }
+    }
+  }
+
+  // Find rotation with smallest outer interval
+  let n = normalized.length;
+  if (n <= 1) {
+    return normalized;
+  }
+
+  let bestRotation = normalized;
+  let bestSpan = 12;
+
+  for (rot in 0..(n - 1)) {
+    let rotated = [];
+    for (i in 0..(n - 1)) {
+      rotated[rotated.length] = normalized[(i + rot) % n];
+    }
+
+    // Transpose to start at 0
+    let first = rotated[0];
+    let transposed = [];
+    for (pc in rotated) {
+      transposed[transposed.length] = (pc - first + 12) % 12;
+    }
+
+    // Calculate span (last - first, considering wrap)
+    let last = transposed[n - 1];
+    if (last < bestSpan) {
+      bestSpan = last;
+      bestRotation = transposed;
+    } else if (last == bestSpan) {
+      // Compare left-packed
+      let isBetter = false;
+      for (i in 1..(n - 2)) {
+        if (transposed[i] < bestRotation[i]) {
+          isBetter = true;
+          break;
+        } else if (transposed[i] > bestRotation[i]) {
+          break;
+        }
+      }
+      if (isBetter) {
+        bestRotation = transposed;
+      }
+    }
+  }
+
+  return bestRotation;
+}
+
+// Get prime form (most compact normal form)
+export fn primeForm(pcs) {
+  let nf = normalForm(pcs);
+
+  // Also check inversion
+  let inverted = [];
+  for (pc in pcs) {
+    inverted[inverted.length] = (12 - pc) % 12;
+  }
+  let invertedNf = normalForm(inverted);
+
+  // Compare and return smaller
+  let n = nf.length;
+  for (i in 0..(n - 1)) {
+    if (nf[i] < invertedNf[i]) {
+      return nf;
+    } else if (nf[i] > invertedNf[i]) {
+      return invertedNf;
+    }
+  }
+
+  return nf;
+}
+
+// Get interval class vector
+export fn intervalVector(pcs) {
+  let vector = [0, 0, 0, 0, 0, 0];
+  let n = pcs.length;
+
+  for (i in 0..(n - 2)) {
+    for (j in (i + 1)..(n - 1)) {
+      let interval = (pcs[j] - pcs[i]) % 12;
+      if (interval < 0) {
+        interval = interval + 12;
+      }
+      if (interval > 6) {
+        interval = 12 - interval;
+      }
+      if (interval > 0 && interval <= 6) {
+        vector[interval - 1] = vector[interval - 1] + 1;
+      }
+    }
+  }
+
+  return vector;
+}
+
+// ============================================
+// Row to Notes
+// ============================================
+
+// Convert pitch classes to MIDI pitches in a specific octave range
+export fn rowToMidi(row, baseOctave, octaveRange) {
+  let base = baseOctave;
+  if (base == null) {
+    base = 4;
+  }
+  let range = octaveRange;
+  if (range == null) {
+    range = 1;
+  }
+
+  let result = [];
+  let baseMidi = base * 12;
+
+  for (pc in row.pitchClasses) {
+    let midi = baseMidi + pc;
+    result[result.length] = midi;
+  }
+
+  return result;
+}
+
+// Convert row to notes with specified duration
+export fn rowToNotes(row, dur, velocity, baseOctave) {
+  let midiPitches = rowToMidi(row, baseOctave, 1);
+  let v = velocity;
+  if (v == null) {
+    v = 0.8;
+  }
+
+  let notes = [];
+  for (midi in midiPitches) {
+    notes[notes.length] = {
+      type: "note",
+      pitch: midi,
+      dur: dur,
+      velocity: v
+    };
+  }
+
+  return notes;
+}
+
+// ============================================
+// Famous Rows
+// ============================================
+
+// Berg - Lyric Suite
+export const BERG_LYRIC = toneRow([5, 4, 0, 9, 7, 2, 8, 1, 3, 6, 10, 11]);
+
+// Schoenberg - Op. 23 No. 5 Waltz
+export const SCHOENBERG_WALTZ = toneRow([0, 11, 7, 8, 3, 1, 2, 10, 6, 5, 4, 9]);
+
+// Webern - Concerto Op. 24 (derived row)
+export const WEBERN_CONCERTO = toneRow([11, 10, 2, 3, 7, 6, 8, 4, 5, 0, 1, 9]);
+
+// Webern - Symphony Op. 21 (palindromic)
+export const WEBERN_SYMPHONY = toneRow([9, 6, 8, 11, 10, 5, 4, 1, 2, 0, 3, 7]);
+
+// Stravinsky - Movements
+export const STRAVINSKY_MOVEMENTS = toneRow([8, 11, 5, 9, 3, 10, 1, 4, 6, 2, 0, 7]);
+
+// Boulez - Structures Ia
+export const BOULEZ_STRUCTURES = toneRow([3, 2, 9, 8, 7, 6, 4, 1, 0, 10, 5, 11]);
+
+// Dallapiccola - Quaderno musicale di Annalibera
+export const DALLAPICCOLA_QUADERNO = toneRow([10, 11, 3, 6, 8, 2, 7, 1, 5, 9, 0, 4]);
+
+// ============================================
+// Row Analysis
+// ============================================
+
+// Get all ordered intervals in the row
+export fn intervals(row) {
+  let result = [];
+  for (i in 0..(row.pitchClasses.length - 2)) {
+    let interval = row.pitchClasses[i + 1] - row.pitchClasses[i];
+    if (interval < 0) {
+      interval = interval + 12;
+    }
+    result[result.length] = interval;
+  }
+  return result;
+}
+
+// Check if row is all-interval (each interval 1-11 appears exactly once)
+export fn isAllInterval(row) {
+  let intv = intervals(row);
+  if (intv.length != 11) {
+    return false;
+  }
+
+  let counts = [];
+  for (i in 0..11) {
+    counts[i] = 0;
+  }
+
+  for (interval in intv) {
+    let normalized = interval % 12;
+    if (normalized < 0) {
+      normalized = normalized + 12;
+    }
+    if (normalized == 0) {
+      return false;  // No unisons in all-interval
+    }
+    counts[normalized] = counts[normalized] + 1;
+  }
+
+  for (i in 1..11) {
+    if (counts[i] != 1) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Check if row is symmetric (palindrome)
+export fn isSymmetric(row) {
+  let n = row.pitchClasses.length;
+  for (i in 0..(n / 2 - 1)) {
+    if (row.pitchClasses[i] != row.pitchClasses[n - 1 - i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// ============================================
+// Total Serialism Helpers
+// ============================================
+
+// Create a series of durations (for total serialism)
+export fn durationSeries(baseDur, ratios) {
+  let result = [];
+  for (r in ratios) {
+    result[result.length] = baseDur * r;
+  }
+  return result;
+}
+
+// Create a series of dynamics (0-1 range)
+export fn dynamicSeries(values) {
+  let result = [];
+  for (v in values) {
+    let normalized = v;
+    if (normalized < 0) {
+      normalized = 0;
+    }
+    if (normalized > 1) {
+      normalized = 1;
+    }
+    result[result.length] = normalized;
+  }
+  return result;
+}
+
+// Create attack point series (for rhythmic serialism)
+export fn attackSeries(row, unit) {
+  let u = unit;
+  if (u == null) {
+    u = 1 / 4;  // Quarter note default
+  }
+
+  let result = [];
+  let pos = 0;
+
+  for (pc in row.pitchClasses) {
+    result[result.length] = pos;
+    pos = pos + pc * u;
+  }
+
+  return result;
+}
+

@@ -3135,6 +3135,9 @@ export const STDLIB_ALGORITHM = `// std:algorithm - see lib/algorithm.mf for ful
 export const STDLIB_SYNC = `// std:sync - see lib/sync.mf for full implementation`;
 export const STDLIB_METADATA = `// std:metadata - see lib/metadata.mf for full implementation`;
 
+// v5.1 module
+export const STDLIB_SERIAL = `// std:serial - see lib/serial.mf for full implementation`;
+
 /**
  * Map of stdlib module names to their source code
  */
@@ -3161,6 +3164,8 @@ export const STDLIB_MODULES: Record<string, string> = {
   algorithm: STDLIB_ALGORITHM,
   sync: STDLIB_SYNC,
   metadata: STDLIB_METADATA,
+  // v5.1 libraries
+  serial: STDLIB_SERIAL,
 };
 
 /**
