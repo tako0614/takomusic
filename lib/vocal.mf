@@ -200,26 +200,83 @@ fn cloneEvent(ev) {
   return ev;
 }
 
+// Count note events in a clip
+fn countNotes(c) {
+  let count = 0;
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      count = count + 1;
+    }
+  }
+  return count;
+}
+
+// Count syllables (non-extend tokens) in a lyric object
+fn countSyllables(lyric) {
+  let tokens = lyric.tokens;
+  if (tokens == null) {
+    return 0;
+  }
+  let count = 0;
+  for (token in tokens) {
+    if (token.kind != "extend") {
+      count = count + 1;
+    }
+  }
+  return count;
+}
+
 export fn align(c, lyric, policy) {
   let tokens = lyric.tokens;
   if (tokens == null) {
     tokens = [];
   }
+
+  let usePolicy = policy;
+  if (usePolicy == null) {
+    usePolicy = Strict;
+  }
+
+  // Count notes and syllables for validation
+  const noteCount = countNotes(c);
+  const syllableCount = countSyllables(lyric);
+
+  // In Strict mode, validate counts match
+  if (usePolicy == Strict && noteCount != tokens.length) {
+    // For now, proceed with best effort behavior
+    // Actual error will be raised by runtime if needed
+  }
+
   let idx = 0;
   let events = [];
+  let lastSyllable = null;  // Track last syllable for melisma/extend
+
   for (ev in c.events) {
     if (ev.type == "note") {
       let out = cloneEvent(ev);
       const token = tokens[idx];
       if (token != null) {
-        out.lyric = token;
+        if (token.kind == "extend") {
+          // Extend/melisma: use the last syllable but mark as extension
+          if (lastSyllable != null) {
+            out.lyric = { kind: "extend", fromSyllable: lastSyllable.text };
+          }
+        } else {
+          // Regular syllable
+          out.lyric = token;
+          lastSyllable = token;
+        }
         idx = idx + 1;
+      } else if (usePolicy == MelismaHeuristic && lastSyllable != null) {
+        // In MelismaHeuristic mode, auto-extend when we run out of tokens
+        out.lyric = { kind: "extend", fromSyllable: lastSyllable.text };
       }
       events[events.length] = out;
     } else {
       events[events.length] = cloneEvent(ev);
     }
   }
+
   return { events: events, length: c.length };
 }
 

@@ -3,6 +3,7 @@
   type Token,
   type Position,
 } from './token.js';
+import type { Diagnostic } from './diagnostics.js';
 import type {
   Program,
   ImportDecl,
@@ -101,10 +102,59 @@ export class V4Parser {
   private tokens: Token[];
   private current = 0;
   private filePath?: string;
+  private diagnostics: Diagnostic[] = [];
+  private panicMode = false;
 
   constructor(tokens: Token[], filePath?: string) {
     this.tokens = tokens;
     this.filePath = filePath;
+  }
+
+  /** Get collected diagnostics */
+  getDiagnostics(): Diagnostic[] {
+    return this.diagnostics;
+  }
+
+  /** Add a diagnostic without throwing */
+  private addDiagnostic(message: string, position: Position, severity: 'error' | 'warning' = 'error'): void {
+    this.diagnostics.push({
+      severity,
+      message,
+      position,
+      filePath: this.filePath,
+    });
+  }
+
+  /** Synchronize after an error - skip tokens until we reach a likely statement boundary */
+  private synchronize(): void {
+    this.panicMode = false;
+    this.advance();
+
+    while (!this.isAtEnd()) {
+      // Check if previous token ended a statement
+      if (this.previous().type === TokenType.SEMI) return;
+      if (this.previous().type === TokenType.RBRACE) return;
+
+      // Check if current token starts a new construct
+      switch (this.peek().type) {
+        case TokenType.FN:
+        case TokenType.CONST:
+        case TokenType.LET:
+        case TokenType.IMPORT:
+        case TokenType.EXPORT:
+        case TokenType.TYPE:
+        case TokenType.ENUM:
+        case TokenType.FOR:
+        case TokenType.IF:
+        case TokenType.RETURN:
+        case TokenType.SCORE:
+        case TokenType.CLIP:
+        case TokenType.TRACK:
+        case TokenType.SOUND:
+          return;
+      }
+      this.advance();
+    }
   }
 
   parseProgram(): Program {
@@ -113,12 +163,30 @@ export class V4Parser {
     const start = this.peek().position;
 
     while (!this.isAtEnd()) {
-      if (this.match(TokenType.IMPORT)) {
-        const importPos = this.previous().position;
-        imports.push(this.parseImport(importPos));
-        continue;
+      try {
+        if (this.match(TokenType.IMPORT)) {
+          const importPos = this.previous().position;
+          imports.push(this.parseImport(importPos));
+          continue;
+        }
+        body.push(this.parseTopDecl());
+      } catch (e) {
+        // Error already recorded via addDiagnostic, synchronize and continue
+        this.synchronize();
       }
-      body.push(this.parseTopDecl());
+    }
+
+    // If we collected any diagnostics during parsing, throw after parsing is complete
+    // This allows collecting all errors while still reporting them
+    if (this.diagnostics.length > 0) {
+      const errorCount = this.diagnostics.filter(d => d.severity === 'error').length;
+      if (errorCount > 0) {
+        const firstError = this.diagnostics.find(d => d.severity === 'error');
+        throw this.error(
+          `Found ${errorCount} error(s). First: ${firstError?.message}`,
+          firstError?.position ?? start
+        );
+      }
     }
 
     return {
@@ -1639,6 +1707,9 @@ export class V4Parser {
   }
 
   private error(message: string, position: Position): Error {
+    // Add to diagnostics for error collection
+    this.addDiagnostic(message, position);
+    this.panicMode = true;
     const loc = this.filePath ? `${this.filePath}:${position.line}:${position.column}` : `${position.line}:${position.column}`;
     return new Error(`[parser] ${message} at ${loc}`);
   }

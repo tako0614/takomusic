@@ -97,7 +97,7 @@ export class V4Evaluator {
   private diagnostics: Diagnostic[];
   private filePath?: string;
   private callDepth = 0;
-  private static readonly MAX_CALL_DEPTH = 512;
+  private static readonly MAX_CALL_DEPTH = 1024;
 
   // Seeded RNG for deterministic random operations (Linear Congruential Generator)
   private rngState: number = 12345;

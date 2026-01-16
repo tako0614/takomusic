@@ -97,8 +97,8 @@ export const ErrorCodes = {
 
   // E3xx: Evaluation/Runtime errors
   E300: 'Division by zero',
-  E301: 'Maximum call stack depth exceeded (512 calls)',
-  E302: 'For loop iteration limit exceeded',
+  E301: 'Maximum call stack depth exceeded (1024 calls)',
+  E302: 'For loop error',
   E303: 'Stack overflow',
   E304: 'Duration calculation error',
   E305: 'Time sub out of beat tick range',
@@ -260,9 +260,9 @@ function getDefaultSuggestion(code: string, details?: string): string | undefine
     case 'E300':
       return 'Check for division by zero';
     case 'E301':
-      return 'Recursive calls are allowed but limited to 512 depth. Consider using iteration or tail recursion optimization.';
+      return 'Recursive calls are allowed but limited to 1024 depth. Consider using iteration or tail recursion optimization.';
     case 'E302':
-      return 'For loop iterations are limited for safety. Consider breaking into smaller chunks.';
+      return 'Check the for loop iterable is valid';
     case 'E303':
       return 'Reduce nesting depth or use iterative approach';
     case 'E304':
