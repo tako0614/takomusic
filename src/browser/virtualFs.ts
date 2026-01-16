@@ -3156,6 +3156,12 @@ export const STDLIB_FORM = `// std:form - see lib/form.mf for full implementatio
 export const STDLIB_CLUSTER = `// std:cluster - see lib/cluster.mf for full implementation`;
 export const STDLIB_CANON = `// std:canon - see lib/canon.mf for full implementation`;
 
+// v5.5 libraries
+export const STDLIB_GAMELAN = `// std:gamelan - see lib/gamelan.mf for full implementation`;
+export const STDLIB_RAGA = `// std:raga - see lib/raga.mf for full implementation`;
+export const STDLIB_COUNTERPOINT = `// std:counterpoint - see lib/counterpoint.mf for full implementation`;
+export const STDLIB_ORCHESTRATION = `// std:orchestration - see lib/orchestration.mf for full implementation`;
+
 /**
  * Map of stdlib module names to their source code
  */
@@ -3199,6 +3205,11 @@ export const STDLIB_MODULES: Record<string, string> = {
   form: STDLIB_FORM,
   cluster: STDLIB_CLUSTER,
   canon: STDLIB_CANON,
+  // v5.5 libraries
+  gamelan: STDLIB_GAMELAN,
+  raga: STDLIB_RAGA,
+  counterpoint: STDLIB_COUNTERPOINT,
+  orchestration: STDLIB_ORCHESTRATION,
 };
 
 /**
