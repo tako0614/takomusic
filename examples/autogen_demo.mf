@@ -1,0 +1,56 @@
+// TakoMusic - Autogen Demo
+
+import { motifFromPitches } from "std:motif";
+import * as autogen from "std:autogen";
+
+fn baseMelody() {
+  return motifFromPitches([C4, E4, G4, A4], q);
+}
+
+fn chordProgression() {
+  return [
+    [C4, E4, G4],
+    [F3, A3, C4]
+  ];
+}
+
+export fn main() -> Score {
+  const melody = baseMelody();
+  const counter = autogen.counterMelody(melody, 7, true, 0.7);
+  const chords = chordProgression();
+
+  const bass = autogen.bassline(chords, h, -12, 0.7);
+  const comp = autogen.accompaniment(chords, [0, 1, 2, 1], e, 0, 0.5);
+
+  const melodyClip = autogen.motifToClip(melody);
+  const counterClip = autogen.motifToClip(counter);
+  const bassClip = autogen.motifToClip(bass);
+  const compClip = autogen.motifToClip(comp);
+
+  return score {
+    meta { title "Autogen Demo"; }
+    tempo { 1:1 -> 100bpm; }
+    meter { 1:1 -> 4/4; }
+
+    sound "piano" kind instrument {
+      label "Piano";
+      range A0..C8;
+    }
+
+    track "Melody" role Instrument sound "piano" {
+      place 1:1 melodyClip;
+    }
+
+    track "Counter" role Instrument sound "piano" {
+      place 1:1 counterClip;
+    }
+
+    track "Bass" role Instrument sound "piano" {
+      place 1:1 bassClip;
+    }
+
+    track "Comp" role Instrument sound "piano" {
+      place 1:1 compClip;
+    }
+  };
+}

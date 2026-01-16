@@ -1,4 +1,6 @@
+import type { Position } from './token.js';
 import type { RuntimeValue } from './runtime.js';
+import { createError } from './errors.js';
 import { findSimilar, formatSuggestion, getAllKnownIdentifiers } from './suggestions.js';
 
 interface Binding {
@@ -22,34 +24,32 @@ export class Scope {
     this.bindings.set(name, { value, mutable });
   }
 
-  assign(name: string, value: RuntimeValue): void {
+  assign(name: string, value: RuntimeValue, position?: Position, filePath?: string): void {
     const binding = this.lookupBinding(name);
     if (!binding) {
-      const suggestion = this.getSuggestion(name);
-      throw new Error(`Undefined symbol: ${name}${suggestion}`);
+      throw createError('E201', `"${name}"`, position, filePath, this.getSuggestion(name));
     }
     if (!binding.mutable) {
-      throw new Error(`Cannot assign to const '${name}'`);
+      throw createError('E202', `"${name}"`, position, filePath);
     }
     binding.value = value;
   }
 
-  get(name: string): RuntimeValue {
+  get(name: string, position?: Position, filePath?: string): RuntimeValue {
     const binding = this.lookupBinding(name);
     if (!binding) {
-      const suggestion = this.getSuggestion(name);
-      throw new Error(`Undefined symbol: ${name}${suggestion}`);
+      throw createError('E201', `"${name}"`, position, filePath, this.getSuggestion(name));
     }
     return binding.value;
   }
 
-  private getSuggestion(name: string): string {
+  private getSuggestion(name: string): string | undefined {
     // Collect all known names in scope
     const scopeNames = this.getAllNames();
     const allCandidates = [...scopeNames, ...getAllKnownIdentifiers()];
     const similar = findSimilar(name, allCandidates, { minSimilarity: 0.6, maxResults: 1 });
     const suggestionText = formatSuggestion(similar);
-    return suggestionText ? `. ${suggestionText}` : '';
+    return suggestionText ?? undefined;
   }
 
   private getAllNames(): string[] {

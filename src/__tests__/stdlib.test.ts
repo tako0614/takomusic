@@ -574,3 +574,74 @@ export fn main() -> Score {
     expect(ir.meta.title).toBe('second');
   });
 });
+
+describe('std:markov', () => {
+  it('stateKey and splitState round trip', () => {
+    const source = `
+import * as markov from "std:markov";
+
+export fn main() -> Score {
+  const key = markov.stateKey(["A", "B"]);
+  const parts = markov.splitState(key);
+  const title = parts[0] + "-" + parts[1];
+  return score {
+    meta { title title; }
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "test" kind instrument {}
+    track "Test" role Instrument sound "test" {}
+  };
+}`;
+    const ir = compileToIR(source);
+    expect(ir.meta.title).toBe('A-B');
+  });
+});
+
+describe('std:constraint', () => {
+  it('solves simple allDifferent', () => {
+    const source = `
+import * as csp from "std:constraint";
+
+export fn main() -> Score {
+  let p = csp.problem();
+  p = csp.addVar(p, "a", [1, 2]);
+  p = csp.addVar(p, "b", [1, 2]);
+  p = csp.addConstraint(p, csp.allDifferent(["a", "b"]));
+  const result = csp.solve(p, { maxSolutions: 1, varOrder: "mrv" });
+  return score {
+    meta { title result.kind; }
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "test" kind instrument {}
+    track "Test" role Instrument sound "test" {}
+  };
+}`;
+    const ir = compileToIR(source);
+    expect(ir.meta.title).toBe('Ok');
+  });
+});
+
+describe('std:autogen', () => {
+  it('builds a bassline motif', () => {
+    const source = `
+import * as autogen from "std:autogen";
+
+export fn main() -> Score {
+  const chords = [[C4, E4, G4], [D4, F4, A4]];
+  const bass = autogen.bassline(chords, q, -12, 0.7);
+  const clip = autogen.motifToClip(bass);
+  return score {
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "bass" kind instrument {}
+    track "Bass" role Instrument sound "bass" {
+      place 1:1 clip;
+    }
+  };
+}`;
+    const ir = compileToIR(source);
+    const events = ir.tracks[0].placements[0].clip.events;
+    const notes = events.filter(e => e.type === 'note');
+    expect(notes).toHaveLength(2);
+  });
+});

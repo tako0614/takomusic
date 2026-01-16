@@ -2,7 +2,7 @@
   "name": "takomusic",
   "displayName": "TakoMusic",
   "description": "Language support for TakoMusic v4 (.mf files)",
-  "version": "4.0.0",
+  "version": "4.2.1",
   "publisher": "tako0614",
   "icon": "icon.png",
   "engines": {
@@ -48,6 +48,7 @@
     "@vscode/vsce": "^3.0.0"
   },
   "contributes": {
+    "commands": [],
     "languages": [
       {
         "id": "takomusic",
