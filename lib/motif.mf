@@ -1,0 +1,722 @@
+// std:motif (v5.3)
+// Motif development and thematic transformation utilities
+// Classical techniques for developing musical ideas
+
+// ============================================
+// Motif Representation
+// ============================================
+
+// Create a motif (melodic fragment)
+// notes: array of {pitch, duration, velocity?}
+export fn motif(notes) {
+  return {
+    type: "motif",
+    notes: notes,
+    length: notes.length
+  };
+}
+
+// Create a note for a motif
+export fn note(pitch, duration, velocity) {
+  let vel = velocity;
+  if (vel == null) {
+    vel = 0.8;
+  }
+  return {
+    pitch: pitch,
+    duration: duration,
+    velocity: vel
+  };
+}
+
+// Create motif from pitch array (equal durations)
+export fn motifFromPitches(pitches, duration) {
+  let notes = [];
+  for (p in pitches) {
+    notes[notes.length] = note(p, duration, 0.8);
+  }
+  return motif(notes);
+}
+
+// Get pitches from motif
+export fn getPitches(m) {
+  let pitches = [];
+  for (n in m.notes) {
+    pitches[pitches.length] = n.pitch;
+  }
+  return pitches;
+}
+
+// Get durations from motif
+export fn getDurations(m) {
+  let durations = [];
+  for (n in m.notes) {
+    durations[durations.length] = n.duration;
+  }
+  return durations;
+}
+
+// Get total duration of motif
+export fn totalDuration(m) {
+  let total = 0 / 1;
+  for (n in m.notes) {
+    total = total + n.duration;
+  }
+  return total;
+}
+
+// ============================================
+// Pitch Transformations
+// ============================================
+
+// Transpose motif
+export fn transpose(m, semitones) {
+  let notes = [];
+  for (n in m.notes) {
+    notes[notes.length] = note(n.pitch + semitones, n.duration, n.velocity);
+  }
+  return motif(notes);
+}
+
+// Invert motif around axis
+export fn invert(m, axis) {
+  let ax = axis;
+  if (ax == null && m.notes.length > 0) {
+    ax = m.notes[0].pitch;  // First note as axis
+  }
+
+  let notes = [];
+  for (n in m.notes) {
+    const inverted = ax * 2 - n.pitch;
+    notes[notes.length] = note(inverted, n.duration, n.velocity);
+  }
+  return motif(notes);
+}
+
+// Retrograde (reverse)
+export fn retrograde(m) {
+  let notes = [];
+  for (i in 0..(m.notes.length - 1)) {
+    notes[i] = m.notes[m.notes.length - 1 - i];
+  }
+  return motif(notes);
+}
+
+// Retrograde inversion
+export fn retrogradeInversion(m, axis) {
+  return retrograde(invert(m, axis));
+}
+
+// Octave displacement
+export fn displaceOctave(m, noteIndex, octaves) {
+  let notes = [];
+  for (i in 0..(m.notes.length - 1)) {
+    if (i == noteIndex) {
+      notes[i] = note(
+        m.notes[i].pitch + octaves * 12,
+        m.notes[i].duration,
+        m.notes[i].velocity
+      );
+    } else {
+      notes[i] = m.notes[i];
+    }
+  }
+  return motif(notes);
+}
+
+// Random octave displacement
+export fn randomOctaveDisplace(m, probability, range, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let notes = [];
+  for (n in m.notes) {
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    const r = rng / 2147483648;
+
+    if (r < probability) {
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      const octave = ((rng / 2147483648) * (range * 2 + 1) - range);
+      let oct = octave - (octave % 1);
+      notes[notes.length] = note(n.pitch + oct * 12, n.duration, n.velocity);
+    } else {
+      notes[notes.length] = n;
+    }
+  }
+
+  return motif(notes);
+}
+
+// ============================================
+// Rhythm Transformations
+// ============================================
+
+// Augmentation (double durations)
+export fn augment(m, factor) {
+  let f = factor;
+  if (f == null) {
+    f = 2;
+  }
+
+  let notes = [];
+  for (n in m.notes) {
+    notes[notes.length] = note(n.pitch, n.duration * f, n.velocity);
+  }
+  return motif(notes);
+}
+
+// Diminution (halve durations)
+export fn diminish(m, factor) {
+  let f = factor;
+  if (f == null) {
+    f = 2;
+  }
+
+  let notes = [];
+  for (n in m.notes) {
+    notes[notes.length] = note(n.pitch, n.duration / f, n.velocity);
+  }
+  return motif(notes);
+}
+
+// Retrograde rhythm only (keep pitches)
+export fn retrogradeRhythm(m) {
+  let durations = getDurations(m);
+  let reversedDurs = [];
+  for (i in 0..(durations.length - 1)) {
+    reversedDurs[i] = durations[durations.length - 1 - i];
+  }
+
+  let notes = [];
+  for (i in 0..(m.notes.length - 1)) {
+    notes[i] = note(m.notes[i].pitch, reversedDurs[i], m.notes[i].velocity);
+  }
+  return motif(notes);
+}
+
+// Add swing to rhythm
+export fn addSwing(m, swingRatio) {
+  let ratio = swingRatio;
+  if (ratio == null) {
+    ratio = 0.67;  // Triplet swing
+  }
+
+  let notes = [];
+  for (i in 0..(m.notes.length - 1)) {
+    const n = m.notes[i];
+    if (i % 2 == 0) {
+      notes[i] = note(n.pitch, n.duration * ratio * 2, n.velocity);
+    } else {
+      notes[i] = note(n.pitch, n.duration * (1 - ratio) * 2, n.velocity);
+    }
+  }
+  return motif(notes);
+}
+
+// ============================================
+// Melodic Development
+// ============================================
+
+// Sequence (repeat at different pitch level)
+export fn sequence(m, intervals) {
+  let result = [];
+  for (interval in intervals) {
+    const transposed = transpose(m, interval);
+    for (n in transposed.notes) {
+      result[result.length] = n;
+    }
+  }
+  return motif(result);
+}
+
+// Fill in stepwise motion between leaps
+export fn fillLeaps(m, maxLeap, fillDuration) {
+  let notes = [];
+  notes[0] = m.notes[0];
+
+  for (i in 1..(m.notes.length - 1)) {
+    const prev = m.notes[i - 1].pitch;
+    const curr = m.notes[i].pitch;
+    let interval = curr - prev;
+    if (interval < 0) { interval = -interval; }
+
+    if (interval > maxLeap) {
+      // Add fill notes
+      const direction = (curr - prev) > 0 ? 1 : -1;
+      let fillPitch = prev;
+      while (true) {
+        fillPitch = fillPitch + direction * 2;  // Stepwise
+        let diff = curr - fillPitch;
+        if (direction < 0) { diff = -diff; }
+        if (diff <= 0) { break; }
+        notes[notes.length] = note(fillPitch, fillDuration, 0.6);
+      }
+    }
+
+    notes[notes.length] = m.notes[i];
+  }
+
+  return motif(notes);
+}
+
+// Ornament with neighbor tones
+export fn addNeighborTones(m, probability, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let notes = [];
+  for (i in 0..(m.notes.length - 1)) {
+    const n = m.notes[i];
+
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    if ((rng / 2147483648) < probability && i < m.notes.length - 1) {
+      // Add neighbor tone
+      const halfDur = n.duration / 2;
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      const direction = ((rng / 2147483648) < 0.5) ? 1 : -1;
+
+      notes[notes.length] = note(n.pitch, halfDur, n.velocity);
+      notes[notes.length] = note(n.pitch + direction, halfDur, n.velocity * 0.7);
+    } else {
+      notes[notes.length] = n;
+    }
+  }
+
+  return motif(notes);
+}
+
+// Add passing tones
+export fn addPassingTones(m, probability, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let notes = [];
+
+  for (i in 0..(m.notes.length - 1)) {
+    const n = m.notes[i];
+    notes[notes.length] = n;
+
+    if (i < m.notes.length - 1) {
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+
+      if ((rng / 2147483648) < probability) {
+        const next = m.notes[i + 1];
+        const interval = next.pitch - n.pitch;
+
+        if (interval > 2 || interval < -2) {
+          // Add passing tone
+          const passingPitch = n.pitch + (interval > 0 ? 2 : -2);
+          notes[notes.length] = note(passingPitch, n.duration / 2, n.velocity * 0.7);
+        }
+      }
+    }
+  }
+
+  return motif(notes);
+}
+
+// ============================================
+// Fragmentation
+// ============================================
+
+// Extract fragment from motif
+export fn fragment(m, startIndex, length) {
+  let notes = [];
+  let endIdx = startIndex + length;
+  if (endIdx > m.notes.length) {
+    endIdx = m.notes.length;
+  }
+
+  for (i in startIndex..(endIdx - 1)) {
+    notes[notes.length] = m.notes[i];
+  }
+  return motif(notes);
+}
+
+// Get head (beginning) of motif
+export fn head(m, length) {
+  return fragment(m, 0, length);
+}
+
+// Get tail (ending) of motif
+export fn tail(m, length) {
+  const start = m.notes.length - length;
+  if (start < 0) {
+    return m;
+  }
+  return fragment(m, start, length);
+}
+
+// Split motif at index
+export fn split(m, index) {
+  return [
+    fragment(m, 0, index),
+    fragment(m, index, m.notes.length - index)
+  ];
+}
+
+// ============================================
+// Combination
+// ============================================
+
+// Concatenate motifs
+export fn concat(m1, m2) {
+  let notes = [];
+  for (n in m1.notes) {
+    notes[notes.length] = n;
+  }
+  for (n in m2.notes) {
+    notes[notes.length] = n;
+  }
+  return motif(notes);
+}
+
+// Interleave motifs
+export fn interleave(m1, m2) {
+  let notes = [];
+  let maxLen = m1.notes.length;
+  if (m2.notes.length > maxLen) {
+    maxLen = m2.notes.length;
+  }
+
+  for (i in 0..(maxLen - 1)) {
+    if (i < m1.notes.length) {
+      notes[notes.length] = m1.notes[i];
+    }
+    if (i < m2.notes.length) {
+      notes[notes.length] = m2.notes[i];
+    }
+  }
+  return motif(notes);
+}
+
+// Combine pitches from m1 with rhythms from m2
+export fn combineElements(pitchMotif, rhythmMotif) {
+  let notes = [];
+  let len = pitchMotif.notes.length;
+  if (rhythmMotif.notes.length < len) {
+    len = rhythmMotif.notes.length;
+  }
+
+  for (i in 0..(len - 1)) {
+    notes[i] = note(
+      pitchMotif.notes[i].pitch,
+      rhythmMotif.notes[i].duration,
+      pitchMotif.notes[i].velocity
+    );
+  }
+  return motif(notes);
+}
+
+// ============================================
+// Variation Techniques
+// ============================================
+
+// Create variation by changing specific notes
+export fn vary(m, indices, newPitches) {
+  let notes = [];
+  for (i in 0..(m.notes.length - 1)) {
+    let found = false;
+    for (j in 0..(indices.length - 1)) {
+      if (indices[j] == i) {
+        notes[i] = note(newPitches[j], m.notes[i].duration, m.notes[i].velocity);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      notes[i] = m.notes[i];
+    }
+  }
+  return motif(notes);
+}
+
+// Permute notes (reorder)
+export fn permute(m, permutation) {
+  let notes = [];
+  for (idx in permutation) {
+    if (idx >= 0 && idx < m.notes.length) {
+      notes[notes.length] = m.notes[idx];
+    }
+  }
+  return motif(notes);
+}
+
+// Shuffle notes randomly
+export fn shuffle(m, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  // Create permutation array
+  let perm = [];
+  for (i in 0..(m.notes.length - 1)) {
+    perm[i] = i;
+  }
+
+  // Fisher-Yates shuffle
+  for (i in 0..(m.notes.length - 2)) {
+    const j = m.notes.length - 1 - i;
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    const k = (rng / 2147483648) * (j + 1);
+    let kInt = k - (k % 1);
+
+    const temp = perm[j];
+    perm[j] = perm[kInt];
+    perm[kInt] = temp;
+  }
+
+  return permute(m, perm);
+}
+
+// ============================================
+// Intervallic Analysis
+// ============================================
+
+// Get intervals between consecutive notes
+export fn getIntervals(m) {
+  let intervals = [];
+  for (i in 1..(m.notes.length - 1)) {
+    intervals[intervals.length] = m.notes[i].pitch - m.notes[i - 1].pitch;
+  }
+  return intervals;
+}
+
+// Get contour (direction of motion)
+// Returns array of -1 (down), 0 (same), 1 (up)
+export fn getContour(m) {
+  let contour = [];
+  for (i in 1..(m.notes.length - 1)) {
+    const diff = m.notes[i].pitch - m.notes[i - 1].pitch;
+    if (diff > 0) {
+      contour[contour.length] = 1;
+    } else if (diff < 0) {
+      contour[contour.length] = -1;
+    } else {
+      contour[contour.length] = 0;
+    }
+  }
+  return contour;
+}
+
+// Create motif from intervals (starting from given pitch)
+export fn fromIntervals(startPitch, intervals, duration) {
+  let notes = [];
+  let pitch = startPitch;
+  notes[0] = note(pitch, duration, 0.8);
+
+  for (interval in intervals) {
+    pitch = pitch + interval;
+    notes[notes.length] = note(pitch, duration, 0.8);
+  }
+  return motif(notes);
+}
+
+// Create motif with same contour but different intervals
+export fn applyContour(contour, startPitch, scale, duration) {
+  let notes = [];
+  let scaleIndex = 0;
+
+  // Find starting position in scale
+  for (i in 0..(scale.length - 1)) {
+    if (scale[i] == startPitch % 12) {
+      scaleIndex = i;
+      break;
+    }
+  }
+
+  let octave = (startPitch / 12) - (startPitch % 12 > 0 ? 0 : 1);
+  notes[0] = note(startPitch, duration, 0.8);
+
+  for (dir in contour) {
+    scaleIndex = scaleIndex + dir;
+
+    if (scaleIndex >= scale.length) {
+      scaleIndex = scaleIndex - scale.length;
+      octave = octave + 1;
+    }
+    if (scaleIndex < 0) {
+      scaleIndex = scaleIndex + scale.length;
+      octave = octave - 1;
+    }
+
+    const pitch = octave * 12 + scale[scaleIndex];
+    notes[notes.length] = note(pitch, duration, 0.8);
+  }
+
+  return motif(notes);
+}
+
+// ============================================
+// Motivic Similarity
+// ============================================
+
+// Calculate similarity between two motifs
+export fn similarity(m1, m2) {
+  // Simple interval-based similarity
+  const intervals1 = getIntervals(m1);
+  const intervals2 = getIntervals(m2);
+
+  let len = intervals1.length;
+  if (intervals2.length < len) {
+    len = intervals2.length;
+  }
+  if (len == 0) {
+    return 0;
+  }
+
+  let matches = 0;
+  for (i in 0..(len - 1)) {
+    if (intervals1[i] == intervals2[i]) {
+      matches = matches + 1;
+    }
+  }
+
+  return matches / len;
+}
+
+// Calculate contour similarity
+export fn contourSimilarity(m1, m2) {
+  const contour1 = getContour(m1);
+  const contour2 = getContour(m2);
+
+  let len = contour1.length;
+  if (contour2.length < len) {
+    len = contour2.length;
+  }
+  if (len == 0) {
+    return 0;
+  }
+
+  let matches = 0;
+  for (i in 0..(len - 1)) {
+    if (contour1[i] == contour2[i]) {
+      matches = matches + 1;
+    }
+  }
+
+  return matches / len;
+}
+
+// ============================================
+// Classical Forms
+// ============================================
+
+// Create antecedent-consequent pair
+export fn antecedentConsequent(antecedent, consequentEnding) {
+  // Consequent starts same, ends differently
+  const len = antecedent.notes.length;
+  const splitPoint = len - consequentEnding.notes.length;
+
+  let consequent = head(antecedent, splitPoint);
+  consequent = concat(consequent, consequentEnding);
+
+  return {
+    antecedent: antecedent,
+    consequent: consequent
+  };
+}
+
+// Create sentence structure (presentation + continuation)
+export fn sentence(basicIdea, continuation) {
+  // Presentation: basic idea + sequence
+  const presentation = concat(basicIdea, transpose(basicIdea, 2));
+
+  return {
+    presentation: presentation,
+    continuation: continuation,
+    full: concat(presentation, continuation)
+  };
+}
+
+// Create period structure
+export fn period(phrase1, phrase2) {
+  return {
+    antecedent: phrase1,
+    consequent: phrase2,
+    full: concat(phrase1, phrase2)
+  };
+}
+
+// ============================================
+// Development Generators
+// ============================================
+
+// Generate variations of a motif
+export fn generateVariations(m, count, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let variations = [m];
+  const techniques = [
+    "transpose", "invert", "retrograde", "augment", "diminish", "sequence"
+  ];
+
+  for (_ in 1..(count - 1)) {
+    rng = (rng * 1103515245 + 12345) % 2147483648;
+    const techIdx = ((rng / 2147483648) * techniques.length);
+    let idx = techIdx - (techIdx % 1);
+    const technique = techniques[idx];
+
+    const base = variations[variations.length - 1];
+    let newVar = base;
+
+    if (technique == "transpose") {
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      const interval = ((rng / 2147483648) * 12 - 6);
+      let intv = interval - (interval % 1);
+      newVar = transpose(base, intv);
+    } else if (technique == "invert") {
+      newVar = invert(base, null);
+    } else if (technique == "retrograde") {
+      newVar = retrograde(base);
+    } else if (technique == "augment") {
+      newVar = augment(base, 2);
+    } else if (technique == "diminish") {
+      newVar = diminish(base, 2);
+    } else if (technique == "sequence") {
+      newVar = sequence(base, [0, 2, 4]);
+    }
+
+    variations[variations.length] = newVar;
+  }
+
+  return variations;
+}
+
+// Create development section from motif
+export fn develop(m, stages) {
+  let development = [];
+  let current = m;
+
+  for (stage in stages) {
+    if (stage.type == "transpose") {
+      current = transpose(current, stage.interval);
+    } else if (stage.type == "invert") {
+      current = invert(current, stage.axis);
+    } else if (stage.type == "retrograde") {
+      current = retrograde(current);
+    } else if (stage.type == "augment") {
+      current = augment(current, stage.factor);
+    } else if (stage.type == "diminish") {
+      current = diminish(current, stage.factor);
+    } else if (stage.type == "fragment") {
+      current = fragment(current, stage.start, stage.length);
+    } else if (stage.type == "sequence") {
+      current = sequence(current, stage.intervals);
+    }
+
+    development[development.length] = current;
+  }
+
+  return development;
+}

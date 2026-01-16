@@ -1,0 +1,615 @@
+// std:microtonal (v5.3)
+// Microtonal and xenharmonic music utilities
+// Supports EDO systems, just intonation, and various tuning systems
+
+// ============================================
+// Constants
+// ============================================
+
+// Reference frequency for A4
+export const A4_FREQ = 440.0;
+export const A4_MIDI = 69;
+
+// Mathematical constants
+const LN2 = 0.693147180559945;
+const LOG2_E = 1.4426950408889634;
+
+// ============================================
+// Equal Division of Octave (EDO)
+// ============================================
+
+// Create an EDO tuning system
+export fn edo(divisions) {
+  return {
+    type: "edo",
+    divisions: divisions,
+    stepCents: 1200 / divisions
+  };
+}
+
+// Common EDO systems
+export fn edo12() { return edo(12); }   // Standard Western
+export fn edo19() { return edo(19); }   // Better thirds
+export fn edo22() { return edo(22); }   // Better sevenths
+export fn edo24() { return edo(24); }   // Quarter tones
+export fn edo31() { return edo(31); }   // Excellent approximation
+export fn edo41() { return edo(41); }   // Very accurate
+export fn edo53() { return edo(53); }   // Near-just
+
+// Get frequency for EDO step
+export fn edoFrequency(tuning, step, refFreq) {
+  let ref = refFreq;
+  if (ref == null) {
+    ref = A4_FREQ;
+  }
+
+  const cents = step * tuning.stepCents;
+  // 2^(cents/1200)
+  const ratio = 2 ** (cents / 1200);
+  return ref * ratio;
+}
+
+// Get cents for EDO step
+export fn edoCents(tuning, step) {
+  return step * tuning.stepCents;
+}
+
+// Find closest EDO step to a ratio
+export fn ratioToEdoStep(tuning, ratio) {
+  // cents = 1200 * log2(ratio)
+  const cents = 1200 * log2Approx(ratio);
+  return cents / tuning.stepCents;
+}
+
+// Round to nearest EDO step
+export fn quantizeToEdo(tuning, cents) {
+  const step = cents / tuning.stepCents;
+  // Round
+  let rounded = step;
+  if (step >= 0) {
+    rounded = step + 0.5;
+    rounded = rounded - (rounded % 1);
+  } else {
+    rounded = step - 0.5;
+    rounded = rounded - (rounded % 1);
+  }
+  return rounded * tuning.stepCents;
+}
+
+// ============================================
+// Just Intonation
+// ============================================
+
+// Create a just intonation ratio
+export fn ratio(num, den) {
+  return {
+    type: "ratio",
+    numerator: num,
+    denominator: den
+  };
+}
+
+// Convert ratio to cents
+export fn ratioToCents(r) {
+  const decimal = r.numerator / r.denominator;
+  return 1200 * log2Approx(decimal);
+}
+
+// Convert ratio to frequency
+export fn ratioToFrequency(r, baseFreq) {
+  let base = baseFreq;
+  if (base == null) {
+    base = A4_FREQ;
+  }
+  return base * r.numerator / r.denominator;
+}
+
+// Common just intervals
+export fn unison() { return ratio(1, 1); }
+export fn minorSecond() { return ratio(16, 15); }
+export fn majorSecond() { return ratio(9, 8); }
+export fn minorThird() { return ratio(6, 5); }
+export fn majorThird() { return ratio(5, 4); }
+export fn perfectFourth() { return ratio(4, 3); }
+export fn tritone() { return ratio(45, 32); }
+export fn perfectFifth() { return ratio(3, 2); }
+export fn minorSixth() { return ratio(8, 5); }
+export fn majorSixth() { return ratio(5, 3); }
+export fn minorSeventh() { return ratio(9, 5); }
+export fn majorSeventh() { return ratio(15, 8); }
+export fn octave() { return ratio(2, 1); }
+
+// Septimal (7-limit) intervals
+export fn septimalMinorThird() { return ratio(7, 6); }
+export fn septimalTritone() { return ratio(7, 5); }
+export fn harmonicSeventh() { return ratio(7, 4); }
+export fn septimalMinorSecond() { return ratio(28, 27); }
+
+// 11-limit intervals
+export fn undecimalNeutralSecond() { return ratio(11, 10); }
+export fn undecimalTritone() { return ratio(11, 8); }
+export fn undecimalNeutralSeventh() { return ratio(11, 6); }
+
+// ============================================
+// Just Intonation Scales
+// ============================================
+
+// Ptolemaic (syntonic) major scale
+export fn justMajor() {
+  return [
+    ratio(1, 1),
+    ratio(9, 8),
+    ratio(5, 4),
+    ratio(4, 3),
+    ratio(3, 2),
+    ratio(5, 3),
+    ratio(15, 8),
+    ratio(2, 1)
+  ];
+}
+
+// Just minor scale
+export fn justMinor() {
+  return [
+    ratio(1, 1),
+    ratio(9, 8),
+    ratio(6, 5),
+    ratio(4, 3),
+    ratio(3, 2),
+    ratio(8, 5),
+    ratio(9, 5),
+    ratio(2, 1)
+  ];
+}
+
+// Harmonic series (first 16 partials)
+export fn harmonicSeries(count) {
+  let n = count;
+  if (n == null) {
+    n = 16;
+  }
+
+  let ratios = [];
+  for (i in 1..n) {
+    ratios[ratios.length] = ratio(i, 1);
+  }
+  return ratios;
+}
+
+// Subharmonic series
+export fn subharmonicSeries(count) {
+  let n = count;
+  if (n == null) {
+    n = 16;
+  }
+
+  let ratios = [];
+  for (i in 1..n) {
+    ratios[ratios.length] = ratio(n, i);
+  }
+  return ratios;
+}
+
+// ============================================
+// Cent Operations
+// ============================================
+
+// Convert MIDI note to cents from A4
+export fn midiToCents(midiNote) {
+  return (midiNote - A4_MIDI) * 100;
+}
+
+// Convert cents from A4 to frequency
+export fn centsToFrequency(cents, refFreq) {
+  let ref = refFreq;
+  if (ref == null) {
+    ref = A4_FREQ;
+  }
+  return ref * (2 ** (cents / 1200));
+}
+
+// Convert frequency to cents from A4
+export fn frequencyToCents(freq, refFreq) {
+  let ref = refFreq;
+  if (ref == null) {
+    ref = A4_FREQ;
+  }
+  return 1200 * log2Approx(freq / ref);
+}
+
+// Add cents offset to MIDI note
+export fn detune(midiNote, centsOffset) {
+  return {
+    type: "microtonalPitch",
+    baseMidi: midiNote,
+    centsOffset: centsOffset,
+    totalCents: midiToCents(midiNote) + centsOffset
+  };
+}
+
+// Create pitch from cents
+export fn pitchFromCents(cents) {
+  // Find closest MIDI note
+  const midiApprox = A4_MIDI + cents / 100;
+  let baseMidi = midiApprox;
+  if (midiApprox >= 0) {
+    baseMidi = midiApprox - (midiApprox % 1);
+  } else {
+    baseMidi = midiApprox - 1 - ((midiApprox - 1) % 1);
+  }
+
+  const centsOffset = cents - (baseMidi - A4_MIDI) * 100;
+
+  return {
+    type: "microtonalPitch",
+    baseMidi: baseMidi,
+    centsOffset: centsOffset,
+    totalCents: cents
+  };
+}
+
+// ============================================
+// Historical Temperaments
+// ============================================
+
+// Pythagorean tuning (pure fifths)
+export fn pythagorean() {
+  return {
+    type: "temperament",
+    name: "pythagorean",
+    intervals: [
+      0,      // C
+      90,     // C#
+      204,    // D
+      294,    // Eb
+      408,    // E
+      498,    // F
+      588,    // F#
+      702,    // G
+      792,    // G#
+      906,    // A
+      996,    // Bb
+      1110    // B
+    ]
+  };
+}
+
+// Quarter-comma meantone
+export fn quarterCommaMeantone() {
+  return {
+    type: "temperament",
+    name: "quarterCommaMeantone",
+    intervals: [
+      0,      // C
+      76,     // C#
+      193,    // D
+      310,    // Eb
+      386,    // E
+      503,    // F
+      579,    // F#
+      697,    // G
+      773,    // G#
+      890,    // A
+      1007,   // Bb
+      1083    // B
+    ]
+  };
+}
+
+// Werckmeister III
+export fn werckmeisterIII() {
+  return {
+    type: "temperament",
+    name: "werckmeisterIII",
+    intervals: [
+      0,      // C
+      90,     // C#
+      192,    // D
+      294,    // Eb
+      390,    // E
+      498,    // F
+      588,    // F#
+      696,    // G
+      792,    // G#
+      888,    // A
+      996,    // Bb
+      1092    // B
+    ]
+  };
+}
+
+// Kirnberger III
+export fn kirnbergerIII() {
+  return {
+    type: "temperament",
+    name: "kirnbergerIII",
+    intervals: [
+      0,      // C
+      90,     // C#
+      193,    // D
+      294,    // Eb
+      386,    // E
+      498,    // F
+      590,    // F#
+      697,    // G
+      792,    // G#
+      890,    // A
+      996,    // Bb
+      1088    // B
+    ]
+  };
+}
+
+// Get frequency from temperament
+export fn temperamentFrequency(temp, pitchClass, octave, refFreq) {
+  let ref = refFreq;
+  if (ref == null) {
+    ref = 261.63;  // C4
+  }
+
+  const cents = temp.intervals[pitchClass % 12] + (octave * 1200);
+  return ref * (2 ** (cents / 1200));
+}
+
+// ============================================
+// Exotic Scales
+// ============================================
+
+// Bohlen-Pierce scale (13-EDO of 3:1)
+export fn bohlenPierce() {
+  return {
+    type: "nonOctave",
+    name: "bohlenPierce",
+    divisions: 13,
+    period: ratio(3, 1),  // Tritave instead of octave
+    stepCents: 146.3      // 1901.96 / 13
+  };
+}
+
+// Carlos Alpha (78 cents step)
+export fn carlosAlpha() {
+  return {
+    type: "nonOctave",
+    name: "carlosAlpha",
+    stepCents: 78,
+    divisions: 15.385  // ~15.385 steps per octave
+  };
+}
+
+// Carlos Beta (63.8 cents step)
+export fn carlosBeta() {
+  return {
+    type: "nonOctave",
+    name: "carlosBeta",
+    stepCents: 63.8,
+    divisions: 18.8
+  };
+}
+
+// Carlos Gamma (35.1 cents step)
+export fn carlosGamma() {
+  return {
+    type: "nonOctave",
+    name: "carlosGamma",
+    stepCents: 35.1,
+    divisions: 34.2
+  };
+}
+
+// ============================================
+// Interval Analysis
+// ============================================
+
+// Calculate interval between two pitches in cents
+export fn intervalCents(pitch1, pitch2) {
+  let cents1 = 0;
+  let cents2 = 0;
+
+  if (pitch1.totalCents != null) {
+    cents1 = pitch1.totalCents;
+  } else {
+    cents1 = pitch1 * 100;  // Assume MIDI
+  }
+
+  if (pitch2.totalCents != null) {
+    cents2 = pitch2.totalCents;
+  } else {
+    cents2 = pitch2 * 100;
+  }
+
+  return cents2 - cents1;
+}
+
+// Find the prime limit of a ratio
+export fn primeLimit(r) {
+  let num = r.numerator;
+  let den = r.denominator;
+  let maxPrime = 2;
+
+  // Simple prime factorization
+  const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31];
+
+  for (p in primes) {
+    while (num % p == 0) {
+      num = num / p;
+      if (p > maxPrime) {
+        maxPrime = p;
+      }
+    }
+    while (den % p == 0) {
+      den = den / p;
+      if (p > maxPrime) {
+        maxPrime = p;
+      }
+    }
+  }
+
+  return maxPrime;
+}
+
+// Check if ratio is superparticular (n+1)/n
+export fn isSuperparticular(r) {
+  return r.numerator == r.denominator + 1;
+}
+
+// Simplify ratio to lowest terms
+export fn simplifyRatio(r) {
+  let a = r.numerator;
+  let b = r.denominator;
+
+  // Find GCD
+  while (b != 0) {
+    const temp = b;
+    b = a % b;
+    a = temp;
+  }
+
+  return ratio(r.numerator / a, r.denominator / a);
+}
+
+// Multiply ratios
+export fn multiplyRatios(r1, r2) {
+  return simplifyRatio(ratio(
+    r1.numerator * r2.numerator,
+    r1.denominator * r2.denominator
+  ));
+}
+
+// Divide ratios
+export fn divideRatios(r1, r2) {
+  return simplifyRatio(ratio(
+    r1.numerator * r2.denominator,
+    r1.denominator * r2.numerator
+  ));
+}
+
+// Invert ratio
+export fn invertRatio(r) {
+  return ratio(r.denominator, r.numerator);
+}
+
+// ============================================
+// Tuning Tables
+// ============================================
+
+// Generate tuning table (MIDI note to frequency)
+export fn generateTuningTable(tuning, baseNote, baseFreq) {
+  let table = {};
+
+  for (note in 0..127) {
+    let freq = 0;
+
+    if (tuning.type == "edo") {
+      const steps = note - baseNote;
+      freq = baseFreq * (2 ** (steps / tuning.divisions));
+    } else if (tuning.type == "temperament") {
+      const octave = (note / 12) - (baseNote / 12);
+      const pitchClass = note % 12;
+      const cents = tuning.intervals[pitchClass] + (octave * 1200);
+      freq = baseFreq * (2 ** (cents / 1200));
+    }
+
+    table[note] = freq;
+  }
+
+  return table;
+}
+
+// Generate Scala format tuning file content
+export fn toScalaFormat(scale, name) {
+  let result = "! " + name + ".scl\n";
+  result = result + "!\n";
+  result = result + name + "\n";
+  result = result + (scale.length - 1) + "\n";
+  result = result + "!\n";
+
+  for (i in 1..(scale.length - 1)) {
+    const r = scale[i];
+    if (r.type == "ratio") {
+      result = result + r.numerator + "/" + r.denominator + "\n";
+    } else {
+      result = result + ratioToCents(r) + "\n";
+    }
+  }
+
+  return result;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+// Approximate log2 using series expansion
+fn log2Approx(x) {
+  if (x <= 0) {
+    return 0;
+  }
+
+  // Normalize to [1, 2)
+  let exp = 0;
+  let val = x;
+
+  while (val >= 2) {
+    val = val / 2;
+    exp = exp + 1;
+  }
+  while (val < 1) {
+    val = val * 2;
+    exp = exp - 1;
+  }
+
+  // Taylor series for ln(x) around 1
+  const y = val - 1;
+  let ln = y;
+  let term = y;
+
+  for (n in 2..15) {
+    term = term * (-y);
+    ln = ln + term / n;
+  }
+
+  // Convert to log2: log2(x) = ln(x) / ln(2)
+  return exp + ln * LOG2_E;
+}
+
+// ============================================
+// MTS (MIDI Tuning Standard) Support
+// ============================================
+
+// Convert pitch to MTS format (14-bit pitch bend)
+export fn toMTS(pitch) {
+  if (pitch.type != "microtonalPitch") {
+    return { note: pitch, bend: 0 };
+  }
+
+  const baseMidi = pitch.baseMidi;
+  const centsOffset = pitch.centsOffset;
+
+  // Convert cents to pitch bend units
+  // Standard pitch bend range is ±2 semitones = ±200 cents
+  // 14-bit range is 0-16383, center is 8192
+  const bendRange = 200;  // cents
+  const bendUnits = (centsOffset / bendRange) * 8192;
+
+  let bend = 8192 + bendUnits;
+  if (bend < 0) { bend = 0; }
+  if (bend > 16383) { bend = 16383; }
+
+  // Round to integer
+  bend = bend - (bend % 1);
+
+  return {
+    note: baseMidi,
+    bend: bend
+  };
+}
+
+// Create MTS bulk tuning dump
+export fn createMTSDump(tuningTable, name) {
+  // Returns data for MTS SysEx message
+  return {
+    type: "mtsDump",
+    name: name,
+    tuning: tuningTable
+  };
+}

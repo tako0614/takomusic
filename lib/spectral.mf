@@ -1,0 +1,666 @@
+// std:spectral (v5.3)
+// Spectral music composition utilities
+// Based on techniques from Grisey, Murail, and the French spectral school
+
+// ============================================
+// Constants
+// ============================================
+
+export const A4_FREQ = 440.0;
+const LOG2_E = 1.4426950408889634;
+
+// ============================================
+// Harmonic Series
+// ============================================
+
+// Generate harmonic series from fundamental
+export fn harmonics(fundamental, count) {
+  let partials = [];
+  for (n in 1..count) {
+    partials[partials.length] = {
+      partial: n,
+      frequency: fundamental * n,
+      amplitude: 1.0 / n  // Natural rolloff
+    };
+  }
+  return partials;
+}
+
+// Generate odd harmonics only
+export fn oddHarmonics(fundamental, count) {
+  let partials = [];
+  for (i in 0..(count - 1)) {
+    const n = i * 2 + 1;
+    partials[partials.length] = {
+      partial: n,
+      frequency: fundamental * n,
+      amplitude: 1.0 / n
+    };
+  }
+  return partials;
+}
+
+// Generate even harmonics only
+export fn evenHarmonics(fundamental, count) {
+  let partials = [];
+  for (i in 1..count) {
+    const n = i * 2;
+    partials[partials.length] = {
+      partial: n,
+      frequency: fundamental * n,
+      amplitude: 1.0 / n
+    };
+  }
+  return partials;
+}
+
+// Generate subharmonics
+export fn subharmonics(fundamental, count) {
+  let partials = [];
+  for (n in 1..count) {
+    partials[partials.length] = {
+      partial: -n,
+      frequency: fundamental / n,
+      amplitude: 1.0 / n
+    };
+  }
+  return partials;
+}
+
+// ============================================
+// Frequency to Pitch Conversion
+// ============================================
+
+// Convert frequency to MIDI note (floating point)
+export fn frequencyToMidi(freq) {
+  return 69 + 12 * log2Approx(freq / A4_FREQ);
+}
+
+// Convert frequency to nearest MIDI note (integer)
+export fn frequencyToNearestMidi(freq) {
+  const midi = frequencyToMidi(freq);
+  if (midi >= 0) {
+    return midi + 0.5 - ((midi + 0.5) % 1);
+  }
+  return midi - 0.5 - ((midi - 0.5) % 1);
+}
+
+// Convert MIDI note to frequency
+export fn midiToFrequency(midi) {
+  return A4_FREQ * (2 ** ((midi - 69) / 12));
+}
+
+// Get cents deviation from nearest MIDI note
+export fn frequencyCentsDeviation(freq) {
+  const exactMidi = frequencyToMidi(freq);
+  const nearestMidi = frequencyToNearestMidi(freq);
+  return (exactMidi - nearestMidi) * 100;
+}
+
+// ============================================
+// Spectral Analysis
+// ============================================
+
+// Convert spectrum to playable pitches
+// Quantizes to nearest quarter-tone or specified resolution
+export fn spectrumToPitches(partials, resolution) {
+  let res = resolution;
+  if (res == null) {
+    res = 50;  // Quarter-tone (50 cents)
+  }
+
+  let pitches = [];
+  for (partial in partials) {
+    const exactMidi = frequencyToMidi(partial.frequency);
+    const cents = exactMidi * 100;
+
+    // Quantize to resolution
+    let quantized = cents / res;
+    if (quantized >= 0) {
+      quantized = quantized + 0.5 - ((quantized + 0.5) % 1);
+    } else {
+      quantized = quantized - 0.5 - ((quantized - 0.5) % 1);
+    }
+    quantized = quantized * res;
+
+    pitches[pitches.length] = {
+      midi: quantized / 100,
+      cents: quantized,
+      amplitude: partial.amplitude,
+      partial: partial.partial
+    };
+  }
+
+  return pitches;
+}
+
+// Remove duplicate pitches (within tolerance)
+export fn removeDuplicates(pitches, tolerance) {
+  let tol = tolerance;
+  if (tol == null) {
+    tol = 25;  // Quarter of a semitone
+  }
+
+  let unique = [];
+  for (pitch in pitches) {
+    let isDup = false;
+    for (existing in unique) {
+      let diff = pitch.cents - existing.cents;
+      if (diff < 0) { diff = -diff; }
+      if (diff < tol) {
+        isDup = true;
+        // Keep the louder one
+        if (pitch.amplitude > existing.amplitude) {
+          existing.amplitude = pitch.amplitude;
+        }
+        break;
+      }
+    }
+    if (!isDup) {
+      unique[unique.length] = pitch;
+    }
+  }
+
+  return unique;
+}
+
+// ============================================
+// Spectral Transformations
+// ============================================
+
+// Frequency shift (add constant to all frequencies)
+export fn frequencyShift(partials, shiftHz) {
+  let result = [];
+  for (partial in partials) {
+    if (partial.frequency + shiftHz > 0) {
+      result[result.length] = {
+        partial: partial.partial,
+        frequency: partial.frequency + shiftHz,
+        amplitude: partial.amplitude
+      };
+    }
+  }
+  return result;
+}
+
+// Ring modulation (multiply frequencies)
+export fn ringModulate(partials, modulatorFreq) {
+  let result = [];
+  for (partial in partials) {
+    // Sum frequency
+    result[result.length] = {
+      partial: partial.partial,
+      frequency: partial.frequency + modulatorFreq,
+      amplitude: partial.amplitude * 0.5
+    };
+    // Difference frequency
+    const diff = partial.frequency - modulatorFreq;
+    if (diff > 0) {
+      result[result.length] = {
+        partial: -partial.partial,
+        frequency: diff,
+        amplitude: partial.amplitude * 0.5
+      };
+    }
+  }
+  return result;
+}
+
+// Stretch/compress spectrum
+export fn stretchSpectrum(partials, factor) {
+  const fundamental = partials[0].frequency;
+
+  let result = [];
+  for (partial in partials) {
+    const interval = partial.frequency / fundamental;
+    const newInterval = interval ** factor;
+    result[result.length] = {
+      partial: partial.partial,
+      frequency: fundamental * newInterval,
+      amplitude: partial.amplitude
+    };
+  }
+  return result;
+}
+
+// Inharmonicity simulation (piano-like stretching)
+export fn addInharmonicity(partials, coefficient) {
+  const fundamental = partials[0].frequency;
+
+  let result = [];
+  for (partial in partials) {
+    const n = partial.partial;
+    // f_n = f_1 * n * sqrt(1 + B * n^2)
+    const stretch = (1 + coefficient * n * n) ** 0.5;
+    result[result.length] = {
+      partial: n,
+      frequency: fundamental * n * stretch,
+      amplitude: partial.amplitude
+    };
+  }
+  return result;
+}
+
+// Filter spectrum by frequency range
+export fn filterByFrequency(partials, minFreq, maxFreq) {
+  let result = [];
+  for (partial in partials) {
+    if (partial.frequency >= minFreq && partial.frequency <= maxFreq) {
+      result[result.length] = partial;
+    }
+  }
+  return result;
+}
+
+// Filter by amplitude threshold
+export fn filterByAmplitude(partials, threshold) {
+  let result = [];
+  for (partial in partials) {
+    if (partial.amplitude >= threshold) {
+      result[result.length] = partial;
+    }
+  }
+  return result;
+}
+
+// ============================================
+// Spectral Interpolation (Morphing)
+// ============================================
+
+// Interpolate between two spectra
+export fn interpolateSpectra(spectrumA, spectrumB, amount) {
+  // Simple linear interpolation based on partial number
+  let result = [];
+
+  // Get all unique partial numbers
+  let partialNums = [];
+  for (p in spectrumA) {
+    partialNums[partialNums.length] = p.partial;
+  }
+  for (p in spectrumB) {
+    let found = false;
+    for (num in partialNums) {
+      if (num == p.partial) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      partialNums[partialNums.length] = p.partial;
+    }
+  }
+
+  for (num in partialNums) {
+    let freqA = 0;
+    let ampA = 0;
+    let freqB = 0;
+    let ampB = 0;
+
+    for (p in spectrumA) {
+      if (p.partial == num) {
+        freqA = p.frequency;
+        ampA = p.amplitude;
+        break;
+      }
+    }
+
+    for (p in spectrumB) {
+      if (p.partial == num) {
+        freqB = p.frequency;
+        ampB = p.amplitude;
+        break;
+      }
+    }
+
+    const freq = freqA * (1 - amount) + freqB * amount;
+    const amp = ampA * (1 - amount) + ampB * amount;
+
+    if (freq > 0 && amp > 0.001) {
+      result[result.length] = {
+        partial: num,
+        frequency: freq,
+        amplitude: amp
+      };
+    }
+  }
+
+  return result;
+}
+
+// Create morphing sequence between spectra
+export fn morphSequence(spectrumA, spectrumB, steps) {
+  let sequence = [];
+  for (i in 0..steps) {
+    const amount = i / steps;
+    sequence[i] = interpolateSpectra(spectrumA, spectrumB, amount);
+  }
+  return sequence;
+}
+
+// ============================================
+// Instrument Spectra (Approximations)
+// ============================================
+
+// Clarinet-like spectrum (odd harmonics)
+export fn clarinetSpectrum(fundamental) {
+  let partials = [];
+  const amplitudes = [1.0, 0.75, 0.5, 0.14, 0.5, 0.12, 0.17];
+
+  for (i in 0..(amplitudes.length - 1)) {
+    const n = i * 2 + 1;
+    partials[partials.length] = {
+      partial: n,
+      frequency: fundamental * n,
+      amplitude: amplitudes[i]
+    };
+  }
+  return partials;
+}
+
+// Trumpet-like spectrum
+export fn trumpetSpectrum(fundamental) {
+  let partials = [];
+  const amplitudes = [1.0, 0.8, 0.65, 0.9, 0.7, 0.6, 0.4, 0.3, 0.2];
+
+  for (i in 0..(amplitudes.length - 1)) {
+    const n = i + 1;
+    partials[partials.length] = {
+      partial: n,
+      frequency: fundamental * n,
+      amplitude: amplitudes[i]
+    };
+  }
+  return partials;
+}
+
+// String-like spectrum (with slight inharmonicity)
+export fn stringSpectrum(fundamental, inharmonicity) {
+  let inh = inharmonicity;
+  if (inh == null) {
+    inh = 0.0001;
+  }
+
+  let partials = harmonics(fundamental, 16);
+  return addInharmonicity(partials, inh);
+}
+
+// Bell-like spectrum (non-harmonic)
+export fn bellSpectrum(fundamental) {
+  // Approximate bell partials (Rossing's data)
+  const ratios = [1.0, 2.0, 2.4, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0];
+  const amps = [1.0, 0.6, 0.4, 0.25, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05];
+
+  let partials = [];
+  for (i in 0..(ratios.length - 1)) {
+    partials[partials.length] = {
+      partial: i + 1,
+      frequency: fundamental * ratios[i],
+      amplitude: amps[i]
+    };
+  }
+  return partials;
+}
+
+// ============================================
+// Difference Tones and Combination Tones
+// ============================================
+
+// Calculate difference tone
+export fn differenceTone(freq1, freq2) {
+  let diff = freq1 - freq2;
+  if (diff < 0) { diff = -diff; }
+  return diff;
+}
+
+// Calculate sum tone
+export fn sumTone(freq1, freq2) {
+  return freq1 + freq2;
+}
+
+// Generate combination tones up to order n
+export fn combinationTones(freq1, freq2, order) {
+  let tones = [];
+
+  for (m in 1..order) {
+    for (n in 1..order) {
+      // f = m*f1 ± n*f2
+      const sum = m * freq1 + n * freq2;
+      const diff = m * freq1 - n * freq2;
+
+      tones[tones.length] = {
+        type: "sum",
+        m: m,
+        n: n,
+        frequency: sum
+      };
+
+      if (diff > 0) {
+        tones[tones.length] = {
+          type: "diff",
+          m: m,
+          n: n,
+          frequency: diff
+        };
+      }
+    }
+  }
+
+  return tones;
+}
+
+// ============================================
+// Formant Synthesis
+// ============================================
+
+// Create formant (resonance peak)
+export fn formant(centerFreq, bandwidth, amplitude) {
+  return {
+    type: "formant",
+    frequency: centerFreq,
+    bandwidth: bandwidth,
+    amplitude: amplitude
+  };
+}
+
+// Vowel formants (approximate)
+export fn vowelFormants(vowel) {
+  if (vowel == "a") {
+    return [
+      formant(800, 80, 1.0),
+      formant(1200, 90, 0.5),
+      formant(2500, 120, 0.25)
+    ];
+  } else if (vowel == "e") {
+    return [
+      formant(400, 70, 1.0),
+      formant(2000, 100, 0.4),
+      formant(2600, 120, 0.2)
+    ];
+  } else if (vowel == "i") {
+    return [
+      formant(300, 60, 1.0),
+      formant(2300, 90, 0.5),
+      formant(3000, 120, 0.25)
+    ];
+  } else if (vowel == "o") {
+    return [
+      formant(500, 70, 1.0),
+      formant(800, 80, 0.4),
+      formant(2500, 120, 0.15)
+    ];
+  } else if (vowel == "u") {
+    return [
+      formant(350, 60, 1.0),
+      formant(700, 70, 0.3),
+      formant(2500, 100, 0.1)
+    ];
+  }
+  return [];
+}
+
+// Apply formants to spectrum
+export fn applyFormants(partials, formants) {
+  let result = [];
+
+  for (partial in partials) {
+    let totalAmp = 0;
+
+    for (formantSpec in formants) {
+      // Gaussian resonance curve
+      const diff = partial.frequency - formantSpec.frequency;
+      const sigma = formantSpec.bandwidth / 2.355;  // FWHM to sigma
+      const gaussian = formantSpec.amplitude *
+        (2.71828 ** (-(diff * diff) / (2 * sigma * sigma)));
+      totalAmp = totalAmp + gaussian;
+    }
+
+    result[result.length] = {
+      partial: partial.partial,
+      frequency: partial.frequency,
+      amplitude: partial.amplitude * totalAmp
+    };
+  }
+
+  return result;
+}
+
+// ============================================
+// Spectral Chords
+// ============================================
+
+// Create chord from harmonic series segment
+export fn harmonicChord(fundamental, startPartial, endPartial) {
+  let partials = [];
+  for (n in startPartial..endPartial) {
+    partials[partials.length] = {
+      partial: n,
+      frequency: fundamental * n,
+      amplitude: 1.0 / n
+    };
+  }
+  return partials;
+}
+
+// Create chord from specific partials
+export fn partialChord(fundamental, partialNumbers) {
+  let partials = [];
+  for (n in partialNumbers) {
+    partials[partials.length] = {
+      partial: n,
+      frequency: fundamental * n,
+      amplitude: 1.0 / n
+    };
+  }
+  return partials;
+}
+
+// Create subharmonic chord (undertone series)
+export fn subharmonicChord(fundamental, startPartial, endPartial) {
+  let partials = [];
+  for (n in startPartial..endPartial) {
+    partials[partials.length] = {
+      partial: -n,
+      frequency: fundamental / n,
+      amplitude: 1.0 / n
+    };
+  }
+  return partials;
+}
+
+// ============================================
+// Analysis Utilities
+// ============================================
+
+// Calculate spectral centroid
+export fn spectralCentroid(partials) {
+  let weightedSum = 0;
+  let totalAmp = 0;
+
+  for (partial in partials) {
+    weightedSum = weightedSum + partial.frequency * partial.amplitude;
+    totalAmp = totalAmp + partial.amplitude;
+  }
+
+  if (totalAmp == 0) {
+    return 0;
+  }
+  return weightedSum / totalAmp;
+}
+
+// Calculate spectral spread
+export fn spectralSpread(partials) {
+  const centroid = spectralCentroid(partials);
+  let weightedVariance = 0;
+  let totalAmp = 0;
+
+  for (partial in partials) {
+    const diff = partial.frequency - centroid;
+    weightedVariance = weightedVariance + (diff * diff) * partial.amplitude;
+    totalAmp = totalAmp + partial.amplitude;
+  }
+
+  if (totalAmp == 0) {
+    return 0;
+  }
+  return (weightedVariance / totalAmp) ** 0.5;
+}
+
+// Calculate roughness (simplified Plomp-Levelt)
+export fn calculateRoughness(partials) {
+  let roughness = 0;
+
+  for (i in 0..(partials.length - 2)) {
+    for (j in (i + 1)..(partials.length - 1)) {
+      const f1 = partials[i].frequency;
+      const f2 = partials[j].frequency;
+      const a1 = partials[i].amplitude;
+      const a2 = partials[j].amplitude;
+
+      const diff = f2 - f1;
+      if (diff < 0) { continue; }
+
+      // Critical bandwidth approximation
+      const cb = 25 + 75 * (1 + 1.4 * ((f1 + f2) / 2 / 1000) ** 2) ** 0.69;
+
+      // Roughness contribution
+      const x = diff / cb;
+      const contrib = a1 * a2 * (2.71828 ** (-3.5 * x)) * x ** 2;
+      roughness = roughness + contrib;
+    }
+  }
+
+  return roughness;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+fn log2Approx(x) {
+  if (x <= 0) {
+    return 0;
+  }
+
+  let exp = 0;
+  let val = x;
+
+  while (val >= 2) {
+    val = val / 2;
+    exp = exp + 1;
+  }
+  while (val < 1) {
+    val = val * 2;
+    exp = exp - 1;
+  }
+
+  const y = val - 1;
+  let ln = y;
+  let term = y;
+
+  for (n in 2..15) {
+    term = term * (-y);
+    ln = ln + term / n;
+  }
+
+  return exp + ln * LOG2_E;
+}

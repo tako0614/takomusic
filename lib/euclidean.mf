@@ -1,0 +1,660 @@
+// std:euclidean (v5.3)
+// Euclidean rhythms and related algorithmic rhythm generators
+// Based on Godfried Toussaint's research on Euclidean rhythms
+
+// ============================================
+// Core Euclidean Algorithm
+// ============================================
+
+// Generate Euclidean rhythm using Bjorklund's algorithm
+// k = number of onsets (hits)
+// n = total steps
+// Returns array of 0s and 1s
+export fn euclidean(k, n) {
+  if (k >= n) {
+    let result = [];
+    for (_ in 0..(n - 1)) {
+      result[result.length] = 1;
+    }
+    return result;
+  }
+
+  if (k == 0) {
+    let result = [];
+    for (_ in 0..(n - 1)) {
+      result[result.length] = 0;
+    }
+    return result;
+  }
+
+  // Bjorklund's algorithm
+  let pattern = [];
+  for (i in 0..(n - 1)) {
+    if (i < k) {
+      pattern[i] = [1];
+    } else {
+      pattern[i] = [0];
+    }
+  }
+
+  let divisor = n - k;
+  while (divisor > 1) {
+    let newPattern = [];
+    let pairs = k;
+    if (divisor < k) {
+      pairs = divisor;
+    }
+
+    for (i in 0..(pairs - 1)) {
+      let combined = [];
+      for (x in pattern[i]) {
+        combined[combined.length] = x;
+      }
+      for (x in pattern[pattern.length - 1 - i]) {
+        combined[combined.length] = x;
+      }
+      newPattern[i] = combined;
+    }
+
+    // Add remaining
+    if (k > divisor) {
+      for (i in pairs..(k - divisor - 1 + pairs)) {
+        newPattern[newPattern.length] = pattern[i];
+      }
+    } else {
+      let remaining = divisor - k;
+      for (i in 0..(remaining - 1)) {
+        newPattern[newPattern.length] = pattern[k + i];
+      }
+    }
+
+    pattern = newPattern;
+
+    let prevK = k;
+    k = pattern.length;
+    if (prevK > divisor) {
+      divisor = prevK - divisor;
+    } else {
+      divisor = divisor - prevK;
+    }
+  }
+
+  // Flatten
+  let result = [];
+  for (group in pattern) {
+    for (x in group) {
+      result[result.length] = x;
+    }
+  }
+
+  return result;
+}
+
+// Rotate pattern by offset
+export fn rotate(pattern, offset) {
+  let n = pattern.length;
+  if (n == 0) {
+    return [];
+  }
+
+  let off = offset % n;
+  if (off < 0) {
+    off = off + n;
+  }
+
+  let result = [];
+  for (i in 0..(n - 1)) {
+    result[i] = pattern[(i + off) % n];
+  }
+  return result;
+}
+
+// Find all rotations of a pattern
+export fn allRotations(pattern) {
+  let rotations = [];
+  for (i in 0..(pattern.length - 1)) {
+    rotations[i] = rotate(pattern, i);
+  }
+  return rotations;
+}
+
+// ============================================
+// Famous Euclidean Rhythms
+// ============================================
+
+// Cuban tresillo (3,8)
+export fn tresillo() {
+  return euclidean(3, 8);
+}
+
+// Cuban cinquillo (5,8)
+export fn cinquillo() {
+  return euclidean(5, 8);
+}
+
+// Bossa nova (5,16) - common starting rotation
+export fn bossaNova() {
+  return euclidean(5, 16);
+}
+
+// Soukous (5,12)
+export fn soukous() {
+  return euclidean(5, 12);
+}
+
+// Rumba clave son (5,16) with specific rotation
+export fn rumbaClave() {
+  return rotate(euclidean(5, 16), 0);
+}
+
+// Standard bell pattern (7,12)
+export fn bellPattern() {
+  return euclidean(7, 12);
+}
+
+// Aksak (Bulgarian) (4,9)
+export fn aksak() {
+  return euclidean(4, 9);
+}
+
+// West African (5,12)
+export fn westAfrican() {
+  return euclidean(5, 12);
+}
+
+// Flamenco (4,12)
+export fn flamenco() {
+  return euclidean(4, 12);
+}
+
+// ============================================
+// Pattern Analysis
+// ============================================
+
+// Count onsets in pattern
+export fn countOnsets(pattern) {
+  let count = 0;
+  for (x in pattern) {
+    if (x == 1) {
+      count = count + 1;
+    }
+  }
+  return count;
+}
+
+// Get inter-onset intervals (IOIs)
+export fn getIOIs(pattern) {
+  let iois = [];
+  let lastOnset = -1;
+
+  for (i in 0..(pattern.length - 1)) {
+    if (pattern[i] == 1) {
+      if (lastOnset >= 0) {
+        iois[iois.length] = i - lastOnset;
+      }
+      lastOnset = i;
+    }
+  }
+
+  // Wrap around for cyclic pattern
+  if (lastOnset >= 0) {
+    let firstOnset = -1;
+    for (i in 0..(pattern.length - 1)) {
+      if (pattern[i] == 1) {
+        firstOnset = i;
+        break;
+      }
+    }
+    if (firstOnset >= 0) {
+      iois[iois.length] = pattern.length - lastOnset + firstOnset;
+    }
+  }
+
+  return iois;
+}
+
+// Check if pattern is maximally even
+export fn isMaximallyEven(pattern) {
+  const k = countOnsets(pattern);
+  const n = pattern.length;
+  const expected = euclidean(k, n);
+
+  // Check all rotations
+  for (rotation in allRotations(expected)) {
+    let match = true;
+    for (i in 0..(n - 1)) {
+      if (pattern[i] != rotation[i]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Calculate evenness score (variance of IOIs)
+export fn evennessScore(pattern) {
+  const iois = getIOIs(pattern);
+  if (iois.length == 0) {
+    return 0;
+  }
+
+  // Calculate mean
+  let sum = 0;
+  for (ioi in iois) {
+    sum = sum + ioi;
+  }
+  const mean = sum / iois.length;
+
+  // Calculate variance
+  let variance = 0;
+  for (ioi in iois) {
+    const diff = ioi - mean;
+    variance = variance + diff * diff;
+  }
+  variance = variance / iois.length;
+
+  // Lower variance = more even
+  return 1 / (1 + variance);
+}
+
+// ============================================
+// Pattern Transformations
+// ============================================
+
+// Invert pattern (swap 0s and 1s)
+export fn invert(pattern) {
+  let result = [];
+  for (x in pattern) {
+    if (x == 1) {
+      result[result.length] = 0;
+    } else {
+      result[result.length] = 1;
+    }
+  }
+  return result;
+}
+
+// Reverse pattern
+export fn reverse(pattern) {
+  let result = [];
+  for (i in 0..(pattern.length - 1)) {
+    result[i] = pattern[pattern.length - 1 - i];
+  }
+  return result;
+}
+
+// Stretch pattern by factor
+export fn stretch(pattern, factor) {
+  let result = [];
+  for (x in pattern) {
+    for (_ in 0..(factor - 1)) {
+      result[result.length] = x;
+    }
+  }
+  return result;
+}
+
+// Compress pattern (take every nth)
+export fn compress(pattern, factor) {
+  let result = [];
+  for (i in 0..(pattern.length - 1)) {
+    if (i % factor == 0) {
+      result[result.length] = pattern[i];
+    }
+  }
+  return result;
+}
+
+// Concatenate patterns
+export fn concat(p1, p2) {
+  let result = [];
+  for (x in p1) {
+    result[result.length] = x;
+  }
+  for (x in p2) {
+    result[result.length] = x;
+  }
+  return result;
+}
+
+// Interleave patterns
+export fn interleave(p1, p2) {
+  let result = [];
+  let maxLen = p1.length;
+  if (p2.length > maxLen) {
+    maxLen = p2.length;
+  }
+
+  for (i in 0..(maxLen - 1)) {
+    if (i < p1.length) {
+      result[result.length] = p1[i];
+    }
+    if (i < p2.length) {
+      result[result.length] = p2[i];
+    }
+  }
+  return result;
+}
+
+// Boolean AND of patterns
+export fn patternAnd(p1, p2) {
+  let len = p1.length;
+  if (p2.length < len) {
+    len = p2.length;
+  }
+
+  let result = [];
+  for (i in 0..(len - 1)) {
+    if (p1[i] == 1 && p2[i] == 1) {
+      result[i] = 1;
+    } else {
+      result[i] = 0;
+    }
+  }
+  return result;
+}
+
+// Boolean OR of patterns
+export fn patternOr(p1, p2) {
+  let len = p1.length;
+  if (p2.length < len) {
+    len = p2.length;
+  }
+
+  let result = [];
+  for (i in 0..(len - 1)) {
+    if (p1[i] == 1 || p2[i] == 1) {
+      result[i] = 1;
+    } else {
+      result[i] = 0;
+    }
+  }
+  return result;
+}
+
+// Boolean XOR of patterns
+export fn patternXor(p1, p2) {
+  let len = p1.length;
+  if (p2.length < len) {
+    len = p2.length;
+  }
+
+  let result = [];
+  for (i in 0..(len - 1)) {
+    if ((p1[i] == 1 && p2[i] == 0) || (p1[i] == 0 && p2[i] == 1)) {
+      result[i] = 1;
+    } else {
+      result[i] = 0;
+    }
+  }
+  return result;
+}
+
+// ============================================
+// Polyrhythm Generation
+// ============================================
+
+// Generate polyrhythm from two Euclidean patterns
+export fn polyrhythm(k1, n1, k2, n2) {
+  // Find LCM for combined length
+  let a = n1;
+  let b = n2;
+  while (b != 0) {
+    const temp = b;
+    b = a % b;
+    a = temp;
+  }
+  const gcd = a;
+  const lcm = (n1 * n2) / gcd;
+
+  // Stretch both patterns to LCM length
+  const p1 = stretch(euclidean(k1, n1), lcm / n1);
+  const p2 = stretch(euclidean(k2, n2), lcm / n2);
+
+  return {
+    pattern1: p1,
+    pattern2: p2,
+    combined: patternOr(p1, p2),
+    length: lcm
+  };
+}
+
+// Generate complementary rhythms
+export fn complementaryRhythms(k, n) {
+  const p1 = euclidean(k, n);
+  const p2 = invert(p1);
+  return {
+    rhythm: p1,
+    complement: p2
+  };
+}
+
+// ============================================
+// Musical Conversion
+// ============================================
+
+// Convert pattern to durations
+// baseDuration: duration of one step
+export fn toDurations(pattern, baseDuration) {
+  let durations = [];
+  let currentDur = 0;
+
+  for (i in 0..(pattern.length - 1)) {
+    currentDur = currentDur + baseDuration;
+    if (pattern[i] == 1) {
+      if (durations.length > 0 || i == 0) {
+        // Start new note
+        if (i > 0 && durations.length > 0) {
+          // Previous duration is finalized
+        }
+      }
+      durations[durations.length] = baseDuration;
+      currentDur = 0;
+    } else if (durations.length > 0) {
+      // Extend previous note
+      durations[durations.length - 1] = durations[durations.length - 1] + baseDuration;
+    }
+  }
+
+  return durations;
+}
+
+// Convert pattern to onset times
+export fn toOnsetTimes(pattern, baseDuration) {
+  let times = [];
+  let time = 0 / 1;
+
+  for (i in 0..(pattern.length - 1)) {
+    if (pattern[i] == 1) {
+      times[times.length] = time;
+    }
+    time = time + baseDuration;
+  }
+
+  return times;
+}
+
+// Convert pattern to rest pattern (for tied notes)
+export fn toRestPattern(pattern) {
+  let result = [];
+  for (x in pattern) {
+    if (x == 1) {
+      result[result.length] = false;  // Not a rest
+    } else {
+      result[result.length] = true;   // Rest or tie
+    }
+  }
+  return result;
+}
+
+// ============================================
+// Pattern Variation
+// ============================================
+
+// Add random variations to pattern
+export fn addSwing(pattern, swingAmount, seed) {
+  // Returns timing offsets for each onset
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let offsets = [];
+  for (i in 0..(pattern.length - 1)) {
+    if (pattern[i] == 1) {
+      // Even positions get positive swing, odd get negative
+      if (i % 2 == 0) {
+        offsets[offsets.length] = swingAmount;
+      } else {
+        offsets[offsets.length] = -swingAmount;
+      }
+    }
+  }
+
+  return offsets;
+}
+
+// Humanize pattern with random timing
+export fn humanize(pattern, maxOffset, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let offsets = [];
+  for (i in 0..(pattern.length - 1)) {
+    if (pattern[i] == 1) {
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      const normalized = (rng / 2147483648) * 2 - 1;  // -1 to 1
+      offsets[offsets.length] = normalized * maxOffset;
+    }
+  }
+
+  return offsets;
+}
+
+// Probabilistic pattern - each onset has probability p
+export fn probabilisticPattern(pattern, probability, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let result = [];
+  for (x in pattern) {
+    if (x == 1) {
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      if ((rng / 2147483648) < probability) {
+        result[result.length] = 1;
+      } else {
+        result[result.length] = 0;
+      }
+    } else {
+      result[result.length] = 0;
+    }
+  }
+
+  return result;
+}
+
+// ============================================
+// Pattern Matching and Search
+// ============================================
+
+// Find best Euclidean approximation for arbitrary pattern
+export fn findBestEuclidean(pattern) {
+  const n = pattern.length;
+  const k = countOnsets(pattern);
+
+  let bestMatch = euclidean(k, n);
+  let bestScore = 0;
+
+  // Try all rotations
+  for (rotation in allRotations(euclidean(k, n))) {
+    let score = 0;
+    for (i in 0..(n - 1)) {
+      if (pattern[i] == rotation[i]) {
+        score = score + 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = rotation;
+    }
+  }
+
+  return {
+    euclidean: bestMatch,
+    matchScore: bestScore / n,
+    k: k,
+    n: n
+  };
+}
+
+// Check if two patterns are rotational equivalents
+export fn areRotationallyEquivalent(p1, p2) {
+  if (p1.length != p2.length) {
+    return false;
+  }
+
+  for (rotation in allRotations(p1)) {
+    let match = true;
+    for (i in 0..(p2.length - 1)) {
+      if (rotation[i] != p2[i]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ============================================
+// Notation Helpers
+// ============================================
+
+// Convert to string representation
+export fn toString(pattern) {
+  let result = "";
+  for (x in pattern) {
+    if (x == 1) {
+      result = result + "x";
+    } else {
+      result = result + ".";
+    }
+  }
+  return result;
+}
+
+// Parse from string
+export fn fromString(str) {
+  let result = [];
+  for (i in 0..(str.length - 1)) {
+    const ch = str[i];
+    if (ch == "x" || ch == "X" || ch == "1") {
+      result[result.length] = 1;
+    } else if (ch == "." || ch == "-" || ch == "0") {
+      result[result.length] = 0;
+    }
+  }
+  return result;
+}
+
+// Convert to binary number representation
+export fn toBinary(pattern) {
+  let result = 0;
+  for (i in 0..(pattern.length - 1)) {
+    if (pattern[i] == 1) {
+      result = result + (2 ** (pattern.length - 1 - i));
+    }
+  }
+  return result;
+}
