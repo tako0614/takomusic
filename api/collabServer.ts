@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { WebSocketServer, WebSocket } from 'ws'
 import * as Y from 'yjs'
 import * as syncProtocol from 'y-protocols/sync'
@@ -23,6 +24,20 @@ const getDoc = (room: string): CollabDoc => {
     docs.set(room, { doc, awareness, connections: new Set() })
   }
   return docs.get(room) as CollabDoc
+}
+
+const toUint8Array = (data: WebSocket.RawData): Uint8Array | null => {
+  if (typeof data === 'string') return null
+  if (Array.isArray(data)) {
+    if (data.length === 0) return new Uint8Array()
+    const combined = Buffer.concat(data)
+    return new Uint8Array(combined.buffer, combined.byteOffset, combined.byteLength)
+  }
+  if (data instanceof ArrayBuffer) return new Uint8Array(data)
+  if (ArrayBuffer.isView(data)) {
+    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+  }
+  return null
 }
 
 const send = (ws: WebSocket, encoder: encoding.Encoder) => {
@@ -61,28 +76,34 @@ const setupConnection = (ws: WebSocket, room: string) => {
   collab.awareness.on('update', awarenessListener)
 
   ws.on('message', (data) => {
-    const message = new Uint8Array(data as ArrayBuffer)
-    const decoder = decoding.createDecoder(message)
-    const messageType = decoding.readVarUint(decoder)
-    const encoder = encoding.createEncoder()
-    encoding.writeVarUint(encoder, messageType)
+    const message = toUint8Array(data)
+    if (!message || message.length === 0) return
+    try {
+      const decoder = decoding.createDecoder(message)
+      const messageType = decoding.readVarUint(decoder)
+      const encoder = encoding.createEncoder()
+      encoding.writeVarUint(encoder, messageType)
 
-    if (messageType === messageSync) {
-      syncProtocol.readSyncMessage(decoder, encoder, collab.doc, ws)
-      if (encoding.length(encoder) > 1) {
-        send(ws, encoder)
+      if (messageType === messageSync) {
+        syncProtocol.readSyncMessage(decoder, encoder, collab.doc, ws)
+        if (encoding.length(encoder) > 1) {
+          send(ws, encoder)
+        }
+        return
       }
-      return
-    }
 
-    if (messageType === messageAwareness) {
-      const update = decoding.readVarUint8Array(decoder)
-      awarenessProtocol.applyAwarenessUpdate(collab.awareness, update, ws)
-      const decoded = awarenessProtocol.decodeAwarenessUpdate(update)
-      for (const [clientId] of decoded) {
-        awarenessIds.add(clientId)
+      if (messageType === messageAwareness) {
+        const update = decoding.readVarUint8Array(decoder)
+        awarenessProtocol.applyAwarenessUpdate(collab.awareness, update, ws)
+        const decoded = awarenessProtocol.decodeAwarenessUpdate(update)
+        for (const [clientId] of decoded) {
+          awarenessIds.add(clientId)
+        }
+        return
       }
-      return
+    } catch (err) {
+      console.warn('Collab message error', err)
+      ws.close(1003, 'Invalid message')
     }
   })
 
@@ -118,8 +139,14 @@ const setupConnection = (ws: WebSocket, room: string) => {
 export const startCollabServer = (port = 8787) => {
   const server = new WebSocketServer({ port })
   server.on('connection', (ws, request) => {
-    const url = new URL(request.url || '', `http://${request.headers.host}`)
-    const room = url.searchParams.get('room') || url.pathname.replace(/^\/+/, '') || 'default'
+    const host = request.headers.host || 'localhost'
+    let room = 'default'
+    try {
+      const url = new URL(request.url || '/', `http://${host}`)
+      room = url.searchParams.get('room') || url.pathname.replace(/^\/+/, '') || 'default'
+    } catch {
+      room = 'default'
+    }
     setupConnection(ws as WebSocket, room)
   })
 

@@ -18,21 +18,42 @@ export type AudioExportResult = {
 
 const isNode = (): boolean => typeof process !== 'undefined' && !!process.versions?.node
 
+const exportsRoot = path.join(os.tmpdir(), 'takomusic-exports')
+
 const runCommand = async (command: string, args: string[], cwd: string) =>
   new Promise<{ code: number; stdout: string; stderr: string }>((resolve) => {
     const child = spawn(command, args, { cwd })
     let stdout = ''
     let stderr = ''
+    let settled = false
+    const settle = (code: number, out: string, err: string) => {
+      if (settled) return
+      settled = true
+      resolve({ code, stdout: out, stderr: err })
+    }
     child.stdout.on('data', (chunk) => {
       stdout += chunk.toString()
     })
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString()
     })
+    child.on('error', (err) => {
+      const combined = `${stderr}${stderr ? '\n' : ''}${err.message}`
+      settle(1, stdout, combined)
+    })
     child.on('close', (code) => {
-      resolve({ code: code ?? 0, stdout, stderr })
+      settle(code ?? 0, stdout, stderr)
     })
   })
+
+const moveFile = async (source: string, target: string) => {
+  try {
+    await fs.rename(source, target)
+  } catch {
+    await fs.copyFile(source, target)
+    await fs.unlink(source).catch(() => undefined)
+  }
+}
 
 const resolveDefaultProfile = async (): Promise<Record<string, unknown>> => {
   const profilePath = path.resolve(process.cwd(), 'profiles', 'audio.mf.profile.json')
@@ -69,35 +90,47 @@ export const exportAudio = async (request: AudioExportRequest): Promise<AudioExp
   }
 
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'takomusic-audio-'))
-  const scorePath = path.join(tempDir, 'score.json')
-  const profilePath = path.join(tempDir, 'profile.json')
-  const stamp = Date.now().toString(36)
-  const baseName = `takomusic_export_${stamp}`
-  const format = request.format === 'wav' ? 'wav' : 'mp3'
-  const outputPath = path.join(tempDir, `${baseName}.${format}`)
-  const wavPath = path.join(tempDir, `${baseName}.wav`)
+  try {
+    const scorePath = path.join(tempDir, 'score.json')
+    const profilePath = path.join(tempDir, 'profile.json')
+    const stamp = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+    const baseName = `takomusic_export_${stamp}`
+    const format = request.format === 'wav' ? 'wav' : 'mp3'
+    const outputPath = path.join(tempDir, `${baseName}.${format}`)
+    const wavPath = path.join(tempDir, `${baseName}.wav`)
 
-  const profileData = request.profile ?? (await resolveDefaultProfile())
-  const patchedProfile = await ensureOutputProfile(profileData, outputPath, wavPath)
+    const profileData = request.profile ?? (await resolveDefaultProfile())
+    const patchedProfile = await ensureOutputProfile(profileData, outputPath, wavPath)
 
-  await fs.writeFile(scorePath, JSON.stringify(request.score, null, 2))
-  await fs.writeFile(profilePath, JSON.stringify(patchedProfile, null, 2))
+    await fs.writeFile(scorePath, JSON.stringify(request.score, null, 2))
+    await fs.writeFile(profilePath, JSON.stringify(patchedProfile, null, 2))
 
-  const rendererPath = resolveRendererPath()
-  const result = await runCommand('node', [rendererPath, 'render', '--score', scorePath, '--profile', profilePath], tempDir)
+    const rendererPath = resolveRendererPath()
+    const result = await runCommand(
+      'node',
+      [rendererPath, 'render', '--score', scorePath, '--profile', profilePath],
+      tempDir
+    )
 
-  if (result.code !== 0) {
-    const message = result.stderr.trim() || result.stdout.trim() || 'Renderer failed'
-    throw new Error(message)
-  }
+    if (result.code !== 0) {
+      const message = result.stderr.trim() || result.stdout.trim() || 'Renderer failed'
+      throw new Error(message)
+    }
 
-  const fileName = path.basename(outputPath)
-  const mimeType = format === 'wav' ? 'audio/wav' : 'audio/mpeg'
-  const artifact = saveExportArtifact(outputPath, fileName, mimeType)
+    await fs.mkdir(exportsRoot, { recursive: true })
+    const finalPath = path.join(exportsRoot, `${baseName}.${format}`)
+    await moveFile(outputPath, finalPath)
 
-  return {
-    artifactId: artifact.id,
-    fileName: artifact.fileName,
-    mimeType: artifact.mimeType,
+    const fileName = path.basename(finalPath)
+    const mimeType = format === 'wav' ? 'audio/wav' : 'audio/mpeg'
+    const artifact = saveExportArtifact(finalPath, fileName, mimeType)
+
+    return {
+      artifactId: artifact.id,
+      fileName: artifact.fileName,
+      mimeType: artifact.mimeType,
+    }
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true })
   }
 }
