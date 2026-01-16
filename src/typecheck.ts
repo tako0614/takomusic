@@ -246,6 +246,55 @@ const STD_EXPORTS: Record<string, Record<string, TypeInfo>> = {
     crossRhythm: fnType(CLIP),
     accent: fnType(arrayType(NUMBER)),
   },
+  'std:articulations': {
+    applyStaccato: fnType(CLIP),
+    applyTenuto: fnType(CLIP),
+    applyAccent: fnType(CLIP),
+    applyMarcato: fnType(CLIP),
+    applyLegato: fnType(CLIP),
+    applyArticulation: fnType(CLIP),
+    articulatePhrase: fnType(CLIP),
+  },
+  'std:dynamics': {
+    crescendo: fnType(CLIP),
+    decrescendo: fnType(CLIP),
+    diminuendo: fnType(CLIP),
+    dynamicShape: fnType(CLIP),
+    accentPattern: fnType(CLIP),
+    sforzando: fnType(CLIP),
+    subito: fnType(CLIP),
+  },
+  'std:ornament': {
+    autoExpand: fnType(CLIP),
+    expandTrill: fnType(CLIP),
+    expandMordent: fnType(CLIP),
+    expandUpperMordent: fnType(CLIP),
+    expandTurn: fnType(CLIP),
+    expandTremolo: fnType(CLIP),
+    expandChordTremolo: fnType(CLIP),
+  },
+  'std:pedal': {
+    sustainDown: fnType(UNKNOWN),
+    sustainUp: fnType(UNKNOWN),
+    sustainChange: fnType(UNKNOWN),
+    sostenutoDown: fnType(UNKNOWN),
+    sostenutoUp: fnType(UNKNOWN),
+    unaCordaDown: fnType(UNKNOWN),
+    unaCordaUp: fnType(UNKNOWN),
+    pedal: fnType(UNKNOWN),
+    sustainSpan: fnType(CLIP),
+    withSustain: fnType(CLIP),
+    legatoPedal: fnType(CLIP),
+  },
+  'std:tuning': {
+    cents: fnType(NUMBER),
+    centsToRatio: fnType(NUMBER),
+    ratioToCents: fnType(NUMBER),
+    justCents: fnType(NUMBER),
+    detune: fnType(PITCH),
+    pythagorean: fnType(arrayType(NUMBER)),
+    edo: fnType(arrayType(NUMBER)),
+  },
 };
 
 class TypeEnv {
@@ -613,6 +662,20 @@ class TypeChecker {
     });
     const base = types.find((t) => t.kind !== 'unknown');
     if (!base) return arrayType(UNKNOWN);
+
+    // Check for mixed types and issue warning
+    const nonUnknownTypes = types.filter((t) => t.kind !== 'unknown');
+    const uniqueKinds = new Set(nonUnknownTypes.map(t => t.kind));
+    if (uniqueKinds.size > 1) {
+      // Report warning for heterogeneous array
+      this.diagnostics.push({
+        severity: 'warning',
+        message: `Array contains mixed types: ${[...uniqueKinds].join(', ')}. Consider using a tuple or ensuring consistent types.`,
+        position: expr.position,
+        filePath: this.filePath,
+      });
+    }
+
     const hasDifferent = types.some((t) => t.kind !== 'unknown' && t.kind !== base.kind);
     if (!hasDifferent) return arrayType(base);
     return tupleType(types);

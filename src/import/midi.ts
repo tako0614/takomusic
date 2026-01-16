@@ -2,7 +2,7 @@
  * MIDI Import - Convert Standard MIDI Files to TakoMusic Score IR
  */
 
-import type { ScoreIR, Track, Clip, Event, NoteEvent, ChordEvent, DrumHitEvent, ControlEvent } from '../ir.js';
+import type { ScoreIR, Track, Clip, Event, NoteEvent, ChordEvent, DrumHitEvent, ControlEvent, AutomationEvent, MarkerEvent } from '../ir.js';
 import type { Rat } from '../rat.js';
 import type { Pitch } from '../pitch.js';
 
@@ -394,6 +394,12 @@ export interface MidiImportOptions {
   mergeChords?: boolean;
   /** Treat channel 10 (9 in 0-indexed) as drums */
   drumChannel?: number;
+  /** Include CC (Control Change) events */
+  includeCC?: boolean;
+  /** Include pitch bend as automation */
+  includePitchBend?: boolean;
+  /** Include markers from MIDI meta events */
+  includeMarkers?: boolean;
 }
 
 /**
@@ -408,10 +414,14 @@ export function midiToScoreIR(
 
   const drumChannel = options.drumChannel ?? 9; // MIDI channel 10 (0-indexed: 9)
   const mergeChords = options.mergeChords ?? true;
+  const includeCC = options.includeCC ?? true;
+  const includePitchBend = options.includePitchBend ?? true;
+  const includeMarkers = options.includeMarkers ?? true;
 
   // Extract tempo and meter events from track 0 (or first track with them)
   const tempoEvents: { at: Rat; bpm: number; unit: Rat }[] = [];
   const meterEvents: { at: Rat; numerator: number; denominator: number }[] = [];
+  const markers: MarkerEvent[] = [];
   let title: string | undefined;
   let copyright: string | undefined;
 
@@ -439,6 +449,23 @@ export function midiToScoreIR(
       if (event.type === 'copyright' && !copyright) {
         copyright = event.text;
       }
+      // Collect markers
+      if (includeMarkers && event.type === 'marker' && event.text) {
+        markers.push({
+          type: 'marker',
+          pos: ticksToRat(event.absoluteTime, ppq),
+          kind: 'section',
+          label: event.text,
+        });
+      }
+      if (includeMarkers && event.type === 'cuePoint' && event.text) {
+        markers.push({
+          type: 'marker',
+          pos: ticksToRat(event.absoluteTime, ppq),
+          kind: 'cue',
+          label: event.text,
+        });
+      }
     }
   }
 
@@ -464,6 +491,18 @@ export function midiToScoreIR(
   const channelNotes: Map<
     number,
     { start: number; end: number; note: number; velocity: number }[]
+  > = new Map();
+
+  // Group CC events by channel
+  const channelCC: Map<
+    number,
+    { time: number; controller: number; value: number }[]
+  > = new Map();
+
+  // Group pitch bend events by channel
+  const channelPitchBend: Map<
+    number,
+    { time: number; value: number }[]
   > = new Map();
 
   for (const track of parsed.tracks) {
@@ -494,6 +533,23 @@ export function midiToScoreIR(
             velocity: on.velocity,
           });
         }
+      } else if (includeCC && event.type === 'controlChange' && event.channel !== undefined) {
+        if (!channelCC.has(event.channel)) {
+          channelCC.set(event.channel, []);
+        }
+        channelCC.get(event.channel)!.push({
+          time: event.absoluteTime,
+          controller: event.controller!,
+          value: event.value!,
+        });
+      } else if (includePitchBend && event.type === 'pitchBend' && event.channel !== undefined) {
+        if (!channelPitchBend.has(event.channel)) {
+          channelPitchBend.set(event.channel, []);
+        }
+        channelPitchBend.get(event.channel)!.push({
+          time: event.absoluteTime,
+          value: event.value! - 8192, // Center at 0
+        });
       }
     }
   }
@@ -606,6 +662,34 @@ export function midiToScoreIR(
       }
     }
 
+    // Add CC events as control events
+    const ccEvents = channelCC.get(channel);
+    if (ccEvents) {
+      for (const cc of ccEvents) {
+        events.push({
+          type: 'control',
+          start: ticksToRat(cc.time, ppq),
+          kind: 'cc',
+          data: { number: cc.controller, value: cc.value },
+        } as ControlEvent);
+      }
+    }
+
+    // Add pitch bend as automation events (convert to automation curve)
+    const pitchBendEvents = channelPitchBend.get(channel);
+    if (pitchBendEvents && pitchBendEvents.length > 0) {
+      // Group consecutive pitch bend events into automation segments
+      // For simplicity, create point automation events
+      for (const pb of pitchBendEvents) {
+        events.push({
+          type: 'control',
+          start: ticksToRat(pb.time, ppq),
+          kind: 'pitchBend',
+          data: { value: pb.value },
+        } as ControlEvent);
+      }
+    }
+
     // Sort events by start time
     events.sort((a, b) => {
       const aStart = 'start' in a ? (a.start as Rat) : { n: 0, d: 1 };
@@ -645,6 +729,7 @@ export function midiToScoreIR(
     meterMap: meterEvents,
     sounds,
     tracks,
+    markers: markers.length > 0 ? markers : undefined,
   };
 
   return score;

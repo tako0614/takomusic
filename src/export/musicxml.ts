@@ -12,6 +12,8 @@ import type {
   GlissandoEvent,
   TempoEvent,
   MeterEvent,
+  LyricSpan,
+  PedalEvent,
 } from '../ir.js';
 import type { Rat } from '../rat.js';
 import type { Pitch } from '../pitch.js';
@@ -91,6 +93,20 @@ function getDots(divisions: number, noteDivisions: number): number {
   return 0;
 }
 
+// Convert velocity to dynamics name
+function velocityToDynamics(velocity: number): string | null {
+  if (velocity <= 0.08) return 'pppp';
+  if (velocity <= 0.16) return 'ppp';
+  if (velocity <= 0.25) return 'pp';
+  if (velocity <= 0.37) return 'p';
+  if (velocity <= 0.52) return 'mp';
+  if (velocity <= 0.67) return 'mf';
+  if (velocity <= 0.80) return 'f';
+  if (velocity <= 0.92) return 'ff';
+  if (velocity <= 0.97) return 'fff';
+  return 'ffff';
+}
+
 // Generate XML for a note
 function generateNoteXml(
   pitch: Pitch,
@@ -100,7 +116,9 @@ function generateNoteXml(
   voice: number,
   isRest: boolean = false,
   techniques?: string[],
-  isGrace?: boolean
+  isGrace?: boolean,
+  velocity?: number,
+  lyric?: LyricSpan
 ): string {
   const lines: string[] = [];
   lines.push('        <note>');
@@ -143,30 +161,141 @@ function generateNoteXml(
   // Add articulations/techniques
   if (techniques && techniques.length > 0) {
     lines.push('          <notations>');
-    lines.push('            <articulations>');
+
+    // Articulations
+    const articulations: string[] = [];
+    const ornaments: string[] = [];
+    const technicalElements: string[] = [];
+    let hasFermata = false;
 
     for (const tech of techniques) {
       switch (tech) {
+        // Articulations
         case 'staccato':
-          lines.push('              <staccato/>');
+          articulations.push('              <staccato/>');
+          break;
+        case 'staccatissimo':
+          articulations.push('              <staccatissimo/>');
           break;
         case 'accent':
-          lines.push('              <accent/>');
+          articulations.push('              <accent/>');
           break;
         case 'tenuto':
-          lines.push('              <tenuto/>');
+          articulations.push('              <tenuto/>');
           break;
         case 'marcato':
-          lines.push('              <strong-accent/>');
+          articulations.push('              <strong-accent/>');
           break;
+        case 'spiccato':
+          articulations.push('              <spiccato/>');
+          break;
+        case 'detache':
+          articulations.push('              <detached-legato/>');
+          break;
+        case 'breath':
+          articulations.push('              <breath-mark/>');
+          break;
+        case 'caesura':
+          articulations.push('              <caesura/>');
+          break;
+
+        // Ornaments
+        case 'trill':
+          ornaments.push('              <trill-mark/>');
+          break;
+        case 'mordent':
+          ornaments.push('              <mordent/>');
+          break;
+        case 'upper_mordent':
+          ornaments.push('              <inverted-mordent/>');
+          break;
+        case 'turn':
+          ornaments.push('              <turn/>');
+          break;
+        case 'tremolo':
+          ornaments.push('              <tremolo type="single">3</tremolo>');
+          break;
+
+        // Technical
+        case 'pizz':
+        case 'pizzicato':
+          technicalElements.push('              <pluck/>');
+          break;
+        case 'arco':
+          technicalElements.push('              <bow-direction>down</bow-direction>');
+          break;
+        case 'harmonics':
+          technicalElements.push('              <harmonic/>');
+          break;
+        case 'sul_pont':
+        case 'sul_ponticello':
+          technicalElements.push('              <string-mute type="on"/>');
+          break;
+        case 'con_sord':
+        case 'con_sordino':
+          technicalElements.push('              <mute>on</mute>');
+          break;
+        case 'senza_sord':
+        case 'senza_sordino':
+          technicalElements.push('              <mute>off</mute>');
+          break;
+
+        // Fermata
+        case 'fermata':
+          hasFermata = true;
+          break;
+
         case 'legato':
           // Legato is typically shown as slurs, handled separately
           break;
       }
     }
 
-    lines.push('            </articulations>');
+    if (articulations.length > 0) {
+      lines.push('            <articulations>');
+      for (const art of articulations) {
+        lines.push(art);
+      }
+      lines.push('            </articulations>');
+    }
+
+    if (ornaments.length > 0) {
+      lines.push('            <ornaments>');
+      for (const orn of ornaments) {
+        lines.push(orn);
+      }
+      lines.push('            </ornaments>');
+    }
+
+    if (technicalElements.length > 0) {
+      lines.push('            <technical>');
+      for (const tech of technicalElements) {
+        lines.push(tech);
+      }
+      lines.push('            </technical>');
+    }
+
+    if (hasFermata) {
+      lines.push('            <fermata/>');
+    }
+
     lines.push('          </notations>');
+  }
+
+  // Add lyric if present
+  if (lyric && !isChord) {
+    lines.push('          <lyric number="1">');
+    if (lyric.kind === 'extend') {
+      lines.push('            <extend/>');
+    } else {
+      // Map wordPos to MusicXML syllabic
+      const syllabic = lyric.wordPos ?? 'single';
+      lines.push(`            <syllabic>${syllabic}</syllabic>`);
+      if (lyric.text) {
+        lines.push(`            <text>${escapeXml(lyric.text)}</text>`);
+      }
+    }
+    lines.push('          </lyric>');
   }
 
   lines.push('        </note>');
@@ -387,7 +516,10 @@ export function scoreToMusicXML(
               false,
               voice,
               false,
-              noteEvent.techniques
+              noteEvent.techniques,
+              false,
+              noteEvent.velocity,
+              noteEvent.lyric
             )
           );
 
@@ -406,7 +538,9 @@ export function scoreToMusicXML(
                 j > 0,
                 voice,
                 false,
-                chordEvent.techniques
+                chordEvent.techniques,
+                false,
+                chordEvent.velocity
               )
             );
           }
@@ -473,6 +607,29 @@ export function scoreToMusicXML(
           lines.push('        </note>');
 
           forwardTick = tick + duration;
+        } else if (event.type === 'pedal') {
+          const pedalEvent = event as PedalEvent;
+
+          // MusicXML uses direction for pedal markings
+          lines.push('        <direction placement="below">');
+          lines.push('          <direction-type>');
+
+          // Determine pedal type attribute
+          let pedalType: string;
+          if (pedalEvent.action === 'down') {
+            pedalType = 'start';
+          } else if (pedalEvent.action === 'up') {
+            pedalType = 'stop';
+          } else {
+            pedalType = 'change';
+          }
+
+          // Add line attribute for sustain pedal visual representation
+          const lineAttr = pedalEvent.pedal === 'sustain' ? ' line="yes"' : '';
+          lines.push(`            <pedal type="${pedalType}"${lineAttr}/>`);
+
+          lines.push('          </direction-type>');
+          lines.push('        </direction>');
         }
       }
 

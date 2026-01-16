@@ -1,6 +1,8 @@
 // std:articulations (v4)
 // Standard articulation techniques and helper functions
 
+use std:core { cloneEvent };
+
 // ============================================================
 // Standard Articulation Constants
 // ============================================================
@@ -60,35 +62,6 @@ export const vibrato = "vibrato";
 // ============================================================
 // Helper Functions
 // ============================================================
-
-fn cloneEvent(ev) {
-  if (ev.type == "note") {
-    return {
-      type: "note",
-      start: ev.start,
-      dur: ev.dur,
-      pitch: ev.pitch,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      lyric: ev.lyric,
-      ext: ev.ext
-    };
-  }
-  if (ev.type == "chord") {
-    return {
-      type: "chord",
-      start: ev.start,
-      dur: ev.dur,
-      pitches: ev.pitches,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      ext: ev.ext
-    };
-  }
-  return ev;
-}
 
 fn hasTechnique(techs, tech) {
   if (techs == null) { return false; }
@@ -252,18 +225,8 @@ export fn extendForLegato(c) {
     }
   }
 
-  // Simple bubble sort by start
-  for (i in 0..(notes.length - 1)) {
-    for (j in 0..(notes.length - i - 2)) {
-      const a = notes[j].start;
-      const b = notes[j + 1].start;
-      if (a > b) {
-        const tmp = notes[j];
-        notes[j] = notes[j + 1];
-        notes[j + 1] = tmp;
-      }
-    }
-  }
+  // Sort by start time using native O(n log n) sort
+  notes = sortBy(notes, "start");
 
   // Extend legato notes to reach the next note
   for (i in 0..(notes.length - 2)) {

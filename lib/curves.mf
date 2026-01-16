@@ -46,3 +46,268 @@ export fn piecewise(points) {
   }
   return makeCurve(out);
 }
+
+// Ease in (acceleration) - slow start, fast end
+export fn easeIn(a, b, steps) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    const eased = ratio * ratio;
+    const v = a + (b - a) * eased;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Ease out (deceleration) - fast start, slow end
+export fn easeOut(a, b, steps) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    const eased = 1 - (1 - ratio) * (1 - ratio);
+    const v = a + (b - a) * eased;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Exponential curve (useful for fade-outs, natural decays)
+// factor controls steepness (default 3)
+export fn exponential(a, b, steps, factor) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let f = factor;
+  if (f == null) { f = 3; }
+
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    // Normalized exponential: (e^(ratio*f) - 1) / (e^f - 1)
+    let eased = ratio;
+    if (f != 0) {
+      let expVal = 1;
+      let expF = 1;
+      // Approximate e^x using Taylor series
+      let term = 1;
+      for (k in 1..10) {
+        term = term * (ratio * f) / k;
+        expVal = expVal + term;
+      }
+      term = 1;
+      for (k in 1..10) {
+        term = term * f / k;
+        expF = expF + term;
+      }
+      if (expF > 1.001) {
+        eased = (expVal - 1) / (expF - 1);
+      }
+    }
+    const v = a + (b - a) * eased;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Logarithmic curve (inverse of exponential, useful for fade-ins)
+export fn logarithmic(a, b, steps, factor) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let f = factor;
+  if (f == null) { f = 3; }
+
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    // Approximate log curve: log(1 + ratio*f) / log(1+f)
+    let eased = ratio;
+    if (f > 0) {
+      // Use approximation: 1 - (1-ratio)^(1/f) for log-like curve
+      let invRatio = 1 - ratio;
+      let powered = invRatio;
+      // Approximate x^(1/f) = x for f=1, sqrt for f=2, etc.
+      if (f >= 2) {
+        // Use Newton's method approximation for roots
+        powered = invRatio;
+        for (iter in 0..4) {
+          let product = powered;
+          for (p in 1..(f - 1)) {
+            product = product * powered;
+          }
+          powered = powered - (product - invRatio) / (f * product / powered);
+        }
+      }
+      eased = 1 - powered;
+    }
+    const v = a + (b - a) * eased;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Sinusoidal curve (good for LFO-like modulation)
+// Uses one half of a sine wave
+export fn sine(a, b, steps) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    // Approximate sin using Taylor series for sin(ratio * PI/2)
+    const x = ratio * 1.5708;  // PI/2 ≈ 1.5708
+    let sinVal = x;
+    let term = x;
+    for (k in 1..6) {
+      term = 0 - term * x * x / ((2 * k) * (2 * k + 1));
+      sinVal = sinVal + term;
+    }
+    const v = a + (b - a) * sinVal;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Full sine wave (for cyclic modulation)
+// cycles: number of complete sine waves (default 1)
+export fn sineWave(a, b, steps, cycles) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let c = cycles;
+  if (c == null) { c = 1; }
+
+  let points = [];
+  const mid = (a + b) / 2;
+  const amp = (b - a) / 2;
+
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    // Approximate sin(2*PI*ratio*cycles)
+    const x = ratio * c * 6.2832;  // 2*PI ≈ 6.2832
+    let sinVal = x;
+    let term = x;
+    for (k in 1..10) {
+      term = 0 - term * x * x / ((2 * k) * (2 * k + 1));
+      sinVal = sinVal + term;
+    }
+    const v = mid + amp * sinVal;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Step function (instant change)
+// changePoint: where the step occurs (0.0-1.0, default 0.5)
+export fn step(a, b, changePoint) {
+  let cp = changePoint;
+  if (cp == null) { cp = 0.5; }
+  if (cp <= 0) { cp = 0.001; }
+  if (cp >= 1) { cp = 0.999; }
+
+  return makeCurve([
+    { t: 0, v: a },
+    { t: cp - 0.001, v: a },
+    { t: cp, v: b },
+    { t: 1, v: b }
+  ]);
+}
+
+// Hold curve (constant value, then optional jump at end)
+export fn hold(value) {
+  return makeCurve([
+    { t: 0, v: value },
+    { t: 1, v: value }
+  ]);
+}
+
+// S-curve with configurable steepness
+// steepness controls how sharp the transition is (default 5)
+export fn sCurve(a, b, steps, steepness) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let k = steepness;
+  if (k == null) { k = 5; }
+
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    // Sigmoid: 1 / (1 + e^(-k*(x-0.5)))
+    const x = k * (ratio - 0.5);
+    let expVal = 1;
+    let term = 1;
+    let negX = 0 - x;
+    for (j in 1..10) {
+      term = term * negX / j;
+      expVal = expVal + term;
+    }
+    const sigmoid = 1 / (1 + expVal);
+
+    // Normalize to 0-1 range
+    let sig0 = 1;
+    let term0 = 1;
+    let neg05 = k * 0.5;
+    for (j in 1..10) {
+      term0 = term0 * neg05 / j;
+      sig0 = sig0 + term0;
+    }
+    const base = 1 / (1 + sig0);
+    const scale = 1 - 2 * base;
+
+    const eased = (sigmoid - base) / scale;
+    const v = a + (b - a) * eased;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Quadratic bezier curve
+// control: the control point value (default: midpoint)
+export fn bezier(a, b, steps, control) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let c = control;
+  if (c == null) { c = (a + b) / 2; }
+
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    // Quadratic bezier: (1-t)^2*P0 + 2*(1-t)*t*P1 + t^2*P2
+    const invT = 1 - ratio;
+    const v = invT * invT * a + 2 * invT * ratio * c + ratio * ratio * b;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}
+
+// Bounce curve (good for playful effects)
+export fn bounce(a, b, steps, bounces) {
+  let count = steps;
+  if (count < 2) { count = 2; }
+  let numBounces = bounces;
+  if (numBounces == null) { numBounces = 3; }
+
+  let points = [];
+  for (i in 0..(count - 1)) {
+    const ratio = i / (count - 1);
+    // Damped bounce: target - amplitude * cos(freq * ratio) * decay
+    const decay = 1 - ratio;
+    const freq = numBounces * 6.2832;
+    const x = freq * ratio;
+
+    // Approximate cos using Taylor series
+    let cosVal = 1;
+    let term = 1;
+    for (k in 1..8) {
+      term = 0 - term * x * x / ((2 * k - 1) * (2 * k));
+      cosVal = cosVal + term;
+    }
+
+    const envelope = decay * decay;
+    const v = b - (b - a) * cosVal * envelope;
+    points[points.length] = { t: ratio, v: v };
+  }
+  return makeCurve(points);
+}

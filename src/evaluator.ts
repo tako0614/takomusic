@@ -1347,6 +1347,20 @@ export class V4Evaluator {
         case 'CCStmt': {
           const number = this.expectNumber(this.evaluateExpr(stmt.num, scope), stmt.position);
           const value = this.expectNumber(this.evaluateExpr(stmt.value, scope), stmt.position);
+          // Validate CC number range (0-127)
+          if (number < 0 || number > 127) {
+            throw this.error(
+              `[E502] CC controller out of range 0..127: ${number}`,
+              stmt.position
+            );
+          }
+          // Validate CC value range (0-127)
+          if (value < 0 || value > 127) {
+            throw this.error(
+              `[E503] CC value out of range 0..127: ${value}`,
+              stmt.position
+            );
+          }
           events.push({
             type: 'control',
             start: cursor,
@@ -1632,9 +1646,18 @@ export class V4Evaluator {
     for (const opt of opts) {
       const value = this.evaluateExpr(opt.value, scope);
       switch (opt.name) {
-        case 'vel':
-          event.velocity = this.expectNumber(value, opt.position);
+        case 'vel': {
+          const vel = this.expectNumber(value, opt.position);
+          // Validate velocity range (0.0-1.0 for float, 0-127 for int)
+          if (vel < 0 || vel > 127) {
+            throw this.error(
+              `[E501] Velocity out of range: ${vel}. Use 0.0-1.0 (float) or 0-127 (int).`,
+              opt.position
+            );
+          }
+          event.velocity = vel;
           break;
+        }
         case 'voice':
           event.voice = Math.floor(this.expectNumber(value, opt.position));
           break;
@@ -1749,7 +1772,17 @@ export class V4Evaluator {
   }
 
   private expectPitch(value: RuntimeValue, position: any) {
-    if (value.type === 'pitch') return value.value;
+    if (value.type === 'pitch') {
+      const pitch = value.value;
+      // Validate MIDI pitch range (0-127)
+      if (pitch.midi < 0 || pitch.midi > 127) {
+        throw this.error(
+          `[E500] Pitch out of range 0..127: MIDI note ${pitch.midi}. Valid range is C-1 (0) to G9 (127).`,
+          position
+        );
+      }
+      return pitch;
+    }
     throw this.typeError('pitch', value, position);
   }
 

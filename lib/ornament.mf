@@ -1,37 +1,272 @@
 // std:ornament (v4)
 // Functions for expanding ornaments (trill, mordent, turn, tremolo)
+// Ornaments can be specified via techniques array and parameters in ext:
+//   note(C4, q, tech: [trill], trillInterval: 2, trillSpeed: 16);
 
-fn cloneEvent(ev) {
-  if (ev.type == "note") {
-    return {
-      type: "note",
-      start: ev.start,
-      dur: ev.dur,
-      pitch: ev.pitch,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      lyric: ev.lyric,
-      ext: ev.ext
-    };
+use std:core { cloneEvent, posToRat };
+
+// Helper: check if array contains value
+fn arrayContains(arr, value) {
+  if (arr == null) {
+    return false;
   }
-  return ev;
+  for (item in arr) {
+    if (item == value) {
+      return true;
+    }
+  }
+  return false;
 }
 
-fn posToRat(pos) {
-  if (pos == null) {
-    return null;
+// Helper: get value from ext or default
+fn getExtOr(ev, key, defaultVal) {
+  if (ev.ext == null) {
+    return defaultVal;
   }
-  if (pos.kind == "rat") {
-    return pos.rat;
+  const val = ev.ext[key];
+  if (val == null) {
+    return defaultVal;
   }
-  if (pos.kind != null) {
-    return null;
+  return val;
+}
+
+// Auto-expand ornaments based on techniques array and ext metadata
+// This function examines each note's tech array and expands accordingly:
+//   trill -> reads trillInterval (default 2), trillSpeed (default 16)
+//   mordent -> reads mordentInterval (default 1)
+//   upper_mordent -> reads mordentInterval (default 2)
+//   turn -> reads turnUpperInterval (default 2), turnLowerInterval (default 1)
+//   tremolo -> reads tremoloSpeed (default 32)
+export fn autoExpand(c) {
+  let events = [];
+
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const techs = ev.techniques;
+
+      if (arrayContains(techs, "trill")) {
+        // Expand trill
+        const interval = getExtOr(ev, "trillInterval", 2);
+        const speed = getExtOr(ev, "trillSpeed", 16);
+        const expanded = expandSingleTrill(ev, interval, speed);
+        for (e in expanded) {
+          events[events.length] = e;
+        }
+      } else if (arrayContains(techs, "mordent")) {
+        // Expand mordent
+        const interval = getExtOr(ev, "mordentInterval", 1);
+        const expanded = expandSingleMordent(ev, interval, false);
+        for (e in expanded) {
+          events[events.length] = e;
+        }
+      } else if (arrayContains(techs, "upper_mordent")) {
+        // Expand upper mordent
+        const interval = getExtOr(ev, "mordentInterval", 2);
+        const expanded = expandSingleMordent(ev, interval, true);
+        for (e in expanded) {
+          events[events.length] = e;
+        }
+      } else if (arrayContains(techs, "turn")) {
+        // Expand turn
+        const upper = getExtOr(ev, "turnUpperInterval", 2);
+        const lower = getExtOr(ev, "turnLowerInterval", 1);
+        const expanded = expandSingleTurn(ev, upper, lower);
+        for (e in expanded) {
+          events[events.length] = e;
+        }
+      } else if (arrayContains(techs, "tremolo")) {
+        // Expand tremolo
+        const speed = getExtOr(ev, "tremoloSpeed", 32);
+        const expanded = expandSingleTremolo(ev, speed);
+        for (e in expanded) {
+          events[events.length] = e;
+        }
+      } else {
+        events[events.length] = cloneEvent(ev);
+      }
+    } else if (ev.type == "chord" && arrayContains(ev.techniques, "tremolo")) {
+      // Chord tremolo
+      const speed = getExtOr(ev, "tremoloSpeed", 16);
+      const expanded = expandSingleChordTremolo(ev, speed);
+      for (e in expanded) {
+        events[events.length] = e;
+      }
+    } else {
+      events[events.length] = cloneEvent(ev);
+    }
   }
-  if (pos.n != null && pos.d != null) {
-    return pos;
+
+  return { events: events, length: c.length };
+}
+
+// Single-note expansion helpers (used by autoExpand)
+fn expandSingleTrill(ev, interval, speed) {
+  let result = [];
+  const start = posToRat(ev.start);
+  if (start == null) {
+    result[0] = cloneEvent(ev);
+    return result;
   }
-  return null;
+
+  const noteDur = 1 / speed;
+  const totalDur = ev.dur;
+  const mainPitch = ev.pitch;
+  const upperPitch = { midi: mainPitch.midi + interval, cents: mainPitch.cents };
+
+  let currentStart = start;
+  let isUpper = false;
+  let remaining = totalDur;
+
+  while (remaining > 0 / 1) {
+    const thisDur = match (remaining < noteDur) {
+      true -> remaining
+      else -> noteDur
+    };
+    const pitch = match (isUpper) {
+      true -> upperPitch
+      else -> mainPitch
+    };
+    result[result.length] = {
+      type: "note",
+      start: currentStart,
+      dur: thisDur,
+      pitch: pitch,
+      velocity: ev.velocity,
+      voice: ev.voice
+    };
+    currentStart = currentStart + thisDur;
+    remaining = remaining - thisDur;
+    isUpper = !isUpper;
+  }
+  return result;
+}
+
+fn expandSingleMordent(ev, interval, isUpper) {
+  let result = [];
+  const start = posToRat(ev.start);
+  if (start == null) {
+    result[0] = cloneEvent(ev);
+    return result;
+  }
+
+  const mainPitch = ev.pitch;
+  const auxPitch = match (isUpper) {
+    true -> { midi: mainPitch.midi + interval, cents: mainPitch.cents }
+    else -> { midi: mainPitch.midi - interval, cents: mainPitch.cents }
+  };
+  const totalDur = ev.dur;
+  const ornamentDur = totalDur / 8;
+  const mainDur = totalDur - (ornamentDur * 2);
+
+  result[0] = { type: "note", start: start, dur: ornamentDur, pitch: mainPitch, velocity: ev.velocity, voice: ev.voice };
+  result[1] = { type: "note", start: start + ornamentDur, dur: ornamentDur, pitch: auxPitch, velocity: ev.velocity, voice: ev.voice };
+  result[2] = { type: "note", start: start + (ornamentDur * 2), dur: mainDur, pitch: mainPitch, velocity: ev.velocity, voice: ev.voice };
+  return result;
+}
+
+fn expandSingleTurn(ev, upper, lower) {
+  let result = [];
+  const start = posToRat(ev.start);
+  if (start == null) {
+    result[0] = cloneEvent(ev);
+    return result;
+  }
+
+  const mainPitch = ev.pitch;
+  const upperPitch = { midi: mainPitch.midi + upper, cents: mainPitch.cents };
+  const lowerPitch = { midi: mainPitch.midi - lower, cents: mainPitch.cents };
+  const totalDur = ev.dur;
+  const ornamentDur = totalDur / 8;
+  const mainDur = totalDur - (ornamentDur * 4);
+
+  result[0] = { type: "note", start: start, dur: ornamentDur, pitch: upperPitch, velocity: ev.velocity, voice: ev.voice };
+  result[1] = { type: "note", start: start + ornamentDur, dur: ornamentDur, pitch: mainPitch, velocity: ev.velocity, voice: ev.voice };
+  result[2] = { type: "note", start: start + (ornamentDur * 2), dur: ornamentDur, pitch: lowerPitch, velocity: ev.velocity, voice: ev.voice };
+  result[3] = { type: "note", start: start + (ornamentDur * 3), dur: ornamentDur + mainDur, pitch: mainPitch, velocity: ev.velocity, voice: ev.voice };
+  return result;
+}
+
+fn expandSingleTremolo(ev, speed) {
+  let result = [];
+  const start = posToRat(ev.start);
+  if (start == null) {
+    result[0] = cloneEvent(ev);
+    return result;
+  }
+
+  const noteDur = 1 / speed;
+  const totalDur = ev.dur;
+  let currentStart = start;
+  let remaining = totalDur;
+
+  while (remaining > 0 / 1) {
+    const thisDur = match (remaining < noteDur) {
+      true -> remaining
+      else -> noteDur
+    };
+    result[result.length] = {
+      type: "note",
+      start: currentStart,
+      dur: thisDur,
+      pitch: ev.pitch,
+      velocity: ev.velocity,
+      voice: ev.voice
+    };
+    currentStart = currentStart + thisDur;
+    remaining = remaining - thisDur;
+  }
+  return result;
+}
+
+fn expandSingleChordTremolo(ev, speed) {
+  let result = [];
+  const start = posToRat(ev.start);
+  const pitches = ev.pitches;
+
+  if (start == null || pitches == null || pitches.length < 2) {
+    result[0] = ev;
+    return result;
+  }
+
+  const mid = pitches.length / 2;
+  let firstHalf = [];
+  let secondHalf = [];
+  for (i in 0..(pitches.length - 1)) {
+    if (i < mid) {
+      firstHalf[firstHalf.length] = pitches[i];
+    } else {
+      secondHalf[secondHalf.length] = pitches[i];
+    }
+  }
+
+  const noteDur = 1 / speed;
+  const totalDur = ev.dur;
+  let currentStart = start;
+  let remaining = totalDur;
+  let isSecond = false;
+
+  while (remaining > 0 / 1) {
+    const thisDur = match (remaining < noteDur) {
+      true -> remaining
+      else -> noteDur
+    };
+    const chordPitches = match (isSecond) {
+      true -> secondHalf
+      else -> firstHalf
+    };
+    result[result.length] = {
+      type: "chord",
+      start: currentStart,
+      dur: thisDur,
+      pitches: chordPitches,
+      velocity: ev.velocity,
+      voice: ev.voice
+    };
+    currentStart = currentStart + thisDur;
+    remaining = remaining - thisDur;
+    isSecond = !isSecond;
+  }
+  return result;
 }
 
 // Expand a trill: alternates between main pitch and upper pitch
