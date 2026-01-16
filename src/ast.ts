@@ -45,6 +45,7 @@ export interface Param extends BaseNode {
   kind: 'Param';
   name: string;
   type?: TypeRef;
+  defaultValue?: Expr;  // Default parameter value: fn foo(x, y = 10)
 }
 
 export interface ConstDecl extends BaseNode {
@@ -94,6 +95,9 @@ export type Statement =
   | ReturnStmt
   | IfStmt
   | ForStmt
+  | WhileStmt
+  | BreakStmt
+  | ContinueStmt
   | AssignmentStmt
   | ExprStmt;
 
@@ -114,6 +118,20 @@ export interface ForStmt extends BaseNode {
   iterator: string;
   iterable: Expr;
   body: Block;
+}
+
+export interface WhileStmt extends BaseNode {
+  kind: 'WhileStmt';
+  test: Expr;
+  body: Block;
+}
+
+export interface BreakStmt extends BaseNode {
+  kind: 'BreakStmt';
+}
+
+export interface ContinueStmt extends BaseNode {
+  kind: 'ContinueStmt';
 }
 
 export interface AssignmentStmt extends BaseNode {
@@ -148,6 +166,7 @@ export type Expr =
   | PipeExpr
   | MatchExpr
   | TryExpr
+  | ArrowExpr
   | ScoreExpr
   | ClipExpr;
 
@@ -291,6 +310,14 @@ export interface TryExpr extends BaseNode {
   tryBlock: Block;
   catchParam?: string;  // Optional error binding name
   catchBlock: Block;
+}
+
+// Arrow function expression (lambda)
+// Example: x => x * 2, (x, y) => x + y, () => 42
+export interface ArrowExpr extends BaseNode {
+  kind: 'ArrowExpr';
+  params: Param[];
+  body: Expr | Block;  // Single expression or block
 }
 
 export interface RangePattern extends BaseNode {

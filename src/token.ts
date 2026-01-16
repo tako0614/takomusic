@@ -73,10 +73,14 @@ export enum TokenType {
   CATCH = 'CATCH',
   GRACE = 'GRACE',
   GLISS = 'GLISS',
+  WHILE = 'WHILE',
+  BREAK = 'BREAK',
+  CONTINUE = 'CONTINUE',
 
   PLUS = 'PLUS',
   MINUS = 'MINUS',
   STAR = 'STAR',
+  STARSTAR = 'STARSTAR',  // ** exponentiation
   SLASH = 'SLASH',
   PERCENT = 'PERCENT',
   EQ = 'EQ',
@@ -96,6 +100,7 @@ export enum TokenType {
   SEMI = 'SEMI',
   COLON = 'COLON',
   ARROW = 'ARROW',
+  FATARROW = 'FATARROW',  // => for lambda functions
   AT = 'AT',
   DOTDOT = 'DOTDOT',
   SPREAD = 'SPREAD',
@@ -150,4 +155,7 @@ export const KEYWORDS: Record<string, TokenType> = {
   catch: TokenType.CATCH,
   grace: TokenType.GRACE,
   gliss: TokenType.GLISS,
+  while: TokenType.WHILE,
+  break: TokenType.BREAK,
+  continue: TokenType.CONTINUE,
 };

@@ -181,11 +181,14 @@ export class V4Lexer {
       case '-':
         if (this.match('>')) return { type: TokenType.ARROW, position: pos };
         return { type: TokenType.MINUS, position: pos };
-      case '*': return { type: TokenType.STAR, position: pos };
+      case '*':
+        if (this.match('*')) return { type: TokenType.STARSTAR, position: pos };
+        return { type: TokenType.STAR, position: pos };
       case '/': return { type: TokenType.SLASH, position: pos };
       case '%': return { type: TokenType.PERCENT, position: pos };
       case '=':
         if (this.match('=')) return { type: TokenType.EQEQ, position: pos };
+        if (this.match('>')) return { type: TokenType.FATARROW, position: pos };
         return { type: TokenType.EQ, position: pos };
       case '!':
         if (this.match('=')) return { type: TokenType.NEQ, position: pos };

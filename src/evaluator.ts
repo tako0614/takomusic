@@ -14,6 +14,7 @@ import type { Diagnostic } from './diagnostics.js';
 import type { LyricSpan } from './ir.js';
 import type {
   ArpDirection,
+  ArrowExpr,
   Block,
   ClipExpr,
   ClipStmt,
@@ -39,6 +40,7 @@ import type {
   TripletStmt,
   TryExpr,
   TuplePattern,
+  WhileStmt,
 } from './ast.js';
 import {
   ArrayValue,
@@ -91,6 +93,14 @@ class ReturnSignal {
   constructor(value: RuntimeValue) {
     this.value = value;
   }
+}
+
+class BreakSignal {
+  constructor() {}
+}
+
+class ContinueSignal {
+  constructor() {}
 }
 
 export class V4Evaluator {
@@ -295,6 +305,8 @@ export class V4Evaluator {
           return this.evaluateMatch(expr, scope);
         case 'TryExpr':
           return this.evaluateTry(expr, scope);
+        case 'ArrowExpr':
+          return this.evaluateArrowExpr(expr, scope);
         case 'ScoreExpr':
           return scoreToObject(this.evaluateScore(expr, scope));
         case 'ClipExpr':
@@ -399,6 +411,12 @@ export class V4Evaluator {
         return this.evaluateIf(stmt, scope);
       case 'ForStmt':
         return this.evaluateFor(stmt, scope);
+      case 'WhileStmt':
+        return this.evaluateWhile(stmt, scope);
+      case 'BreakStmt':
+        throw new BreakSignal();
+      case 'ContinueStmt':
+        throw new ContinueSignal();
       case 'AssignmentStmt':
         this.evaluateAssignment(stmt, scope);
         return null;
@@ -424,7 +442,7 @@ export class V4Evaluator {
     this.callDepth++;
 
     const callScope = new Scope(fn.closure);
-    bindParams(fn.params, args, named, callScope, fn.name);
+    bindParams(fn.params, args, named, callScope, fn.name, this);
     try {
       this.evaluateBlock(fn.body, callScope);
       this.callDepth--;
@@ -473,7 +491,13 @@ export class V4Evaluator {
       for (const item of iterable.elements) {
         const iterScope = new Scope(scope);
         iterScope.define(stmt.iterator, item, true);
-        this.evaluateBlock(stmt.body, iterScope);
+        try {
+          this.evaluateBlock(stmt.body, iterScope);
+        } catch (e) {
+          if (e instanceof BreakSignal) break;
+          if (e instanceof ContinueSignal) continue;
+          throw e;
+        }
       }
       return null;
     }
@@ -484,11 +508,38 @@ export class V4Evaluator {
       for (let i = start; i <= end; i++) {
         const iterScope = new Scope(scope);
         iterScope.define(stmt.iterator, makeNumber(i), true);
-        this.evaluateBlock(stmt.body, iterScope);
+        try {
+          this.evaluateBlock(stmt.body, iterScope);
+        } catch (e) {
+          if (e instanceof BreakSignal) break;
+          if (e instanceof ContinueSignal) continue;
+          throw e;
+        }
       }
       return null;
     }
     throw this.error('for-in expects an array or numeric range', stmt.position);
+  }
+
+  private evaluateWhile(stmt: WhileStmt, scope: Scope): RuntimeValue | null {
+    const MAX_ITERATIONS = 1000000; // Prevent infinite loops
+    let iterations = 0;
+    while (iterations < MAX_ITERATIONS) {
+      const test = this.evaluateExpr(stmt.test, scope);
+      if (!isTruthy(test)) break;
+      iterations++;
+      const loopScope = new Scope(scope);
+      try {
+        this.evaluateBlock(stmt.body, loopScope);
+      } catch (e) {
+        if (e instanceof BreakSignal) break;
+        if (e instanceof ContinueSignal) continue;
+        throw e;
+      }
+    }
+    if (iterations >= MAX_ITERATIONS) {
+      throw this.error('Maximum loop iterations exceeded (1000000)', stmt.position);
+    }
     return null;
   }
 
@@ -639,6 +690,8 @@ export class V4Evaluator {
         return divValues(left, right, position);
       case '%':
         return modValues(left, right, position);
+      case '**':
+        return powValues(left, right, position);
       case '==':
         return makeBool(valuesEqual(left, right));
       case '!=':
@@ -875,6 +928,30 @@ export class V4Evaluator {
         return result;
       }
     }
+
+  private evaluateArrowExpr(expr: ArrowExpr, scope: Scope): FunctionValue {
+    // Create a function value that captures the current scope as closure
+    const arrowFn: FunctionValue = {
+      type: 'function',
+      name: '<arrow>',
+      params: expr.params,
+      closure: scope,
+    };
+
+    if (expr.body.kind === 'Block') {
+      // Block body: use as-is
+      arrowFn.body = expr.body;
+    } else {
+      // Expression body: wrap in implicit return
+      arrowFn.native = (args: RuntimeValue[], named: Map<string, RuntimeValue>) => {
+        const callScope = new Scope(scope);
+        bindParams(expr.params, args, named, callScope, '<arrow>', this);
+        return this.evaluateExpr(expr.body as Expr, callScope);
+      };
+    }
+
+    return arrowFn;
+  }
 
   private evaluateScore(expr: ScoreExpr, scope: Scope): ScoreValueData {
     const meta: ScoreValueData['meta'] = {};
@@ -2392,6 +2469,13 @@ function modValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValu
   throw new Error(`Unsupported % operands at ${position?.line ?? 0}:${position?.column ?? 0}`);
 }
 
+function powValues(a: RuntimeValue, b: RuntimeValue, position: any): RuntimeValue {
+  if (a.type === 'number' && b.type === 'number') {
+    return makeNumber(Math.pow(a.value, b.value));
+  }
+  throw new Error(`Unsupported ** operands at ${position?.line ?? 0}:${position?.column ?? 0}`);
+}
+
 function isTruthy(value: RuntimeValue): boolean {
   switch (value.type) {
     case 'bool':
@@ -2407,8 +2491,18 @@ function isTruthy(value: RuntimeValue): boolean {
   }
 }
 
-function bindParams(params: Param[], args: RuntimeValue[], named: Map<string, RuntimeValue>, scope: Scope, fnName?: string): void {
+function bindParams(
+  params: Param[],
+  args: RuntimeValue[],
+  named: Map<string, RuntimeValue>,
+  scope: Scope,
+  fnName?: string,
+  evaluator?: V4Evaluator
+): void {
   const fnLabel = fnName ? `function '${fnName}'` : 'function';
+
+  // Count required parameters (those without default values)
+  const requiredCount = params.filter(p => !p.defaultValue).length;
 
   if (args.length > params.length) {
     throw new Error(`${fnLabel} expects ${params.length} argument(s) but got ${args.length}`);
@@ -2426,6 +2520,13 @@ function bindParams(params: Param[], args: RuntimeValue[], named: Map<string, Ru
     }
     if (named.has(param.name)) {
       scope.define(param.name, named.get(param.name)!, true);
+      assigned.add(param.name);
+      continue;
+    }
+    // Check for default value
+    if (param.defaultValue && evaluator) {
+      const defaultVal = evaluator.evaluateExpr(param.defaultValue, scope);
+      scope.define(param.name, defaultVal, true);
       assigned.add(param.name);
       continue;
     }
