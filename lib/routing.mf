@@ -1,0 +1,699 @@
+// std:routing (v5.2)
+// Audio/MIDI routing and signal flow utilities
+// For defining instrument assignments, bus routing, and signal chains
+
+// ============================================
+// Channel and Bus Definitions
+// ============================================
+
+// Create a channel with properties
+export fn channel(name, properties) {
+  let props = properties;
+  if (props == null) {
+    props = {};
+  }
+  return {
+    type: "channel",
+    name: name,
+    volume: props.volume,
+    pan: props.pan,
+    mute: props.mute,
+    solo: props.solo,
+    sends: props.sends,
+    inserts: props.inserts,
+    output: props.output
+  };
+}
+
+// Create an audio bus
+export fn bus(name, properties) {
+  let props = properties;
+  if (props == null) {
+    props = {};
+  }
+  return {
+    type: "bus",
+    name: name,
+    volume: props.volume,
+    pan: props.pan,
+    mute: props.mute,
+    inserts: props.inserts,
+    output: props.output
+  };
+}
+
+// Create master bus
+export fn master(properties) {
+  return bus("master", properties);
+}
+
+// ============================================
+// Standard Bus Configurations
+// ============================================
+
+// Create a reverb send bus
+export fn reverbBus(name, reverbType, wetLevel) {
+  let wet = wetLevel;
+  if (wet == null) {
+    wet = 0.3;
+  }
+  return {
+    type: "bus",
+    name: name,
+    effect: "reverb",
+    effectType: reverbType,
+    wet: wet,
+    output: "master"
+  };
+}
+
+// Create a delay send bus
+export fn delayBus(name, delayTime, feedback, wetLevel) {
+  let wet = wetLevel;
+  if (wet == null) {
+    wet = 0.25;
+  }
+  return {
+    type: "bus",
+    name: name,
+    effect: "delay",
+    delayTime: delayTime,
+    feedback: feedback,
+    wet: wet,
+    output: "master"
+  };
+}
+
+// Create a submix bus for grouping
+export fn submixBus(name, channels) {
+  return {
+    type: "bus",
+    name: name,
+    inputs: channels,
+    output: "master"
+  };
+}
+
+// ============================================
+// Send Routing
+// ============================================
+
+// Create a send to a bus
+export fn send(busName, level, preFader) {
+  let pre = preFader;
+  if (pre == null) {
+    pre = false;
+  }
+  return {
+    type: "send",
+    bus: busName,
+    level: level,
+    preFader: pre
+  };
+}
+
+// Create multiple sends
+export fn sends(sendList) {
+  return {
+    type: "sends",
+    list: sendList
+  };
+}
+
+// ============================================
+// Insert Effects
+// ============================================
+
+// Create an insert effect slot
+export fn insert(effectName, parameters) {
+  let params = parameters;
+  if (params == null) {
+    params = {};
+  }
+  return {
+    type: "insert",
+    effect: effectName,
+    parameters: params,
+    bypass: false
+  };
+}
+
+// Create insert chain
+export fn insertChain(inserts) {
+  return {
+    type: "insertChain",
+    inserts: inserts
+  };
+}
+
+// Common insert effects
+
+export fn compressor(threshold, ratio, attack, release) {
+  return insert("compressor", {
+    threshold: threshold,
+    ratio: ratio,
+    attack: attack,
+    release: release
+  });
+}
+
+export fn eq(bands) {
+  return insert("eq", { bands: bands });
+}
+
+export fn eqBand(freq, gain, q) {
+  return {
+    frequency: freq,
+    gain: gain,
+    q: q
+  };
+}
+
+export fn limiter(threshold, release) {
+  return insert("limiter", {
+    threshold: threshold,
+    release: release
+  });
+}
+
+export fn gate(threshold, attack, hold, release) {
+  return insert("gate", {
+    threshold: threshold,
+    attack: attack,
+    hold: hold,
+    release: release
+  });
+}
+
+export fn saturator(drive, mix) {
+  return insert("saturator", {
+    drive: drive,
+    mix: mix
+  });
+}
+
+// ============================================
+// MIDI Routing
+// ============================================
+
+// Create MIDI channel assignment
+export fn midiChannel(number) {
+  if (number < 1) { return 1; }
+  if (number > 16) { return 16; }
+  return number;
+}
+
+// Create MIDI port assignment
+export fn midiPort(name, channel) {
+  return {
+    type: "midiPort",
+    name: name,
+    channel: channel
+  };
+}
+
+// Create MIDI routing rule
+export fn midiRoute(fromChannel, toChannel, transform) {
+  return {
+    type: "midiRoute",
+    from: fromChannel,
+    to: toChannel,
+    transform: transform
+  };
+}
+
+// MIDI transformations
+
+export fn transpose(semitones) {
+  return {
+    type: "transpose",
+    semitones: semitones
+  };
+}
+
+export fn velocityScale(factor) {
+  return {
+    type: "velocityScale",
+    factor: factor
+  };
+}
+
+export fn velocityOffset(offset) {
+  return {
+    type: "velocityOffset",
+    offset: offset
+  };
+}
+
+export fn channelFilter(allowedChannels) {
+  return {
+    type: "channelFilter",
+    channels: allowedChannels
+  };
+}
+
+export fn noteFilter(lowNote, highNote) {
+  return {
+    type: "noteFilter",
+    low: lowNote,
+    high: highNote
+  };
+}
+
+// ============================================
+// Instrument Routing
+// ============================================
+
+// Assign voice to instrument/channel
+export fn assignVoice(voiceName, channel, properties) {
+  let props = properties;
+  if (props == null) {
+    props = {};
+  }
+  return {
+    type: "voiceAssignment",
+    voice: voiceName,
+    channel: channel,
+    instrument: props.instrument,
+    midiChannel: props.midiChannel,
+    volume: props.volume,
+    pan: props.pan
+  };
+}
+
+// Create voice group (multiple voices to same output)
+export fn voiceGroup(voices, output) {
+  return {
+    type: "voiceGroup",
+    voices: voices,
+    output: output
+  };
+}
+
+// Layer multiple instruments on same voice
+export fn layer(instruments) {
+  return {
+    type: "layer",
+    instruments: instruments
+  };
+}
+
+// Split keyboard across instruments
+export fn split(splitPoint, lowInstrument, highInstrument) {
+  return {
+    type: "split",
+    splitPoint: splitPoint,
+    low: lowInstrument,
+    high: highInstrument
+  };
+}
+
+// ============================================
+// Routing Configurations
+// ============================================
+
+// Create a complete routing configuration
+export fn routingConfig(channels, buses, assignments) {
+  return {
+    type: "routingConfig",
+    channels: channels,
+    buses: buses,
+    assignments: assignments
+  };
+}
+
+// Standard orchestral routing template
+export fn orchestralRouting() {
+  return routingConfig(
+    [
+      channel("strings", { pan: 0, sends: [send("hallReverb", 0.4)] }),
+      channel("woodwinds", { pan: -0.2, sends: [send("hallReverb", 0.35)] }),
+      channel("brass", { pan: 0.2, sends: [send("hallReverb", 0.3)] }),
+      channel("percussion", { pan: 0, sends: [send("hallReverb", 0.25)] })
+    ],
+    [
+      reverbBus("hallReverb", "hall", 0.4),
+      master({ inserts: [limiter(-0.3, 100)] })
+    ],
+    [
+      assignVoice("violin1", "strings", { pan: -0.6 }),
+      assignVoice("violin2", "strings", { pan: -0.3 }),
+      assignVoice("viola", "strings", { pan: 0.2 }),
+      assignVoice("cello", "strings", { pan: 0.5 }),
+      assignVoice("bass", "strings", { pan: 0.4 }),
+      assignVoice("flute", "woodwinds", { pan: -0.4 }),
+      assignVoice("oboe", "woodwinds", { pan: -0.2 }),
+      assignVoice("clarinet", "woodwinds", { pan: 0.1 }),
+      assignVoice("bassoon", "woodwinds", { pan: 0.3 }),
+      assignVoice("horn", "brass", { pan: -0.3 }),
+      assignVoice("trumpet", "brass", { pan: 0.1 }),
+      assignVoice("trombone", "brass", { pan: 0.3 }),
+      assignVoice("tuba", "brass", { pan: 0.4 }),
+      assignVoice("timpani", "percussion", { pan: 0 }),
+      assignVoice("cymbals", "percussion", { pan: 0.2 })
+    ]
+  );
+}
+
+// Standard band routing template
+export fn bandRouting() {
+  return routingConfig(
+    [
+      channel("drums", { pan: 0, inserts: [compressor(-18, 4, 10, 100)] }),
+      channel("bass", { pan: 0, inserts: [compressor(-12, 3, 20, 150)] }),
+      channel("guitars", { pan: 0, sends: [send("roomReverb", 0.15)] }),
+      channel("keys", { pan: 0, sends: [send("roomReverb", 0.2)] }),
+      channel("vocals", { pan: 0, sends: [send("plateReverb", 0.25), send("delay", 0.15)] })
+    ],
+    [
+      reverbBus("roomReverb", "room", 0.25),
+      reverbBus("plateReverb", "plate", 0.3),
+      delayBus("delay", 0.25, 0.3, 0.2),
+      master({ inserts: [limiter(-0.5, 80)] })
+    ],
+    [
+      assignVoice("kick", "drums", { pan: 0 }),
+      assignVoice("snare", "drums", { pan: 0 }),
+      assignVoice("hihat", "drums", { pan: 0.3 }),
+      assignVoice("toms", "drums", { pan: 0 }),
+      assignVoice("bass", "bass", { pan: 0 }),
+      assignVoice("guitar1", "guitars", { pan: -0.4 }),
+      assignVoice("guitar2", "guitars", { pan: 0.4 }),
+      assignVoice("piano", "keys", { pan: -0.2 }),
+      assignVoice("synth", "keys", { pan: 0.2 }),
+      assignVoice("lead", "vocals", { pan: 0 }),
+      assignVoice("backing", "vocals", { pan: 0 })
+    ]
+  );
+}
+
+// Electronic music routing template
+export fn electronicRouting() {
+  return routingConfig(
+    [
+      channel("drums", { pan: 0, inserts: [compressor(-15, 4, 5, 50)] }),
+      channel("bass", { pan: 0, inserts: [saturator(0.3, 0.5)] }),
+      channel("synths", { pan: 0, sends: [send("reverb", 0.2), send("delay", 0.25)] }),
+      channel("fx", { pan: 0, sends: [send("reverb", 0.4)] })
+    ],
+    [
+      reverbBus("reverb", "hall", 0.35),
+      delayBus("delay", 0.375, 0.4, 0.3),  // Dotted eighth
+      master({ inserts: [compressor(-6, 2, 30, 200), limiter(-0.3, 50)] })
+    ],
+    []
+  );
+}
+
+// ============================================
+// Sidechain Routing
+// ============================================
+
+// Create sidechain input
+export fn sidechain(sourceChannel, parameters) {
+  let params = parameters;
+  if (params == null) {
+    params = {};
+  }
+  return {
+    type: "sidechain",
+    source: sourceChannel,
+    threshold: params.threshold,
+    ratio: params.ratio,
+    attack: params.attack,
+    release: params.release
+  };
+}
+
+// Sidechain compressor preset for pumping effect
+export fn pumpingCompressor(sourceChannel) {
+  return {
+    type: "insert",
+    effect: "compressor",
+    parameters: {
+      threshold: -30,
+      ratio: 8,
+      attack: 1,
+      release: 150
+    },
+    sidechain: sourceChannel
+  };
+}
+
+// ============================================
+// Automation Lanes
+// ============================================
+
+// Create automation lane
+export fn automationLane(channelName, parameter) {
+  return {
+    type: "automationLane",
+    channel: channelName,
+    parameter: parameter,
+    points: []
+  };
+}
+
+// Add automation point
+export fn automationPoint(lane, time, value) {
+  let newLane = {
+    type: lane.type,
+    channel: lane.channel,
+    parameter: lane.parameter,
+    points: []
+  };
+
+  for (p in lane.points) {
+    newLane.points[newLane.points.length] = p;
+  }
+
+  newLane.points[newLane.points.length] = {
+    time: time,
+    value: value
+  };
+
+  return newLane;
+}
+
+// Common automation parameters
+export const VOLUME = "volume";
+export const PAN = "pan";
+export const MUTE = "mute";
+export const SEND_LEVEL = "sendLevel";
+export const INSERT_BYPASS = "insertBypass";
+
+// ============================================
+// Monitoring
+// ============================================
+
+// Create monitor mix
+export fn monitorMix(name, channelLevels) {
+  return {
+    type: "monitorMix",
+    name: name,
+    levels: channelLevels
+  };
+}
+
+// Create headphone cue mix
+export fn cueMix(name, channelLevels, clickLevel) {
+  return {
+    type: "cueMix",
+    name: name,
+    levels: channelLevels,
+    click: clickLevel
+  };
+}
+
+// ============================================
+// I/O Configuration
+// ============================================
+
+// Define audio input
+export fn audioInput(name, channels) {
+  return {
+    type: "audioInput",
+    name: name,
+    channels: channels
+  };
+}
+
+// Define audio output
+export fn audioOutput(name, channels) {
+  return {
+    type: "audioOutput",
+    name: name,
+    channels: channels
+  };
+}
+
+// Stereo I/O presets
+export fn stereoInput(name) {
+  return audioInput(name, 2);
+}
+
+export fn stereoOutput(name) {
+  return audioOutput(name, 2);
+}
+
+// Surround configurations
+export fn surroundOutput51() {
+  return audioOutput("surround51", 6);  // L, R, C, LFE, Ls, Rs
+}
+
+export fn surroundOutput71() {
+  return audioOutput("surround71", 8);  // L, R, C, LFE, Ls, Rs, Lb, Rb
+}
+
+// ============================================
+// Utility Functions
+// ============================================
+
+// Get channel by name from config
+export fn getChannel(config, name) {
+  for (ch in config.channels) {
+    if (ch.name == name) {
+      return ch;
+    }
+  }
+  return null;
+}
+
+// Get bus by name from config
+export fn getBus(config, name) {
+  for (b in config.buses) {
+    if (b.name == name) {
+      return b;
+    }
+  }
+  return null;
+}
+
+// Get voice assignment
+export fn getVoiceAssignment(config, voiceName) {
+  for (a in config.assignments) {
+    if (a.voice == voiceName) {
+      return a;
+    }
+  }
+  return null;
+}
+
+// Update channel property
+export fn setChannelVolume(config, channelName, volume) {
+  let newConfig = {
+    type: config.type,
+    channels: [],
+    buses: config.buses,
+    assignments: config.assignments
+  };
+
+  for (ch in config.channels) {
+    if (ch.name == channelName) {
+      newConfig.channels[newConfig.channels.length] = {
+        type: ch.type,
+        name: ch.name,
+        volume: volume,
+        pan: ch.pan,
+        mute: ch.mute,
+        solo: ch.solo,
+        sends: ch.sends,
+        inserts: ch.inserts,
+        output: ch.output
+      };
+    } else {
+      newConfig.channels[newConfig.channels.length] = ch;
+    }
+  }
+
+  return newConfig;
+}
+
+export fn setChannelPan(config, channelName, pan) {
+  let newConfig = {
+    type: config.type,
+    channels: [],
+    buses: config.buses,
+    assignments: config.assignments
+  };
+
+  for (ch in config.channels) {
+    if (ch.name == channelName) {
+      newConfig.channels[newConfig.channels.length] = {
+        type: ch.type,
+        name: ch.name,
+        volume: ch.volume,
+        pan: pan,
+        mute: ch.mute,
+        solo: ch.solo,
+        sends: ch.sends,
+        inserts: ch.inserts,
+        output: ch.output
+      };
+    } else {
+      newConfig.channels[newConfig.channels.length] = ch;
+    }
+  }
+
+  return newConfig;
+}
+
+// Mute/unmute channel
+export fn muteChannel(config, channelName, muted) {
+  let newConfig = {
+    type: config.type,
+    channels: [],
+    buses: config.buses,
+    assignments: config.assignments
+  };
+
+  for (ch in config.channels) {
+    if (ch.name == channelName) {
+      newConfig.channels[newConfig.channels.length] = {
+        type: ch.type,
+        name: ch.name,
+        volume: ch.volume,
+        pan: ch.pan,
+        mute: muted,
+        solo: ch.solo,
+        sends: ch.sends,
+        inserts: ch.inserts,
+        output: ch.output
+      };
+    } else {
+      newConfig.channels[newConfig.channels.length] = ch;
+    }
+  }
+
+  return newConfig;
+}
+
+// Solo channel
+export fn soloChannel(config, channelName, soloed) {
+  let newConfig = {
+    type: config.type,
+    channels: [],
+    buses: config.buses,
+    assignments: config.assignments
+  };
+
+  for (ch in config.channels) {
+    if (ch.name == channelName) {
+      newConfig.channels[newConfig.channels.length] = {
+        type: ch.type,
+        name: ch.name,
+        volume: ch.volume,
+        pan: ch.pan,
+        mute: ch.mute,
+        solo: soloed,
+        sends: ch.sends,
+        inserts: ch.inserts,
+        output: ch.output
+      };
+    } else {
+      newConfig.channels[newConfig.channels.length] = ch;
+    }
+  }
+
+  return newConfig;
+}

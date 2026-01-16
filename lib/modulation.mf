@@ -1,0 +1,610 @@
+// std:modulation (v5.2)
+// Key modulation and harmonic transition utilities
+// For smooth key changes, pivot chords, and tonal analysis
+
+// ============================================
+// Key Representation
+// ============================================
+
+// Create a key object
+// root: pitch class (0-11, where 0=C)
+// mode: "major" or "minor"
+export fn key(root, mode) {
+  let m = mode;
+  if (m == null) {
+    m = "major";
+  }
+  return {
+    root: root % 12,
+    mode: m
+  };
+}
+
+// Common keys
+export const C_MAJOR = { root: 0, mode: "major" };
+export const G_MAJOR = { root: 7, mode: "major" };
+export const D_MAJOR = { root: 2, mode: "major" };
+export const A_MAJOR = { root: 9, mode: "major" };
+export const E_MAJOR = { root: 4, mode: "major" };
+export const B_MAJOR = { root: 11, mode: "major" };
+export const F_MAJOR = { root: 5, mode: "major" };
+export const Bb_MAJOR = { root: 10, mode: "major" };
+export const Eb_MAJOR = { root: 3, mode: "major" };
+export const Ab_MAJOR = { root: 8, mode: "major" };
+
+export const A_MINOR = { root: 9, mode: "minor" };
+export const E_MINOR = { root: 4, mode: "minor" };
+export const B_MINOR = { root: 11, mode: "minor" };
+export const D_MINOR = { root: 2, mode: "minor" };
+export const G_MINOR = { root: 7, mode: "minor" };
+export const C_MINOR = { root: 0, mode: "minor" };
+export const F_MINOR = { root: 5, mode: "minor" };
+
+// ============================================
+// Key Relationships
+// ============================================
+
+// Get relative major/minor
+export fn relative(k) {
+  if (k.mode == "major") {
+    // Relative minor is 3 semitones down
+    return { root: (k.root + 9) % 12, mode: "minor" };
+  } else {
+    // Relative major is 3 semitones up
+    return { root: (k.root + 3) % 12, mode: "major" };
+  }
+}
+
+// Get parallel major/minor (same root, different mode)
+export fn parallel(k) {
+  if (k.mode == "major") {
+    return { root: k.root, mode: "minor" };
+  } else {
+    return { root: k.root, mode: "major" };
+  }
+}
+
+// Get dominant key (fifth above)
+export fn dominant(k) {
+  return { root: (k.root + 7) % 12, mode: k.mode };
+}
+
+// Get subdominant key (fourth above / fifth below)
+export fn subdominant(k) {
+  return { root: (k.root + 5) % 12, mode: k.mode };
+}
+
+// Get supertonic key (second above)
+export fn supertonic(k) {
+  return { root: (k.root + 2) % 12, mode: "minor" };
+}
+
+// Get mediant key (third above)
+export fn mediant(k) {
+  if (k.mode == "major") {
+    return { root: (k.root + 4) % 12, mode: "minor" };
+  } else {
+    return { root: (k.root + 3) % 12, mode: "major" };
+  }
+}
+
+// Get submediant key (sixth above)
+export fn submediant(k) {
+  if (k.mode == "major") {
+    return { root: (k.root + 9) % 12, mode: "minor" };
+  } else {
+    return { root: (k.root + 8) % 12, mode: "major" };
+  }
+}
+
+// ============================================
+// Distance and Relationship Analysis
+// ============================================
+
+// Calculate distance on circle of fifths
+export fn fifthsDistance(k1, k2) {
+  // Count fifths from k1 to k2
+  let dist = 0;
+  let current = k1.root;
+
+  // Try going up in fifths
+  for (i in 0..12) {
+    if (current == k2.root) {
+      return i;
+    }
+    current = (current + 7) % 12;
+  }
+
+  // Try going down in fifths
+  current = k1.root;
+  for (i in 0..12) {
+    if (current == k2.root) {
+      return -i;
+    }
+    current = (current + 5) % 12;
+  }
+
+  return 0;
+}
+
+// Calculate chromatic distance
+export fn chromaticDistance(k1, k2) {
+  let dist = k2.root - k1.root;
+  if (dist < 0) {
+    dist = dist + 12;
+  }
+  if (dist > 6) {
+    dist = dist - 12;
+  }
+  return dist;
+}
+
+// Check if keys are closely related
+// (differ by at most one accidental)
+export fn areCloselyRelated(k1, k2) {
+  const dist = fifthsDistance(k1, k2);
+  const absDist = dist;
+  if (absDist < 0) {
+    return (-absDist) <= 1;
+  }
+  return absDist <= 1;
+}
+
+// Get number of shared pitch classes between keys
+export fn commonTones(k1, k2) {
+  const scale1 = getScalePitchClasses(k1);
+  const scale2 = getScalePitchClasses(k2);
+
+  let count = 0;
+  for (pc1 in scale1) {
+    for (pc2 in scale2) {
+      if (pc1 == pc2) {
+        count = count + 1;
+        break;
+      }
+    }
+  }
+  return count;
+}
+
+// Get scale pitch classes for a key
+fn getScalePitchClasses(k) {
+  let intervals = [0, 2, 4, 5, 7, 9, 11];  // Major
+  if (k.mode == "minor") {
+    intervals = [0, 2, 3, 5, 7, 8, 10];    // Natural minor
+  }
+
+  let pcs = [];
+  for (i in intervals) {
+    pcs[pcs.length] = (k.root + i) % 12;
+  }
+  return pcs;
+}
+
+// ============================================
+// Pivot Chord Analysis
+// ============================================
+
+// Get diatonic chords for a key
+// Returns array of {degree, root, quality}
+export fn getDiatonicChords(k) {
+  let intervals = [0, 2, 4, 5, 7, 9, 11];  // Major scale
+  let qualities = ["major", "minor", "minor", "major", "major", "minor", "dim"];
+
+  if (k.mode == "minor") {
+    intervals = [0, 2, 3, 5, 7, 8, 10];    // Natural minor
+    qualities = ["minor", "dim", "major", "minor", "minor", "major", "major"];
+  }
+
+  let chords = [];
+  for (i in 0..6) {
+    chords[i] = {
+      degree: i + 1,
+      root: (k.root + intervals[i]) % 12,
+      quality: qualities[i]
+    };
+  }
+  return chords;
+}
+
+// Find pivot chords between two keys
+// Returns chords that exist in both keys
+export fn findPivotChords(k1, k2) {
+  const chords1 = getDiatonicChords(k1);
+  const chords2 = getDiatonicChords(k2);
+
+  let pivots = [];
+
+  for (c1 in chords1) {
+    for (c2 in chords2) {
+      if (c1.root == c2.root && c1.quality == c2.quality) {
+        pivots[pivots.length] = {
+          root: c1.root,
+          quality: c1.quality,
+          degreeInKey1: c1.degree,
+          degreeInKey2: c2.degree
+        };
+      }
+    }
+  }
+
+  return pivots;
+}
+
+// Find the best pivot chord for modulation
+export fn bestPivotChord(k1, k2) {
+  const pivots = findPivotChords(k1, k2);
+
+  if (pivots.length == 0) {
+    return null;
+  }
+
+  // Prefer pivots that are strong in both keys
+  // (I, IV, V are strong; ii, iii, vi are medium; vii is weak)
+  let best = pivots[0];
+  let bestScore = 0;
+
+  for (pivot in pivots) {
+    let score = 0;
+
+    // Score for key 1
+    if (pivot.degreeInKey1 == 1 || pivot.degreeInKey1 == 4 || pivot.degreeInKey1 == 5) {
+      score = score + 3;
+    } else if (pivot.degreeInKey1 == 2 || pivot.degreeInKey1 == 6) {
+      score = score + 2;
+    } else {
+      score = score + 1;
+    }
+
+    // Score for key 2
+    if (pivot.degreeInKey2 == 1 || pivot.degreeInKey2 == 4 || pivot.degreeInKey2 == 5) {
+      score = score + 3;
+    } else if (pivot.degreeInKey2 == 2 || pivot.degreeInKey2 == 6) {
+      score = score + 2;
+    } else {
+      score = score + 1;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = pivot;
+    }
+  }
+
+  return best;
+}
+
+// ============================================
+// Modulation Techniques
+// ============================================
+
+// Direct modulation (immediate key change)
+export fn directModulation(fromKey, toKey) {
+  return {
+    type: "direct",
+    from: fromKey,
+    to: toKey,
+    pivot: null
+  };
+}
+
+// Pivot chord modulation
+export fn pivotModulation(fromKey, toKey) {
+  const pivot = bestPivotChord(fromKey, toKey);
+  return {
+    type: "pivot",
+    from: fromKey,
+    to: toKey,
+    pivot: pivot
+  };
+}
+
+// Sequential modulation (through intermediate key)
+export fn sequentialModulation(fromKey, toKey) {
+  // Find an intermediate key that's close to both
+  const candidates = [
+    dominant(fromKey),
+    subdominant(fromKey),
+    relative(fromKey),
+    parallel(fromKey)
+  ];
+
+  let bestIntermediate = null;
+  let bestTotalDist = 100;
+
+  for (candidate in candidates) {
+    const dist1 = fifthsDistance(fromKey, candidate);
+    const dist2 = fifthsDistance(candidate, toKey);
+    let absDist1 = dist1;
+    let absDist2 = dist2;
+    if (absDist1 < 0) { absDist1 = -absDist1; }
+    if (absDist2 < 0) { absDist2 = -absDist2; }
+    const totalDist = absDist1 + absDist2;
+
+    if (totalDist < bestTotalDist) {
+      bestTotalDist = totalDist;
+      bestIntermediate = candidate;
+    }
+  }
+
+  return {
+    type: "sequential",
+    from: fromKey,
+    intermediate: bestIntermediate,
+    to: toKey
+  };
+}
+
+// Chromatic modulation (using chromatic alterations)
+export fn chromaticModulation(fromKey, toKey) {
+  // Use secondary dominants
+  const targetDominant = { root: (toKey.root + 7) % 12, mode: "major" };
+
+  return {
+    type: "chromatic",
+    from: fromKey,
+    to: toKey,
+    secondaryDominant: targetDominant
+  };
+}
+
+// Enharmonic modulation (reinterpreting a chord)
+export fn enharmonicModulation(fromKey, toKey) {
+  // Common enharmonic pivots:
+  // - Diminished 7th chords (can resolve to 4 different keys)
+  // - German augmented 6th = Dominant 7th
+  // - Neapolitan 6th
+
+  return {
+    type: "enharmonic",
+    from: fromKey,
+    to: toKey,
+    technique: "diminished7"  // or "augmented6" or "neapolitan"
+  };
+}
+
+// ============================================
+// Transposition
+// ============================================
+
+// Transpose a pitch from one key to another
+// Maintains scale degree relationship
+export fn transposePitch(pitch, fromKey, toKey) {
+  const interval = toKey.root - fromKey.root;
+  return pitch + interval;
+}
+
+// Transpose a chord from one key to another
+export fn transposeChord(chord, fromKey, toKey) {
+  const interval = toKey.root - fromKey.root;
+  let result = [];
+  for (p in chord) {
+    result[result.length] = p + interval;
+  }
+  return result;
+}
+
+// Transpose a progression from one key to another
+export fn transposeProgression(progression, fromKey, toKey) {
+  let result = [];
+  for (chord in progression) {
+    result[result.length] = transposeChord(chord, fromKey, toKey);
+  }
+  return result;
+}
+
+// ============================================
+// Modal Interchange
+// ============================================
+
+// Borrow a chord from parallel key
+export fn borrowChord(k, degree) {
+  const parallelKey = parallel(k);
+  const chords = getDiatonicChords(parallelKey);
+
+  for (chord in chords) {
+    if (chord.degree == degree) {
+      return chord;
+    }
+  }
+  return null;
+}
+
+// Get borrowed chords commonly used
+// Returns chords from parallel mode
+export fn getBorrowedChords(k) {
+  const parallelKey = parallel(k);
+  const ownChords = getDiatonicChords(k);
+  const parallelChords = getDiatonicChords(parallelKey);
+
+  let borrowed = [];
+
+  for (pChord in parallelChords) {
+    let isOwn = false;
+    for (oChord in ownChords) {
+      if (pChord.root == oChord.root && pChord.quality == oChord.quality) {
+        isOwn = true;
+        break;
+      }
+    }
+    if (!isOwn) {
+      borrowed[borrowed.length] = pChord;
+    }
+  }
+
+  return borrowed;
+}
+
+// ============================================
+// Tonicization
+// ============================================
+
+// Get secondary dominant (V/X)
+export fn secondaryDominant(k, targetDegree) {
+  const chords = getDiatonicChords(k);
+
+  for (chord in chords) {
+    if (chord.degree == targetDegree) {
+      // Return dominant of target chord
+      return {
+        root: (chord.root + 7) % 12,
+        quality: "major7",  // Dominant 7th
+        resolvesTo: chord
+      };
+    }
+  }
+  return null;
+}
+
+// Get secondary leading tone (vii°/X)
+export fn secondaryLeadingTone(k, targetDegree) {
+  const chords = getDiatonicChords(k);
+
+  for (chord in chords) {
+    if (chord.degree == targetDegree) {
+      // Return leading tone chord of target
+      return {
+        root: (chord.root + 11) % 12,
+        quality: "dim7",
+        resolvesTo: chord
+      };
+    }
+  }
+  return null;
+}
+
+// ============================================
+// Analysis
+// ============================================
+
+// Analyze which key a chord progression is in
+// Uses simple heuristic based on chord frequency
+export fn analyzeKey(chords) {
+  // Try all 24 keys and score each
+  let bestKey = { root: 0, mode: "major" };
+  let bestScore = 0;
+
+  for (root in 0..11) {
+    for (mode in ["major", "minor"]) {
+      const testKey = { root: root, mode: mode };
+      const diatonic = getDiatonicChords(testKey);
+
+      let score = 0;
+      for (chord in chords) {
+        for (dChord in diatonic) {
+          if (chord.root == dChord.root && chord.quality == dChord.quality) {
+            // Weight by chord importance
+            if (dChord.degree == 1) {
+              score = score + 4;  // Tonic
+            } else if (dChord.degree == 5) {
+              score = score + 3;  // Dominant
+            } else if (dChord.degree == 4) {
+              score = score + 2;  // Subdominant
+            } else {
+              score = score + 1;
+            }
+            break;
+          }
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestKey = testKey;
+      }
+    }
+  }
+
+  return bestKey;
+}
+
+// Detect modulation points in a chord progression
+export fn detectModulations(chords) {
+  if (chords.length < 4) {
+    return [];
+  }
+
+  let modulations = [];
+  let windowSize = 4;
+
+  // Analyze in windows
+  for (i in 0..(chords.length - windowSize)) {
+    let window1 = [];
+    let window2 = [];
+
+    for (j in 0..(windowSize - 1)) {
+      window1[j] = chords[i + j];
+      if (i + windowSize + j < chords.length) {
+        window2[j] = chords[i + windowSize + j];
+      }
+    }
+
+    if (window2.length == windowSize) {
+      const key1 = analyzeKey(window1);
+      const key2 = analyzeKey(window2);
+
+      if (key1.root != key2.root || key1.mode != key2.mode) {
+        modulations[modulations.length] = {
+          position: i + windowSize,
+          fromKey: key1,
+          toKey: key2
+        };
+      }
+    }
+  }
+
+  return modulations;
+}
+
+// ============================================
+// Utility Functions
+// ============================================
+
+// Get key signature (number of sharps/flats)
+// Positive = sharps, negative = flats
+export fn keySignature(k) {
+  // Circle of fifths position
+  const majorSigs = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];  // C, G, D, A, E, B, F#, C#...
+  const sharpCount = [0, 1, 2, 3, 4, 5, 6, 7, -4, -3, -2, -1];
+
+  let root = k.root;
+  if (k.mode == "minor") {
+    // Relative major
+    root = (root + 3) % 12;
+  }
+
+  for (i in 0..11) {
+    if (majorSigs[i] == root) {
+      return sharpCount[i];
+    }
+  }
+
+  return 0;
+}
+
+// Get key name as string
+export fn keyName(k) {
+  const noteNames = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+  let name = noteNames[k.root];
+  if (k.mode == "minor") {
+    name = name + "m";
+  }
+  return name;
+}
+
+// Check if two keys are the same
+export fn sameKey(k1, k2) {
+  return k1.root == k2.root && k1.mode == k2.mode;
+}
+
+// Get all closely related keys
+export fn relatedKeys(k) {
+  return [
+    relative(k),
+    parallel(k),
+    dominant(k),
+    subdominant(k),
+    relative(dominant(k)),
+    relative(subdominant(k))
+  ];
+}
