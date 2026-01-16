@@ -1,7 +1,7 @@
 /**
  * TakoMusic DSL Language Server
  *
- * LSP server entry point for TakoMusic v4.
+ * LSP server entry point for TakoMusic v7.
  * Provides real-time diagnostics, hover information, and code completion.
  */
 

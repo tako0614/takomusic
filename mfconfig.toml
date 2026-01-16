@@ -1,7 +1,7 @@
-[project]
+﻿[project]
 name = "daisho"
 version = "0.1.0"
 entry = "代償/daisho.mf"
 dist  = "代償/dist"
 out   = "代償/out"
-default_profile = "profiles/audio.mf.profile.json"
+default_profile = "代償/daisho.mf.profile.json"

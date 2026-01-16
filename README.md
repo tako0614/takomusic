@@ -1,4 +1,4 @@
-# TakoMusic (v4)
+# TakoMusic (v7)
 
 TakoMusic is a music composition DSL that evaluates to a neutral `Score` IR and renders via external plugins.
 The language core is backend-agnostic and pushes sound binding to Render Profiles.
@@ -9,7 +9,7 @@ The language core is backend-agnostic and pushes sound binding to Render Profile
 - Rational time model (Dur/Pos) without ticks
 - Abstract sounds + render profiles decouple composition from output
 - Renderer Plugin protocol: `capabilities` / `validate` / `render`
-- Web Playground with real-time audio preview
+- Web Playground with audio preview and WAV/MIDI export
 
 ## Quick Start
 
@@ -106,7 +106,7 @@ export fn main() -> Score {
 2. Resolve/import + typecheck (Pos/Dur separation)
 3. Evaluate `main()` -> `Score`
 4. Normalize IR (bar:beat -> absolute Pos)
-5. Emit `score.json` (IR v4)
+5. Emit `score.json` (Score IR)
 6. Render via profile + renderer plugin
 
 ## CLI
@@ -142,7 +142,7 @@ Renderer plugins are external executables; use `--plugin` to override the resolv
 
 ## Versioning
 
-- Language: v4
+- Language: v7
 - IR schema: `tako.irVersion = 4`
 - Profile schema: `tako.profileVersion = 1`
 - Plugin protocol: `tako.pluginProtocolVersion = 1`
