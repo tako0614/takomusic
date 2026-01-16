@@ -3138,6 +3138,12 @@ export const STDLIB_METADATA = `// std:metadata - see lib/metadata.mf for full i
 // v5.1 module
 export const STDLIB_SERIAL = `// std:serial - see lib/serial.mf for full implementation`;
 
+// v5.2 modules
+export const STDLIB_LSYSTEM = `// std:lsystem - see lib/lsystem.mf for full implementation`;
+export const STDLIB_PROB = `// std:prob - see lib/prob.mf for full implementation`;
+export const STDLIB_MODULATION = `// std:modulation - see lib/modulation.mf for full implementation`;
+export const STDLIB_ROUTING = `// std:routing - see lib/routing.mf for full implementation`;
+
 /**
  * Map of stdlib module names to their source code
  */
@@ -3166,6 +3172,11 @@ export const STDLIB_MODULES: Record<string, string> = {
   metadata: STDLIB_METADATA,
   // v5.1 libraries
   serial: STDLIB_SERIAL,
+  // v5.2 libraries
+  lsystem: STDLIB_LSYSTEM,
+  prob: STDLIB_PROB,
+  modulation: STDLIB_MODULATION,
+  routing: STDLIB_ROUTING,
 };
 
 /**

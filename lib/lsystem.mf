@@ -1,0 +1,546 @@
+// std:lsystem (v5.2)
+// L-systems (Lindenmayer systems) for algorithmic composition
+// Generates self-similar, fractal-like structures for melody, rhythm, and form
+
+// ============================================
+// Core L-System Engine
+// ============================================
+
+// Create an L-system with axiom and rules
+// rules: object mapping symbols to replacement strings
+// Example: lsystem("A", { "A": "AB", "B": "A" })
+export fn lsystem(axiom, rules) {
+  return {
+    axiom: axiom,
+    rules: rules,
+    current: axiom
+  };
+}
+
+// Apply one generation of L-system rules
+export fn iterate(sys) {
+  let result = "";
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    const replacement = sys.rules[ch];
+    if (replacement != null) {
+      result = result + replacement;
+    } else {
+      result = result + ch;
+    }
+  }
+  return {
+    axiom: sys.axiom,
+    rules: sys.rules,
+    current: result
+  };
+}
+
+// Apply n generations
+export fn generate(sys, generations) {
+  let current = sys;
+  for (_ in 0..(generations - 1)) {
+    current = iterate(current);
+  }
+  return current;
+}
+
+// Get the current string of an L-system
+export fn getString(sys) {
+  return sys.current;
+}
+
+// Get length of current string
+export fn getLength(sys) {
+  return sys.current.length;
+}
+
+// ============================================
+// Stochastic L-Systems
+// ============================================
+
+// Create a stochastic L-system with probabilistic rules
+// rules: object mapping symbols to arrays of {replacement, weight}
+// Example: stochasticLsystem("A", { "A": [{r: "AB", w: 2}, {r: "BA", w: 1}] })
+export fn stochasticLsystem(axiom, rules) {
+  return {
+    axiom: axiom,
+    rules: rules,
+    current: axiom,
+    stochastic: true
+  };
+}
+
+// Iterate stochastic L-system with seed
+export fn iterateStochastic(sys, seed) {
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  let result = "";
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    const options = sys.rules[ch];
+
+    if (options != null) {
+      // Calculate total weight
+      let total = 0;
+      for (opt in options) {
+        total = total + opt.w;
+      }
+
+      // Random selection
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      let r = (rng / 2147483648) * total;
+
+      let selected = options[0].r;
+      for (opt in options) {
+        r = r - opt.w;
+        if (r <= 0) {
+          selected = opt.r;
+          break;
+        }
+      }
+      result = result + selected;
+    } else {
+      result = result + ch;
+    }
+  }
+
+  return {
+    axiom: sys.axiom,
+    rules: sys.rules,
+    current: result,
+    stochastic: true,
+    lastSeed: rng
+  };
+}
+
+// Generate n iterations of stochastic L-system
+export fn generateStochastic(sys, generations, seed) {
+  let current = sys;
+  let rng = seed;
+  if (rng == null) {
+    rng = 12345;
+  }
+
+  for (_ in 0..(generations - 1)) {
+    current = iterateStochastic(current, rng);
+    rng = current.lastSeed;
+  }
+  return current;
+}
+
+// ============================================
+// Parametric L-Systems
+// ============================================
+
+// Context-sensitive L-system
+// Uses special markers: < for left context, > for right context
+// Example rule: "A<B>C": "D" means B becomes D when between A and C
+export fn contextLsystem(axiom, rules, contextRules) {
+  return {
+    axiom: axiom,
+    rules: rules,
+    contextRules: contextRules,
+    current: axiom,
+    contextSensitive: true
+  };
+}
+
+// Iterate context-sensitive L-system
+export fn iterateContext(sys) {
+  let result = "";
+  const len = sys.current.length;
+
+  for (i in 0..(len - 1)) {
+    const ch = sys.current[i];
+    let left = "";
+    let right = "";
+    if (i > 0) {
+      left = sys.current[i - 1];
+    }
+    if (i < len - 1) {
+      right = sys.current[i + 1];
+    }
+
+    // Check context rules first
+    let found = false;
+    if (sys.contextRules != null) {
+      const contextKey = left + "<" + ch + ">" + right;
+      const contextRule = sys.contextRules[contextKey];
+      if (contextRule != null) {
+        result = result + contextRule;
+        found = true;
+      }
+    }
+
+    // Fall back to regular rules
+    if (!found) {
+      const replacement = sys.rules[ch];
+      if (replacement != null) {
+        result = result + replacement;
+      } else {
+        result = result + ch;
+      }
+    }
+  }
+
+  return {
+    axiom: sys.axiom,
+    rules: sys.rules,
+    contextRules: sys.contextRules,
+    current: result,
+    contextSensitive: true
+  };
+}
+
+// ============================================
+// Musical Interpretation
+// ============================================
+
+// Map L-system symbols to pitches
+// mapping: object from symbol to pitch offset
+// Returns array of pitches
+export fn toPitches(sys, mapping, basePitch) {
+  let base = basePitch;
+  if (base == null) {
+    base = 60;  // Middle C
+  }
+
+  let pitches = [];
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    const offset = mapping[ch];
+    if (offset != null) {
+      pitches[pitches.length] = base + offset;
+    }
+  }
+  return pitches;
+}
+
+// Map L-system symbols to scale degrees
+// Returns pitches based on scale
+export fn toScaleDegrees(sys, mapping, scale, basePitch) {
+  let base = basePitch;
+  if (base == null) {
+    base = 60;
+  }
+
+  let pitches = [];
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    const degree = mapping[ch];
+    if (degree != null) {
+      // Map degree to scale pitch
+      let octaveShift = 0;
+      let deg = degree;
+
+      while (deg >= scale.length) {
+        deg = deg - scale.length;
+        octaveShift = octaveShift + 12;
+      }
+      while (deg < 0) {
+        deg = deg + scale.length;
+        octaveShift = octaveShift - 12;
+      }
+
+      pitches[pitches.length] = base + scale[deg] + octaveShift;
+    }
+  }
+  return pitches;
+}
+
+// Map L-system to rhythm durations
+// mapping: object from symbol to duration
+export fn toRhythm(sys, mapping) {
+  let durations = [];
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    const dur = mapping[ch];
+    if (dur != null) {
+      durations[durations.length] = dur;
+    }
+  }
+  return durations;
+}
+
+// Map L-system to velocities
+export fn toVelocities(sys, mapping) {
+  let velocities = [];
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    const vel = mapping[ch];
+    if (vel != null) {
+      velocities[velocities.length] = vel;
+    }
+  }
+  return velocities;
+}
+
+// Turtle graphics interpretation for pitch
+// F: forward (add current pitch), +: increase pitch, -: decrease pitch
+// [: push state, ]: pop state
+export fn turtleToPitches(sys, stepSize, basePitch) {
+  let step = stepSize;
+  if (step == null) {
+    step = 2;  // Whole step default
+  }
+  let base = basePitch;
+  if (base == null) {
+    base = 60;
+  }
+
+  let pitches = [];
+  let currentPitch = base;
+  let stack = [];
+
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+
+    if (ch == "F" || ch == "f") {
+      pitches[pitches.length] = currentPitch;
+    } else if (ch == "+") {
+      currentPitch = currentPitch + step;
+    } else if (ch == "-") {
+      currentPitch = currentPitch - step;
+    } else if (ch == "[") {
+      stack[stack.length] = currentPitch;
+    } else if (ch == "]") {
+      if (stack.length > 0) {
+        currentPitch = stack[stack.length - 1];
+        // Pop from stack
+        let newStack = [];
+        for (j in 0..(stack.length - 2)) {
+          newStack[newStack.length] = stack[j];
+        }
+        stack = newStack;
+      }
+    }
+  }
+
+  return pitches;
+}
+
+// ============================================
+// Famous L-Systems
+// ============================================
+
+// Fibonacci sequence L-system
+export fn fibonacci() {
+  return lsystem("A", {
+    "A": "B",
+    "B": "AB"
+  });
+}
+
+// Cantor dust (fractal)
+export fn cantor() {
+  return lsystem("A", {
+    "A": "ABA",
+    "B": "BBB"
+  });
+}
+
+// Koch curve
+export fn koch() {
+  return lsystem("F", {
+    "F": "F+F-F-F+F"
+  });
+}
+
+// Sierpinski triangle
+export fn sierpinski() {
+  return lsystem("A", {
+    "A": "B-A-B",
+    "B": "A+B+A"
+  });
+}
+
+// Dragon curve
+export fn dragon() {
+  return lsystem("FX", {
+    "X": "X+YF+",
+    "Y": "-FX-Y"
+  });
+}
+
+// Hilbert curve
+export fn hilbert() {
+  return lsystem("A", {
+    "A": "-BF+AFA+FB-",
+    "B": "+AF-BFB-FA+"
+  });
+}
+
+// Thue-Morse sequence (fair sequence)
+export fn thueMorse() {
+  return lsystem("A", {
+    "A": "AB",
+    "B": "BA"
+  });
+}
+
+// Algae growth (original L-system by Lindenmayer)
+export fn algae() {
+  return lsystem("A", {
+    "A": "AB",
+    "B": "A"
+  });
+}
+
+// ============================================
+// Musical L-Systems
+// ============================================
+
+// Melodic L-system for step-wise motion
+export fn melodicStepwise() {
+  return lsystem("C", {
+    "C": "CDE",
+    "D": "DEF",
+    "E": "EFG",
+    "F": "FGA",
+    "G": "GAB",
+    "A": "ABC",
+    "B": "BCD"
+  });
+}
+
+// Rhythmic L-system (long-short patterns)
+export fn rhythmicLongShort() {
+  return lsystem("L", {
+    "L": "LSS",
+    "S": "L"
+  });
+}
+
+// Contour L-system (up/down motion)
+export fn contourUpDown() {
+  return lsystem("U", {
+    "U": "UDU",
+    "D": "DUD"
+  });
+}
+
+// Fractal melody generator
+export fn fractalMelody() {
+  return lsystem("M", {
+    "M": "MnMNM",
+    "n": "NnN",
+    "N": "nMn"
+  });
+}
+
+// Binary rhythm (Euclidean-like)
+export fn binaryRhythm() {
+  return lsystem("1", {
+    "1": "10",
+    "0": "1"
+  });
+}
+
+// ============================================
+// Utility Functions
+// ============================================
+
+// Count occurrences of a symbol
+export fn countSymbol(sys, symbol) {
+  let count = 0;
+  for (i in 0..(sys.current.length - 1)) {
+    if (sys.current[i] == symbol) {
+      count = count + 1;
+    }
+  }
+  return count;
+}
+
+// Get symbol at index
+export fn symbolAt(sys, index) {
+  if (index < 0 || index >= sys.current.length) {
+    return null;
+  }
+  return sys.current[index];
+}
+
+// Get substring
+export fn substring(sys, start, len) {
+  let result = "";
+  let endIdx = start + len;
+  if (endIdx > sys.current.length) {
+    endIdx = sys.current.length;
+  }
+  for (i in start..(endIdx - 1)) {
+    result = result + sys.current[i];
+  }
+  return result;
+}
+
+// Reverse the L-system string
+export fn reverse(sys) {
+  let result = "";
+  for (i in 0..(sys.current.length - 1)) {
+    result = sys.current[sys.current.length - 1 - i] + result;
+  }
+  return {
+    axiom: sys.axiom,
+    rules: sys.rules,
+    current: result
+  };
+}
+
+// Filter symbols (keep only specified)
+export fn filterSymbols(sys, keepSymbols) {
+  let result = "";
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    for (s in keepSymbols) {
+      if (ch == s) {
+        result = result + ch;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+// Replace symbols
+export fn replaceSymbol(sys, from, to) {
+  let result = "";
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    if (ch == from) {
+      result = result + to;
+    } else {
+      result = result + ch;
+    }
+  }
+  return {
+    axiom: sys.axiom,
+    rules: sys.rules,
+    current: result
+  };
+}
+
+// Analyze symbol distribution
+export fn symbolDistribution(sys) {
+  let counts = {};
+  for (i in 0..(sys.current.length - 1)) {
+    const ch = sys.current[i];
+    if (counts[ch] == null) {
+      counts[ch] = 0;
+    }
+    counts[ch] = counts[ch] + 1;
+  }
+  return counts;
+}
+
+// Get growth ratio between generations
+export fn growthRatio(sys) {
+  const before = sys.current.length;
+  const after = iterate(sys).current.length;
+  if (before == 0) {
+    return 0;
+  }
+  return after / before;
+}

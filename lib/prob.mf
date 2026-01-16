@@ -1,0 +1,553 @@
+// std:prob (v5.2)
+// Probability distributions for stochastic music composition
+// Provides various distributions and sampling methods
+
+import random;
+
+// ============================================
+// Core Random Number Generation
+// ============================================
+
+// Create a seeded random state
+export fn seed(s) {
+  return random:rng(s);
+}
+
+// Get next random float [0, 1)
+export fn nextRandom(state) {
+  return random:nextFloat(state);
+}
+
+// ============================================
+// Uniform Distribution
+// ============================================
+
+// Uniform float in range [min, max)
+export fn uniform(state, min, max) {
+  const [newState, val] = random:nextFloat(state);
+  return [newState, min + val * (max - min)];
+}
+
+// Uniform integer in range [min, max]
+export fn uniformInt(state, min, max) {
+  return random:nextInt(state, min, max + 1);
+}
+
+// ============================================
+// Gaussian (Normal) Distribution
+// ============================================
+
+// Box-Muller transform for normal distribution
+// Returns value with mean 0, stddev 1
+export fn gaussian(state) {
+  const [s1, u1] = random:nextFloat(state);
+  const [s2, u2] = random:nextFloat(s1);
+
+  // Avoid log(0)
+  let u1Safe = u1;
+  if (u1Safe < 0.0001) {
+    u1Safe = 0.0001;
+  }
+
+  // Box-Muller transform (approximation using Taylor series)
+  // sqrt(-2 * ln(u1)) * cos(2 * pi * u2)
+  const pi = 3.14159265359;
+
+  // Approximation of ln using series: ln(x) ≈ 2 * sum((x-1)/(x+1))^(2n+1) / (2n+1)
+  const x = u1Safe;
+  const t = (x - 1) / (x + 1);
+  const t2 = t * t;
+  const ln_approx = 2 * t * (1 + t2/3 + t2*t2/5 + t2*t2*t2/7);
+
+  // sqrt approximation using Newton-Raphson
+  let sqrtVal = 1.0;
+  const target = -2 * ln_approx;
+  if (target > 0) {
+    for (_ in 0..9) {
+      sqrtVal = (sqrtVal + target / sqrtVal) / 2;
+    }
+  }
+
+  // cos approximation
+  const angle = 2 * pi * u2;
+  const a2 = angle * angle;
+  const cos_approx = 1 - a2/2 + a2*a2/24 - a2*a2*a2/720;
+
+  return [s2, sqrtVal * cos_approx];
+}
+
+// Normal distribution with given mean and standard deviation
+export fn normal(state, mean, stddev) {
+  const [newState, z] = gaussian(state);
+  return [newState, mean + z * stddev];
+}
+
+// ============================================
+// Exponential Distribution
+// ============================================
+
+// Exponential distribution (for inter-arrival times)
+export fn exponential(state, lambda) {
+  const [newState, u] = random:nextFloat(state);
+
+  // Avoid log(0)
+  let uSafe = u;
+  if (uSafe < 0.0001) {
+    uSafe = 0.0001;
+  }
+
+  // ln approximation
+  const t = (uSafe - 1) / (uSafe + 1);
+  const t2 = t * t;
+  const ln_approx = 2 * t * (1 + t2/3 + t2*t2/5);
+
+  return [newState, -ln_approx / lambda];
+}
+
+// ============================================
+// Weighted/Discrete Distributions
+// ============================================
+
+// Sample from discrete distribution with weights
+// options: array of values
+// weights: array of weights (must be same length)
+export fn weighted(state, options, weights) {
+  // Calculate total weight
+  let total = 0;
+  for (w in weights) {
+    total = total + w;
+  }
+
+  const [newState, r] = random:nextFloat(state);
+  let threshold = r * total;
+
+  for (i in 0..(options.length - 1)) {
+    threshold = threshold - weights[i];
+    if (threshold <= 0) {
+      return [newState, options[i]];
+    }
+  }
+
+  return [newState, options[options.length - 1]];
+}
+
+// Sample from probability mass function (PMF)
+// pmf: object mapping values to probabilities
+export fn samplePMF(state, pmf) {
+  let options = [];
+  let weights = [];
+
+  for (key in pmf) {
+    options[options.length] = key;
+    weights[weights.length] = pmf[key];
+  }
+
+  return weighted(state, options, weights);
+}
+
+// ============================================
+// Poisson Distribution
+// ============================================
+
+// Poisson distribution (for counting events)
+// Uses Knuth's algorithm
+export fn poisson(state, lambda) {
+  let L = 1.0;
+
+  // e^(-lambda) approximation
+  let exp_neg_lambda = 1.0;
+  let term = 1.0;
+  for (i in 1..20) {
+    term = term * (-lambda) / i;
+    exp_neg_lambda = exp_neg_lambda + term;
+  }
+  if (exp_neg_lambda < 0.0001) {
+    exp_neg_lambda = 0.0001;
+  }
+  L = exp_neg_lambda;
+
+  let k = 0;
+  let p = 1.0;
+  let s = state;
+
+  while (p > L) {
+    k = k + 1;
+    const [newS, u] = random:nextFloat(s);
+    s = newS;
+    p = p * u;
+  }
+
+  return [s, k - 1];
+}
+
+// ============================================
+// Triangular Distribution
+// ============================================
+
+// Triangular distribution (min, mode, max)
+// Good for "approximately" values
+export fn triangular(state, min, mode, max) {
+  const [newState, u] = random:nextFloat(state);
+
+  const fc = (mode - min) / (max - min);
+
+  let val = 0;
+  if (u < fc) {
+    // sqrt approximation
+    let target = u * (max - min) * (mode - min);
+    let sqrtVal = target / 2;
+    for (_ in 0..9) {
+      sqrtVal = (sqrtVal + target / sqrtVal) / 2;
+    }
+    val = min + sqrtVal;
+  } else {
+    let target = (1 - u) * (max - min) * (max - mode);
+    let sqrtVal = target / 2;
+    for (_ in 0..9) {
+      sqrtVal = (sqrtVal + target / sqrtVal) / 2;
+    }
+    val = max - sqrtVal;
+  }
+
+  return [newState, val];
+}
+
+// ============================================
+// Beta Distribution (approximation)
+// ============================================
+
+// Beta distribution for bounded randomness
+// alpha, beta > 0, output in [0, 1]
+export fn beta(state, alpha, betaParam) {
+  // Simple approximation using mean + variance adjustment
+  const mean = alpha / (alpha + betaParam);
+  const variance = (alpha * betaParam) / ((alpha + betaParam) ** 2 * (alpha + betaParam + 1));
+
+  // Use triangular approximation
+  let stddev = 0.5;
+  if (variance > 0) {
+    // sqrt approximation
+    let sqrtVal = variance;
+    for (_ in 0..9) {
+      sqrtVal = (sqrtVal + variance / sqrtVal) / 2;
+    }
+    stddev = sqrtVal;
+  }
+
+  const min = mean - stddev * 1.732;  // sqrt(3) for triangular
+  const max = mean + stddev * 1.732;
+
+  let [newState, val] = triangular(state, min, mean, max);
+
+  // Clamp to [0, 1]
+  if (val < 0) { val = 0; }
+  if (val > 1) { val = 1; }
+
+  return [newState, val];
+}
+
+// ============================================
+// Musical Applications
+// ============================================
+
+// Generate random pitches from scale with weights
+// Weights favor certain scale degrees (e.g., tonic, fifth)
+export fn randomScalePitch(state, scale, basePitch, weights) {
+  let w = weights;
+  if (w == null) {
+    // Default: favor root and fifth
+    w = [];
+    for (i in 0..(scale.length - 1)) {
+      if (i == 0) {
+        w[i] = 3;  // Root
+      } else if (i == 4) {
+        w[i] = 2;  // Fifth (in diatonic)
+      } else {
+        w[i] = 1;
+      }
+    }
+  }
+
+  let indices = [];
+  for (i in 0..(scale.length - 1)) {
+    indices[i] = i;
+  }
+
+  const [newState, idx] = weighted(state, indices, w);
+  return [newState, basePitch + scale[idx]];
+}
+
+// Generate random velocity with humanization
+export fn randomVelocity(state, baseVelocity, humanize) {
+  let h = humanize;
+  if (h == null) {
+    h = 0.1;
+  }
+
+  const [newState, offset] = normal(state, 0, h);
+  let vel = baseVelocity + offset;
+
+  if (vel < 0) { vel = 0; }
+  if (vel > 1) { vel = 1; }
+
+  return [newState, vel];
+}
+
+// Generate random duration variation
+export fn randomDuration(state, baseDuration, variation) {
+  let v = variation;
+  if (v == null) {
+    v = 0.1;
+  }
+
+  const [newState, factor] = normal(state, 1.0, v);
+  let dur = baseDuration * factor;
+
+  if (dur < baseDuration * 0.5) {
+    dur = baseDuration * 0.5;
+  }
+  if (dur > baseDuration * 1.5) {
+    dur = baseDuration * 1.5;
+  }
+
+  return [newState, dur];
+}
+
+// Generate random timing offset (for "humanize" effect)
+export fn randomTiming(state, maxOffset) {
+  let m = maxOffset;
+  if (m == null) {
+    m = 0.02;  // 20ms default
+  }
+
+  return uniform(state, -m, m);
+}
+
+// Markov chain step
+export fn markovStep(state, currentState, transitions) {
+  const trans = transitions[currentState];
+  if (trans == null) {
+    return [state, currentState];  // Stay in current state
+  }
+
+  let options = [];
+  let weights = [];
+  for (next in trans) {
+    options[options.length] = next;
+    weights[weights.length] = trans[next];
+  }
+
+  return weighted(state, options, weights);
+}
+
+// ============================================
+// Sequence Generation
+// ============================================
+
+// Generate n uniform random floats
+export fn uniformSequence(state, n, min, max) {
+  let result = [];
+  let s = state;
+
+  for (_ in 0..(n - 1)) {
+    const [newS, val] = uniform(s, min, max);
+    s = newS;
+    result[result.length] = val;
+  }
+
+  return [s, result];
+}
+
+// Generate n normal random values
+export fn normalSequence(state, n, mean, stddev) {
+  let result = [];
+  let s = state;
+
+  for (_ in 0..(n - 1)) {
+    const [newS, val] = normal(s, mean, stddev);
+    s = newS;
+    result[result.length] = val;
+  }
+
+  return [s, result];
+}
+
+// Generate n weighted samples
+export fn weightedSequence(state, n, options, weights) {
+  let result = [];
+  let s = state;
+
+  for (_ in 0..(n - 1)) {
+    const [newS, val] = weighted(s, options, weights);
+    s = newS;
+    result[result.length] = val;
+  }
+
+  return [s, result];
+}
+
+// Shuffle array (Fisher-Yates)
+export fn shuffle(state, arr) {
+  let result = [];
+  for (x in arr) {
+    result[result.length] = x;
+  }
+
+  let s = state;
+  for (i in 0..(result.length - 2)) {
+    const j = result.length - 1 - i;
+    const [newS, k] = uniformInt(s, 0, j);
+    s = newS;
+
+    // Swap
+    const temp = result[j];
+    result[j] = result[k];
+    result[k] = temp;
+  }
+
+  return [s, result];
+}
+
+// Pick n random elements from array (without replacement)
+export fn sample(state, arr, n) {
+  const [newState, shuffled] = shuffle(state, arr);
+
+  let result = [];
+  let count = n;
+  if (count > shuffled.length) {
+    count = shuffled.length;
+  }
+
+  for (i in 0..(count - 1)) {
+    result[result.length] = shuffled[i];
+  }
+
+  return [newState, result];
+}
+
+// Pick 1 random element from array
+export fn choice(state, arr) {
+  if (arr.length == 0) {
+    return [state, null];
+  }
+  const [newState, idx] = uniformInt(state, 0, arr.length - 1);
+  return [newState, arr[idx]];
+}
+
+// ============================================
+// Probability Utilities
+// ============================================
+
+// Bernoulli trial (flip coin with given probability)
+export fn bernoulli(state, p) {
+  const [newState, u] = random:nextFloat(state);
+  return [newState, u < p];
+}
+
+// Geometric distribution (number of trials until first success)
+export fn geometric(state, p) {
+  let s = state;
+  let count = 1;
+
+  while (count < 1000) {
+    const [newS, success] = bernoulli(s, p);
+    s = newS;
+    if (success) {
+      return [s, count];
+    }
+    count = count + 1;
+  }
+
+  return [s, count];
+}
+
+// Binomial distribution (number of successes in n trials)
+export fn binomial(state, n, p) {
+  let s = state;
+  let successes = 0;
+
+  for (_ in 0..(n - 1)) {
+    const [newS, success] = bernoulli(s, p);
+    s = newS;
+    if (success) {
+      successes = successes + 1;
+    }
+  }
+
+  return [s, successes];
+}
+
+// Categorical distribution (generalized Bernoulli)
+export fn categorical(state, probabilities) {
+  let options = [];
+  for (i in 0..(probabilities.length - 1)) {
+    options[i] = i;
+  }
+  return weighted(state, options, probabilities);
+}
+
+// ============================================
+// Brownian Motion / Random Walk
+// ============================================
+
+// 1D random walk
+export fn randomWalk(state, steps, stepSize) {
+  let s = state;
+  let position = 0;
+  let result = [position];
+
+  for (_ in 0..(steps - 1)) {
+    const [newS, direction] = bernoulli(s, 0.5);
+    s = newS;
+
+    if (direction) {
+      position = position + stepSize;
+    } else {
+      position = position - stepSize;
+    }
+    result[result.length] = position;
+  }
+
+  return [s, result];
+}
+
+// Brownian motion (continuous random walk)
+export fn brownianMotion(state, steps, volatility) {
+  let s = state;
+  let position = 0;
+  let result = [position];
+
+  for (_ in 0..(steps - 1)) {
+    const [newS, delta] = normal(s, 0, volatility);
+    s = newS;
+    position = position + delta;
+    result[result.length] = position;
+  }
+
+  return [s, result];
+}
+
+// Bounded random walk (stays within min/max)
+export fn boundedWalk(state, steps, stepSize, min, max) {
+  let s = state;
+  let position = (min + max) / 2;
+  let result = [position];
+
+  for (_ in 0..(steps - 1)) {
+    const [newS, delta] = normal(s, 0, stepSize);
+    s = newS;
+    position = position + delta;
+
+    // Reflect at boundaries
+    if (position < min) {
+      position = min + (min - position);
+    }
+    if (position > max) {
+      position = max - (position - max);
+    }
+
+    result[result.length] = position;
+  }
+
+  return [s, result];
+}
