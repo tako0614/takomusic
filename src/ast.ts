@@ -146,6 +146,7 @@ export type Expr =
   | BinaryExpr
   | PipeExpr
   | MatchExpr
+  | TryExpr
   | ScoreExpr
   | ClipExpr;
 
@@ -282,13 +283,62 @@ export interface MatchExpr extends BaseNode {
   arms: MatchArm[];
 }
 
+// Try-catch expression for error handling
+// Example: try { riskyOperation() } catch (e) { handleError(e) }
+export interface TryExpr extends BaseNode {
+  kind: 'TryExpr';
+  tryBlock: Block;
+  catchParam?: string;  // Optional error binding name
+  catchBlock: Block;
+}
+
 export interface RangePattern extends BaseNode {
   kind: 'RangePattern';
   start: NumberLiteral;
   end: NumberLiteral;
 }
 
-export type MatchPattern = Expr | RangePattern;
+// Binding pattern: captures a value and names it
+// Example: x @ [a, b] matches array and binds the whole to x
+export interface BindingPattern extends BaseNode {
+  kind: 'BindingPattern';
+  name: string;
+  pattern?: MatchPattern;  // Optional inner pattern
+}
+
+// Array pattern: matches arrays and destructures elements
+// Example: [first, second, ...rest] or [_, middle, _]
+export interface ArrayPattern extends BaseNode {
+  kind: 'ArrayPattern';
+  elements: ArrayPatternElement[];
+}
+
+export interface ArrayPatternElement extends BaseNode {
+  kind: 'ArrayPatternElement';
+  pattern: MatchPattern | null;  // null means wildcard (_)
+  rest: boolean;  // true for ...rest patterns
+}
+
+// Object pattern: matches objects and destructures properties
+// Example: { name, age: a } or { x, ...rest }
+export interface ObjectPattern extends BaseNode {
+  kind: 'ObjectPattern';
+  properties: ObjectPatternProperty[];
+  rest?: string;  // Optional rest pattern name
+}
+
+export interface ObjectPatternProperty extends BaseNode {
+  kind: 'ObjectPatternProperty';
+  key: string;
+  pattern?: MatchPattern;  // If absent, binds key as variable name
+}
+
+// Wildcard pattern: matches anything
+export interface WildcardPattern extends BaseNode {
+  kind: 'WildcardPattern';
+}
+
+export type MatchPattern = Expr | RangePattern | BindingPattern | ArrayPattern | ObjectPattern | WildcardPattern;
 
 export interface MatchArm extends BaseNode {
   kind: 'MatchArm';
@@ -416,7 +466,9 @@ export type ClipStmt =
   | AutomationStmt
   | MarkerStmt
   | ArpStmt
-  | TripletStmt;
+  | TripletStmt
+  | GraceStmt
+  | GlissStmt;
 
 export interface AtStmt extends BaseNode {
   kind: 'AtStmt';
@@ -496,4 +548,30 @@ export interface TripletStmt extends BaseNode {
   n: number;        // Number of notes (e.g., 3 for triplet)
   inTime: number;   // Time span to fit notes into (e.g., 2 for triplet = 3 notes in time of 2)
   body: ClipStmt[];
+}
+
+// Grace note statement: grace(mainPitch, mainDur, graces: [pitch, ...], style: acciaccatura)
+export type GraceStyle = 'acciaccatura' | 'appoggiatura';
+export type GraceStealFrom = 'main' | 'previous';
+
+export interface GraceStmt extends BaseNode {
+  kind: 'GraceStmt';
+  mainPitch: Expr;
+  mainDur: Expr;
+  graces: Expr;       // Array of pitches for grace notes
+  style: GraceStyle;
+  stealFrom: GraceStealFrom;
+  opts: NamedArg[];
+}
+
+// Glissando statement: gliss(fromPitch, toPitch, dur, style: continuous)
+export type GlissStyle = 'continuous' | 'discrete';
+
+export interface GlissStmt extends BaseNode {
+  kind: 'GlissStmt';
+  fromPitch: Expr;
+  toPitch: Expr;
+  dur: Expr;
+  style: GlissStyle;
+  opts: NamedArg[];
 }

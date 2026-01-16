@@ -278,7 +278,7 @@ If the profile omits `degradePolicy`, the plugin's `degradeDefaults` are used pe
     },
     "supportedEvents": {
       "type": "array",
-      "items": { "enum": ["note", "chord", "drumHit", "breath", "control", "automation", "marker"] }
+      "items": { "enum": ["note", "chord", "drumHit", "breath", "control", "automation", "marker", "graceNote", "glissando"] }
     },
     "lyricSupport": {
       "type": "object",

@@ -418,6 +418,12 @@
         },
         {
           "$ref": "#/$defs/MarkerEvent"
+        },
+        {
+          "$ref": "#/$defs/GraceNoteEvent"
+        },
+        {
+          "$ref": "#/$defs/GlissandoEvent"
         }
       ]
     },
@@ -729,6 +735,139 @@
         }
       },
       "additionalProperties": false
+    },
+    "GraceNoteEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "mainPitch",
+        "mainDur",
+        "graces",
+        "style",
+        "stealFrom"
+      ],
+      "properties": {
+        "type": {
+          "const": "graceNote"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "mainPitch": {
+          "$ref": "#/$defs/Pitch"
+        },
+        "mainDur": {
+          "$ref": "#/$defs/Rat"
+        },
+        "graces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GraceNotePitch"
+          }
+        },
+        "style": {
+          "type": "string",
+          "enum": [
+            "acciaccatura",
+            "appoggiatura"
+          ]
+        },
+        "stealFrom": {
+          "type": "string",
+          "enum": [
+            "main",
+            "previous"
+          ]
+        },
+        "velocity": {
+          "type": "number"
+        },
+        "voice": {
+          "type": "integer"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "Grace note event with ornamental pitches before the main note"
+    },
+    "GraceNotePitch": {
+      "type": "object",
+      "required": [
+        "pitch",
+        "dur"
+      ],
+      "properties": {
+        "pitch": {
+          "$ref": "#/$defs/Pitch"
+        },
+        "dur": {
+          "$ref": "#/$defs/Rat"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GlissandoEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "end",
+        "fromPitch",
+        "toPitch",
+        "style"
+      ],
+      "properties": {
+        "type": {
+          "const": "glissando"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "end": {
+          "$ref": "#/$defs/Rat"
+        },
+        "fromPitch": {
+          "$ref": "#/$defs/Pitch"
+        },
+        "toPitch": {
+          "$ref": "#/$defs/Pitch"
+        },
+        "style": {
+          "type": "string",
+          "enum": [
+            "continuous",
+            "discrete"
+          ]
+        },
+        "velocity": {
+          "type": "number"
+        },
+        "voice": {
+          "type": "integer"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "Glissando/portamento between two pitches"
     }
   }
 }

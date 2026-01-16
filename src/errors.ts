@@ -1,35 +1,54 @@
 // Error definitions for MFS language
 
-import type { Position } from './token.js';
+import type { Position, Span } from './token.js';
 
 export class MFError extends Error {
   public suggestion?: string;
+  public span?: Span;
+  public labels?: ErrorLabel[];
 
   constructor(
     public code: string,
     message: string,
     public position?: Position,
     public filePath?: string,
-    suggestion?: string
+    suggestion?: string,
+    span?: Span,
+    labels?: ErrorLabel[]
   ) {
     super(message);
     this.name = 'MFError';
     this.suggestion = suggestion;
+    this.span = span;
+    this.labels = labels;
   }
 
   toString(): string {
-    const loc = this.position
-      ? `${this.filePath || 'unknown'}:${this.position.line}:${this.position.column}`
-      : '';
+    const loc = this.span
+      ? `${this.filePath || 'unknown'}:${this.span.start.line}:${this.span.start.column}-${this.span.end.line}:${this.span.end.column}`
+      : this.position
+        ? `${this.filePath || 'unknown'}:${this.position.line}:${this.position.column}`
+        : '';
     let result = `\n  error[${this.code}]: ${this.message}`;
     if (loc) {
       result += `\n    --> ${loc}`;
+    }
+    if (this.labels && this.labels.length > 0) {
+      for (const label of this.labels) {
+        result += `\n    | ${label.message}`;
+      }
     }
     if (this.suggestion) {
       result += `\n    help: ${this.suggestion}`;
     }
     return result;
   }
+}
+
+// Label for pointing to specific parts of code with explanation
+export interface ErrorLabel {
+  span?: Span;
+  message: string;
 }
 
 /**
@@ -78,7 +97,7 @@ export const ErrorCodes = {
 
   // E3xx: Evaluation/Runtime errors
   E300: 'Division by zero',
-  E301: 'Recursion limit exceeded',
+  E301: 'Maximum call stack depth exceeded (512 calls)',
   E302: 'For loop iteration limit exceeded',
   E303: 'Stack overflow',
   E304: 'Duration calculation error',
@@ -132,7 +151,9 @@ export function createError(
   details?: string,
   position?: Position,
   filePath?: string,
-  suggestion?: string
+  suggestion?: string,
+  span?: Span,
+  labels?: ErrorLabel[]
 ): MFError {
   const message = details
     ? `${ErrorCodes[code]}: ${details}`
@@ -141,7 +162,36 @@ export function createError(
   // Add default suggestions for common errors
   const defaultSuggestion = suggestion ?? getDefaultSuggestion(code, details);
 
-  return new MFError(code, message, position, filePath, defaultSuggestion);
+  return new MFError(code, message, position, filePath, defaultSuggestion, span, labels);
+}
+
+// Create error with span information (preferred)
+export function createErrorWithSpan(
+  code: keyof typeof ErrorCodes,
+  details: string,
+  span: Span,
+  filePath?: string,
+  labels?: ErrorLabel[]
+): MFError {
+  const message = `${ErrorCodes[code]}: ${details}`;
+  const suggestion = getDefaultSuggestion(code, details);
+  return new MFError(code, message, span.start, filePath, suggestion, span, labels);
+}
+
+// Create a type mismatch error with detailed labels
+export function createTypeMismatchError(
+  expected: string,
+  actual: string,
+  position?: Position,
+  filePath?: string,
+  span?: Span
+): MFError {
+  const details = `expected ${expected}, got ${actual}`;
+  const labels: ErrorLabel[] = [
+    { message: `expected ${expected}` },
+    { message: `got ${actual}` },
+  ];
+  return createError('E200', details, position, filePath, undefined, span, labels);
 }
 
 function getDefaultSuggestion(code: string, details?: string): string | undefined {
@@ -210,9 +260,9 @@ function getDefaultSuggestion(code: string, details?: string): string | undefine
     case 'E300':
       return 'Check for division by zero';
     case 'E301':
-      return 'Procedures cannot call themselves directly or indirectly';
+      return 'Recursive calls are allowed but limited to 512 depth. Consider using iteration or tail recursion optimization.';
     case 'E302':
-      return 'For loop range bounds must be const values, not let variables';
+      return 'For loop iterations are limited for safety. Consider breaking into smaller chunks.';
     case 'E303':
       return 'Reduce nesting depth or use iterative approach';
     case 'E304':

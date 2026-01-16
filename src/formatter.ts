@@ -309,10 +309,39 @@ class Formatter {
   }
 
   private formatPattern(pattern: MatchPattern): string {
-    if (pattern.kind === 'RangePattern') {
-      return `${pattern.start.value}..${pattern.end.value}`;
+    switch (pattern.kind) {
+      case 'RangePattern':
+        return `${pattern.start.value}..${pattern.end.value}`;
+      case 'BindingPattern': {
+        const inner = pattern.pattern ? ` @ ${this.formatPattern(pattern.pattern)}` : '';
+        return `${pattern.name}${inner}`;
+      }
+      case 'ArrayPattern': {
+        const elements = pattern.elements.map(el => {
+          if (el.pattern === null) return '_';
+          const prefix = el.rest ? '...' : '';
+          return prefix + this.formatPattern(el.pattern);
+        });
+        return `[${elements.join(', ')}]`;
+      }
+      case 'ObjectPattern': {
+        const props = pattern.properties.map(prop => {
+          if (prop.pattern) {
+            return `${prop.key}: ${this.formatPattern(prop.pattern)}`;
+          }
+          return prop.key;
+        });
+        if (pattern.rest) {
+          props.push(`...${pattern.rest}`);
+        }
+        return `{ ${props.join(', ')} }`;
+      }
+      case 'WildcardPattern':
+        return '_';
+      default:
+        // It's an Expr
+        return this.formatExpr(pattern as Expr);
     }
-    return this.formatExpr(pattern);
   }
 
   private formatScoreExpr(expr: ScoreExpr): string {

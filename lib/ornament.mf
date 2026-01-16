@@ -1,0 +1,417 @@
+// std:ornament (v4)
+// Functions for expanding ornaments (trill, mordent, turn, tremolo)
+
+fn cloneEvent(ev) {
+  if (ev.type == "note") {
+    return {
+      type: "note",
+      start: ev.start,
+      dur: ev.dur,
+      pitch: ev.pitch,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      lyric: ev.lyric,
+      ext: ev.ext
+    };
+  }
+  return ev;
+}
+
+fn posToRat(pos) {
+  if (pos == null) {
+    return null;
+  }
+  if (pos.kind == "rat") {
+    return pos.rat;
+  }
+  if (pos.kind != null) {
+    return null;
+  }
+  if (pos.n != null && pos.d != null) {
+    return pos;
+  }
+  return null;
+}
+
+// Expand a trill: alternates between main pitch and upper pitch
+// c: input clip
+// interval: semitones above main pitch (default: 2 = whole step)
+// speed: subdivisions per beat, e.g., 16 = sixteenth notes (default: 16)
+export fn expandTrill(c, interval, speed) {
+  let trillInterval = interval;
+  if (trillInterval == null) {
+    trillInterval = 2;
+  }
+  let trillSpeed = speed;
+  if (trillSpeed == null) {
+    trillSpeed = 16;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const start = posToRat(ev.start);
+      if (start == null) {
+        events[events.length] = cloneEvent(ev);
+      } else {
+        // Expand trill into alternating notes
+        const noteDur = 1 / trillSpeed;
+        const totalDur = ev.dur;
+        const mainPitch = ev.pitch;
+        const upperPitch = { midi: mainPitch.midi + trillInterval, cents: mainPitch.cents };
+
+        let currentStart = start;
+        let isUpper = false;
+        let remaining = totalDur;
+
+        while (remaining > 0 / 1) {
+          const thisDur = match (remaining < noteDur) {
+            true -> remaining
+            else -> noteDur
+          };
+
+          const pitch = match (isUpper) {
+            true -> upperPitch
+            else -> mainPitch
+          };
+
+          events[events.length] = {
+            type: "note",
+            start: currentStart,
+            dur: thisDur,
+            pitch: pitch,
+            velocity: ev.velocity,
+            voice: ev.voice
+          };
+
+          currentStart = currentStart + thisDur;
+          remaining = remaining - thisDur;
+          isUpper = !isUpper;
+        }
+      }
+    } else {
+      events[events.length] = cloneEvent(ev);
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// Expand a mordent: main -> lower -> main (short ornament)
+// c: input clip
+// interval: semitones below main pitch (default: 1 = half step)
+export fn expandMordent(c, interval) {
+  let mordentInterval = interval;
+  if (mordentInterval == null) {
+    mordentInterval = 1;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const start = posToRat(ev.start);
+      if (start == null) {
+        events[events.length] = cloneEvent(ev);
+      } else {
+        const mainPitch = ev.pitch;
+        const lowerPitch = { midi: mainPitch.midi - mordentInterval, cents: mainPitch.cents };
+        const totalDur = ev.dur;
+
+        // Mordent takes 1/8 of the note duration for the ornament
+        const ornamentDur = totalDur / 8;
+        const mainDur = totalDur - (ornamentDur * 2);
+
+        // First note: main pitch (quick)
+        events[events.length] = {
+          type: "note",
+          start: start,
+          dur: ornamentDur,
+          pitch: mainPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+
+        // Second note: lower pitch (quick)
+        events[events.length] = {
+          type: "note",
+          start: start + ornamentDur,
+          dur: ornamentDur,
+          pitch: lowerPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+
+        // Third note: main pitch (rest of duration)
+        events[events.length] = {
+          type: "note",
+          start: start + (ornamentDur * 2),
+          dur: mainDur,
+          pitch: mainPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+      }
+    } else {
+      events[events.length] = cloneEvent(ev);
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// Expand an upper mordent (inverted): main -> upper -> main
+// c: input clip
+// interval: semitones above main pitch (default: 2 = whole step)
+export fn expandUpperMordent(c, interval) {
+  let mordentInterval = interval;
+  if (mordentInterval == null) {
+    mordentInterval = 2;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const start = posToRat(ev.start);
+      if (start == null) {
+        events[events.length] = cloneEvent(ev);
+      } else {
+        const mainPitch = ev.pitch;
+        const upperPitch = { midi: mainPitch.midi + mordentInterval, cents: mainPitch.cents };
+        const totalDur = ev.dur;
+
+        const ornamentDur = totalDur / 8;
+        const mainDur = totalDur - (ornamentDur * 2);
+
+        events[events.length] = {
+          type: "note",
+          start: start,
+          dur: ornamentDur,
+          pitch: mainPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+
+        events[events.length] = {
+          type: "note",
+          start: start + ornamentDur,
+          dur: ornamentDur,
+          pitch: upperPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+
+        events[events.length] = {
+          type: "note",
+          start: start + (ornamentDur * 2),
+          dur: mainDur,
+          pitch: mainPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+      }
+    } else {
+      events[events.length] = cloneEvent(ev);
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// Expand a turn: upper -> main -> lower -> main
+// c: input clip
+// upperInterval: semitones above (default: 2)
+// lowerInterval: semitones below (default: 1)
+export fn expandTurn(c, upperInterval, lowerInterval) {
+  let upper = upperInterval;
+  if (upper == null) {
+    upper = 2;
+  }
+  let lower = lowerInterval;
+  if (lower == null) {
+    lower = 1;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const start = posToRat(ev.start);
+      if (start == null) {
+        events[events.length] = cloneEvent(ev);
+      } else {
+        const mainPitch = ev.pitch;
+        const upperPitch = { midi: mainPitch.midi + upper, cents: mainPitch.cents };
+        const lowerPitch = { midi: mainPitch.midi - lower, cents: mainPitch.cents };
+        const totalDur = ev.dur;
+
+        // Turn takes 1/4 of duration for ornament (4 quick notes)
+        const ornamentDur = totalDur / 8;
+        const mainDur = totalDur - (ornamentDur * 4);
+
+        // Upper
+        events[events.length] = {
+          type: "note",
+          start: start,
+          dur: ornamentDur,
+          pitch: upperPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+
+        // Main
+        events[events.length] = {
+          type: "note",
+          start: start + ornamentDur,
+          dur: ornamentDur,
+          pitch: mainPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+
+        // Lower
+        events[events.length] = {
+          type: "note",
+          start: start + (ornamentDur * 2),
+          dur: ornamentDur,
+          pitch: lowerPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+
+        // Main (rest of duration)
+        events[events.length] = {
+          type: "note",
+          start: start + (ornamentDur * 3),
+          dur: ornamentDur + mainDur,
+          pitch: mainPitch,
+          velocity: ev.velocity,
+          voice: ev.voice
+        };
+      }
+    } else {
+      events[events.length] = cloneEvent(ev);
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// Expand tremolo: rapid repetition of a single note
+// c: input clip
+// speed: subdivisions per beat (default: 32)
+export fn expandTremolo(c, speed) {
+  let tremoloSpeed = speed;
+  if (tremoloSpeed == null) {
+    tremoloSpeed = 32;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const start = posToRat(ev.start);
+      if (start == null) {
+        events[events.length] = cloneEvent(ev);
+      } else {
+        const noteDur = 1 / tremoloSpeed;
+        const totalDur = ev.dur;
+
+        let currentStart = start;
+        let remaining = totalDur;
+
+        while (remaining > 0 / 1) {
+          const thisDur = match (remaining < noteDur) {
+            true -> remaining
+            else -> noteDur
+          };
+
+          events[events.length] = {
+            type: "note",
+            start: currentStart,
+            dur: thisDur,
+            pitch: ev.pitch,
+            velocity: ev.velocity,
+            voice: ev.voice
+          };
+
+          currentStart = currentStart + thisDur;
+          remaining = remaining - thisDur;
+        }
+      }
+    } else {
+      events[events.length] = cloneEvent(ev);
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// Expand chord tremolo: alternates between two chords
+// c: input clip with chord events
+// speed: subdivisions per beat (default: 16)
+export fn expandChordTremolo(c, speed) {
+  let tremoloSpeed = speed;
+  if (tremoloSpeed == null) {
+    tremoloSpeed = 16;
+  }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "chord") {
+      const start = posToRat(ev.start);
+      const pitches = ev.pitches;
+
+      if (start == null || pitches == null || pitches.length < 2) {
+        events[events.length] = ev;
+      } else {
+        // Split chord into two halves for alternation
+        const mid = pitches.length / 2;
+        let firstHalf = [];
+        let secondHalf = [];
+
+        for (i in 0..(pitches.length - 1)) {
+          if (i < mid) {
+            firstHalf[firstHalf.length] = pitches[i];
+          } else {
+            secondHalf[secondHalf.length] = pitches[i];
+          }
+        }
+
+        const noteDur = 1 / tremoloSpeed;
+        const totalDur = ev.dur;
+
+        let currentStart = start;
+        let remaining = totalDur;
+        let isSecond = false;
+
+        while (remaining > 0 / 1) {
+          const thisDur = match (remaining < noteDur) {
+            true -> remaining
+            else -> noteDur
+          };
+
+          const chordPitches = match (isSecond) {
+            true -> secondHalf
+            else -> firstHalf
+          };
+
+          events[events.length] = {
+            type: "chord",
+            start: currentStart,
+            dur: thisDur,
+            pitches: chordPitches,
+            velocity: ev.velocity,
+            voice: ev.voice
+          };
+
+          currentStart = currentStart + thisDur;
+          remaining = remaining - thisDur;
+          isSecond = !isSecond;
+        }
+      }
+    } else {
+      events[events.length] = ev;
+    }
+  }
+
+  return { events: events, length: c.length };
+}

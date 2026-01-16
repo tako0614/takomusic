@@ -484,4 +484,198 @@ export fn main() -> Score {
       expect(ir.meta.title).toBe('Result: outer-inner');
     });
   });
+
+  describe('grace notes', () => {
+    it('generates grace note events', () => {
+      const source = `
+export fn main() -> Score {
+  return score {
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "piano" kind instrument {}
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        grace(C4, q, graces: [B3]);
+      };
+    }
+  };
+}`;
+      const ir = compileToIR(source);
+      const events = ir.tracks[0].placements[0].clip.events;
+      expect(events.filter(e => e.type === 'graceNote')).toHaveLength(1);
+    });
+
+    it('generates grace note with style option', () => {
+      const source = `
+export fn main() -> Score {
+  return score {
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "piano" kind instrument {}
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        grace(D4, h, graces: [C4], style: appoggiatura);
+      };
+    }
+  };
+}`;
+      const ir = compileToIR(source);
+      const events = ir.tracks[0].placements[0].clip.events;
+      const graceEvent = events.find(e => e.type === 'graceNote');
+      expect(graceEvent).toBeDefined();
+      expect((graceEvent as any).style).toBe('appoggiatura');
+    });
+  });
+
+  describe('glissando', () => {
+    it('generates glissando events', () => {
+      const source = `
+export fn main() -> Score {
+  return score {
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "piano" kind instrument {}
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        gliss(C4, G4, q);
+      };
+    }
+  };
+}`;
+      const ir = compileToIR(source);
+      const events = ir.tracks[0].placements[0].clip.events;
+      expect(events.filter(e => e.type === 'glissando')).toHaveLength(1);
+    });
+
+    it('generates glissando with style option', () => {
+      const source = `
+export fn main() -> Score {
+  return score {
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "piano" kind instrument {}
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        gliss(C4, C5, h, style: discrete);
+      };
+    }
+  };
+}`;
+      const ir = compileToIR(source);
+      const events = ir.tracks[0].placements[0].clip.events;
+      const glissEvent = events.find(e => e.type === 'glissando');
+      expect(glissEvent).toBeDefined();
+      expect((glissEvent as any).style).toBe('discrete');
+    });
+  });
+
+  describe('try-catch expressions', () => {
+    it('evaluates try block successfully', () => {
+      const source = `
+fn compute() -> Int {
+  const result = try {
+    return 42;
+  } catch (err) {
+    return 0;
+  };
+  return result;
+}
+
+export fn main() -> Score {
+  const result = compute();
+  const title = match (result) {
+    42 -> "Success";
+    else -> "Failed";
+  };
+  return score {
+    meta { title title; }
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "test" kind instrument {}
+    track "Test" role Instrument sound "test" {}
+  };
+}`;
+      const ir = compileToIR(source);
+      expect(ir.meta.title).toBe('Success');
+    });
+  });
+
+  describe('extended match patterns', () => {
+    it('matches with range pattern', () => {
+      const source = `
+fn describe(val: Int) -> String {
+  return match (val) {
+    0..10 -> "small";
+    11..100 -> "medium";
+    else -> "big";
+  };
+}
+
+export fn main() -> Score {
+  return score {
+    meta { title describe(50); }
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "test" kind instrument {}
+    track "Test" role Instrument sound "test" {}
+  };
+}`;
+      const ir = compileToIR(source);
+      expect(ir.meta.title).toBe('medium');
+    });
+
+    it('matches with wildcard pattern', () => {
+      const source = `
+fn classify(val: Int) -> String {
+  return match (val) {
+    1 -> "one";
+    2 -> "two";
+    _ -> "other";
+  };
+}
+
+export fn main() -> Score {
+  return score {
+    meta { title classify(99); }
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "test" kind instrument {}
+    track "Test" role Instrument sound "test" {}
+  };
+}`;
+      const ir = compileToIR(source);
+      expect(ir.meta.title).toBe('other');
+    });
+  });
+
+  describe('arp with seeded random', () => {
+    it('produces deterministic results for random mode', () => {
+      const source = `
+export fn main() -> Score {
+  return score {
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "piano" kind instrument {}
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 clip {
+        arp([C4, E4, G4, C5], q, random);
+      };
+    }
+  };
+}`;
+      const ir1 = compileToIR(source);
+      const ir2 = compileToIR(source);
+
+      const events1 = ir1.tracks[0].placements[0].clip.events.filter(e => e.type === 'note');
+      const events2 = ir2.tracks[0].placements[0].clip.events.filter(e => e.type === 'note');
+
+      expect(events1.length).toBe(4);
+      expect(events1.length).toBe(events2.length);
+
+      // Verify determinism - same pitches in same order
+      for (let i = 0; i < events1.length; i++) {
+        expect((events1[i] as any).pitch.midi).toBe((events2[i] as any).pitch.midi);
+      }
+    });
+  });
 });

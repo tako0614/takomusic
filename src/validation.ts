@@ -128,20 +128,47 @@ function validateExpr(expr: Expr, ctx: ValidationContext): void {
 }
 
 function validatePattern(pattern: MatchPattern, ctx: ValidationContext): void {
-  if (pattern.kind === 'RangePattern') {
-    // Range patterns are valid if start <= end
-    if (pattern.start.value > pattern.end.value) {
-      ctx.diagnostics.push({
-        severity: 'warning',
-        message: `Range pattern start (${pattern.start.value}) is greater than end (${pattern.end.value})`,
-        position: pattern.position,
-        filePath: ctx.filePath,
-      });
-    }
-    return;
+  switch (pattern.kind) {
+    case 'RangePattern':
+      // Range patterns are valid if start <= end
+      if (pattern.start.value > pattern.end.value) {
+        ctx.diagnostics.push({
+          severity: 'warning',
+          message: `Range pattern start (${pattern.start.value}) is greater than end (${pattern.end.value})`,
+          position: pattern.position,
+          filePath: ctx.filePath,
+        });
+      }
+      return;
+    case 'BindingPattern':
+      // Validate inner pattern if present
+      if (pattern.pattern) {
+        validatePattern(pattern.pattern, ctx);
+      }
+      return;
+    case 'ArrayPattern':
+      // Validate each element pattern
+      for (const el of pattern.elements) {
+        if (el.pattern) {
+          validatePattern(el.pattern, ctx);
+        }
+      }
+      return;
+    case 'ObjectPattern':
+      // Validate each property pattern
+      for (const prop of pattern.properties) {
+        if (prop.pattern) {
+          validatePattern(prop.pattern, ctx);
+        }
+      }
+      return;
+    case 'WildcardPattern':
+      // Wildcard patterns are always valid
+      return;
+    default:
+      // Otherwise validate as regular expression
+      validateExpr(pattern as Expr, ctx);
   }
-  // Otherwise validate as regular expression
-  validateExpr(pattern, ctx);
 }
 
 function validateScoreExpr(expr: ScoreExpr, ctx: ValidationContext): void {

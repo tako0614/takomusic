@@ -55,8 +55,9 @@ type TypeKind =
   | 'bool'
   | 'null'
   | 'pitch'
-  | 'time'
-  | 'pos'
+  | 'dur'         // Duration (e.g., q, h, w) - distinct from number
+  | 'time'        // Rational time value (Rat)
+  | 'pos'         // Position (bar:beat or absolute)
   | 'clip'
   | 'score'
   | 'array'
@@ -90,10 +91,13 @@ const UNKNOWN: TypeInfo = { kind: 'unknown' };
 const NUMBER: TypeInfo = { kind: 'number' };
 const STRING: TypeInfo = { kind: 'string' };
 const BOOL: TypeInfo = { kind: 'bool' };
+const ARRAY: TypeInfo = { kind: 'array' };
+const OBJECT: TypeInfo = { kind: 'object' };
 const NULL: TypeInfo = { kind: 'null' };
 const PITCH: TypeInfo = { kind: 'pitch' };
-const TIME: TypeInfo = { kind: 'time' };
-const POS: TypeInfo = { kind: 'pos' };
+const DUR: TypeInfo = { kind: 'dur' };   // Duration type (q, h, w, etc.)
+const TIME: TypeInfo = { kind: 'time' }; // Rational time (Rat)
+const POS: TypeInfo = { kind: 'pos' };   // Position (bar:beat or absolute)
 const CLIP: TypeInfo = { kind: 'clip' };
 const SCORE: TypeInfo = { kind: 'score' };
 const CURVE: TypeInfo = { kind: 'curve' };
@@ -108,6 +112,9 @@ const STD_EXPORTS: Record<string, Record<string, TypeInfo>> = {
     overlay: fnType(CLIP),
     repeat: fnType(CLIP),
     slice: fnType(CLIP),
+    sliceFrom: fnType(CLIP),
+    sliceOverlap: fnType(CLIP),
+    sliceTrim: fnType(CLIP),
     mapEvents: fnType(CLIP),
     shift: fnType(CLIP),
     padTo: fnType(CLIP),
@@ -218,6 +225,11 @@ const STD_EXPORTS: Record<string, Record<string, TypeInfo>> = {
     phonemes: fnType(LYRIC),
     align: fnType(CLIP),
     vibrato: fnType(CLIP),
+    vibratoGradual: fnType(CLIP),
+    vibratoSine: STRING,
+    vibratoTriangle: STRING,
+    vibratoSquare: STRING,
+    vibratoRandom: STRING,
     portamento: fnType(CLIP),
     breathiness: fnType(CLIP),
     loudness: fnType(CLIP),
@@ -549,7 +561,7 @@ class TypeChecker {
       case 'PitchLiteral':
         return PITCH;
       case 'DurLiteral':
-        return TIME;
+        return DUR;  // Duration literals (q, h, w, etc.) are typed as dur
       case 'PosRefLiteral':
         return POS;
       case 'Identifier': {
@@ -754,12 +766,26 @@ class TypeChecker {
   }
 
   private inferPattern(pattern: MatchPattern, env: TypeEnv, moduleAliases: Map<string, string>): TypeInfo {
-    if (pattern.kind === 'RangePattern') {
-      // Range patterns are only valid for numeric types
-      return NUMBER;
+    switch (pattern.kind) {
+      case 'RangePattern':
+        // Range patterns are only valid for numeric types
+        return NUMBER;
+      case 'BindingPattern':
+        // Binding patterns match anything
+        return UNKNOWN;
+      case 'ArrayPattern':
+        // Array patterns match arrays
+        return ARRAY;
+      case 'ObjectPattern':
+        // Object patterns match objects
+        return OBJECT;
+      case 'WildcardPattern':
+        // Wildcard matches anything
+        return UNKNOWN;
+      default:
+        // It's a regular expression pattern
+        return this.inferExpr(pattern as Expr, env, moduleAliases);
     }
-    // Otherwise it's a regular expression pattern
-    return this.inferExpr(pattern, env, moduleAliases);
   }
 
   private checkScore(expr: ScoreExpr, env: TypeEnv, moduleAliases: Map<string, string>): void {
@@ -990,7 +1016,8 @@ class TypeChecker {
   ): void {
     const type = this.inferExpr(expr, env, moduleAliases);
     if (type.kind === 'unknown') return;
-    if (type.kind !== 'number' && type.kind !== 'time') {
+    // Strict number check - dur and time are not accepted here
+    if (type.kind !== 'number') {
       this.report(`Expected number for ${context}`, position);
     }
   }
@@ -1055,7 +1082,8 @@ class TypeChecker {
   ): void {
     const type = this.inferExpr(expr, env, moduleAliases);
     if (type.kind === 'unknown') return;
-    if (type.kind !== 'time' && type.kind !== 'number') {
+    // Accept dur (duration literals like q, h, w) or time (rational values)
+    if (type.kind !== 'dur' && type.kind !== 'time') {
       this.report(`Expected duration for ${context}`, position);
     }
   }
@@ -1069,7 +1097,8 @@ class TypeChecker {
   ): void {
     const type = this.inferExpr(expr, env, moduleAliases);
     if (type.kind === 'unknown') return;
-    if (type.kind !== 'pos' && type.kind !== 'time' && type.kind !== 'number') {
+    // Accept pos, time, or dur for position contexts
+    if (type.kind !== 'pos' && type.kind !== 'time' && type.kind !== 'dur') {
       this.report(`Expected position for ${context}`, position);
     }
   }
@@ -1207,15 +1236,19 @@ function isCompatible(expected: TypeInfo, actual: TypeInfo): boolean {
   // Type parameters are compatible with any type (will be inferred)
   if (expected.kind === 'typeParam' || actual.kind === 'typeParam') return true;
   if (expected.kind === actual.kind) {
-    // For enum variants, also check that they're from the same enum
+    // For enum variants, also check that they're from the same enum and variant
     if (expected.kind === 'enumVariant' && actual.kind === 'enumVariant') {
       return expected.enumName === actual.enumName;
     }
     return true;
   }
-  if (expected.kind === 'time' && actual.kind === 'number') return true;
-  if (expected.kind === 'number' && actual.kind === 'time') return true;
-  if (expected.kind === 'pos' && (actual.kind === 'time' || actual.kind === 'number')) return true;
+  // Duration is compatible with time (durations are time quantities)
+  if (expected.kind === 'time' && actual.kind === 'dur') return true;
+  if (expected.kind === 'dur' && actual.kind === 'time') return true;
+  // Position can accept time or duration for offset calculations
+  if (expected.kind === 'pos' && (actual.kind === 'time' || actual.kind === 'dur')) return true;
+  // NOTE: number is NOT automatically compatible with time/dur anymore
+  // This prevents accidental mixing of plain numbers with musical time values
   return false;
 }
 
@@ -1238,19 +1271,38 @@ function inferSub(left: TypeInfo, right: TypeInfo): TypeInfo {
 
 function inferMul(left: TypeInfo, right: TypeInfo): TypeInfo {
   if (left.kind === 'number' && right.kind === 'number') return NUMBER;
-  if (isTimeLike(left) && right.kind === 'number') return TIME;
-  if (left.kind === 'number' && isTimeLike(right)) return TIME;
+  // dur * number = dur (scaling duration)
+  if (left.kind === 'dur' && right.kind === 'number') return DUR;
+  if (left.kind === 'number' && right.kind === 'dur') return DUR;
+  // time * number = time (scaling time)
+  if (left.kind === 'time' && right.kind === 'number') return TIME;
+  if (left.kind === 'number' && right.kind === 'time') return TIME;
+  // dur * dur or time * time = time (area in time space, less common)
+  if (left.kind === 'dur' && right.kind === 'dur') return TIME;
   if (left.kind === 'time' && right.kind === 'time') return TIME;
   return UNKNOWN;
 }
 
 function inferDiv(left: TypeInfo, right: TypeInfo): TypeInfo {
-  if (left.kind === 'number' && right.kind === 'number') return TIME;
+  // number / number = dur (e.g., 1/4 = quarter note duration)
+  if (left.kind === 'number' && right.kind === 'number') return DUR;
+  // time / number = time (scaling)
   if (left.kind === 'time' && right.kind === 'number') return TIME;
-  if (left.kind === 'time' && right.kind === 'time') return TIME;
+  // dur / number = dur (scaling)
+  if (left.kind === 'dur' && right.kind === 'number') return DUR;
+  // time / time = number (ratio)
+  if (left.kind === 'time' && right.kind === 'time') return NUMBER;
+  // dur / dur = number (ratio)
+  if (left.kind === 'dur' && right.kind === 'dur') return NUMBER;
   return UNKNOWN;
 }
 
+// Check if a type represents a time-like quantity (duration or time)
 function isTimeLike(value: TypeInfo): boolean {
-  return value.kind === 'time' || value.kind === 'number';
+  return value.kind === 'time' || value.kind === 'dur';
+}
+
+// Check if a type can be used in duration contexts
+function isDurLike(value: TypeInfo): boolean {
+  return value.kind === 'dur' || value.kind === 'time';
 }

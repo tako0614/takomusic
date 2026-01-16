@@ -1,0 +1,321 @@
+// std:articulations (v4)
+// Standard articulation techniques and helper functions
+
+// ============================================================
+// Standard Articulation Constants
+// ============================================================
+
+// Basic articulations
+export const staccato = "staccato";
+export const staccatissimo = "staccatissimo";
+export const legato = "legato";
+export const tenuto = "tenuto";
+export const accent = "accent";
+export const marcato = "marcato";
+
+// Dynamic-related
+export const sfz = "sfz";
+export const rfz = "rfz";
+export const fp = "fp";
+export const sfp = "sfp";
+
+// String-specific
+export const pizzicato = "pizzicato";
+export const pizz = "pizz";
+export const arco = "arco";
+export const spiccato = "spiccato";
+export const detache = "detache";
+export const martele = "martele";
+export const ricochet = "ricochet";
+export const colLegno = "col_legno";
+export const sulPonticello = "sul_pont";
+export const sulTasto = "sul_tasto";
+export const conSordino = "con_sord";
+export const senzaSordino = "senza_sord";
+export const tremolo = "tremolo";
+export const harmonics = "harmonics";
+
+// Wind-specific
+export const flutter = "flutter";
+export const doubleTongue = "double_tongue";
+export const tripleTongue = "triple_tongue";
+
+// Ornaments
+export const trill = "trill";
+export const mordent = "mordent";
+export const upperMordent = "upper_mordent";
+export const turn = "turn";
+export const appoggiatura = "appoggiatura";
+export const acciaccatura = "acciaccatura";
+
+// Other
+export const fermata = "fermata";
+export const breath = "breath";
+export const caesura = "caesura";
+export const arpeggiate = "arpeggiate";
+export const glissando = "glissando";
+export const portamento = "portamento";
+export const vibrato = "vibrato";
+
+// ============================================================
+// Helper Functions
+// ============================================================
+
+fn cloneEvent(ev) {
+  if (ev.type == "note") {
+    return {
+      type: "note",
+      start: ev.start,
+      dur: ev.dur,
+      pitch: ev.pitch,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      lyric: ev.lyric,
+      ext: ev.ext
+    };
+  }
+  if (ev.type == "chord") {
+    return {
+      type: "chord",
+      start: ev.start,
+      dur: ev.dur,
+      pitches: ev.pitches,
+      velocity: ev.velocity,
+      voice: ev.voice,
+      techniques: ev.techniques,
+      ext: ev.ext
+    };
+  }
+  return ev;
+}
+
+fn hasTechnique(techs, tech) {
+  if (techs == null) { return false; }
+  for (t in techs) {
+    if (t == tech) { return true; }
+  }
+  return false;
+}
+
+fn addTechnique(techs, tech) {
+  let result = [];
+  if (techs != null) {
+    for (t in techs) {
+      result[result.length] = t;
+    }
+  }
+  if (!hasTechnique(result, tech)) {
+    result[result.length] = tech;
+  }
+  return result;
+}
+
+fn removeTechnique(techs, tech) {
+  if (techs == null) { return []; }
+  let result = [];
+  for (t in techs) {
+    if (t != tech) {
+      result[result.length] = t;
+    }
+  }
+  return result;
+}
+
+// ============================================================
+// Articulation Application Functions
+// ============================================================
+
+// Apply an articulation to all notes in a clip
+export fn applyArticulation(c, tech) {
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord") {
+      let out = cloneEvent(ev);
+      out.techniques = addTechnique(out.techniques, tech);
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Remove an articulation from all notes
+export fn removeArticulation(c, tech) {
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord") {
+      let out = cloneEvent(ev);
+      out.techniques = removeTechnique(out.techniques, tech);
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Clear all articulations
+export fn clearArticulations(c) {
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord") {
+      let out = cloneEvent(ev);
+      out.techniques = [];
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// ============================================================
+// Convenience Functions for Common Articulations
+// ============================================================
+
+export fn makeStaccato(c) {
+  return applyArticulation(c, staccato);
+}
+
+export fn makeLegato(c) {
+  return applyArticulation(c, legato);
+}
+
+export fn makeAccented(c) {
+  return applyArticulation(c, accent);
+}
+
+export fn makeTenuto(c) {
+  return applyArticulation(c, tenuto);
+}
+
+export fn makeMarcato(c) {
+  return applyArticulation(c, marcato);
+}
+
+export fn makePizzicato(c) {
+  let result = removeArticulation(c, arco);
+  return applyArticulation(result, pizz);
+}
+
+export fn makeArco(c) {
+  let result = removeArticulation(c, pizz);
+  result = removeArticulation(result, pizzicato);
+  return applyArticulation(result, arco);
+}
+
+export fn makeTremolo(c) {
+  return applyArticulation(c, tremolo);
+}
+
+export fn makeHarmonics(c) {
+  return applyArticulation(c, harmonics);
+}
+
+// ============================================================
+// Duration Modification Based on Articulation
+// ============================================================
+
+// Shorten notes for staccato effect (default: 50% of original duration)
+export fn shortenForStaccato(c, factor) {
+  let f = factor;
+  if (f == null) { f = 0.5; }
+
+  let events = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord") {
+      let out = cloneEvent(ev);
+      if (hasTechnique(out.techniques, staccato) || hasTechnique(out.techniques, staccatissimo)) {
+        out.dur = out.dur * f;
+      }
+      events[events.length] = out;
+    } else {
+      events[events.length] = ev;
+    }
+  }
+  return { events: events, length: c.length };
+}
+
+// Lengthen notes for legato effect (extend to 100% of gap to next note)
+export fn extendForLegato(c) {
+  // Sort notes by start time
+  let notes = [];
+  let other = [];
+
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      notes[notes.length] = cloneEvent(ev);
+    } else {
+      other[other.length] = ev;
+    }
+  }
+
+  // Simple bubble sort by start
+  for (i in 0..(notes.length - 1)) {
+    for (j in 0..(notes.length - i - 2)) {
+      const a = notes[j].start;
+      const b = notes[j + 1].start;
+      if (a > b) {
+        const tmp = notes[j];
+        notes[j] = notes[j + 1];
+        notes[j + 1] = tmp;
+      }
+    }
+  }
+
+  // Extend legato notes to reach the next note
+  for (i in 0..(notes.length - 2)) {
+    const current = notes[i];
+    const next = notes[i + 1];
+    if (hasTechnique(current.techniques, legato)) {
+      const gap = next.start - (current.start + current.dur);
+      if (gap > 0 / 1) {
+        current.dur = current.dur + gap;
+      }
+    }
+  }
+
+  let events = [];
+  for (ev in other) {
+    events[events.length] = ev;
+  }
+  for (ev in notes) {
+    events[events.length] = ev;
+  }
+  return { events: events, length: c.length };
+}
+
+// ============================================================
+// Articulation Queries
+// ============================================================
+
+// Check if any note in clip has specific articulation
+export fn hasAnyArticulation(c, tech) {
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord") {
+      if (hasTechnique(ev.techniques, tech)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Get list of all articulations used in clip
+export fn getArticulations(c) {
+  let result = [];
+  for (ev in c.events) {
+    if (ev.type == "note" || ev.type == "chord") {
+      if (ev.techniques != null) {
+        for (t in ev.techniques) {
+          if (!hasTechnique(result, t)) {
+            result[result.length] = t;
+          }
+        }
+      }
+    }
+  }
+  return result;
+}

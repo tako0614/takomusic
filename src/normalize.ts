@@ -1,6 +1,6 @@
 import { addRat, compareRat, makeRat, mulRat, ratFromInt } from './rat.js';
 import type { Rat } from './rat.js';
-import type { ScoreIR, TempoEvent, MeterEvent, Track, Placement, Clip, Event, MarkerEvent } from './ir.js';
+import type { ScoreIR, TempoEvent, MeterEvent, Track, Placement, Clip, Event, MarkerEvent, GraceNoteEvent, GlissandoEvent } from './ir.js';
 import type { Diagnostic } from './diagnostics.js';
 import {
   ClipEventValue,
@@ -171,6 +171,17 @@ function normalizeEvent(event: ClipEventValue, meterMap: ResolvedMeterEvent[], d
       };
     case 'marker':
       return normalizeMarker(event, meterMap, diagnostics);
+    case 'graceNote':
+      return {
+        ...event,
+        start: resolvePosValue(event.start, meterMap, diagnostics),
+      };
+    case 'glissando':
+      return {
+        ...event,
+        start: resolvePosValue(event.start, meterMap, diagnostics),
+        end: resolvePosValue(event.end, meterMap, diagnostics),
+      };
     default:
       diagnostics.push({ severity: 'warning', message: `Unknown event type at ${index}` });
       return event as unknown as Event;
@@ -211,6 +222,10 @@ function eventEnd(event: Event, diagnostics: Diagnostic[]): Rat | null {
       return event.end;
     case 'marker':
       return event.pos;
+    case 'graceNote':
+      return addRat(event.start, event.mainDur);
+    case 'glissando':
+      return event.end;
     default:
       return null;
   }

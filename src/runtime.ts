@@ -222,7 +222,9 @@ export type ClipEventValue =
   | BreathEventValue
   | ControlEventValue
   | AutomationEventValue
-  | MarkerEventValue;
+  | MarkerEventValue
+  | GraceNoteEventValue
+  | GlissandoEventValue;
 
 export interface NoteEventValue {
   type: 'note';
@@ -287,6 +289,34 @@ export interface MarkerEventValue {
   pos: PosValue;
   kind: string;
   label: string;
+}
+
+export interface GraceNotePitchValue {
+  pitch: Pitch;
+  dur: Rat;
+}
+
+export interface GraceNoteEventValue {
+  type: 'graceNote';
+  start: PosValue;
+  mainPitch: Pitch;
+  mainDur: Rat;
+  graces: GraceNotePitchValue[];
+  style: 'acciaccatura' | 'appoggiatura';
+  stealFrom: 'main' | 'previous';
+  velocity?: number;
+  ext?: Record<string, unknown>;
+}
+
+export interface GlissandoEventValue {
+  type: 'glissando';
+  start: PosValue;
+  end: PosValue;
+  fromPitch: Pitch;
+  toPitch: Pitch;
+  style: 'continuous' | 'discrete';
+  velocity?: number;
+  ext?: Record<string, unknown>;
 }
 
 export interface ScoreValueData {

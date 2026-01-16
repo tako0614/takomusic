@@ -11,6 +11,52 @@ import type { SourceSpan as DiagnosticSpan } from '../diagnostics.js';
 // Re-export SourceSpan for compatibility
 export type SourceSpan = DiagnosticSpan;
 
+/**
+ * Get terminal width, with fallback
+ */
+function getTerminalWidth(): number {
+  try {
+    if (process.stdout.columns) {
+      return Math.max(40, process.stdout.columns);
+    }
+  } catch {
+    // Ignore errors
+  }
+  return 80; // Default width
+}
+
+/**
+ * Wrap text to fit within terminal width
+ */
+export function wrapText(text: string, maxWidth: number, indent: number = 0): string {
+  if (text.length + indent <= maxWidth) {
+    return text;
+  }
+
+  const effectiveWidth = maxWidth - indent;
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    if (currentLine.length === 0) {
+      currentLine = word;
+    } else if (currentLine.length + 1 + word.length <= effectiveWidth) {
+      currentLine += ' ' + word;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+
+  if (currentLine.length > 0) {
+    lines.push(currentLine);
+  }
+
+  const indentStr = ' '.repeat(indent);
+  return lines.map((line, i) => (i === 0 ? line : indentStr + line)).join('\n');
+}
+
 export interface SnippetOptions {
   /** Number of context lines before the error */
   linesBefore?: number;
@@ -110,6 +156,7 @@ function generateUnderline(
 /**
  * Format a source code snippet with error highlighting
  * Produces Rust-style error output
+ * Supports both single-line and multi-line spans
  */
 export function formatSourceSnippet(
   filePath: string,
@@ -129,34 +176,80 @@ export function formatSourceSnippet(
     return ''; // Cannot read source file
   }
 
-  const errorLine = span.start.line;
-  const errorColumn = span.start.column;
-  const errorEndColumn = span.end?.column ?? errorColumn + 1;
-  const spanLength = span.end?.line === span.start.line
-    ? Math.max(1, errorEndColumn - errorColumn)
-    : 1;
+  const startLine = span.start.line;
+  const startColumn = span.start.column;
+  const endLine = span.end?.line ?? startLine;
+  const endColumn = span.end?.column ?? startColumn + 1;
 
-  // Calculate line range
-  const startLine = Math.max(1, errorLine - linesBefore);
-  const endLine = Math.min(lines.length, errorLine + linesAfter);
+  // Check if this is a multi-line span
+  const isMultiLine = endLine > startLine;
+
+  // Calculate display line range
+  const displayStartLine = Math.max(1, startLine - linesBefore);
+  const displayEndLine = Math.min(lines.length, endLine + linesAfter);
 
   // Calculate width for line numbers
-  const width = lineNumberWidth(endLine);
+  const width = lineNumberWidth(displayEndLine);
 
   const output: string[] = [];
+  const underlineColor = getUnderlineColor(isWarning, isInfo);
 
   // Add blank line prefix
   const blankPrefix = ' '.repeat(width) + ' ' + colors.pipe('|');
   output.push(blankPrefix);
 
-  // Add source lines
-  for (let i = startLine; i <= endLine; i++) {
-    const lineContent = lines[i - 1] ?? '';
-    output.push(formatSourceLine(i, lineContent, width, i === errorLine));
+  if (isMultiLine) {
+    // Multi-line span handling with vertical bar indicator
+    for (let i = displayStartLine; i <= displayEndLine; i++) {
+      const lineContent = lines[i - 1] ?? '';
+      const isInSpan = i >= startLine && i <= endLine;
+      const isSpanStart = i === startLine;
+      const isSpanEnd = i === endLine;
 
-    // Add underline after the error line
-    if (i === errorLine) {
-      output.push(generateUnderline(errorColumn, spanLength, label, isWarning, width, isInfo));
+      // Line number and pipe
+      const numStr = String(i).padStart(width, ' ');
+
+      if (isInSpan) {
+        // Show vertical bar for span
+        const barChar = isSpanStart ? '/' : isSpanEnd ? '\\' : '|';
+        const prefix = colors.lineNumber(numStr) + ' ' + underlineColor(barChar) + ' ';
+        output.push(prefix + lineContent);
+
+        // Add underline on first line
+        if (isSpanStart) {
+          const leadingSpaces = ' '.repeat(Math.max(0, startColumn - 1));
+          const underlineLen = lineContent.length - startColumn + 1;
+          const carets = '_'.repeat(Math.max(1, underlineLen));
+          const underline = ' '.repeat(width) + ' ' + underlineColor('|') + ' ' + leadingSpaces + underlineColor(carets);
+          output.push(underline);
+        }
+
+        // Add underline and label on last line
+        if (isSpanEnd) {
+          const leadingSpaces = ' '.repeat(0);
+          const carets = '^'.repeat(Math.max(1, endColumn - 1));
+          let underline = ' '.repeat(width) + ' ' + underlineColor('|') + ' ' + leadingSpaces + underlineColor(carets);
+          if (label) {
+            underline += ' ' + underlineColor(label);
+          }
+          output.push(underline);
+        }
+      } else {
+        output.push(formatSourceLine(i, lineContent, width));
+      }
+    }
+  } else {
+    // Single-line span (original behavior)
+    const spanLength = Math.max(1, endColumn - startColumn);
+
+    for (let i = displayStartLine; i <= displayEndLine; i++) {
+      const lineContent = lines[i - 1] ?? '';
+      output.push(formatSourceLine(i, lineContent, width, i === startLine));
+
+      // Add underline after the error line
+      if (i === startLine) {
+        output.push(generateUnderline(startColumn, spanLength, label, isWarning, width, isInfo));
+      }
     }
   }
 
@@ -165,6 +258,7 @@ export function formatSourceSnippet(
 
 /**
  * Format source snippet from source content string (for LSP/tests without file access)
+ * Supports both single-line and multi-line spans
  */
 export function formatSourceSnippetFromContent(
   sourceContent: string,
@@ -180,34 +274,80 @@ export function formatSourceSnippetFromContent(
   } = options;
 
   const lines = sourceContent.split(/\r?\n/);
-  const errorLine = span.start.line;
-  const errorColumn = span.start.column;
-  const errorEndColumn = span.end?.column ?? errorColumn + 1;
-  const spanLength = span.end?.line === span.start.line
-    ? Math.max(1, errorEndColumn - errorColumn)
-    : 1;
+  const startLine = span.start.line;
+  const startColumn = span.start.column;
+  const endLine = span.end?.line ?? startLine;
+  const endColumn = span.end?.column ?? startColumn + 1;
 
-  // Calculate line range
-  const startLine = Math.max(1, errorLine - linesBefore);
-  const endLine = Math.min(lines.length, errorLine + linesAfter);
+  // Check if this is a multi-line span
+  const isMultiLine = endLine > startLine;
+
+  // Calculate display line range
+  const displayStartLine = Math.max(1, startLine - linesBefore);
+  const displayEndLine = Math.min(lines.length, endLine + linesAfter);
 
   // Calculate width for line numbers
-  const width = lineNumberWidth(endLine);
+  const width = lineNumberWidth(displayEndLine);
 
   const output: string[] = [];
+  const underlineColor = getUnderlineColor(isWarning, isInfo);
 
   // Add blank line prefix
   const blankPrefix = ' '.repeat(width) + ' ' + colors.pipe('|');
   output.push(blankPrefix);
 
-  // Add source lines
-  for (let i = startLine; i <= endLine; i++) {
-    const lineContent = lines[i - 1] ?? '';
-    output.push(formatSourceLine(i, lineContent, width, i === errorLine));
+  if (isMultiLine) {
+    // Multi-line span handling with vertical bar indicator
+    for (let i = displayStartLine; i <= displayEndLine; i++) {
+      const lineContent = lines[i - 1] ?? '';
+      const isInSpan = i >= startLine && i <= endLine;
+      const isSpanStart = i === startLine;
+      const isSpanEnd = i === endLine;
 
-    // Add underline after the error line
-    if (i === errorLine) {
-      output.push(generateUnderline(errorColumn, spanLength, label, isWarning, width, isInfo));
+      // Line number and pipe
+      const numStr = String(i).padStart(width, ' ');
+
+      if (isInSpan) {
+        // Show vertical bar for span
+        const barChar = isSpanStart ? '/' : isSpanEnd ? '\\' : '|';
+        const prefix = colors.lineNumber(numStr) + ' ' + underlineColor(barChar) + ' ';
+        output.push(prefix + lineContent);
+
+        // Add underline on first line
+        if (isSpanStart) {
+          const leadingSpaces = ' '.repeat(Math.max(0, startColumn - 1));
+          const underlineLen = lineContent.length - startColumn + 1;
+          const carets = '_'.repeat(Math.max(1, underlineLen));
+          const underline = ' '.repeat(width) + ' ' + underlineColor('|') + ' ' + leadingSpaces + underlineColor(carets);
+          output.push(underline);
+        }
+
+        // Add underline and label on last line
+        if (isSpanEnd) {
+          const leadingSpaces = ' '.repeat(0);
+          const carets = '^'.repeat(Math.max(1, endColumn - 1));
+          let underline = ' '.repeat(width) + ' ' + underlineColor('|') + ' ' + leadingSpaces + underlineColor(carets);
+          if (label) {
+            underline += ' ' + underlineColor(label);
+          }
+          output.push(underline);
+        }
+      } else {
+        output.push(formatSourceLine(i, lineContent, width));
+      }
+    }
+  } else {
+    // Single-line span (original behavior)
+    const spanLength = Math.max(1, endColumn - startColumn);
+
+    for (let i = displayStartLine; i <= displayEndLine; i++) {
+      const lineContent = lines[i - 1] ?? '';
+      output.push(formatSourceLine(i, lineContent, width, i === startLine));
+
+      // Add underline after the error line
+      if (i === startLine) {
+        output.push(generateUnderline(startColumn, spanLength, label, isWarning, width, isInfo));
+      }
     }
   }
 

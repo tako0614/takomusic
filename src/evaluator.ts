@@ -26,6 +26,7 @@ import type {
   ForStmt,
   IfStmt,
   MatchExpr,
+  MatchPattern,
   Param,
   ReturnStmt,
   ScoreExpr,
@@ -36,6 +37,7 @@ import type {
   MeterItem,
   TrackDecl,
   TripletStmt,
+  TryExpr,
   TuplePattern,
 } from './ast.js';
 import {
@@ -46,6 +48,9 @@ import {
   ClipValueData,
   DrumHitEventValue,
   FunctionValue,
+  GlissandoEventValue,
+  GraceNoteEventValue,
+  GraceNotePitchValue,
   MarkerEventValue,
   NoteEventValue,
   ObjectValue,
@@ -93,6 +98,23 @@ export class V4Evaluator {
   private filePath?: string;
   private callDepth = 0;
   private static readonly MAX_CALL_DEPTH = 512;
+
+  // Seeded RNG for deterministic random operations (Linear Congruential Generator)
+  private rngState: number = 12345;
+
+  private nextRng(): number {
+    // LCG parameters from Numerical Recipes
+    this.rngState = (this.rngState * 1664525 + 1013904223) >>> 0;
+    return this.rngState / 4294967296;
+  }
+
+  /**
+   * Set the RNG seed for deterministic random operations.
+   * Useful for testing or reproducible outputs.
+   */
+  setSeed(seed: number): void {
+    this.rngState = seed >>> 0;
+  }
 
   constructor(diagnostics: Diagnostic[], filePath?: string) {
     this.diagnostics = diagnostics;
@@ -271,6 +293,8 @@ export class V4Evaluator {
           return this.evaluatePipe(expr.left, expr.call, scope, expr.position);
         case 'MatchExpr':
           return this.evaluateMatch(expr, scope);
+        case 'TryExpr':
+          return this.evaluateTry(expr, scope);
         case 'ScoreExpr':
           return scoreToObject(this.evaluateScore(expr, scope));
         case 'ClipExpr':
@@ -394,7 +418,8 @@ export class V4Evaluator {
       throw new Error('Invalid function value');
     }
     if (this.callDepth >= V4Evaluator.MAX_CALL_DEPTH) {
-      throw new Error('Call stack depth exceeded');
+      const fnName = fn.name ? `in function '${fn.name}'` : '';
+      throw new Error(`[E301] Maximum call stack depth exceeded (${V4Evaluator.MAX_CALL_DEPTH} calls) ${fnName}. Recursive calls are allowed but limited.`);
     }
     this.callDepth++;
 
@@ -641,27 +666,24 @@ export class V4Evaluator {
         }
         if (!arm.pattern) continue;
 
-        let patternMatches = false;
-
-        // Handle RangePattern
-        if (arm.pattern.kind === 'RangePattern') {
-          const start = arm.pattern.start.value;
-          const end = arm.pattern.end.value;
-          patternMatches = this.matchesRange(value, start, end);
-        } else {
-          const patternValue = this.evaluateExpr(arm.pattern, scope);
-          patternMatches = valuesEqual(value, patternValue);
-        }
+        const bindings = new Map<string, RuntimeValue>();
+        const patternMatches = this.matchPattern(arm.pattern, value, bindings, scope);
 
         if (patternMatches) {
+          // Create new scope with bindings
+          const armScope = new Scope(scope);
+          for (const [name, val] of bindings) {
+            armScope.define(name, val, false);
+          }
+
           // Check guard condition if present
           if (arm.guard) {
-            const guardResult = this.evaluateExpr(arm.guard, scope);
+            const guardResult = this.evaluateExpr(arm.guard, armScope);
             if (guardResult.type !== 'bool' || !guardResult.value) {
               continue; // Guard failed, try next arm
             }
           }
-          return this.evaluateExpr(arm.value, scope);
+          return this.evaluateExpr(arm.value, armScope);
         }
       }
       if (fallback) {
@@ -677,6 +699,117 @@ export class V4Evaluator {
       return makeNull();
     }
 
+    private matchPattern(
+      pattern: MatchPattern,
+      value: RuntimeValue,
+      bindings: Map<string, RuntimeValue>,
+      scope: Scope
+    ): boolean {
+      switch (pattern.kind) {
+        case 'WildcardPattern':
+          // Wildcard matches anything
+          return true;
+
+        case 'RangePattern':
+          return this.matchesRange(value, pattern.start.value, pattern.end.value);
+
+        case 'BindingPattern': {
+          // Binding pattern: bind value to name, optionally check inner pattern
+          if (pattern.pattern) {
+            if (!this.matchPattern(pattern.pattern, value, bindings, scope)) {
+              return false;
+            }
+          }
+          bindings.set(pattern.name, value);
+          return true;
+        }
+
+        case 'ArrayPattern': {
+          // Array pattern: match arrays and destructure
+          if (value.type !== 'array') return false;
+          const elements = value.elements;
+
+          let valueIndex = 0;
+          for (let i = 0; i < pattern.elements.length; i++) {
+            const elem = pattern.elements[i];
+
+            if (elem.rest) {
+              // Rest pattern: collect remaining elements
+              const restElements = elements.slice(valueIndex);
+              const restArray: ArrayValue = {
+                type: 'array',
+                elements: restElements,
+              };
+              if (elem.pattern) {
+                if (elem.pattern.kind === 'BindingPattern') {
+                  bindings.set(elem.pattern.name, restArray);
+                } else if (!this.matchPattern(elem.pattern, restArray, bindings, scope)) {
+                  return false;
+                }
+              }
+              valueIndex = elements.length;
+            } else {
+              // Regular element
+              if (valueIndex >= elements.length) return false;
+              const elemValue = elements[valueIndex];
+              if (elem.pattern && !this.matchPattern(elem.pattern, elemValue, bindings, scope)) {
+                return false;
+              }
+              valueIndex++;
+            }
+          }
+
+          // If no rest pattern, array must have exact length
+          const hasRest = pattern.elements.some(e => e.rest);
+          if (!hasRest && valueIndex !== elements.length) return false;
+
+          return true;
+        }
+
+        case 'ObjectPattern': {
+          // Object pattern: match objects and destructure
+          if (value.type !== 'object') return false;
+          const props = value.props;
+
+          const matchedKeys = new Set<string>();
+          for (const prop of pattern.properties) {
+            if (!props.has(prop.key)) return false;
+            const propValue = props.get(prop.key)!;
+            matchedKeys.add(prop.key);
+
+            if (prop.pattern) {
+              // key: pattern
+              if (!this.matchPattern(prop.pattern, propValue, bindings, scope)) {
+                return false;
+              }
+            } else {
+              // Shorthand: { key } binds key to its value
+              bindings.set(prop.key, propValue);
+            }
+          }
+
+          // Handle rest pattern
+          if (pattern.rest) {
+            const restProps = new Map<string, RuntimeValue>();
+            for (const [k, v] of props) {
+              if (!matchedKeys.has(k)) {
+                restProps.set(k, v);
+              }
+            }
+            bindings.set(pattern.rest, { type: 'object', props: restProps });
+          }
+
+          return true;
+        }
+
+        default: {
+          // For expression patterns, evaluate and compare
+          const patternValue = this.evaluateExpr(pattern as Expr, scope);
+          return valuesEqual(value, patternValue);
+        }
+      }
+    }
+
     private matchesRange(value: RuntimeValue, start: number, end: number): boolean {
       if (value.type === 'number') {
         return value.value >= start && value.value <= end;
@@ -686,6 +819,61 @@ export class V4Evaluator {
         return numValue >= start && numValue <= end;
       }
       return false;
+    }
+
+    private evaluateTry(expr: TryExpr, scope: Scope): RuntimeValue {
+      try {
+        // Evaluate the try block and return the last expression value
+        const tryScope = new Scope(scope);
+        let result: RuntimeValue = makeNull();
+        for (const stmt of expr.tryBlock.statements) {
+          if (stmt.kind === 'ExprStmt') {
+            result = this.evaluateExpr(stmt.expr, tryScope);
+          } else if (stmt.kind === 'ReturnStmt') {
+            if (stmt.value) {
+              throw new ReturnSignal(this.evaluateExpr(stmt.value, tryScope));
+            }
+            throw new ReturnSignal(makeNull());
+          } else {
+            this.evaluateStatement(stmt, tryScope);
+          }
+        }
+        return result;
+      } catch (err) {
+        // Don't catch ReturnSignal - let it propagate
+        if (err instanceof ReturnSignal) {
+          throw err;
+        }
+
+        // Evaluate the catch block
+        const catchScope = new Scope(scope);
+        if (expr.catchParam) {
+          // Bind the error to the catch parameter
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          catchScope.define(expr.catchParam, {
+            type: 'object',
+            props: new Map([
+              ['message', { type: 'string', value: errorMessage }],
+              ['name', { type: 'string', value: err instanceof Error ? err.name : 'Error' }],
+            ]),
+          } as ObjectValue, false);
+        }
+
+        let result: RuntimeValue = makeNull();
+        for (const stmt of expr.catchBlock.statements) {
+          if (stmt.kind === 'ExprStmt') {
+            result = this.evaluateExpr(stmt.expr, catchScope);
+          } else if (stmt.kind === 'ReturnStmt') {
+            if (stmt.value) {
+              throw new ReturnSignal(this.evaluateExpr(stmt.value, catchScope));
+            }
+            throw new ReturnSignal(makeNull());
+          } else {
+            this.evaluateStatement(stmt, catchScope);
+          }
+        }
+        return result;
+      }
     }
 
   private evaluateScore(expr: ScoreExpr, scope: Scope): ScoreValueData {
@@ -795,6 +983,41 @@ export class V4Evaluator {
     return tempoEvents[tempoEvents.length - 1].bpm;
   }
 
+  // Calculate number of steps for gradational tempo based on duration
+  // Aims for approximately 1 step per sixteenth note (0.25 beats), min 4, max 128
+  private calculateGradationalSteps(startPos: PosValue, endPos: PosValue): number {
+    const MIN_STEPS = 4;
+    const MAX_STEPS = 128;
+    const STEPS_PER_BEAT = 4; // One step per sixteenth note
+
+    let durationInBeats: number;
+
+    if (isRat(startPos.value) && isRat(endPos.value)) {
+      // Both are rational positions - calculate duration directly
+      const startRat = ratToNumber(startPos.value);
+      const endRat = ratToNumber(endPos.value);
+      durationInBeats = endRat - startRat;
+    } else if (isPosRef(startPos.value) && isPosRef(endPos.value)) {
+      // Both are bar:beat references - estimate duration
+      // Assuming 4 beats per bar (common time), this is an approximation
+      const startBar = startPos.value.bar;
+      const startBeat = startPos.value.beat;
+      const endBar = endPos.value.bar;
+      const endBeat = endPos.value.beat;
+      // Estimate: (bar difference * 4) + beat difference
+      durationInBeats = (endBar - startBar) * 4 + (endBeat - startBeat);
+    } else {
+      // Mixed types or unsupported - use default
+      return 16;
+    }
+
+    // Calculate steps: aim for STEPS_PER_BEAT steps per beat
+    const calculatedSteps = Math.round(durationInBeats * STEPS_PER_BEAT);
+
+    // Clamp to min/max range
+    return Math.max(MIN_STEPS, Math.min(MAX_STEPS, calculatedSteps));
+  }
+
   // Generate intermediate tempo events for gradational tempo
   private generateGradationalTempo(
     startPos: PosValue,
@@ -807,12 +1030,9 @@ export class V4Evaluator {
   ): TempoEventValue[] {
     const results: TempoEventValue[] = [];
 
-    // Determine the number of intermediate points based on the position difference
-    // We'll use a fixed resolution for now: one event per quarter note (1/4)
-    // For positions that are PosRef, we need to estimate the duration
-
-    // Calculate number of steps (minimum 4 steps for smooth transitions)
-    const numSteps = 16;
+    // Calculate number of steps based on duration for smoother curves
+    // Aim for approximately 1 step per sixteenth note (1/16), with min 4 and max 128
+    const numSteps = this.calculateGradationalSteps(startPos, endPos);
 
     for (let i = 0; i <= numSteps; i++) {
       const t = i / numSteps;
@@ -1040,7 +1260,15 @@ export class V4Evaluator {
 
   private evaluateClip(expr: ClipExpr, scope: Scope): ClipValueData {
     let cursor: PosValue = makePosValue(ratFromInt(0));
+    let maxCursor: PosValue = makePosValue(ratFromInt(0));
     const events: ClipEventValue[] = [];
+
+    // Helper to update maxCursor if cursor is greater
+    const updateMaxCursor = () => {
+      if (comparePosValues(cursor, maxCursor) > 0) {
+        maxCursor = cursor;
+      }
+    };
 
     for (const stmt of expr.body) {
       switch (stmt.kind) {
@@ -1050,6 +1278,7 @@ export class V4Evaluator {
         case 'RestStmt': {
           const dur = this.expectRat(this.evaluateExpr(stmt.dur, scope), stmt.position);
           cursor = addPos(cursor, dur);
+          updateMaxCursor();
           break;
         }
         case 'BreathStmt': {
@@ -1066,6 +1295,7 @@ export class V4Evaluator {
           };
           events.push(event);
           cursor = addPos(cursor, dur);
+          updateMaxCursor();
           break;
         }
         case 'NoteStmt': {
@@ -1080,6 +1310,7 @@ export class V4Evaluator {
           this.applyNoteOptions(event, stmt.opts, scope);
           events.push(event);
           cursor = addPos(cursor, dur);
+          updateMaxCursor();
           break;
         }
         case 'ChordStmt': {
@@ -1094,6 +1325,7 @@ export class V4Evaluator {
           this.applyEventOptions(event, stmt.opts, scope);
           events.push(event);
           cursor = addPos(cursor, dur);
+          updateMaxCursor();
           break;
         }
         case 'HitStmt': {
@@ -1109,6 +1341,7 @@ export class V4Evaluator {
           this.applyEventOptions(event, stmt.opts, scope);
           events.push(event);
           cursor = addPos(cursor, dur);
+          updateMaxCursor();
           break;
         }
         case 'CCStmt': {
@@ -1166,6 +1399,7 @@ export class V4Evaluator {
             events.push(noteEvent);
             cursor = addPos(cursor, dur);
           }
+          updateMaxCursor();
           break;
         }
         case 'TripletStmt': {
@@ -1173,6 +1407,54 @@ export class V4Evaluator {
           const result = this.evaluateTriplet(stmt, cursor, scope);
           events.push(...result.events);
           cursor = result.cursor;
+          updateMaxCursor();
+          break;
+        }
+        case 'GraceStmt': {
+          const mainPitch = this.expectPitch(this.evaluateExpr(stmt.mainPitch, scope), stmt.position);
+          const mainDur = this.expectRat(this.evaluateExpr(stmt.mainDur, scope), stmt.position);
+          const gracePitches = this.expectPitchArray(this.evaluateExpr(stmt.graces, scope), stmt.position);
+
+          // Create grace note pitch values with default duration (1/16 of main note)
+          const defaultGraceDur = divRat(mainDur, ratFromInt(4));
+          const graces: GraceNotePitchValue[] = gracePitches.map(pitch => ({
+            pitch,
+            dur: defaultGraceDur,
+          }));
+
+          const event: GraceNoteEventValue = {
+            type: 'graceNote',
+            start: cursor,
+            mainPitch,
+            mainDur,
+            graces,
+            style: stmt.style,
+            stealFrom: stmt.stealFrom,
+          };
+          this.applyEventOptions(event, stmt.opts, scope);
+          events.push(event);
+          cursor = addPos(cursor, mainDur);
+          updateMaxCursor();
+          break;
+        }
+        case 'GlissStmt': {
+          const fromPitch = this.expectPitch(this.evaluateExpr(stmt.fromPitch, scope), stmt.position);
+          const toPitch = this.expectPitch(this.evaluateExpr(stmt.toPitch, scope), stmt.position);
+          const dur = this.expectRat(this.evaluateExpr(stmt.dur, scope), stmt.position);
+          const endPos = addPos(cursor, dur);
+
+          const event: GlissandoEventValue = {
+            type: 'glissando',
+            start: cursor,
+            end: endPos,
+            fromPitch,
+            toPitch,
+            style: stmt.style,
+          };
+          this.applyEventOptions(event, stmt.opts, scope);
+          events.push(event);
+          cursor = endPos;
+          updateMaxCursor();
           break;
         }
         default:
@@ -1180,7 +1462,9 @@ export class V4Evaluator {
       }
     }
 
-    return { events };
+    // Calculate clip length from maximum cursor position
+    const length = posToRat(maxCursor);
+    return { events, length };
   }
 
   private evaluateTriplet(
@@ -1377,6 +1661,13 @@ export class V4Evaluator {
     }
     const ext: Record<string, unknown> = {};
     for (const opt of opts) {
+      // Skip options that are already handled at parse time for grace/gliss
+      if (event.type === 'graceNote' && (opt.name === 'graces' || opt.name === 'style' || opt.name === 'stealFrom')) {
+        continue;
+      }
+      if (event.type === 'glissando' && opt.name === 'style') {
+        continue;
+      }
       const value = this.evaluateExpr(opt.value, scope);
       switch (opt.name) {
         case 'vel':
@@ -1523,10 +1814,10 @@ export class V4Evaluator {
         return [...reversed, ...up];
       }
       case 'random':
-        // Shuffle the pitches using Fisher-Yates algorithm
+        // Shuffle the pitches using Fisher-Yates algorithm with seeded RNG
         const shuffled = [...pitches];
         for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
+          const j = Math.floor(this.nextRng() * (i + 1));
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
@@ -1795,6 +2086,55 @@ function addPos(pos: PosValue, dur: RatValue['value']): PosValue {
     return makePosValue(makePosExpr(pos.value.base, addRat(pos.value.offset, dur)));
   }
   return pos;
+}
+
+/**
+ * Compare two PosValue positions.
+ * Returns negative if a < b, 0 if equal, positive if a > b.
+ * Note: PosRef values (bar:beat) cannot be compared to rational values
+ * without knowing the time signature, so we approximate.
+ */
+function comparePosValues(a: PosValue, b: PosValue): number {
+  const ratA = posToRat(a);
+  const ratB = posToRat(b);
+  // Cross multiply to compare: a.n/a.d vs b.n/b.d
+  return ratA.n * ratB.d - ratB.n * ratA.d;
+}
+
+/**
+ * Convert a PosValue to a Rat (rational number representing position in whole notes).
+ *
+ * LIMITATIONS:
+ * For PosRef values (bar:beat notation), this function assumes a constant 4/4 time signature:
+ * - 1 bar = 1 whole note (4 beats)
+ * - 1 beat = 1/4 note
+ *
+ * For scores with different time signatures (3/4, 6/8, 5/4, etc.), the conversion will be
+ * approximate. For precise positioning in non-4/4 meters, use rational positions directly
+ * (e.g., 3/4 instead of bar:beat notation).
+ *
+ * TODO: Accept optional meterMap parameter for accurate conversion across time signatures.
+ */
+function posToRat(pos: PosValue): RatValue['value'] {
+  if (isRat(pos.value)) {
+    return pos.value;
+  }
+  if (isPosRef(pos.value)) {
+    // Current approximation: assume 4/4 time, bar = 1 whole note, beat = 1 quarter
+    // bar:beat -> (bar-1) * 1 + (beat-1) * 1/4
+    // Note: This is inaccurate for non-4/4 time signatures
+    const barOffset = (pos.value.bar - 1) * 1;  // bars are 1-indexed
+    const beatOffset = (pos.value.beat - 1) / 4;  // beats are 1-indexed
+    const total = barOffset + beatOffset;
+    // Convert to rational with good precision
+    return makeRat(Math.round(total * 1000), 1000);
+  }
+  if (isPosExpr(pos.value)) {
+    // PosRef + offset
+    const baseRat = posToRat(makePosValue(pos.value.base));
+    return addRat(baseRat, pos.value.offset);
+  }
+  return ratFromInt(0);
 }
 
 function valuesEqual(a: RuntimeValue, b: RuntimeValue): boolean {

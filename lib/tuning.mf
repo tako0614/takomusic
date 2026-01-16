@@ -1,0 +1,503 @@
+// std:tuning (v4)
+// Functions for working with alternative tuning systems and microtonal music
+
+// ============================================================================
+// Just Intonation Constants
+// ============================================================================
+
+// Just intonation ratios (frequency ratios relative to root)
+// These are the pure harmonic intervals based on the overtone series
+export const JUST_RATIOS = {
+  unison: 1 / 1,
+  minorSecond: 16 / 15,
+  majorSecond: 9 / 8,
+  minorThird: 6 / 5,
+  majorThird: 5 / 4,
+  perfectFourth: 4 / 3,
+  tritone: 45 / 32,
+  perfectFifth: 3 / 2,
+  minorSixth: 8 / 5,
+  majorSixth: 5 / 3,
+  minorSeventh: 9 / 5,
+  majorSeventh: 15 / 8,
+  octave: 2 / 1
+};
+
+// Convert frequency ratio to cents deviation from equal temperament
+// ratio: frequency ratio (e.g., 3/2 for perfect fifth)
+// returns: cents deviation from equal temperament
+fn ratioToCents(ratio) {
+  // cents = 1200 * log2(ratio) - ET_cents
+  // For this, we need to compare against ET
+  // log2(ratio) = ln(ratio) / ln(2)
+  // We'll use approximation: ln(x) ≈ (x-1) - (x-1)^2/2 + (x-1)^3/3 for x near 1
+  // Or use the pre-computed values below
+  return null; // Placeholder - see JUST_CENTS for pre-computed values
+}
+
+// Pre-computed cents deviations from 12-TET for just intervals
+// Positive = sharper than ET, Negative = flatter than ET
+export const JUST_CENTS = {
+  unison: 0,
+  minorSecond: 12,      // 16/15 vs 2^(1/12) = +11.73 cents
+  majorSecond: 4,       // 9/8 vs 2^(2/12) = +3.91 cents
+  minorThird: 16,       // 6/5 vs 2^(3/12) = +15.64 cents
+  majorThird: -14,      // 5/4 vs 2^(4/12) = -13.69 cents
+  perfectFourth: -2,    // 4/3 vs 2^(5/12) = -1.96 cents
+  tritone: -10,         // 45/32 vs 2^(6/12) = -9.78 cents
+  perfectFifth: 2,      // 3/2 vs 2^(7/12) = +1.96 cents
+  minorSixth: 14,       // 8/5 vs 2^(8/12) = +13.69 cents
+  majorSixth: -16,      // 5/3 vs 2^(9/12) = -15.64 cents
+  minorSeventh: 18,     // 9/5 vs 2^(10/12) = +17.60 cents
+  majorSeventh: -12,    // 15/8 vs 2^(11/12) = -11.73 cents
+  octave: 0
+};
+
+// Semitone offsets for interval names (for pitch calculation)
+const INTERVAL_SEMITONES = {
+  unison: 0,
+  minorSecond: 1,
+  majorSecond: 2,
+  minorThird: 3,
+  majorThird: 4,
+  perfectFourth: 5,
+  tritone: 6,
+  perfectFifth: 7,
+  minorSixth: 8,
+  majorSixth: 9,
+  minorSeventh: 10,
+  majorSeventh: 11,
+  octave: 12
+};
+
+// ============================================================================
+// Just Intonation Functions
+// ============================================================================
+
+// Get cents adjustment for a just interval
+// interval: string name of interval (e.g., "majorThird", "perfectFifth")
+// returns: cents adjustment from equal temperament
+export fn justCents(interval) {
+  const cents = JUST_CENTS[interval];
+  if (cents == null) {
+    return 0;
+  }
+  return cents;
+}
+
+// Create a pitch with just intonation cents adjustment
+// root: base pitch (e.g., C4)
+// interval: string name of interval
+// returns: pitch with cents adjustment for just intonation
+export fn justPitch(root, interval) {
+  const semitones = INTERVAL_SEMITONES[interval];
+  const cents = JUST_CENTS[interval];
+
+  if (semitones == null || cents == null) {
+    return root;
+  }
+
+  // Create new pitch with adjusted MIDI and cents
+  return {
+    midi: root.midi + semitones,
+    cents: (root.cents ?? 0) + cents
+  };
+}
+
+// Create a just-intoned chord from a root and list of intervals
+// root: base pitch
+// intervals: array of interval names (e.g., ["majorThird", "perfectFifth"])
+// returns: array of pitches with just intonation
+export fn justChord(root, intervals) {
+  let result = [root];
+
+  for (interval in intervals) {
+    result[result.length] = justPitch(root, interval);
+  }
+
+  return result;
+}
+
+// Common just-intoned chord helpers
+export fn justMajorTriad(root) {
+  return justChord(root, ["majorThird", "perfectFifth"]);
+}
+
+export fn justMinorTriad(root) {
+  return justChord(root, ["minorThird", "perfectFifth"]);
+}
+
+export fn justMajorSeventh(root) {
+  return justChord(root, ["majorThird", "perfectFifth", "majorSeventh"]);
+}
+
+export fn justMinorSeventh(root) {
+  return justChord(root, ["minorThird", "perfectFifth", "minorSeventh"]);
+}
+
+export fn justDominantSeventh(root) {
+  return justChord(root, ["majorThird", "perfectFifth", "minorSeventh"]);
+}
+
+// ============================================================================
+// Equal Division of the Octave (EDO) Systems
+// ============================================================================
+
+// Calculate cents per step for an EDO system
+// divisions: number of equal divisions of the octave
+// returns: cents per step
+export fn edoCentsPerStep(divisions) {
+  return 1200 / divisions;
+}
+
+// Calculate cents for a specific step in an EDO system
+// divisions: number of equal divisions of the octave
+// step: step number (0 = unison, divisions = octave)
+// returns: cents from the root
+export fn edoStepCents(divisions, step) {
+  return (1200 * step) / divisions;
+}
+
+// Calculate deviation from 12-TET for an EDO step
+// divisions: number of divisions
+// step: step number in the EDO system
+// nearestSemitone: the nearest 12-TET semitone
+// returns: cents deviation from 12-TET
+export fn edoDeviation(divisions, step, nearestSemitone) {
+  const edoCents = edoStepCents(divisions, step);
+  const etCents = nearestSemitone * 100;
+  return edoCents - etCents;
+}
+
+// Create a pitch in an EDO system
+// root: base pitch
+// divisions: number of equal divisions
+// step: step number from root
+// returns: pitch with appropriate cents adjustment
+export fn edoPitch(root, divisions, step) {
+  const totalCents = edoStepCents(divisions, step);
+  const semitones = totalCents / 100;
+  const wholeSemitones = match (semitones >= 0) {
+    true -> semitones - (semitones % 1)
+    else -> semitones - (semitones % 1) - 1
+  };
+  const centsFraction = (semitones - wholeSemitones) * 100;
+
+  return {
+    midi: root.midi + wholeSemitones,
+    cents: (root.cents ?? 0) + centsFraction
+  };
+}
+
+// Common EDO systems
+export const EDO_19 = 19;  // 19-tone equal temperament (meantone-like)
+export const EDO_24 = 24;  // Quarter-tone scale
+export const EDO_31 = 31;  // 31-tone equal temperament
+export const EDO_53 = 53;  // 53-tone equal temperament (approximates just intonation well)
+
+// ============================================================================
+// Quarter Tones
+// ============================================================================
+
+// Quarter tone constants (24-EDO)
+export const QUARTER_SHARP = 50;   // +50 cents
+export const QUARTER_FLAT = -50;   // -50 cents
+export const THREE_QUARTER_SHARP = 150;
+export const THREE_QUARTER_FLAT = -150;
+
+// Create a quarter-tone adjusted pitch
+// pitch: base pitch
+// adjustment: one of QUARTER_SHARP, QUARTER_FLAT, etc.
+// returns: pitch with cents adjustment
+export fn quarterTone(pitch, adjustment) {
+  return {
+    midi: pitch.midi,
+    cents: (pitch.cents ?? 0) + adjustment
+  };
+}
+
+// Convenience functions for quarter tones
+export fn quarterSharp(pitch) {
+  return quarterTone(pitch, QUARTER_SHARP);
+}
+
+export fn quarterFlat(pitch) {
+  return quarterTone(pitch, QUARTER_FLAT);
+}
+
+export fn threeQuarterSharp(pitch) {
+  return quarterTone(pitch, THREE_QUARTER_SHARP);
+}
+
+export fn threeQuarterFlat(pitch) {
+  return quarterTone(pitch, THREE_QUARTER_FLAT);
+}
+
+// ============================================================================
+// Pythagorean Tuning
+// ============================================================================
+
+// Pythagorean tuning uses only perfect fifths (3:2) to derive all intervals
+// This creates pure fifths but rather harsh thirds
+export const PYTHAGOREAN_CENTS = {
+  unison: 0,
+  minorSecond: -10,     // 256/243
+  majorSecond: 4,       // 9/8 (same as just)
+  minorThird: -6,       // 32/27
+  majorThird: 8,        // 81/64 (Pythagorean ditone, quite sharp)
+  perfectFourth: -2,    // 4/3 (same as just)
+  tritone: 12,          // 729/512
+  perfectFifth: 2,      // 3/2 (same as just)
+  minorSixth: -8,       // 128/81
+  majorSixth: 6,        // 27/16
+  minorSeventh: -4,     // 16/9
+  majorSeventh: 10,     // 243/128
+  octave: 0
+};
+
+export fn pythagoreanCents(interval) {
+  const cents = PYTHAGOREAN_CENTS[interval];
+  if (cents == null) {
+    return 0;
+  }
+  return cents;
+}
+
+export fn pythagoreanPitch(root, interval) {
+  const semitones = INTERVAL_SEMITONES[interval];
+  const cents = PYTHAGOREAN_CENTS[interval];
+
+  if (semitones == null || cents == null) {
+    return root;
+  }
+
+  return {
+    midi: root.midi + semitones,
+    cents: (root.cents ?? 0) + cents
+  };
+}
+
+// ============================================================================
+// Meantone Temperament
+// ============================================================================
+
+// Quarter-comma meantone (most common historical meantone)
+// Tempers the fifth slightly flat to achieve pure major thirds
+export const MEANTONE_CENTS = {
+  unison: 0,
+  minorSecond: 17,      // diatonic semitone
+  majorSecond: -7,      // whole tone
+  minorThird: 10,       // minor third
+  majorThird: -14,      // pure major third (5/4)
+  perfectFourth: 3,     // fourth
+  tritone: -10,         // tritone
+  perfectFifth: -3,     // tempered fifth
+  minorSixth: 14,       // minor sixth
+  majorSixth: -10,      // major sixth
+  minorSeventh: 7,      // minor seventh
+  majorSeventh: -17,    // major seventh
+  octave: 0
+};
+
+export fn meantoneCents(interval) {
+  const cents = MEANTONE_CENTS[interval];
+  if (cents == null) {
+    return 0;
+  }
+  return cents;
+}
+
+export fn meantonePitch(root, interval) {
+  const semitones = INTERVAL_SEMITONES[interval];
+  const cents = MEANTONE_CENTS[interval];
+
+  if (semitones == null || cents == null) {
+    return root;
+  }
+
+  return {
+    midi: root.midi + semitones,
+    cents: (root.cents ?? 0) + cents
+  };
+}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+// Adjust all notes in a clip by a fixed cents amount
+// c: input clip
+// centsAdjust: cents to add to all pitches
+// returns: clip with adjusted pitches
+export fn adjustCents(c, centsAdjust) {
+  let events = [];
+
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      events[events.length] = {
+        type: "note",
+        start: ev.start,
+        dur: ev.dur,
+        pitch: {
+          midi: ev.pitch.midi,
+          cents: (ev.pitch.cents ?? 0) + centsAdjust
+        },
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        lyric: ev.lyric,
+        ext: ev.ext
+      };
+    } else if (ev.type == "chord") {
+      let adjustedPitches = [];
+      for (p in ev.pitches) {
+        adjustedPitches[adjustedPitches.length] = {
+          midi: p.midi,
+          cents: (p.cents ?? 0) + centsAdjust
+        };
+      }
+      events[events.length] = {
+        type: "chord",
+        start: ev.start,
+        dur: ev.dur,
+        pitches: adjustedPitches,
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        ext: ev.ext
+      };
+    } else {
+      events[events.length] = ev;
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// Apply a tuning function to all intervals in a clip relative to a reference pitch
+// c: input clip
+// reference: the reference pitch (tonic)
+// tuningFn: function that takes (root, interval) and returns cents adjustment
+// returns: clip with retuned pitches
+export fn applyTuning(c, reference, tuningFn) {
+  let events = [];
+  const refMidi = reference.midi;
+
+  for (ev in c.events) {
+    if (ev.type == "note") {
+      const interval = ev.pitch.midi - refMidi;
+      const semitones = ((interval % 12) + 12) % 12;  // Normalize to 0-11
+      const centsAdjust = tuningFn(semitones);
+
+      events[events.length] = {
+        type: "note",
+        start: ev.start,
+        dur: ev.dur,
+        pitch: {
+          midi: ev.pitch.midi,
+          cents: (ev.pitch.cents ?? 0) + centsAdjust
+        },
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        lyric: ev.lyric,
+        ext: ev.ext
+      };
+    } else if (ev.type == "chord") {
+      let adjustedPitches = [];
+      for (p in ev.pitches) {
+        const interval = p.midi - refMidi;
+        const semitones = ((interval % 12) + 12) % 12;
+        const centsAdjust = tuningFn(semitones);
+        adjustedPitches[adjustedPitches.length] = {
+          midi: p.midi,
+          cents: (p.cents ?? 0) + centsAdjust
+        };
+      }
+      events[events.length] = {
+        type: "chord",
+        start: ev.start,
+        dur: ev.dur,
+        pitches: adjustedPitches,
+        velocity: ev.velocity,
+        voice: ev.voice,
+        techniques: ev.techniques,
+        ext: ev.ext
+      };
+    } else {
+      events[events.length] = ev;
+    }
+  }
+
+  return { events: events, length: c.length };
+}
+
+// Semitone-indexed just intonation cents for use with applyTuning
+const JUST_CENTS_BY_SEMITONE = [
+  0,    // 0: unison
+  12,   // 1: minor second
+  4,    // 2: major second
+  16,   // 3: minor third
+  -14,  // 4: major third
+  -2,   // 5: perfect fourth
+  -10,  // 6: tritone
+  2,    // 7: perfect fifth
+  14,   // 8: minor sixth
+  -16,  // 9: major sixth
+  18,   // 10: minor seventh
+  -12   // 11: major seventh
+];
+
+// Convenience function to apply just intonation to a clip
+// c: input clip
+// tonic: the tonic pitch (all intervals calculated relative to this)
+// returns: clip with just-intoned pitches
+export fn applyJustIntonation(c, tonic) {
+  return applyTuning(c, tonic, fn(semitones) {
+    return JUST_CENTS_BY_SEMITONE[semitones];
+  });
+}
+
+// Semitone-indexed Pythagorean cents
+const PYTHAGOREAN_CENTS_BY_SEMITONE = [
+  0,    // 0: unison
+  -10,  // 1: minor second
+  4,    // 2: major second
+  -6,   // 3: minor third
+  8,    // 4: major third
+  -2,   // 5: perfect fourth
+  12,   // 6: tritone
+  2,    // 7: perfect fifth
+  -8,   // 8: minor sixth
+  6,    // 9: major sixth
+  -4,   // 10: minor seventh
+  10    // 11: major seventh
+];
+
+export fn applyPythagorean(c, tonic) {
+  return applyTuning(c, tonic, fn(semitones) {
+    return PYTHAGOREAN_CENTS_BY_SEMITONE[semitones];
+  });
+}
+
+// Semitone-indexed meantone cents
+const MEANTONE_CENTS_BY_SEMITONE = [
+  0,    // 0: unison
+  17,   // 1: minor second
+  -7,   // 2: major second
+  10,   // 3: minor third
+  -14,  // 4: major third
+  3,    // 5: perfect fourth
+  -10,  // 6: tritone
+  -3,   // 7: perfect fifth
+  14,   // 8: minor sixth
+  -10,  // 9: major sixth
+  7,    // 10: minor seventh
+  -17   // 11: major seventh
+];
+
+export fn applyMeantone(c, tonic) {
+  return applyTuning(c, tonic, fn(semitones) {
+    return MEANTONE_CENTS_BY_SEMITONE[semitones];
+  });
+}
