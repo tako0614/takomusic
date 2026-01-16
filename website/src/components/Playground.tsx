@@ -307,94 +307,6 @@ export function Playground() {
     flashStatus('Project deleted.')
   }
 
-  const collabEndpoint = () => (import.meta as any).env?.VITE_TAKOMUSIC_COLLAB_URL || 'ws://localhost:8787'
-
-  const attachCollabBinding = () => {
-    if (!editor || !collabText || !window.monaco) return
-    const model = editor.getModel()
-    if (!model) return
-
-    const handleRemoteUpdate = (event: Y.YTextEvent) => {
-      if (collabApplying) return
-      const edits: { range: any; text: string }[] = []
-      let index = 0
-      for (const op of event.delta) {
-        if (op.retain) {
-          index += op.retain
-        } else if (op.delete) {
-          const start = model.getPositionAt(index)
-          const end = model.getPositionAt(index + op.delete)
-          edits.push({
-            range: new window.monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
-            text: '',
-          })
-        } else if (op.insert) {
-          const pos = model.getPositionAt(index)
-          edits.push({
-            range: new window.monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
-            text: op.insert,
-          })
-          index += op.insert.length
-        }
-      }
-      if (edits.length === 0) return
-      collabApplying = true
-      model.applyEdits(edits)
-      collabApplying = false
-      setCode(model.getValue())
-    }
-
-    collabText.observe(handleRemoteUpdate)
-
-    collabDispose = () => {
-      collabText?.unobserve(handleRemoteUpdate)
-      collabDispose = null
-    }
-  }
-
-  const disconnectCollab = () => {
-    collabDispose?.()
-    collabProvider?.destroy()
-    collabDoc?.destroy()
-    collabDoc = null
-    collabText = null
-    collabProvider = null
-    collabApplying = false
-    setCollabStatus('offline')
-  }
-
-  const connectCollab = () => {
-    if (!editor) {
-      flashStatus('Editor not ready.')
-      return
-    }
-    const room = collabRoom().trim()
-    if (!room) {
-      flashStatus('Enter a room name.')
-      return
-    }
-    disconnectCollab()
-    setCollabStatus('connecting')
-    collabDoc = new Y.Doc()
-    collabText = collabDoc.getText('code')
-    collabProvider = new WebsocketProvider(collabEndpoint(), room, collabDoc)
-    collabProvider.on('status', (event) => {
-      setCollabStatus(event.status === 'connected' ? 'connected' : 'offline')
-    })
-    if (collabText.length === 0) {
-      collabApplying = true
-      collabText.insert(0, editor.getValue())
-      collabApplying = false
-    } else {
-      collabApplying = true
-      editor.setValue(collabText.toString())
-      collabApplying = false
-      setCode(editor.getValue())
-    }
-    attachCollabBinding()
-    flashStatus('Collab connected.')
-  }
-
   const handleDownloadMidi = async () => {
     if (isCompiling()) return
     if (!currentIR()) {
@@ -410,6 +322,27 @@ export function Playground() {
       flashStatus('MIDI downloaded.')
     } catch {
       flashStatus('MIDI export failed.')
+    }
+  }
+
+  const handleDownloadAudio = async () => {
+    if (isCompiling() || isRenderingAudio()) return
+    setIsRenderingAudio(true)
+    try {
+      if (!currentIR()) {
+        await compile()
+      }
+      const ir = currentIR()
+      if (!ir) {
+        flashStatus('Compile failed. Audio not generated.')
+        return
+      }
+      await downloadWav(ir, projectName() || ir.meta?.title)
+      flashStatus('Audio downloaded.')
+    } catch {
+      flashStatus('Audio export failed.')
+    } finally {
+      setIsRenderingAudio(false)
     }
   }
 
@@ -508,23 +441,11 @@ export function Playground() {
       padding: { top: 16, bottom: 16 },
     })
 
-    editor.onDidChangeModelContent((event) => {
+    editor.onDidChangeModelContent(() => {
       if (!editor) return
       const value = editor.getValue()
       setCode(value)
       lastCompileResult = null
-      if (!collabText || collabApplying || !collabDoc) return
-      const changes = [...event.changes].sort((a, b) => b.rangeOffset - a.rangeOffset)
-      collabDoc.transact(() => {
-        for (const change of changes) {
-          if (change.rangeLength) {
-            collabText.delete(change.rangeOffset, change.rangeLength)
-          }
-          if (change.text) {
-            collabText.insert(change.rangeOffset, change.text)
-          }
-        }
-      })
     })
   }
 
@@ -545,7 +466,6 @@ export function Playground() {
   })
 
   onCleanup(() => {
-    disconnectCollab()
     editor?.dispose()
     getAudioPlayer().dispose()
   })
@@ -705,27 +625,6 @@ export function Playground() {
         <Show when={statusMessage()}>
           <div class="text-xs text-slate-400">{statusMessage()}</div>
         </Show>
-        <div class="flex flex-wrap items-center gap-2">
-          <input
-            value={collabRoom()}
-            onInput={(event) => setCollabRoom(event.currentTarget.value)}
-            placeholder="Collab room"
-            class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
-          />
-          <button
-            onClick={connectCollab}
-            class="px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
-          >
-            Connect
-          </button>
-          <button
-            onClick={disconnectCollab}
-            class="px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
-          >
-            Disconnect
-          </button>
-          <span class="text-xs text-slate-500">Status: {collabStatus()}</span>
-        </div>
       </div>
 
       {/* Example snippets */}
@@ -808,6 +707,16 @@ export function Playground() {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
                 </svg>
                 MIDI
+              </button>
+              <button
+                onClick={handleDownloadAudio}
+                disabled={isCompiling() || isRenderingAudio()}
+                class="px-4 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors flex items-center gap-2 disabled:bg-slate-600"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+                </svg>
+                {isRenderingAudio() ? 'Rendering...' : 'WAV'}
               </button>
             </div>
           </div>

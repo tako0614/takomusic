@@ -1,6 +1,6 @@
 # TakoMusic v7 Tutorial
 
-This guide walks through the v7 workflow: writing code, using the web app, collaboration, rendering, and VSCode features.
+This guide walks through the v7 workflow: writing code, using the web app, rendering, and VSCode features.
 
 ## 1) Quick Start
 
@@ -39,22 +39,9 @@ mf build src/main.mf
 - Click **Compile** to view IR/AST.
 - Click **Play** to hear the score.
 - Click **MIDI** to download a MIDI file.
+- Click **WAV** to download a rendered audio file.
 
-## 3) Collaboration (Web)
-
-Collab uses WebSocket + Yjs.
-
-- Choose a room name.
-- Click **Connect**.
-- Share the room name with collaborators.
-
-Set the collab endpoint:
-
-```
-VITE_TAKOMUSIC_COLLAB_URL=ws://localhost:8787
-```
-
-## 4) VSCode Extension
+## 3) VSCode Extension
 
 Features:
 
@@ -62,19 +49,11 @@ Features:
 
 No additional commands are required.
 
-## 5) Server Audio Export
+## 4) Browser Audio Export
 
-Server-side audio export uses the renderer plugin:
+Audio export is rendered locally in the browser (OfflineAudioContext) and downloaded as WAV.
 
-- `tools/tako-render-audio/index.js`
-- profile: `profiles/audio.mf.profile.json`
-
-API endpoints:
-
-- `POST /api/exports/audio` (score payload)
-- `GET /api/exports/{id}` (download)
-
-## 6) Tips
+## 5) Tips
 
 - Use small motifs and combine with `repeat`, `concat`, and `merge`.
 - Use `std:autogen` for basslines and accompaniment.
