@@ -1,4 +1,4 @@
-// std:sync (v5)
+// std:sync (v7.0)
 // Synchronization: timecode, SMPTE, MTC, OSC, video sync
 
 import * as core from "std:core";
@@ -276,7 +276,7 @@ export fn tempoSync(pos, bpm, reason) {
 export fn calculateTemposForCues(cues, beatsPerBar) {
   let tempos = [];
 
-  for (i in 0..(cues.length - 2)) {
+  for (i in 0 .. (cues.length - 2)) {
     const currentCue = cues[i];
     const nextCue = cues[i + 1];
 

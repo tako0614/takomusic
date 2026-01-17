@@ -1,4 +1,4 @@
-// std:articulations (v4)
+// std:articulations (v7.0)
 // Standard articulation techniques and helper functions
 
 import { cloneEvent } from "std:core";
@@ -229,7 +229,7 @@ export fn extendForLegato(c) {
   notes = sortBy(notes, "start");
 
   // Extend legato notes to reach the next note
-  for (i in 0..(notes.length - 2)) {
+  for (i in 0 .. (notes.length - 2)) {
     const current = notes[i];
     const next = notes[i + 1];
     if (hasTechnique(current.techniques, legato)) {

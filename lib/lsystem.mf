@@ -1,4 +1,4 @@
-// std:lsystem (v5.2)
+// std:lsystem (v7.0)
 // L-systems (Lindenmayer systems) for algorithmic composition
 // Generates self-similar, fractal-like structures for melody, rhythm, and form
 
@@ -20,7 +20,7 @@ export fn lsystem(axiom, rules) {
 // Apply one generation of L-system rules
 export fn iterate(sys) {
   let result = "";
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     const replacement = sys.rules[ch];
     if (replacement != null) {
@@ -39,7 +39,7 @@ export fn iterate(sys) {
 // Apply n generations
 export fn generate(sys, generations) {
   let current = sys;
-  for (_ in 0..(generations - 1)) {
+  for (_ in 0 .. (generations - 1)) {
     current = iterate(current);
   }
   return current;
@@ -79,7 +79,7 @@ export fn iterateStochastic(sys, seed) {
   }
 
   let result = "";
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     const options = sys.rules[ch];
 
@@ -125,7 +125,7 @@ export fn generateStochastic(sys, generations, seed) {
     rng = 12345;
   }
 
-  for (_ in 0..(generations - 1)) {
+  for (_ in 0 .. (generations - 1)) {
     current = iterateStochastic(current, rng);
     rng = current.lastSeed;
   }
@@ -154,7 +154,7 @@ export fn iterateContext(sys) {
   let result = "";
   const len = sys.current.length;
 
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     const ch = sys.current[i];
     let left = "";
     let right = "";
@@ -210,7 +210,7 @@ export fn toPitches(sys, mapping, basePitch) {
   }
 
   let pitches = [];
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     const offset = mapping[ch];
     if (offset != null) {
@@ -229,7 +229,7 @@ export fn toScaleDegrees(sys, mapping, scale, basePitch) {
   }
 
   let pitches = [];
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     const degree = mapping[ch];
     if (degree != null) {
@@ -256,7 +256,7 @@ export fn toScaleDegrees(sys, mapping, scale, basePitch) {
 // mapping: object from symbol to duration
 export fn toRhythm(sys, mapping) {
   let durations = [];
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     const dur = mapping[ch];
     if (dur != null) {
@@ -269,7 +269,7 @@ export fn toRhythm(sys, mapping) {
 // Map L-system to velocities
 export fn toVelocities(sys, mapping) {
   let velocities = [];
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     const vel = mapping[ch];
     if (vel != null) {
@@ -296,7 +296,7 @@ export fn turtleToPitches(sys, stepSize, basePitch) {
   let currentPitch = base;
   let stack = [];
 
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
 
     if (ch == "F" || ch == "f") {
@@ -312,7 +312,7 @@ export fn turtleToPitches(sys, stepSize, basePitch) {
         currentPitch = stack[stack.length - 1];
         // Pop from stack
         let newStack = [];
-        for (j in 0..(stack.length - 2)) {
+        for (j in 0 .. (stack.length - 2)) {
           newStack[newStack.length] = stack[j];
         }
         stack = newStack;
@@ -447,7 +447,7 @@ export fn binaryRhythm() {
 // Count occurrences of a symbol
 export fn countSymbol(sys, symbol) {
   let count = 0;
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     if (sys.current[i] == symbol) {
       count = count + 1;
     }
@@ -470,7 +470,7 @@ export fn substring(sys, start, len) {
   if (endIdx > sys.current.length) {
     endIdx = sys.current.length;
   }
-  for (i in start..(endIdx - 1)) {
+  for (i in start .. (endIdx - 1)) {
     result = result + sys.current[i];
   }
   return result;
@@ -479,7 +479,7 @@ export fn substring(sys, start, len) {
 // Reverse the L-system string
 export fn reverse(sys) {
   let result = "";
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     result = sys.current[sys.current.length - 1 - i] + result;
   }
   return {
@@ -492,7 +492,7 @@ export fn reverse(sys) {
 // Filter symbols (keep only specified)
 export fn filterSymbols(sys, keepSymbols) {
   let result = "";
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     for (s in keepSymbols) {
       if (ch == s) {
@@ -507,7 +507,7 @@ export fn filterSymbols(sys, keepSymbols) {
 // Replace symbols
 export fn replaceSymbol(sys, from, to) {
   let result = "";
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     if (ch == from) {
       result = result + to;
@@ -525,7 +525,7 @@ export fn replaceSymbol(sys, from, to) {
 // Analyze symbol distribution
 export fn symbolDistribution(sys) {
   let counts = {};
-  for (i in 0..(sys.current.length - 1)) {
+  for (i in 0 .. (sys.current.length - 1)) {
     const ch = sys.current[i];
     if (counts[ch] == null) {
       counts[ch] = 0;

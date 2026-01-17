@@ -1,4 +1,4 @@
-// std:ornament (v4)
+// std:ornament (v7.0)
 // Functions for expanding ornaments (trill, mordent, turn, tremolo)
 // Ornaments can be specified via techniques array and parameters in ext:
 //   note(C4, q, tech: [trill], trillInterval: 2, trillSpeed: 16);
@@ -231,7 +231,7 @@ fn expandSingleChordTremolo(ev, speed) {
   const mid = pitches.length / 2;
   let firstHalf = [];
   let secondHalf = [];
-  for (i in 0..(pitches.length - 1)) {
+  for (i in 0 .. (pitches.length - 1)) {
     if (i < mid) {
       firstHalf[firstHalf.length] = pitches[i];
     } else {
@@ -603,7 +603,7 @@ export fn expandChordTremolo(c, speed) {
         let firstHalf = [];
         let secondHalf = [];
 
-        for (i in 0..(pitches.length - 1)) {
+        for (i in 0 .. (pitches.length - 1)) {
           if (i < mid) {
             firstHalf[firstHalf.length] = pitches[i];
           } else {

@@ -1,4 +1,4 @@
-// std:counterpoint (v5.5)
+// std:counterpoint (v7.0)
 // Species counterpoint and voice leading utilities
 // Based on traditional rules from Fux's Gradus ad Parnassum
 
@@ -130,7 +130,7 @@ export fn validateFirstSpecies(cantusFirmus, counterpoint) {
     return errors;
   }
 
-  for (i in 0..(cantusFirmus.length - 1)) {
+  for (i in 0 .. (cantusFirmus.length - 1)) {
     const cf = cantusFirmus[i];
     const cp = counterpoint[i];
     const int = intervalClass(cf, cp);
@@ -242,7 +242,7 @@ export fn validateSecondSpecies(cantusFirmus, counterpoint) {
     return errors;
   }
 
-  for (i in 0..(cantusFirmus.length - 1)) {
+  for (i in 0 .. (cantusFirmus.length - 1)) {
     const cf = cantusFirmus[i];
     const cpDownbeat = counterpoint[i * 2];
     const cpUpbeat = counterpoint[i * 2 + 1];
@@ -315,7 +315,7 @@ export fn validateThirdSpecies(cantusFirmus, counterpoint) {
     return errors;
   }
 
-  for (i in 0..(cantusFirmus.length - 1)) {
+  for (i in 0 .. (cantusFirmus.length - 1)) {
     const cf = cantusFirmus[i];
 
     for (j in 0..3) {
@@ -390,7 +390,7 @@ export fn validateFourthSpecies(cantusFirmus, counterpoint) {
     return errors;
   }
 
-  for (i in 0..(cantusFirmus.length - 1)) {
+  for (i in 0 .. (cantusFirmus.length - 1)) {
     const cf = cantusFirmus[i];
     const cpWeak = counterpoint[i * 2];      // Weak beat (tied from previous)
     const cpStrong = counterpoint[i * 2 + 1]; // Strong beat (new note)
@@ -466,7 +466,7 @@ export fn voiceLeadingDistance(chord1, chord2) {
   let totalDistance = 0;
   const len = chord1.length;
 
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     let diff = chord2[i] - chord1[i];
     if (diff < 0) {
       diff = -diff;
@@ -495,7 +495,7 @@ export fn smoothestVoiceLeading(chord1, chord2Options) {
 
 // Check voice crossing
 export fn hasVoiceCrossing(voices) {
-  for (i in 0..(voices.length - 2)) {
+  for (i in 0 .. (voices.length - 2)) {
     if (voices[i] > voices[i + 1]) {
       return true;
     }
@@ -505,7 +505,7 @@ export fn hasVoiceCrossing(voices) {
 
 // Check voice overlap (voice moves past previous position of adjacent voice)
 export fn hasVoiceOverlap(voices1, voices2) {
-  for (i in 0..(voices1.length - 2)) {
+  for (i in 0 .. (voices1.length - 2)) {
     // Upper voice shouldn't go below previous lower voice position
     if (voices2[i + 1] < voices1[i]) {
       return true;
@@ -555,7 +555,7 @@ export fn validateCantusFirmus(cf) {
   }
 
   // Check for large leaps
-  for (i in 1..(pitches.length - 1)) {
+  for (i in 1 .. (pitches.length - 1)) {
     const leap = pitches[i] - pitches[i - 1];
     let absLeap = leap;
     if (absLeap < 0) {
@@ -746,7 +746,7 @@ export fn stretto(subject, entries) {
 
 // Check if counterpoint is invertible at the octave
 export fn isInvertibleAtOctave(line1, line2) {
-  for (i in 0..(line1.length - 1)) {
+  for (i in 0 .. (line1.length - 1)) {
     const int = intervalClass(line1[i], line2[i]);
 
     // Fifths become fourths (dissonant in upper voice)
@@ -759,7 +759,7 @@ export fn isInvertibleAtOctave(line1, line2) {
 
 // Check if counterpoint is invertible at the tenth
 export fn isInvertibleAtTenth(line1, line2) {
-  for (i in 0..(line1.length - 1)) {
+  for (i in 0 .. (line1.length - 1)) {
     const int = intervalClass(line1[i], line2[i]);
 
     // Thirds and sixths work well
@@ -777,7 +777,7 @@ export fn invertCounterpoint(upperLine, lowerLine, inversionInterval) {
   let newUpper = [];
   let newLower = [];
 
-  for (i in 0..(upperLine.length - 1)) {
+  for (i in 0 .. (upperLine.length - 1)) {
     newUpper[i] = lowerLine[i] + inversionInterval;
     newLower[i] = upperLine[i];
   }
@@ -831,7 +831,7 @@ export fn findClimax(pitches) {
   let highest = pitches[0];
   let position = 0;
 
-  for (i in 0..(pitches.length - 1)) {
+  for (i in 0 .. (pitches.length - 1)) {
     if (pitches[i] > highest) {
       highest = pitches[i];
       position = i;
@@ -870,7 +870,7 @@ export fn analyzeMotion(pitches) {
   let steps = 0;
   let leaps = 0;
 
-  for (i in 1..(pitches.length - 1)) {
+  for (i in 1 .. (pitches.length - 1)) {
     const motion = pitches[i] - pitches[i - 1];
     let absMotion = motion;
     if (absMotion < 0) {

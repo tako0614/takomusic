@@ -1,4 +1,4 @@
-// std:melody (v6.0)
+// std:melody (v7.0)
 // Melodic analysis and manipulation utilities
 // Contour analysis, motif detection, shape classification
 
@@ -18,7 +18,7 @@ export fn extractContour(pitches) {
   }
 
   let contour = [];
-  for (i in 1..(pitches.length - 1)) {
+  for (i in 1 .. (pitches.length - 1)) {
     const diff = pitches[i] - pitches[i - 1];
     if (diff > 0) {
       contour[contour.length] = CONTOUR_UP;
@@ -38,7 +38,7 @@ export fn simplifyContour(contour) {
   }
 
   let simplified = [contour[0]];
-  for (i in 1..(contour.length - 1)) {
+  for (i in 1 .. (contour.length - 1)) {
     if (contour[i] != simplified[simplified.length - 1]) {
       simplified[simplified.length] = contour[i];
     }
@@ -60,7 +60,7 @@ export fn contourSimilarity(contour1, contour2) {
     }
 
     let matches = 0;
-    for (i in 0..(minLen - 1)) {
+    for (i in 0 .. (minLen - 1)) {
       if (contour1[i] == contour2[i]) {
         matches = matches + 1;
       }
@@ -73,7 +73,7 @@ export fn contourSimilarity(contour1, contour2) {
   }
 
   let matches = 0;
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     if (contour1[i] == contour2[i]) {
       matches = matches + 1;
     }
@@ -136,7 +136,7 @@ export fn classifyShape(pitches) {
     // Arch: up then down
     if (simplified[0] == CONTOUR_UP) {
       let foundDown = false;
-      for (i in 1..(simplified.length - 1)) {
+      for (i in 1 .. (simplified.length - 1)) {
         if (simplified[i] == CONTOUR_DOWN) {
           foundDown = true;
         }
@@ -149,7 +149,7 @@ export fn classifyShape(pitches) {
     // Inverted arch: down then up
     if (simplified[0] == CONTOUR_DOWN) {
       let foundUp = false;
-      for (i in 1..(simplified.length - 1)) {
+      for (i in 1 .. (simplified.length - 1)) {
         if (simplified[i] == CONTOUR_UP) {
           foundUp = true;
         }
@@ -175,7 +175,7 @@ export fn classifyShape(pitches) {
 // Get intervals between consecutive pitches
 export fn getIntervals(pitches) {
   let intervals = [];
-  for (i in 1..(pitches.length - 1)) {
+  for (i in 1 .. (pitches.length - 1)) {
     intervals[intervals.length] = pitches[i] - pitches[i - 1];
   }
   return intervals;
@@ -273,7 +273,7 @@ export fn findClimax(pitches) {
   let highest = pitches[0];
   let position = 0;
 
-  for (i in 0..(pitches.length - 1)) {
+  for (i in 0 .. (pitches.length - 1)) {
     if (pitches[i] > highest) {
       highest = pitches[i];
       position = i;
@@ -296,7 +296,7 @@ export fn findNadir(pitches) {
   let lowest = pitches[0];
   let position = 0;
 
-  for (i in 0..(pitches.length - 1)) {
+  for (i in 0 .. (pitches.length - 1)) {
     if (pitches[i] < lowest) {
       lowest = pitches[i];
       position = i;
@@ -326,20 +326,20 @@ export fn findMotifs(pitches, minLength) {
   const intervals = getIntervals(pitches);
 
   // Find all possible motifs
-  for (motifLen in len..(n / 2)) {
-    for (start in 0..(n - motifLen - 1)) {
+  for (motifLen in len .. (n / 2)) {
+    for (start in 0 .. (n - motifLen - 1)) {
       // Extract motif intervals
       let motifIntervals = [];
-      for (i in 0..(motifLen - 2)) {
+      for (i in 0 .. (motifLen - 2)) {
         motifIntervals[i] = intervals[start + i];
       }
 
       // Find occurrences
       let occurrences = [start];
 
-      for (searchStart in (start + motifLen)..(n - motifLen)) {
+      for (searchStart in (start + motifLen) .. (n - motifLen)) {
         let matches = true;
-        for (i in 0..(motifLen - 2)) {
+        for (i in 0 .. (motifLen - 2)) {
           if (intervals[searchStart + i] != motifIntervals[i]) {
             matches = false;
           }
@@ -353,7 +353,7 @@ export fn findMotifs(pitches, minLength) {
       if (occurrences.length > 1) {
         // Extract actual pitches
         let motifPitches = [];
-        for (i in 0..(motifLen - 1)) {
+        for (i in 0 .. (motifLen - 1)) {
           motifPitches[i] = pitches[start + i];
         }
 
@@ -362,7 +362,7 @@ export fn findMotifs(pitches, minLength) {
         for (existing in motifs) {
           if (existing.pitches.length == motifPitches.length) {
             let same = true;
-            for (i in 0..(motifPitches.length - 1)) {
+            for (i in 0 .. (motifPitches.length - 1)) {
               if (existing.pitches[i] != motifPitches[i]) {
                 same = false;
               }
@@ -398,7 +398,7 @@ export fn isTransposition(melody1, melody2) {
 
   const interval = melody2[0] - melody1[0];
 
-  for (i in 1..(melody1.length - 1)) {
+  for (i in 1 .. (melody1.length - 1)) {
     if (melody2[i] - melody1[i] != interval) {
       return { isTransposition: false, interval: 0 };
     }
@@ -414,7 +414,7 @@ export fn isRetrograde(melody1, melody2) {
   }
 
   const n = melody1.length;
-  for (i in 0..(n - 1)) {
+  for (i in 0 .. (n - 1)) {
     if (melody1[i] != melody2[n - 1 - i]) {
       return false;
     }
@@ -434,7 +434,7 @@ export fn isInversion(melody1, melody2, axis) {
     ax = melody1[0];
   }
 
-  for (i in 0..(melody1.length - 1)) {
+  for (i in 0 .. (melody1.length - 1)) {
     const expected = 2 * ax - melody1[i];
     if (melody2[i] != expected) {
       return false;
@@ -474,7 +474,7 @@ export fn invert(pitches, axis) {
 // Retrograde (reverse)
 export fn retrograde(pitches) {
   let result = [];
-  for (i in 0..(pitches.length - 1)) {
+  for (i in 0 .. (pitches.length - 1)) {
     result[i] = pitches[pitches.length - 1 - i];
   }
   return result;
@@ -490,7 +490,7 @@ export fn augment(pitches, factor) {
   if (pitches.length == 0) { return []; }
 
   let result = [pitches[0]];
-  for (i in 1..(pitches.length - 1)) {
+  for (i in 1 .. (pitches.length - 1)) {
     const interval = pitches[i] - pitches[i - 1];
     result[i] = result[i - 1] + interval * factor;
   }
@@ -613,7 +613,7 @@ export fn findChromaticNotes(pitches, keyRoot) {
   const majorScale = [0, 2, 4, 5, 7, 9, 11];
   let chromatic = [];
 
-  for (i in 0..(pitches.length - 1)) {
+  for (i in 0 .. (pitches.length - 1)) {
     const pc = (pitches[i] - keyRoot) % 12;
     let found = false;
     for (degree in majorScale) {
@@ -645,7 +645,7 @@ export fn detectPhrases(pitches, durations) {
   }
   avgDur = avgDur / durations.length;
 
-  for (i in 1..(pitches.length - 1)) {
+  for (i in 1 .. (pitches.length - 1)) {
     let isBreak = false;
 
     // Long note suggests phrase end

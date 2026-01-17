@@ -1,4 +1,4 @@
-// std:instrument (v5)
+// std:instrument (v7.0)
 // Instrument groups, layers, routing, and orchestration
 
 import * as core from "std:core";
@@ -56,7 +56,7 @@ export fn rhythmSection() {
 // Create a layered instrument (multiple sounds playing together)
 export fn layer(name, sounds, weights) {
   let layerSounds = [];
-  for (i in 0..(sounds.length - 1)) {
+  for (i in 0 .. (sounds.length - 1)) {
     let weight = 1.0;
     if (weights != null && i < weights.length) {
       weight = weights[i];
@@ -220,7 +220,7 @@ export fn automationTrack(name, settings) {
 // Split a part into divisi (multiple voices)
 export fn divisi(clip, numVoices) {
   let voices = [];
-  for (i in 0..(numVoices - 1)) {
+  for (i in 0 .. (numVoices - 1)) {
     let voiceEvents = [];
     for (ev in clip.events) {
       if (ev.voice == i || ev.voice == null) {
@@ -336,7 +336,7 @@ export fn doubleMultiple(clip, intervals) {
 // Distribute chord across multiple voices/instruments
 export fn voicedChord(pitches, startPos, dur, velocities) {
   let events = [];
-  for (i in 0..(pitches.length - 1)) {
+  for (i in 0 .. (pitches.length - 1)) {
     let vel = 0.8;
     if (velocities != null && i < velocities.length) {
       vel = velocities[i];

@@ -83,7 +83,14 @@
       "Bash(timeout 90 npm test)",
       "Bash(npm whoami:*)",
       "Bash(npm publish)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(for file in lib/*.mf)",
+      "Bash(do sed -i \"s/^\\\\/\\\\/ std:\\\\\\([a-z]*\\\\\\) \\(v[0-9.]*\\)/\\\\/\\\\/ std:\\\\1 \\(v7.0\\)/\" \"$file\")",
+      "Bash(test:*)",
+      "Bash(for file in *.mf)",
+      "Bash(do sed -i 's/for \\(\\\\\\([^\\)]*\\\\\\) in \\\\\\([0-9]\\\\+\\\\\\)\\\\.\\\\.\\\\\\(/for \\(\\\\1 in \\\\2 .. \\(/g' \"$file\")",
+      "Bash(do sed -i 's/\\\\.\\\\.\\(/\\\\ ..\\\\ \\(/g' \"$file\")",
+      "Bash(tee:*)"
     ]
   }
 }

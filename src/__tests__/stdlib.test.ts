@@ -629,13 +629,13 @@ import * as autogen from "std:autogen";
 export fn main() -> Score {
   const chords = [[C4, E4, G4], [D4, F4, A4]];
   const bass = autogen.bassline(chords, q, -12, 0.7);
-  const clip = autogen.motifToClip(bass);
+  const bassClip = autogen.motifToClip(bass);
   return score {
     tempo { 1:1 -> 120bpm; }
     meter { 1:1 -> 4/4; }
     sound "bass" kind instrument {}
     track "Bass" role Instrument sound "bass" {
-      place 1:1 clip;
+      place 1:1 bassClip;
     }
   };
 }`;

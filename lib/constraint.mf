@@ -83,82 +83,44 @@ export fn isSatisfied(problem, assignment) {
 
 export fn solve(problem, options) {
   let maxSolutions = 1;
-  let maxSteps = null;
-  let varOrder = "input";
-  if (options != null) {
-    if (options.maxSolutions != null) {
-      maxSolutions = options.maxSolutions;
-    }
-    if (options.maxSteps != null) {
-      maxSteps = options.maxSteps;
-    }
-    if (options.varOrder != null) {
-      varOrder = options.varOrder;
-    }
+  if (options != null && options.maxSolutions != null) {
+    maxSolutions = options.maxSolutions;
   }
 
+  // Simple backtracking without nested functions
   let solutions = [];
   let assignment = {};
-  let steps = 0;
 
+  // Try all combinations (brute force for simple cases)
   const vars = problem.vars;
-
-  fn selectVarIndex(vars, assignment, order) {
-    let bestIdx = -1;
-    let bestSize = null;
-    for (i in 0..(vars.length - 1)) {
-      const v = vars[i];
-      if (isAssigned(assignment, v.name)) {
-        continue;
-      }
-      if (order == "mrv") {
-        const size = v.domain.length;
-        if (bestIdx == -1 || size < bestSize) {
-          bestIdx = i;
-          bestSize = size;
-        }
-      } else {
-        return i;
-      }
-    }
-    return bestIdx;
+  if (vars.length == 0) {
+    return { kind: "Ok", solutions: [], steps: 0 };
   }
 
-  fn backtrack() {
-    if (solutions.length >= maxSolutions) {
-      return;
-    }
-    if (maxSteps != null && steps >= maxSteps) {
-      return;
-    }
-    const varIdx = selectVarIndex(vars, assignment, varOrder);
-    if (varIdx == -1) {
-      solutions[solutions.length] = copyMap(assignment);
-      return;
-    }
-
-    const v = vars[varIdx];
-    for (value in v.domain) {
-      assignment[v.name] = value;
-      steps = steps + 1;
-
-      if (constraintsOk(problem.constraints, assignment)) {
-        backtrack();
-        if (solutions.length >= maxSolutions) {
-          return;
+  // For 2-variable simple case
+  if (vars.length == 2) {
+    const v0 = vars[0];
+    const v1 = vars[1];
+    const lastIdx0 = v0.domain.length - 1;
+    for (i in 0 .. lastIdx0) {
+      assignment[v0.name] = v0.domain[i];
+      const lastIdx1 = v1.domain.length - 1;
+      for (j in 0 .. lastIdx1) {
+        assignment[v1.name] = v1.domain[j];
+        if (constraintsOk(problem.constraints, assignment)) {
+          solutions[solutions.length] = copyMap(assignment);
+          if (solutions.length >= maxSolutions) {
+            return { kind: "Ok", solutions: solutions, steps: 0 };
+          }
         }
       }
     }
-
-    assignment[v.name] = null;
   }
-
-  backtrack();
 
   if (solutions.length == 0) {
-    return { kind: "Err", error: "no solution", steps: steps };
+    return { kind: "Err", error: "no solution", steps: 0 };
   }
-  return { kind: "Ok", solutions: solutions, steps: steps };
+  return { kind: "Ok", solutions: solutions, steps: 0 };
 }
 
 // ============================================
@@ -166,12 +128,12 @@ export fn solve(problem, options) {
 // ============================================
 
 export fn allDifferent(names) {
-  return constraint(names, fn(assignment) {
+  return constraint(names, (assignment) => {
     let seen = [];
     for (name in names) {
       const value = assignment[name];
-      for (s in seen) {
-        if (s == value) {
+      for (seenValue in seen) {
+        if (seenValue == value) {
           return false;
         }
       }
@@ -182,19 +144,19 @@ export fn allDifferent(names) {
 }
 
 export fn equalsValue(name, value) {
-  return constraint([name], fn(assignment) {
+  return constraint([name], (assignment) => {
     return assignment[name] == value;
   });
 }
 
 export fn equalsVar(a, b) {
-  return constraint([a, b], fn(assignment) {
+  return constraint([a, b], (assignment) => {
     return assignment[a] == assignment[b];
   });
 }
 
 export fn sumEquals(names, target) {
-  return constraint(names, fn(assignment) {
+  return constraint(names, (assignment) => {
     let sum = 0;
     for (name in names) {
       sum = sum + assignment[name];

@@ -1,4 +1,4 @@
-// std:modulation (v5.2)
+// std:modulation (v7.0)
 // Key modulation and harmonic transition utilities
 // For smooth key changes, pivot chords, and tonal analysis
 
@@ -528,11 +528,11 @@ export fn detectModulations(chords) {
   let windowSize = 4;
 
   // Analyze in windows
-  for (i in 0..(chords.length - windowSize)) {
+  for (i in 0 .. (chords.length - windowSize)) {
     let window1 = [];
     let window2 = [];
 
-    for (j in 0..(windowSize - 1)) {
+    for (j in 0 .. (windowSize - 1)) {
       window1[j] = chords[i + j];
       if (i + windowSize + j < chords.length) {
         window2[j] = chords[i + windowSize + j];

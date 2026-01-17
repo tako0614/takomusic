@@ -1,4 +1,4 @@
-// std:canon (v5.4)
+// std:canon (v7.0)
 // Canonic techniques and imitative counterpoint
 // Supports various historical and contemporary canonic forms
 
@@ -10,7 +10,7 @@
 export fn canon(subject, voiceCount, delayInterval) {
   let voices = [];
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let events = [];
     const offset = v * delayInterval;
 
@@ -41,7 +41,7 @@ export fn canon(subject, voiceCount, delayInterval) {
 export fn canonAtInterval(subject, voiceCount, delayInterval, pitchInterval) {
   let voices = [];
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let events = [];
     const timeOffset = v * delayInterval;
     const pitchOffset = v * pitchInterval;
@@ -83,7 +83,7 @@ export fn canonInversion(subject, voiceCount, delayInterval, axis) {
 
   let voices = [];
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let events = [];
     const timeOffset = v * delayInterval;
     const isInverted = v % 2 == 1;
@@ -143,7 +143,7 @@ export fn crabCanon(subject, delayInterval) {
   }
 
   // Voice 2: retrograde
-  for (i in 0..(subject.length - 1)) {
+  for (i in 0 .. (subject.length - 1)) {
     const note = subject[subject.length - 1 - i];
     const newStart = totalDur - note.start - note.duration + delayInterval;
 
@@ -195,7 +195,7 @@ export fn tableCanon(subject, axis) {
   }
 
   // Voice 2: retrograde inversion
-  for (i in 0..(subject.length - 1)) {
+  for (i in 0 .. (subject.length - 1)) {
     const note = subject[subject.length - 1 - i];
     const newStart = totalDur - note.start - note.duration;
     const invertedPitch = ax * 2 - note.pitch;
@@ -226,7 +226,7 @@ export fn tableCanon(subject, axis) {
 export fn mensurationCanon(subject, tempoRatios) {
   let voices = [];
 
-  for (i in 0..(tempoRatios.length - 1)) {
+  for (i in 0 .. (tempoRatios.length - 1)) {
     const ratio = tempoRatios[i];
     let events = [];
 
@@ -301,7 +301,7 @@ export fn diminutionCanon(subject, diminutionFactor, delayInterval) {
 export fn spiralCanon(subject, voiceCount, delayInterval, modulationInterval) {
   let voices = [];
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let events = [];
     const timeOffset = v * delayInterval;
     const pitchOffset = v * modulationInterval;
@@ -356,7 +356,7 @@ export fn mirrorCanon(subject) {
   }
 
   // Voice 2: starts at end going backwards, plays simultaneously
-  for (i in 0..(subject.length - 1)) {
+  for (i in 0 .. (subject.length - 1)) {
     const note = subject[subject.length - 1 - i];
     voice2Events[voice2Events.length] = {
       pitch: note.pitch,
@@ -379,7 +379,7 @@ export fn mirrorCanon(subject) {
 export fn round(subject, voiceCount, delayInterval, repetitions) {
   let voices = [];
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let events = [];
     const entryDelay = v * delayInterval;
 
@@ -392,7 +392,7 @@ export fn round(subject, voiceCount, delayInterval, repetitions) {
       }
     }
 
-    for (rep in 0..(repetitions - 1)) {
+    for (rep in 0 .. (repetitions - 1)) {
       const repOffset = rep * subjectDur;
 
       for (note in subject) {
@@ -479,7 +479,7 @@ export fn tripleCanon(subjects, delays, intervals) {
   let voices = [];
   let voiceIdx = 0;
 
-  for (s in 0..(subjects.length - 1)) {
+  for (s in 0 .. (subjects.length - 1)) {
     const subject = subjects[s];
     const delay = delays[s];
     const interval = intervals[s];
@@ -534,7 +534,7 @@ export fn puzzleCanon(subject, rules) {
   voices[0] = { events: voice0Events };
 
   // Derive other voices from rules
-  for (i in 0..(rules.length - 1)) {
+  for (i in 0 .. (rules.length - 1)) {
     const rule = rules[i];
     let events = [];
 
@@ -579,7 +579,7 @@ export fn puzzleCanon(subject, rules) {
       }
 
       let retroEvents = [];
-      for (j in 0..(events.length - 1)) {
+      for (j in 0 .. (events.length - 1)) {
         const e = events[events.length - 1 - j];
         retroEvents[j] = {
           pitch: e.pitch,
@@ -612,7 +612,7 @@ export fn puzzleCanon(subject, rules) {
 export fn isorhythmicCanon(color, talea, voiceCount, delayInterval) {
   let voices = [];
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let events = [];
     const entryDelay = v * delayInterval;
 
@@ -623,7 +623,7 @@ export fn isorhythmicCanon(color, talea, voiceCount, delayInterval) {
     // Continue until both cycles complete together (or reasonable length)
     const iterations = color.length * talea.length;
 
-    for (i in 0..(iterations - 1)) {
+    for (i in 0 .. (iterations - 1)) {
       events[events.length] = {
         pitch: color[colorIdx % color.length],
         start: time,
@@ -666,7 +666,7 @@ export fn phasingCanon(subject, phaseIncrement, totalPhase) {
   // Calculate repetitions needed
   const repetitions = totalPhase / phaseIncrement + 2;
 
-  for (rep in 0..(repetitions - 1)) {
+  for (rep in 0 .. (repetitions - 1)) {
     for (note in subject) {
       voice1Events[voice1Events.length] = {
         pitch: note.pitch,
@@ -680,7 +680,7 @@ export fn phasingCanon(subject, phaseIncrement, totalPhase) {
 
   // Voice 2: gradually shifting
   let phaseOffset = 0 / 1;
-  for (rep in 0..(repetitions - 1)) {
+  for (rep in 0 .. (repetitions - 1)) {
     for (note in subject) {
       voice2Events[voice2Events.length] = {
         pitch: note.pitch,
@@ -760,7 +760,7 @@ export fn verticalIntervalsAt(canonResult, time) {
 
   // Calculate intervals
   let intervals = [];
-  for (i in 1..(activePitches.length - 1)) {
+  for (i in 1 .. (activePitches.length - 1)) {
     intervals[intervals.length] = activePitches[i] - activePitches[i - 1];
   }
 

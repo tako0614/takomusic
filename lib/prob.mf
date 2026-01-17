@@ -1,4 +1,4 @@
-// std:prob (v5.2)
+// std:prob (v7.0)
 // Probability distributions for stochastic music composition
 // Provides various distributions and sampling methods
 
@@ -121,7 +121,7 @@ export fn weighted(state, options, weights) {
   const [newState, r] = random.nextFloat(state);
   let threshold = r * total;
 
-  for (i in 0..(options.length - 1)) {
+  for (i in 0 .. (options.length - 1)) {
     threshold = threshold - weights[i];
     if (threshold <= 0) {
       return [newState, options[i]];
@@ -257,7 +257,7 @@ export fn randomScalePitch(state, scale, basePitch, weights) {
   if (w == null) {
     // Default: favor root and fifth
     w = [];
-    for (i in 0..(scale.length - 1)) {
+    for (i in 0 .. (scale.length - 1)) {
       if (i == 0) {
         w[i] = 3;  // Root
       } else if (i == 4) {
@@ -269,7 +269,7 @@ export fn randomScalePitch(state, scale, basePitch, weights) {
   }
 
   let indices = [];
-  for (i in 0..(scale.length - 1)) {
+  for (i in 0 .. (scale.length - 1)) {
     indices[i] = i;
   }
 
@@ -349,7 +349,7 @@ export fn uniformSequence(state, n, min, max) {
   let result = [];
   let s = state;
 
-  for (_ in 0..(n - 1)) {
+  for (_ in 0 .. (n - 1)) {
     const [newS, val] = uniform(s, min, max);
     s = newS;
     result[result.length] = val;
@@ -363,7 +363,7 @@ export fn normalSequence(state, n, mean, stddev) {
   let result = [];
   let s = state;
 
-  for (_ in 0..(n - 1)) {
+  for (_ in 0 .. (n - 1)) {
     const [newS, val] = normal(s, mean, stddev);
     s = newS;
     result[result.length] = val;
@@ -377,7 +377,7 @@ export fn weightedSequence(state, n, options, weights) {
   let result = [];
   let s = state;
 
-  for (_ in 0..(n - 1)) {
+  for (_ in 0 .. (n - 1)) {
     const [newS, val] = weighted(s, options, weights);
     s = newS;
     result[result.length] = val;
@@ -394,7 +394,7 @@ export fn shuffle(state, arr) {
   }
 
   let s = state;
-  for (i in 0..(result.length - 2)) {
+  for (i in 0 .. (result.length - 2)) {
     const j = result.length - 1 - i;
     const [newS, k] = uniformInt(s, 0, j);
     s = newS;
@@ -418,7 +418,7 @@ export fn sample(state, arr, n) {
     count = shuffled.length;
   }
 
-  for (i in 0..(count - 1)) {
+  for (i in 0 .. (count - 1)) {
     result[result.length] = shuffled[i];
   }
 
@@ -466,7 +466,7 @@ export fn binomial(state, n, p) {
   let s = state;
   let successes = 0;
 
-  for (_ in 0..(n - 1)) {
+  for (_ in 0 .. (n - 1)) {
     const [newS, success] = bernoulli(s, p);
     s = newS;
     if (success) {
@@ -480,7 +480,7 @@ export fn binomial(state, n, p) {
 // Categorical distribution (generalized Bernoulli)
 export fn categorical(state, probabilities) {
   let options = [];
-  for (i in 0..(probabilities.length - 1)) {
+  for (i in 0 .. (probabilities.length - 1)) {
     options[i] = i;
   }
   return weighted(state, options, probabilities);
@@ -496,7 +496,7 @@ export fn randomWalk(state, steps, stepSize) {
   let position = 0;
   let result = [position];
 
-  for (_ in 0..(steps - 1)) {
+  for (_ in 0 .. (steps - 1)) {
     const [newS, direction] = bernoulli(s, 0.5);
     s = newS;
 
@@ -517,7 +517,7 @@ export fn brownianMotion(state, steps, volatility) {
   let position = 0;
   let result = [position];
 
-  for (_ in 0..(steps - 1)) {
+  for (_ in 0 .. (steps - 1)) {
     const [newS, delta] = normal(s, 0, volatility);
     s = newS;
     position = position + delta;
@@ -533,7 +533,7 @@ export fn boundedWalk(state, steps, stepSize, min, max) {
   let position = (min + max) / 2;
   let result = [position];
 
-  for (_ in 0..(steps - 1)) {
+  for (_ in 0 .. (steps - 1)) {
     const [newS, delta] = normal(s, 0, stepSize);
     s = newS;
     position = position + delta;

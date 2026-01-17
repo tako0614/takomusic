@@ -1,4 +1,4 @@
-// std:pedal (v4)
+// std:pedal (v7.0)
 // Functions for piano pedal markings (sustain, sostenuto, una corda)
 
 // Create a sustain pedal down event at current cursor position

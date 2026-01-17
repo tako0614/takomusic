@@ -1,4 +1,4 @@
-// std:form (v5.4)
+// std:form (v7.0)
 // Musical form structures and large-scale organization
 // Classical and contemporary formal designs
 
@@ -207,7 +207,7 @@ export fn themeAndVariations(theme, variations) {
   let structure = ["Theme"];
   let sections = { Theme: theme };
 
-  for (i in 0..(variations.length - 1)) {
+  for (i in 0 .. (variations.length - 1)) {
     const name = "Var" + (i + 1);
     structure[structure.length] = name;
     sections[name] = variations[i];
@@ -249,7 +249,7 @@ export fn groundBass(ostinato, upperParts) {
 // Strophic form (same music, different text)
 export fn strophic(verse, stropheCount) {
   let structure = [];
-  for (i in 0..(stropheCount - 1)) {
+  for (i in 0 .. (stropheCount - 1)) {
     structure[i] = "Verse" + (i + 1);
   }
 
@@ -336,7 +336,7 @@ export fn fugue(exposition, episodes, stretto, coda) {
   let structure = ["Exposition"];
   let sections = { Exposition: exposition };
 
-  for (i in 0..(episodes.length - 1)) {
+  for (i in 0 .. (episodes.length - 1)) {
     const epName = "Episode" + (i + 1);
     structure[structure.length] = epName;
     sections[epName] = episodes[i];
@@ -373,7 +373,7 @@ export fn throughComposed(sections) {
   let structure = [];
   let sectionMap = {};
 
-  for (i in 0..(sections.length - 1)) {
+  for (i in 0 .. (sections.length - 1)) {
     const name = "Section" + (i + 1);
     structure[i] = name;
     sectionMap[name] = sections[i];
@@ -407,14 +407,14 @@ export fn palindrome(sections) {
   let sectionMap = {};
 
   // Forward
-  for (i in 0..(sections.length - 1)) {
+  for (i in 0 .. (sections.length - 1)) {
     const name = "S" + (i + 1);
     structure[structure.length] = name;
     sectionMap[name] = sections[i];
   }
 
   // Backward (excluding center)
-  for (i in 0..(sections.length - 2)) {
+  for (i in 0 .. (sections.length - 2)) {
     const idx = sections.length - 2 - i;
     const name = "S" + (idx + 1) + "'";
     structure[structure.length] = name;
@@ -536,7 +536,7 @@ export fn randomForm(sections, length, seed) {
   }
 
   let structure = [];
-  for (_ in 0..(length - 1)) {
+  for (_ in 0 .. (length - 1)) {
     rng = (rng * 1103515245 + 12345) % 2147483648;
     const idx = ((rng / 2147483648) * sections.length);
     let i = idx - (idx % 1);
@@ -566,7 +566,7 @@ export fn constrainedForm(sections, rules, length, seed) {
   let structure = [];
   let lastSection = null;
 
-  for (_ in 0..(length - 1)) {
+  for (_ in 0 .. (length - 1)) {
     // Filter valid next sections
     let valid = [];
     for (s in sections) {
@@ -589,7 +589,7 @@ export fn constrainedForm(sections, rules, length, seed) {
       // Check max consecutive
       if (rules.maxConsecutive != null && structure.length > 0) {
         let consecutive = 0;
-        for (i in 0..(structure.length - 1)) {
+        for (i in 0 .. (structure.length - 1)) {
           const idx = structure.length - 1 - i;
           if (structure[idx] == s.name) {
             consecutive = consecutive + 1;

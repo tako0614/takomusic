@@ -138,10 +138,14 @@ Renderer plugins are external executables; use `--plugin` to override the resolv
 
 ## Versioning
 
-- Language: v7
-- IR schema: `tako.irVersion = 4`
-- Profile schema: `tako.profileVersion = 1`
-- Plugin protocol: `tako.pluginProtocolVersion = 1`
+TakoMusic uses multiple versioning schemes for different components:
+
+- **Language Version: v7.0** - The TakoMusic language syntax and compiler version (this package version)
+- **IR Schema: v4** (`tako.irVersion = 4`) - Score IR JSON schema version (backward compatible)
+- **Profile Schema: v1** (`tako.profileVersion = 1`) - Render profile JSON schema version
+- **Plugin Protocol: v1** (`tako.pluginProtocolVersion = 1`) - Renderer plugin communication protocol
+
+**Important:** The language version and IR version are independent. IR v4 is compatible with language v4, v5, v6, v7, and future versions. The IR schema only changes when breaking changes to the Score JSON format are needed, while the language can evolve with new syntax and features that compile to the same IR.
 
 ## License
 
