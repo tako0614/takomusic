@@ -181,7 +181,7 @@ export class V4Compiler {
     }
     const imported = this.loadModule(importPath);
     this.evaluateModule(imported);
-    this.bindImport(importDecl.spec, scope, imported.exports, module.path);
+    this.bindImport(importDecl.spec, scope, imported.exports, imported.path);
   }
 
   private bindImport(

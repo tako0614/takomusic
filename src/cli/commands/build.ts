@@ -200,41 +200,46 @@ function startWatchMode(
     if (!supportsRecursive && srcDir !== baseDir) {
       console.log('Recursive watch is unavailable on this platform; watching only the entry directory.');
     }
-    const watcher = fs.watch(srcDir, { recursive: supportsRecursive }, async (eventType, filename) => {
-      if (!filename || !filename.endsWith('.mf')) return;
+    const watcher = fs.watch(
+      srcDir,
+      { recursive: supportsRecursive },
+      async (eventType, filename: string | null) => {
+        const fileName = filename ? filename.toString() : null;
+        if (!fileName || !fileName.endsWith('.mf')) return;
 
-      // If already building, mark that we need another build after this one
-      if (isBuilding) {
-        pendingBuild = true;
-        return;
-      }
-
-      // Debounce rapid changes - set isBuilding immediately to prevent race condition
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      debounceTimer = setTimeout(async () => {
-        isBuilding = true;
-        debounceTimer = null;
-
-        try {
-          console.log(`\n[${new Date().toLocaleTimeString()}] Change detected: ${filename}`);
-          await runBuild(baseDir, entryPath, config, outputPath);
-        } catch (err) {
-          console.error(`Build error: ${(err as Error).message}`);
-        } finally {
-          isBuilding = false;
-          console.log('\nWaiting for changes...');
-
-          // If another change came in while building, trigger a new build
-          if (pendingBuild) {
-            pendingBuild = false;
-            watcher.emit('change', 'change', filename);
-          }
+        // If already building, mark that we need another build after this one
+        if (isBuilding) {
+          pendingBuild = true;
+          return;
         }
-      }, 100);
-    });
+
+        // Debounce rapid changes - set isBuilding immediately to prevent race condition
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+
+        debounceTimer = setTimeout(async () => {
+          isBuilding = true;
+          debounceTimer = null;
+
+          try {
+            console.log(`\n[${new Date().toLocaleTimeString()}] Change detected: ${fileName}`);
+            await runBuild(baseDir, entryPath, config, outputPath);
+          } catch (err) {
+            console.error(`Build error: ${(err as Error).message}`);
+          } finally {
+            isBuilding = false;
+            console.log('\nWaiting for changes...');
+
+            // If another change came in while building, trigger a new build
+            if (pendingBuild) {
+              pendingBuild = false;
+              watcher.emit('change', 'change', fileName);
+            }
+          }
+        }, 100);
+      }
+    );
 
     // Handle Ctrl+C - use named function to allow removal
     const sigintHandler = () => {

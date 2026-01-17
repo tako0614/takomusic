@@ -1,5 +1,6 @@
 import {
   addRat,
+  compareRat,
   divRat,
   isIntegerNumber,
   makeRat,
@@ -8,6 +9,7 @@ import {
   ratToNumber,
   subRat,
 } from './rat.js';
+import type { Rat } from './rat.js';
 import { parsePitchLiteral, transposePitch } from './pitch.js';
 import { Scope } from './scope.js';
 import type { Diagnostic } from './diagnostics.js';
@@ -53,6 +55,7 @@ import {
   GlissandoEventValue,
   GraceNoteEventValue,
   GraceNotePitchValue,
+  MeterEventValue,
   MarkerEventValue,
   NoteEventValue,
   ObjectValue,
@@ -103,11 +106,14 @@ class ContinueSignal {
   constructor() {}
 }
 
+type ResolvedMeterEvent = { at: Rat; numerator: number; denominator: number };
+
 export class V4Evaluator {
   private diagnostics: Diagnostic[];
   private filePath?: string;
   private callDepth = 0;
   private static readonly MAX_CALL_DEPTH = 1024;
+  private meterMapContext: ResolvedMeterEvent[] | null = null;
 
   // Seeded RNG for deterministic random operations (Linear Congruential Generator)
   private rngState: number = 12345;
@@ -962,6 +968,9 @@ export class V4Evaluator {
     const markers: MarkerEventValue[] = [];
     const trackNodes: TrackDecl[] = [];
 
+    const prevMeterMap = this.meterMapContext;
+    this.meterMapContext = resolveMeterMapForEval(meterMap);
+
     for (const item of expr.items) {
       switch (item.kind) {
         case 'MetaBlock':
@@ -982,6 +991,7 @@ export class V4Evaluator {
           break;
         case 'MeterBlock':
           meterMap.push(...this.evaluateMeterBlock(item.items, scope));
+          this.meterMapContext = resolveMeterMapForEval(meterMap);
           break;
         case 'SoundDecl':
           sounds.push(this.evaluateSoundDecl(item.body, item.id, item.soundKind, scope, item.position));
@@ -1009,6 +1019,7 @@ export class V4Evaluator {
     for (const trackNode of trackNodes) {
       tracks.push(this.evaluateTrackDecl(trackNode, scope, soundMap));
     }
+    this.meterMapContext = prevMeterMap;
 
     return { meta, tempoMap, meterMap, sounds, tracks, markers };
   }
@@ -1062,34 +1073,22 @@ export class V4Evaluator {
 
   // Calculate number of steps for gradational tempo based on duration
   // Aims for approximately 1 step per sixteenth note (0.25 beats), min 4, max 128
-  private calculateGradationalSteps(startPos: PosValue, endPos: PosValue): number {
+  private calculateGradationalSteps(startPos: PosValue, endPos: PosValue, unit: Rat): number {
     const MIN_STEPS = 4;
     const MAX_STEPS = 128;
-    const STEPS_PER_BEAT = 4; // One step per sixteenth note
+    const STEPS_PER_UNIT = 4; // One step per sixteenth note of the tempo unit
 
-    let durationInBeats: number;
-
-    if (isRat(startPos.value) && isRat(endPos.value)) {
-      // Both are rational positions - calculate duration directly
-      const startRat = ratToNumber(startPos.value);
-      const endRat = ratToNumber(endPos.value);
-      durationInBeats = endRat - startRat;
-    } else if (isPosRef(startPos.value) && isPosRef(endPos.value)) {
-      // Both are bar:beat references - estimate duration
-      // Assuming 4 beats per bar (common time), this is an approximation
-      const startBar = startPos.value.bar;
-      const startBeat = startPos.value.beat;
-      const endBar = endPos.value.bar;
-      const endBeat = endPos.value.beat;
-      // Estimate: (bar difference * 4) + beat difference
-      durationInBeats = (endBar - startBar) * 4 + (endBeat - startBeat);
-    } else {
-      // Mixed types or unsupported - use default
+    const startRat = posToRat(startPos, this.meterMapContext ?? undefined);
+    const endRat = posToRat(endPos, this.meterMapContext ?? undefined);
+    const diff = subRat(endRat, startRat);
+    const diffAbs = diff.n < 0 ? makeRat(-diff.n, diff.d) : diff;
+    const durationInUnits = ratToNumber(divRat(diffAbs, unit));
+    if (!Number.isFinite(durationInUnits)) {
       return 16;
     }
 
-    // Calculate steps: aim for STEPS_PER_BEAT steps per beat
-    const calculatedSteps = Math.round(durationInBeats * STEPS_PER_BEAT);
+    // Calculate steps: aim for STEPS_PER_UNIT steps per tempo unit
+    const calculatedSteps = Math.round(durationInUnits * STEPS_PER_UNIT);
 
     // Clamp to min/max range
     return Math.max(MIN_STEPS, Math.min(MAX_STEPS, calculatedSteps));
@@ -1109,7 +1108,7 @@ export class V4Evaluator {
 
     // Calculate number of steps based on duration for smoother curves
     // Aim for approximately 1 step per sixteenth note (1/16), with min 4 and max 128
-    const numSteps = this.calculateGradationalSteps(startPos, endPos);
+    const numSteps = this.calculateGradationalSteps(startPos, endPos, unit);
 
     for (let i = 0; i <= numSteps; i++) {
       const t = i / numSteps;
@@ -1150,6 +1149,14 @@ export class V4Evaluator {
       return makePosValue(makeRat(Math.round(interpolated * 1000), 1000));
     }
 
+    const meterMap = this.meterMapContext;
+    if (meterMap && meterMap.length > 0) {
+      const startRat = ratToNumber(posToRat(startPos, meterMap));
+      const endRat = ratToNumber(posToRat(endPos, meterMap));
+      const interpolated = startRat + (endRat - startRat) * t;
+      return makePosValue(makeRat(Math.round(interpolated * 1000), 1000));
+    }
+
     if (isPosRef(startPos.value) && isPosRef(endPos.value)) {
       // Both are bar:beat references
       const startBar = startPos.value.bar;
@@ -1167,9 +1174,11 @@ export class V4Evaluator {
 
       if (beatFraction > 0.001) {
         // Has fractional part, use PosExpr
+        const beatLen = makeRat(1, 4);
+        const offset = mulRat(beatLen, makeRat(Math.round(beatFraction * 1000), 1000));
         return makePosValue(makePosExpr(
           makePosRef(interpolatedBar, Math.floor(baseBeat)),
-          makeRat(Math.round(beatFraction * 1000), 1000)
+          offset
         ));
       }
 
@@ -1342,7 +1351,7 @@ export class V4Evaluator {
 
     // Helper to update maxCursor if cursor is greater
     const updateMaxCursor = () => {
-      if (comparePosValues(cursor, maxCursor) > 0) {
+      if (comparePosValues(cursor, maxCursor, this.meterMapContext ?? undefined) > 0) {
         maxCursor = cursor;
       }
     };
@@ -1364,6 +1373,7 @@ export class V4Evaluator {
           if (stmt.intensity) {
             intensity = this.expectNumber(this.evaluateExpr(stmt.intensity, scope), stmt.position);
           }
+          intensity = this.validateBreathIntensity(intensity, stmt.position);
           const event: BreathEventValue = {
             type: 'breath',
             start: cursor,
@@ -1554,8 +1564,8 @@ export class V4Evaluator {
     }
 
     // Calculate clip length from maximum cursor position
-    const length = posToRat(maxCursor);
-    return { events, length };
+    const length = isRat(maxCursor.value) ? maxCursor.value : undefined;
+    return length ? { events, length } : { events };
   }
 
   private evaluateTriplet(
@@ -1569,12 +1579,18 @@ export class V4Evaluator {
     // Scale factor: inTime/n
     // For triplet(3): 3 notes in time of 2, so scale = 2/3
     const scaleFactor = makeRat(stmt.inTime, stmt.n);
+    const scaleTripletPos = (pos: PosValue): PosValue => {
+      const offset = mulRat(posToRat(pos), scaleFactor);
+      return addPos(startCursor, offset);
+    };
 
     for (const bodyStmt of stmt.body) {
       switch (bodyStmt.kind) {
         case 'AtStmt':
           // at() inside triplet is relative to start of triplet, scaled
-          cursor = this.expectPos(this.evaluateExpr(bodyStmt.pos, scope), bodyStmt.position);
+          cursor = scaleTripletPos(
+            this.expectPos(this.evaluateExpr(bodyStmt.pos, scope), bodyStmt.position)
+          );
           break;
         case 'RestStmt': {
           const dur = this.expectRat(this.evaluateExpr(bodyStmt.dur, scope), bodyStmt.position);
@@ -1589,6 +1605,7 @@ export class V4Evaluator {
           if (bodyStmt.intensity) {
             intensity = this.expectNumber(this.evaluateExpr(bodyStmt.intensity, scope), bodyStmt.position);
           }
+          intensity = this.validateBreathIntensity(intensity, bodyStmt.position);
           const event: BreathEventValue = {
             type: 'breath',
             start: cursor,
@@ -1648,6 +1665,18 @@ export class V4Evaluator {
         case 'CCStmt': {
           const number = this.expectNumber(this.evaluateExpr(bodyStmt.num, scope), bodyStmt.position);
           const value = this.expectNumber(this.evaluateExpr(bodyStmt.value, scope), bodyStmt.position);
+          if (number < 0 || number > 127) {
+            throw this.error(
+              `[E502] CC controller out of range 0..127: ${number}`,
+              bodyStmt.position
+            );
+          }
+          if (value < 0 || value > 127) {
+            throw this.error(
+              `[E503] CC value out of range 0..127: ${value}`,
+              bodyStmt.position
+            );
+          }
           events.push({
             type: 'control',
             start: cursor,
@@ -1658,8 +1687,12 @@ export class V4Evaluator {
         }
         case 'AutomationStmt': {
           const param = this.expectStringLike(this.evaluateExpr(bodyStmt.param, scope), bodyStmt.position);
-          const start = this.expectPos(this.evaluateExpr(bodyStmt.start, scope), bodyStmt.position);
-          const end = this.expectPos(this.evaluateExpr(bodyStmt.end, scope), bodyStmt.position);
+          const start = scaleTripletPos(
+            this.expectPos(this.evaluateExpr(bodyStmt.start, scope), bodyStmt.position)
+          );
+          const end = scaleTripletPos(
+            this.expectPos(this.evaluateExpr(bodyStmt.end, scope), bodyStmt.position)
+          );
           const curveValue = this.evaluateExpr(bodyStmt.curve, scope);
           const curve = this.expectCurve(curveValue, bodyStmt.position);
           const event: AutomationEventValue = {
@@ -1725,14 +1758,7 @@ export class V4Evaluator {
       switch (opt.name) {
         case 'vel': {
           const vel = this.expectNumber(value, opt.position);
-          // Validate velocity range (0.0-1.0 for float, 0-127 for int)
-          if (vel < 0 || vel > 127) {
-            throw this.error(
-              `[E501] Velocity out of range: ${vel}. Use 0.0-1.0 (float) or 0-127 (int).`,
-              opt.position
-            );
-          }
-          event.velocity = vel;
+          event.velocity = this.validateVelocity(vel, opt.position);
           break;
         }
         case 'voice':
@@ -1771,7 +1797,10 @@ export class V4Evaluator {
       const value = this.evaluateExpr(opt.value, scope);
       switch (opt.name) {
         case 'vel':
-          (event as any).velocity = this.expectNumber(value, opt.position);
+          (event as any).velocity = this.validateVelocity(
+            this.expectNumber(value, opt.position),
+            opt.position
+          );
           break;
         case 'voice':
           (event as any).voice = Math.floor(this.expectNumber(value, opt.position));
@@ -1787,6 +1816,26 @@ export class V4Evaluator {
     if (Object.keys(ext).length > 0) {
       (event as any).ext = ext;
     }
+  }
+
+  private validateVelocity(vel: number, position: any): number {
+    if (vel < 0 || vel > 1) {
+      throw this.error(
+        `[E501] Velocity out of range: ${vel}. Use 0.0-1.0.`,
+        position
+      );
+    }
+    return vel;
+  }
+
+  private validateBreathIntensity(intensity: number, position: any): number {
+    if (intensity < 0 || intensity > 1) {
+      throw this.error(
+        `[E504] Breath intensity out of range: ${intensity}. Use 0.0-1.0.`,
+        position
+      );
+    }
+    return intensity;
   }
 
   private expectIndex(value: RuntimeValue, position: any): number {
@@ -2198,36 +2247,80 @@ function addPos(pos: PosValue, dur: RatValue['value']): PosValue {
   return pos;
 }
 
+function resolveMeterMapForEval(events: MeterEventValue[]): ResolvedMeterEvent[] {
+  const resolved: ResolvedMeterEvent[] = [];
+  for (const event of events) {
+    const at = resolvePosValueAgainst(event.at, resolved);
+    resolved.push({ at, numerator: event.numerator, denominator: event.denominator });
+  }
+  return resolved.sort((a, b) => compareRat(a.at, b.at));
+}
+
+function resolvePosValueAgainst(pos: PosValue, meterMap: ResolvedMeterEvent[]): Rat {
+  if (isRat(pos.value)) return pos.value;
+  if (isPosExpr(pos.value)) {
+    const base = resolvePosRefAgainst(pos.value.base, meterMap);
+    return addRat(base, pos.value.offset);
+  }
+  if (isPosRef(pos.value)) {
+    return resolvePosRefAgainst(pos.value, meterMap);
+  }
+  return makeRat(0, 1);
+}
+
+function resolvePosRefAgainst(ref: PosRef, meterMap: ResolvedMeterEvent[]): Rat {
+  if (meterMap.length === 0) {
+    if (ref.bar === 1 && ref.beat === 1) {
+      return makeRat(0, 1);
+    }
+    const barOffset = (ref.bar - 1) * 1;
+    const beatOffset = (ref.beat - 1) / 4;
+    return makeRat(Math.round((barOffset + beatOffset) * 1000), 1000);
+  }
+
+  const sorted = [...meterMap].sort((a, b) => compareRat(a.at, b.at));
+  let current = sorted[0];
+  let currentPos = makeRat(0, 1);
+  let currentBar = 1;
+  let idx = 0;
+
+  while (currentBar < ref.bar) {
+    const barLen = makeRat(current.numerator, current.denominator);
+    currentPos = addRat(currentPos, barLen);
+    currentBar++;
+    while (idx + 1 < sorted.length && compareRat(sorted[idx + 1].at, currentPos) === 0) {
+      idx++;
+      current = sorted[idx];
+    }
+  }
+
+  const beatLen = makeRat(1, current.denominator);
+  const offset = mulRat(beatLen, ratFromInt(ref.beat - 1));
+  return addRat(currentPos, offset);
+}
+
 /**
  * Compare two PosValue positions.
  * Returns negative if a < b, 0 if equal, positive if a > b.
- * Note: PosRef values (bar:beat) cannot be compared to rational values
- * without knowing the time signature, so we approximate.
+ * Uses meterMap when provided to resolve bar:beat positions accurately.
  */
-function comparePosValues(a: PosValue, b: PosValue): number {
-  const ratA = posToRat(a);
-  const ratB = posToRat(b);
+function comparePosValues(a: PosValue, b: PosValue, meterMap?: ResolvedMeterEvent[]): number {
+  const ratA = posToRat(a, meterMap);
+  const ratB = posToRat(b, meterMap);
   // Cross multiply to compare: a.n/a.d vs b.n/b.d
   return ratA.n * ratB.d - ratB.n * ratA.d;
 }
 
 /**
  * Convert a PosValue to a Rat (rational number representing position in whole notes).
- *
- * LIMITATIONS:
- * For PosRef values (bar:beat notation), this function assumes a constant 4/4 time signature:
- * - 1 bar = 1 whole note (4 beats)
- * - 1 beat = 1/4 note
- *
- * For scores with different time signatures (3/4, 6/8, 5/4, etc.), the conversion will be
- * approximate. For precise positioning in non-4/4 meters, use rational positions directly
- * (e.g., 3/4 instead of bar:beat notation).
- *
- * TODO: Accept optional meterMap parameter for accurate conversion across time signatures.
+ * Uses meterMap when provided; otherwise falls back to a 4/4 approximation for bar:beat positions.
  */
-function posToRat(pos: PosValue): RatValue['value'] {
+function posToRat(pos: PosValue, meterMap?: ResolvedMeterEvent[]): RatValue['value'] {
   if (isRat(pos.value)) {
     return pos.value;
+  }
+  if (meterMap && meterMap.length > 0) {
+    return resolvePosValueAgainst(pos, meterMap);
   }
   if (isPosRef(pos.value)) {
     // Current approximation: assume 4/4 time, bar = 1 whole note, beat = 1 quarter
@@ -2241,7 +2334,7 @@ function posToRat(pos: PosValue): RatValue['value'] {
   }
   if (isPosExpr(pos.value)) {
     // PosRef + offset
-    const baseRat = posToRat(makePosValue(pos.value.base));
+    const baseRat = posToRat(makePosValue(pos.value.base), meterMap);
     return addRat(baseRat, pos.value.offset);
   }
   return ratFromInt(0);

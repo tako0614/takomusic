@@ -20,6 +20,8 @@ const GM_DRUM_MAP: Record<string, number> = {
   clap: 39,
   rimshot: 37,
   cowbell: 56,
+  perc1: 75,
+  perc2: 76,
 }
 
 type MidiFile = {

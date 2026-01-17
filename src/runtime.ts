@@ -264,7 +264,7 @@ export interface BreathEventValue {
   type: 'breath';
   start: PosValue;
   dur: Rat;
-  intensity: number;
+  intensity?: number;
   ext?: Record<string, unknown>;
 }
 
@@ -306,6 +306,8 @@ export interface GraceNoteEventValue {
   style: 'acciaccatura' | 'appoggiatura';
   stealFrom: 'main' | 'previous';
   velocity?: number;
+  voice?: number;
+  techniques?: string[];
   ext?: Record<string, unknown>;
 }
 
@@ -317,6 +319,8 @@ export interface GlissandoEventValue {
   toPitch: Pitch;
   style: 'continuous' | 'discrete';
   velocity?: number;
+  voice?: number;
+  techniques?: string[];
   ext?: Record<string, unknown>;
 }
 
