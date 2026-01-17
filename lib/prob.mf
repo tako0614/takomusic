@@ -2,7 +2,7 @@
 // Probability distributions for stochastic music composition
 // Provides various distributions and sampling methods
 
-import random;
+import * as random from "std:random";
 
 // ============================================
 // Core Random Number Generation
@@ -10,12 +10,12 @@ import random;
 
 // Create a seeded random state
 export fn seed(s) {
-  return random:rng(s);
+  return random.rng(s);
 }
 
 // Get next random float [0, 1)
 export fn nextRandom(state) {
-  return random:nextFloat(state);
+  return random.nextFloat(state);
 }
 
 // ============================================
@@ -24,13 +24,13 @@ export fn nextRandom(state) {
 
 // Uniform float in range [min, max)
 export fn uniform(state, min, max) {
-  const [newState, val] = random:nextFloat(state);
+  const [newState, val] = random.nextFloat(state);
   return [newState, min + val * (max - min)];
 }
 
 // Uniform integer in range [min, max]
 export fn uniformInt(state, min, max) {
-  return random:nextInt(state, min, max + 1);
+  return random.nextInt(state, min, max + 1);
 }
 
 // ============================================
@@ -40,8 +40,8 @@ export fn uniformInt(state, min, max) {
 // Box-Muller transform for normal distribution
 // Returns value with mean 0, stddev 1
 export fn gaussian(state) {
-  const [s1, u1] = random:nextFloat(state);
-  const [s2, u2] = random:nextFloat(s1);
+  const [s1, u1] = random.nextFloat(state);
+  const [s2, u2] = random.nextFloat(s1);
 
   // Avoid log(0)
   let u1Safe = u1;
@@ -88,7 +88,7 @@ export fn normal(state, mean, stddev) {
 
 // Exponential distribution (for inter-arrival times)
 export fn exponential(state, lambda) {
-  const [newState, u] = random:nextFloat(state);
+  const [newState, u] = random.nextFloat(state);
 
   // Avoid log(0)
   let uSafe = u;
@@ -118,7 +118,7 @@ export fn weighted(state, options, weights) {
     total = total + w;
   }
 
-  const [newState, r] = random:nextFloat(state);
+  const [newState, r] = random.nextFloat(state);
   let threshold = r * total;
 
   for (i in 0..(options.length - 1)) {
@@ -172,7 +172,7 @@ export fn poisson(state, lambda) {
 
   while (p > L) {
     k = k + 1;
-    const [newS, u] = random:nextFloat(s);
+    const [newS, u] = random.nextFloat(s);
     s = newS;
     p = p * u;
   }
@@ -187,7 +187,7 @@ export fn poisson(state, lambda) {
 // Triangular distribution (min, mode, max)
 // Good for "approximately" values
 export fn triangular(state, min, mode, max) {
-  const [newState, u] = random:nextFloat(state);
+  const [newState, u] = random.nextFloat(state);
 
   const fc = (mode - min) / (max - min);
 
@@ -440,7 +440,7 @@ export fn choice(state, arr) {
 
 // Bernoulli trial (flip coin with given probability)
 export fn bernoulli(state, p) {
-  const [newState, u] = random:nextFloat(state);
+  const [newState, u] = random.nextFloat(state);
   return [newState, u < p];
 }
 

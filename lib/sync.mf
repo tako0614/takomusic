@@ -1,7 +1,7 @@
 // std:sync (v5)
 // Synchronization: timecode, SMPTE, MTC, OSC, video sync
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // SMPTE Timecode

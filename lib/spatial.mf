@@ -1,8 +1,8 @@
 // std:spatial (v5)
 // Spatial audio, panning, and surround sound support
 
-import core;
-import curves;
+import * as core from "std:core";
+import * as curves from "std:curves";
 
 // ============================================
 // Pan Constants

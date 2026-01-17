@@ -1,7 +1,7 @@
 // std:tuplet (v5)
 // Generic tuplet support for any n:m ratio
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Core Tuplet Functions

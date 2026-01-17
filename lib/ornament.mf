@@ -3,7 +3,7 @@
 // Ornaments can be specified via techniques array and parameters in ext:
 //   note(C4, q, tech: [trill], trillInterval: 2, trillSpeed: 16);
 
-use std:core { cloneEvent, posToRat };
+import { cloneEvent, posToRat } from "std:core";
 
 // Helper: check if array contains value
 fn arrayContains(arr, value) {

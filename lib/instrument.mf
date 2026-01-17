@@ -1,7 +1,7 @@
 // std:instrument (v5)
 // Instrument groups, layers, routing, and orchestration
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Instrument Groups

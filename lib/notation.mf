@@ -1,7 +1,7 @@
 // std:notation (v5)
 // Staff control, clefs, key signatures, and notation-specific features
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Clef Definitions

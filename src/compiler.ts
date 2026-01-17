@@ -95,7 +95,7 @@ export class V4Compiler {
     const cached = this.modules.get(absolutePath);
     if (cached) return cached;
 
-    const source = fs.readFileSync(absolutePath, 'utf-8');
+    const source = fs.readFileSync(absolutePath, 'utf-8').replace(/^\uFEFF/, '');
     const lexer = new V4Lexer(source, absolutePath);
     const tokens = lexer.tokenize();
     const parser = new V4Parser(tokens, absolutePath);

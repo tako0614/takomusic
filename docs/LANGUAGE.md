@@ -813,8 +813,7 @@ c = vocal.align(c, lyr);
 
 ## Additional Examples
 
-- `examples/cyberpunk_drive.mf` — Full synthwave demo track
-- `examples/tutorial_*.mf` — Step-by-step tutorials
+- `examples/quickstart.mf` — Minimal end-to-end example
 - `profiles/*.mf.profile.json` — Sample render profiles
 
 ## Related Docs
