@@ -169,6 +169,12 @@ function normalizeEvent(event: ClipEventValue, meterMap: ResolvedMeterEvent[], d
         start: resolvePosValue(event.start, meterMap, diagnostics),
         end: resolvePosValue(event.end, meterMap, diagnostics),
       };
+    case 'pedal':
+      return {
+        ...event,
+        start: resolvePosValue(event.start, meterMap, diagnostics),
+        end: event.end ? resolvePosValue(event.end, meterMap, diagnostics) : undefined,
+      };
     case 'marker':
       return normalizeMarker(event, meterMap, diagnostics);
     case 'graceNote':
@@ -226,6 +232,8 @@ function eventEnd(event: Event, diagnostics: Diagnostic[]): Rat | null {
       return addRat(event.start, event.mainDur);
     case 'glissando':
       return event.end;
+    case 'pedal':
+      return event.end ?? event.start;
     default:
       return null;
   }

@@ -424,6 +424,9 @@
         },
         {
           "$ref": "#/$defs/GlissandoEvent"
+        },
+        {
+          "$ref": "#/$defs/PedalEvent"
         }
       ]
     },
@@ -868,6 +871,48 @@
       },
       "additionalProperties": false,
       "description": "Glissando/portamento between two pitches"
+    },
+    "PedalEvent": {
+      "type": "object",
+      "required": [
+        "type",
+        "start",
+        "pedal",
+        "action"
+      ],
+      "properties": {
+        "type": {
+          "const": "pedal"
+        },
+        "start": {
+          "$ref": "#/$defs/Rat"
+        },
+        "end": {
+          "$ref": "#/$defs/Rat"
+        },
+        "pedal": {
+          "type": "string",
+          "enum": [
+            "sustain",
+            "sostenuto",
+            "una_corda"
+          ]
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "down",
+            "up",
+            "change"
+          ]
+        },
+        "ext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "Pedal marking event (sustain, sostenuto, una corda)"
     }
   }
 }

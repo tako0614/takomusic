@@ -30,6 +30,53 @@ const ratToSeconds = (rat: Rat, bpm: number, beatUnit: Rat = { n: 1, d: 4 }): nu
   return (beats * 60) / bpm
 }
 
+const ratToFloat = (rat: Rat): number => rat.n / rat.d
+
+const toRat = (value: any, fallback: Rat): Rat => {
+  if (value && typeof value === 'object' && typeof value.n === 'number' && typeof value.d === 'number') {
+    return value
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return { n: value, d: 1 }
+  }
+  return fallback
+}
+
+const addRat = (a: Rat, b: Rat): Rat => ({
+  n: a.n * b.d + b.n * a.d,
+  d: a.d * b.d,
+})
+
+const buildTempoMap = (ir: ScoreIR): Array<{ at: Rat; bpm: number; unit: Rat }> => {
+  const base = ir.tempoMap?.length
+    ? ir.tempoMap
+    : [{ at: { n: 0, d: 1 }, bpm: 120, unit: { n: 1, d: 4 } }]
+  return [...base].sort((a, b) => ratToFloat(a.at) - ratToFloat(b.at))
+}
+
+const posToSeconds = (pos: Rat, tempoMap: Array<{ at: Rat; bpm: number; unit: Rat }>): number => {
+  let seconds = 0
+  let lastPos: Rat = { n: 0, d: 1 }
+  let current = tempoMap[0] ?? { at: { n: 0, d: 1 }, bpm: 120, unit: { n: 1, d: 4 } }
+
+  for (const tempo of tempoMap) {
+    if (ratToFloat(pos) <= ratToFloat(tempo.at)) {
+      break
+    }
+    const segmentBeats = (ratToFloat(tempo.at) - ratToFloat(lastPos)) / (current.unit.n / current.unit.d)
+    seconds += (segmentBeats * 60) / current.bpm
+    lastPos = tempo.at
+    current = tempo
+  }
+
+  const tailBeats = (ratToFloat(pos) - ratToFloat(lastPos)) / (current.unit.n / current.unit.d)
+  seconds += (tailBeats * 60) / current.bpm
+  return seconds
+}
+
+const durationToSeconds = (start: Rat, dur: Rat, tempoMap: Array<{ at: Rat; bpm: number; unit: Rat }>): number =>
+  posToSeconds(addRat(start, dur), tempoMap) - posToSeconds(start, tempoMap)
+
 const extractPitch = (event: any): number | undefined => {
   if (typeof event.pitch === 'number') return event.pitch
   if (event.pitch && typeof event.pitch.midi === 'number') return event.pitch.midi
@@ -70,20 +117,20 @@ const drumTailSeconds = (drumKey?: string): number => {
 }
 
 const estimateDuration = (ir: ScoreIR): number => {
-  const bpm = ir.tempoMap?.[0]?.bpm || 120
-  const beatUnit = ir.tempoMap?.[0]?.unit || { n: 1, d: 4 }
+  const tempoMap = buildTempoMap(ir)
   let maxEnd = 0
 
   for (const track of ir.tracks ?? []) {
     for (const placement of track.placements ?? []) {
-      const placementTime = ratToSeconds(placement.at, bpm, beatUnit)
+      const placementAt = toRat(placement.at, { n: 0, d: 1 })
       for (const rawEvent of placement.clip.events ?? []) {
         const event = rawEvent as any
         const eventType = event.type || event.kind
-        const eventAt = event.start || event.at || { n: 0, d: 1 }
-        const eventDur = event.dur || { n: 1, d: 4 }
-        const eventTime = placementTime + ratToSeconds(eventAt, bpm, beatUnit)
-        const duration = ratToSeconds(eventDur, bpm, beatUnit)
+        const eventAt = toRat(event.start ?? event.at, { n: 0, d: 1 })
+        const eventDur = toRat(event.dur, { n: 1, d: 4 })
+        const eventPos = addRat(placementAt, eventAt)
+        const eventTime = posToSeconds(eventPos, tempoMap)
+        const duration = durationToSeconds(eventPos, eventDur, tempoMap)
 
         if (eventType === 'note' || eventType === 'chord') {
           maxEnd = Math.max(maxEnd, eventTime + duration + 0.05)
@@ -300,8 +347,7 @@ const scheduleDrumHit = (
 }
 
 const scheduleScore = (context: BaseAudioContext, masterGain: GainNode, ir: ScoreIR) => {
-  const bpm = ir.tempoMap?.[0]?.bpm || 120
-  const beatUnit = ir.tempoMap?.[0]?.unit || { n: 1, d: 4 }
+  const tempoMap = buildTempoMap(ir)
 
   const soundMap = new Map<string, any>()
   for (const sound of ir.sounds ?? []) {
@@ -313,15 +359,16 @@ const scheduleScore = (context: BaseAudioContext, masterGain: GainNode, ir: Scor
     if (!sound) continue
 
     for (const placement of track.placements ?? []) {
-      const placementTime = ratToSeconds(placement.at, bpm, beatUnit)
+      const placementAt = toRat(placement.at, { n: 0, d: 1 })
 
       for (const rawEvent of placement.clip.events ?? []) {
         const event = rawEvent as any
         const eventType = event.type || event.kind
-        const eventAt = event.start || event.at || { n: 0, d: 1 }
-        const eventDur = event.dur || { n: 1, d: 4 }
-        const eventTime = placementTime + ratToSeconds(eventAt, bpm, beatUnit)
-        const duration = ratToSeconds(eventDur, bpm, beatUnit)
+        const eventAt = toRat(event.start ?? event.at, { n: 0, d: 1 })
+        const eventDur = toRat(event.dur, { n: 1, d: 4 })
+        const eventPos = addRat(placementAt, eventAt)
+        const eventTime = posToSeconds(eventPos, tempoMap)
+        const duration = durationToSeconds(eventPos, eventDur, tempoMap)
         const velocity = event.velocity ?? event.vel ?? 0.8
 
         if (eventType === 'rest') continue
