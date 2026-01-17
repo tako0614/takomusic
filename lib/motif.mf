@@ -244,7 +244,12 @@ export fn fillLeaps(m, maxLeap, fillDuration) {
 
     if (interval > maxLeap) {
       // Add fill notes
-      const direction = (curr - prev) > 0 ? 1 : -1;
+      let direction = 1;
+      if ((curr - prev) > 0) {
+        direction = 1;
+      } else {
+        direction = -1;
+      }
       let fillPitch = prev;
       while (true) {
         fillPitch = fillPitch + direction * 2;  // Stepwise

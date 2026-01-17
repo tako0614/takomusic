@@ -1,0 +1,13 @@
+export fn main() -> Score {
+  let seen = [];
+  for (item in seen) {
+    const x = item;
+  }
+  return score {
+    meta { title "Test"; }
+    tempo { 1:1 -> 120bpm; }
+    meter { 1:1 -> 4/4; }
+    sound "test" kind instrument {}
+    track "Test" role Instrument sound "test" {}
+  };
+}

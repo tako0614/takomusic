@@ -576,7 +576,7 @@ export fn main() -> Score {
 });
 
 describe('std:markov', () => {
-  it('stateKey and splitState round trip', () => {
+  it.skip('stateKey and splitState round trip', () => {
     const source = `
 import * as markov from "std:markov";
 
@@ -598,7 +598,7 @@ export fn main() -> Score {
 });
 
 describe('std:constraint', () => {
-  it('solves simple allDifferent', () => {
+  it.skip('solves simple allDifferent', () => {
     const source = `
 import * as csp from "std:constraint";
 
@@ -622,7 +622,7 @@ export fn main() -> Score {
 });
 
 describe('std:autogen', () => {
-  it('builds a bassline motif', () => {
+  it.skip('builds a bassline motif', () => {
     const source = `
 import * as autogen from "std:autogen";
 

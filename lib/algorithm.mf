@@ -422,9 +422,9 @@ export fn generateMelody(scale, startPitch, length, weights, seed) {
   }
 
   // Default weights: favor stepwise motion
-  let w = weights;
-  if (w == null) {
-    w = [0.1, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1];  // -3, -2, -1, 0, +1, +2, +3 scale steps
+  let wts = weights;
+  if (wts == null) {
+    wts = [0.1, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1];  // -3, -2, -1, 0, +1, +2, +3 scale steps
   }
 
   for (_ in 0 .. (length - 1)) {
@@ -432,7 +432,7 @@ export fn generateMelody(scale, startPitch, length, weights, seed) {
 
     // Choose next interval
     let intervals = [-3, -2, -1, 0, 1, 2, 3];
-    let selection = weightedRandom(intervals, w, rng);
+    let selection = weightedRandom(intervals, wts, rng);
     let step = selection.value;
     rng = selection.newSeed;
 
