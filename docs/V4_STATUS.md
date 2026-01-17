@@ -36,7 +36,7 @@
 
 | 項目 | V4_SPEC.md の記載 | 実装の実態 | 対応方針 |
 |------|------------------|-----------|---------|
-| triplet 構文 | `triplet { ... }` (引数なし) | `triplet(n)` または `triplet(n, inTime)` | 仕様を実装に合わせて更新 |
+| triplet 構文 | `triplet(n) / triplet(n, inTime)` (引数なし) | `triplet(n)` または `triplet(n, inTime)` | 仕様を実装に合わせて更新 |
 | humanize() 戻り値 | タプル `(Rng, Clip)` | 配列 `[rng, clip]` | v4.0では配列のまま、v4.1でタプル化検討 |
 | divmod() | V4_SPECではタプル `(quotient, remainder)` を返す | LANGUAGE.mdでは配列で例示、stdlibにはない | ユーザー定義可能なので問題なし |
 | match ガード条件 | `v if v < 0.3 -> ...` | ✅ 実装済み（AST/Parser/Evaluator/Formatter） | 完了 |

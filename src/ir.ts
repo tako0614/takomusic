@@ -191,6 +191,8 @@ export interface GraceNoteEvent {
   style: 'acciaccatura' | 'appoggiatura';
   stealFrom: 'main' | 'previous';
   velocity?: number;
+  voice?: number;
+  techniques?: string[];
   ext?: Record<string, unknown>;
 }
 
@@ -208,6 +210,8 @@ export interface GlissandoEvent {
   toPitch: Pitch;
   style: 'continuous' | 'discrete';
   velocity?: number;
+  voice?: number;
+  techniques?: string[];
   ext?: Record<string, unknown>;
 }
 

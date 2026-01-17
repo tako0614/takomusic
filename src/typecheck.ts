@@ -209,6 +209,7 @@ const STD_EXPORTS: Record<string, Record<string, TypeInfo>> = {
     tom3: STRING,
     clap: STRING,
     perc1: STRING,
+    perc2: STRING,
     fourOnFloor: fnType(CLIP),
     basicRock: fnType(CLIP),
     fill: fnType(CLIP),

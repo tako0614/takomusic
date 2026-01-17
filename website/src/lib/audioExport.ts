@@ -21,6 +21,8 @@ const GM_DRUM_MAP: Record<string, number> = {
   clap: 39,
   rimshot: 37,
   cowbell: 56,
+  perc1: 75,
+  perc2: 76,
 }
 
 const midiToFreq = (midi: number): number => 440 * Math.pow(2, (midi - 69) / 12)

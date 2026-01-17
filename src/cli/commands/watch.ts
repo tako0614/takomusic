@@ -183,13 +183,14 @@ async function watchFiles(
     // Set up watchers
     for (const dir of dirsToWatch) {
       try {
-        const watcher = fs.watch(dir, (eventType, filename) => {
-          if (!filename || !filename.endsWith('.mf')) {
+        const watcher = fs.watch(dir, (eventType, filename: string | null) => {
+          const fileName = filename ? filename.toString() : null;
+          if (!fileName || !fileName.endsWith('.mf')) {
             return;
           }
 
           if (options.verbose) {
-            console.log(colors.dim(`[${eventType}] ${path.join(dir, filename)}`));
+            console.log(colors.dim(`[${eventType}] ${path.join(dir, fileName)}`));
           }
 
           // Debounce rapid changes
@@ -201,7 +202,7 @@ async function watchFiles(
             if (isRunning) return;
             isRunning = true;
 
-            console.log(colors.cyan('File changed:') + ` ${filename}`);
+            console.log(colors.cyan('File changed:') + ` ${fileName}`);
             await runCommand(targetFile, options);
 
             isRunning = false;

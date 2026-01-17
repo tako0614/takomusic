@@ -452,7 +452,9 @@
           "$ref": "#/$defs/Pitch"
         },
         "velocity": {
-          "type": "number"
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         },
         "voice": {
           "type": "integer"
@@ -498,7 +500,9 @@
           }
         },
         "velocity": {
-          "type": "number"
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         },
         "voice": {
           "type": "integer"
@@ -538,7 +542,9 @@
           "type": "string"
         },
         "velocity": {
-          "type": "number"
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         },
         "techniques": {
           "type": "array",
@@ -784,7 +790,9 @@
           ]
         },
         "velocity": {
-          "type": "number"
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         },
         "voice": {
           "type": "integer"
@@ -853,7 +861,9 @@
           ]
         },
         "velocity": {
-          "type": "number"
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         },
         "voice": {
           "type": "integer"

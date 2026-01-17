@@ -332,9 +332,9 @@ const tripletClip = triplet(3, 2) {  // 2拍に3つ
 };
 
 // v4: ネストした連符
-const complexRhythm = triplet {
+const complexRhythm = triplet(3) {
   note(C4, e);
-  duplet { note(D4, s); note(E4, s); }  // 連符内の2連符
+  tuplet(2, 3) { note(D4, s); note(E4, s); }  // 連符内の2連符
   note(F4, e);
 };
 ```
@@ -817,7 +817,7 @@ TuplePattern ::= '(' Ident (',' Ident)* ')'
 LetTuple ::= 'const' TuplePattern '=' Expr
 
 // 連符
-TupletBlock ::= 'triplet' Block
+TupletBlock ::= 'triplet' '(' Int (',' Int)? ')' Block
               | 'tuplet' '(' Int ',' Int ')' Block
 
 // テンポカーブ

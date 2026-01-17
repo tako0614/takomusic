@@ -127,7 +127,9 @@ function eventToObject(event: ClipEventValue): ObjectValue {
     props.set('key', makeString(event.key));
   }
   if (event.type === 'breath') {
-    props.set('intensity', makeNumber(event.intensity));
+    if (event.intensity !== undefined) {
+      props.set('intensity', makeNumber(event.intensity));
+    }
   }
   if ((event as any).velocity !== undefined) {
     props.set('velocity', makeNumber((event as any).velocity as number));
@@ -166,6 +168,16 @@ function eventToObject(event: ClipEventValue): ObjectValue {
     props.set('fromPitch', makePitchValue(event.fromPitch));
     props.set('toPitch', makePitchValue(event.toPitch));
     props.set('style', makeString(event.style));
+  }
+  if (event.type === 'pedal') {
+    props.set('pedal', makeString(event.pedal));
+    props.set('action', makeString(event.action));
+    if (event.end) {
+      props.set('end', event.end as RuntimeValue);
+    }
+    if (event.ext) {
+      props.set('ext', plainToValue(event.ext));
+    }
   }
   return makeObject(props);
 }
@@ -487,6 +499,9 @@ function coerceEvent(obj: ObjectValue): ClipEventValue {
   if (type === 'breath') {
     const intensityValue = obj.props.get('intensity');
     const intensity = intensityValue && intensityValue.type === 'number' ? intensityValue.value : 0.6;
+    if (intensity < 0 || intensity > 1) {
+      throw new Error(`Breath intensity out of range: ${intensity}. Use 0.0-1.0.`);
+    }
     const event: ClipEventValue = { type: 'breath', start, dur, intensity };
     const ext = obj.props.get('ext');
     if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
@@ -526,8 +541,7 @@ function coerceEvent(obj: ObjectValue): ClipEventValue {
       ? (stealFromValue.value as 'main' | 'previous')
       : 'main';
     const event: ClipEventValue = { type: 'graceNote', start, mainPitch, mainDur, graces, style, stealFrom };
-    const velocity = obj.props.get('velocity');
-    if (velocity && velocity.type === 'number') (event as any).velocity = velocity.value;
+    applyEventExtras(event, obj);
     const ext = obj.props.get('ext');
     if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
     return event;
@@ -542,8 +556,24 @@ function coerceEvent(obj: ObjectValue): ClipEventValue {
       ? (styleValue.value as 'continuous' | 'discrete')
       : 'continuous';
     const event: ClipEventValue = { type: 'glissando', start, end, fromPitch, toPitch, style };
-    const velocity = obj.props.get('velocity');
-    if (velocity && velocity.type === 'number') (event as any).velocity = velocity.value;
+    applyEventExtras(event, obj);
+    const ext = obj.props.get('ext');
+    if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
+    return event;
+  }
+  if (type === 'pedal') {
+    const pedal = expectString(obj.props.get('pedal'));
+    const action = expectString(obj.props.get('action'));
+    const endValue = obj.props.get('end');
+    const event: ClipEventValue = {
+      type: 'pedal',
+      start,
+      pedal: pedal as 'sustain' | 'sostenuto' | 'una_corda',
+      action: action as 'down' | 'up' | 'change',
+    };
+    if (endValue) {
+      event.end = coercePos(endValue);
+    }
     const ext = obj.props.get('ext');
     if (ext) event.ext = valueToPlain(ext) as Record<string, unknown>;
     return event;
@@ -553,7 +583,12 @@ function coerceEvent(obj: ObjectValue): ClipEventValue {
 
 function applyEventExtras(event: any, obj: ObjectValue): void {
   const velocity = obj.props.get('velocity');
-  if (velocity && velocity.type === 'number') event.velocity = velocity.value;
+  if (velocity && velocity.type === 'number') {
+    if (velocity.value < 0 || velocity.value > 1) {
+      throw new Error(`Velocity out of range: ${velocity.value}. Use 0.0-1.0.`);
+    }
+    event.velocity = velocity.value;
+  }
   const voice = obj.props.get('voice');
   if (voice && voice.type === 'number') event.voice = Math.floor(voice.value);
   const techniques = obj.props.get('techniques');

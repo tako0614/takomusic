@@ -1657,6 +1657,13 @@ export class V4Parser {
       inTime = inTimeArg.value as number;
     }
 
+    if (!Number.isInteger(n) || !Number.isInteger(inTime)) {
+      throw this.error('triplet/tuplet arguments must be integers', pos);
+    }
+    if (n <= 0 || inTime <= 0) {
+      throw this.error('triplet/tuplet arguments must be positive', pos);
+    }
+
     this.expect(TokenType.RPAREN, "Expected ')'");
     this.expect(TokenType.LBRACE, "Expected '{'");
 

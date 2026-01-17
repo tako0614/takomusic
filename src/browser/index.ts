@@ -290,7 +290,7 @@ export class BrowserCompiler {
 
     const imported = this.loadModule(importPath);
     this.evaluateModule(imported);
-    this.bindImport(importDecl.spec, scope, imported.exports, module.path);
+    this.bindImport(importDecl.spec, scope, imported.exports, imported.path);
   }
 
   private resolvePath(basePath: string, relativePath: string): string {
