@@ -26,18 +26,14 @@ mf build
 mf render
 ```
 
-## Demo Song
+## Quickstart Example
 
-Check out `examples/cyberpunk_drive.mf` - a complete synthwave track demonstrating TakoMusic's capabilities:
-
-- 64 bars, 8 tracks, 128 BPM
-- Drums, bass, arpeggios, pads, and lead melody
-- Uses std:core, std:transform, std:theory, std:drums
+Try `examples/quickstart.mf` for a minimal, complete song example.
 
 ```bash
-# Build and render the demo
-mf build examples/cyberpunk_drive.mf
-mf render examples/cyberpunk_drive.mf.score.json -p profiles/midi.mf.profile.json
+# Build and render the example
+mf build examples/quickstart.mf
+mf render examples/quickstart.mf.score.json -p profiles/midi.mf.profile.json
 ```
 
 ## Documentation

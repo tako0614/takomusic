@@ -1,7 +1,7 @@
 // std:articulations (v4)
 // Standard articulation techniques and helper functions
 
-use std:core { cloneEvent };
+import { cloneEvent } from "std:core";
 
 // ============================================================
 // Standard Articulation Constants

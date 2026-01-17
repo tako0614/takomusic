@@ -1,7 +1,7 @@
 // std:algorithm (v5)
 // Algorithmic composition: voice leading, Markov chains, counterpoint, constraints
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Voice Leading Rules

@@ -1,7 +1,7 @@
 // std:metadata (v5)
 // Metadata: copyright, credits, part extraction, publishing info
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Score Metadata

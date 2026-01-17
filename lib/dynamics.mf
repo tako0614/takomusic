@@ -1,7 +1,7 @@
 // std:dynamics (v4)
 // Standard dynamic levels and crescendo/diminuendo generators
 
-use std:core { cloneEvent, posToRat, clipLen };
+import { cloneEvent, posToRat, clipLen } from "std:core";
 
 // ============================================================
 // Dynamic Level Constants (velocity 0.0 - 1.0)
@@ -70,6 +70,12 @@ fn linearInterpolate(t, fromVal, toVal) {
   return fromVal + (toVal - fromVal) * t;
 }
 
+fn clamp01(value) {
+  if (value < 0) { return 0; }
+  if (value > 1) { return 1; }
+  return value;
+}
+
 // ============================================================
 // Crescendo / Diminuendo Generators
 // ============================================================
@@ -101,7 +107,7 @@ export fn crescendo(c, from, to, start, end) {
       const evStart = posToRat(ev.start);
       if (evStart != null && evStart >= startPos && evStart <= endPos) {
         const t = (evStart - startPos) / duration;
-        out.velocity = linearInterpolate(t, fromVel, toVel);
+        out.velocity = clamp01(linearInterpolate(t, fromVel, toVel));
       }
       events[events.length] = out;
     } else {
@@ -134,7 +140,7 @@ export fn setDynamic(c, level) {
   for (ev in c.events) {
     if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
       let out = cloneEvent(ev);
-      out.velocity = vel;
+      out.velocity = clamp01(vel);
       events[events.length] = out;
     } else {
       events[events.length] = ev;
@@ -156,10 +162,10 @@ export fn fortePiano(c, forteVel, pianoVel) {
     if (ev.type == "note" || ev.type == "chord" || ev.type == "drumHit") {
       let out = cloneEvent(ev);
       if (first) {
-        out.velocity = fVel;
+        out.velocity = clamp01(fVel);
         first = false;
       } else {
-        out.velocity = pVel;
+        out.velocity = clamp01(pVel);
       }
       events[events.length] = out;
     } else {
@@ -188,7 +194,7 @@ export fn sforzandoAt(c, positions, accentVel) {
         }
       }
       if (isAccent) {
-        out.velocity = aVel;
+        out.velocity = clamp01(aVel);
       }
       events[events.length] = out;
     } else {
@@ -230,10 +236,7 @@ export fn scaleVelocity(c, factor) {
       let out = cloneEvent(ev);
       let vel = out.velocity;
       if (vel == null) { vel = mf; }
-      vel = vel * f;
-      if (vel > 1) { vel = 1; }
-      if (vel < 0) { vel = 0; }
-      out.velocity = vel;
+      out.velocity = clamp01(vel * f);
       events[events.length] = out;
     } else {
       events[events.length] = ev;
@@ -253,10 +256,7 @@ export fn offsetVelocity(c, offset) {
       let out = cloneEvent(ev);
       let vel = out.velocity;
       if (vel == null) { vel = mf; }
-      vel = vel + off;
-      if (vel > 1) { vel = 1; }
-      if (vel < 0) { vel = 0; }
-      out.velocity = vel;
+      out.velocity = clamp01(vel + off);
       events[events.length] = out;
     } else {
       events[events.length] = ev;

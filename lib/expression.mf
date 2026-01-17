@@ -1,8 +1,8 @@
 // std:expression (v5)
 // Advanced expression: vibrato, bow techniques, breath control, extended techniques
 
-import core;
-import curves;
+import * as core from "std:core";
+import * as curves from "std:curves";
 
 // ============================================
 // Vibrato (detailed control)

@@ -1,0 +1,60 @@
+import { repeat, concat } from "std:core";
+import { kick, snare, hhc } from "std:drums";
+import { majorTriad, minorTriad } from "std:theory";
+
+fn drumBar() -> Clip {
+  return clip {
+    hit(kick, q, vel: 0.9);
+    hit(hhc, e, vel: 0.5);
+    hit(hhc, e, vel: 0.5);
+    hit(snare, q, vel: 0.85);
+    hit(hhc, q, vel: 0.5);
+  };
+}
+
+fn chordBarMajor(root) -> Clip {
+  return clip {
+    chord(majorTriad(root), w, vel: 0.6);
+  };
+}
+
+fn chordBarMinor(root) -> Clip {
+  return clip {
+    chord(minorTriad(root), w, vel: 0.6);
+  };
+}
+
+fn progression() -> Clip {
+  return concat(
+    chordBarMajor(C4),
+    concat(
+      chordBarMinor(A3),
+      concat(
+        chordBarMajor(F3),
+        chordBarMajor(G3)
+      )
+    )
+  );
+}
+
+export fn main() -> Score {
+  return score {
+    meta { title "Quickstart"; }
+
+    meter { 1:1 -> 4/4; }
+    tempo { 1:1 -> 120bpm; }
+
+    sound "piano" kind instrument { range A0..C8; }
+    sound "kit" kind drumKit {
+      drumKeys { kick; snare; hhc; }
+    }
+
+    track "Piano" role Instrument sound "piano" {
+      place 1:1 progression();
+    }
+
+    track "Drums" role Drums sound "kit" {
+      place 1:1 repeat(drumBar(), 4);
+    }
+  };
+}

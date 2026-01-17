@@ -210,12 +210,8 @@ const compile = async () => {
 #### 6. サンプル・チュートリアルの不足
 
 **現状**:
-- `examples/` に 5 ファイル
-  - `simple_melody.mf` (57行)
-  - `full_song.mf` (57行)
-  - `euclidean_drums.mf` (17行)
-  - `jazz_progression.mf` (20行)
-  - `generative.mf` (20行)
+- `examples/` に 1 ファイル
+  - `quickstart.mf` (60行)
 
 **欠けているもの**:
 - 段階的なチュートリアル（Getting Started ガイド）

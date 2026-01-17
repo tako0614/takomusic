@@ -2,11 +2,11 @@
 // Markov chain utilities for sequence modeling.
 // Currently wraps the Markov helpers in std:algorithm.
 
-import algorithm;
+import * as algorithm from "std:algorithm";
 
 // Create a Markov chain from a sequence
 export fn buildMarkovChain(sequence, order) {
-  return algorithm:buildMarkovChain(sequence, order);
+  return algorithm.buildMarkovChain(sequence, order);
 }
 
 // Create a state key from an array of values
@@ -63,7 +63,7 @@ export fn startState(sequence, order) {
 
 // Generate a sequence from a Markov chain
 export fn generateFromMarkov(chain, startState, length, seed) {
-  return algorithm:generateFromMarkov(chain, startState, length, seed);
+  return algorithm.generateFromMarkov(chain, startState, length, seed);
 }
 
 // Build a chain and generate from the initial state in the sequence

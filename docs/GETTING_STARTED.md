@@ -233,7 +233,7 @@ Available renderers:
 
 1. Read the [Language Specification](LANGUAGE.md)
 2. Explore the [Standard Library](STDLIB.md)
-3. Check out [example files](../examples/)
+3. Check out the minimal example: `examples/quickstart.mf`
 4. Learn about [DAW Integration](daw-integration.md)
 
 ## Getting Help

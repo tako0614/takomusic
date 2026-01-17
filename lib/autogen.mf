@@ -1,7 +1,7 @@
 // std:autogen (v7.0)
 // Automatic generation helpers (countermelody, bass, accompaniment).
 
-use std:motif { motif, note };
+import { motif, note } from "std:motif";
 
 fn normalizeChord(ch) {
   if (ch == null) {

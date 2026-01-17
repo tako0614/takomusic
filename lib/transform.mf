@@ -33,6 +33,12 @@ fn ratFromNumber(value) {
   return scaled / 1000;
 }
 
+fn clamp01(value) {
+  if (value < 0) { return 0; }
+  if (value > 1) { return 1; }
+  return value;
+}
+
 fn scalePos(pos, factor) {
   const r = posToRat(pos);
   if (r == null) {
@@ -242,7 +248,7 @@ fn humanizeEvent(ev, rng, timing, velocity, idx) {
     out.start = offsetPos(out.start, jitter);
     if (out.velocity != null) {
       const vel = out.velocity;
-      out.velocity = vel * (1 + velocity * (hashFloat(rng, idx + 1) - 0.5));
+      out.velocity = clamp01(vel * (1 + velocity * (hashFloat(rng, idx + 1) - 0.5)));
     }
   }
   return out;

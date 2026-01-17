@@ -1,8 +1,8 @@
 // std:effects (v5)
 // Audio effects automation: reverb, delay, EQ, compression, etc.
 
-import core;
-import curves;
+import * as core from "std:core";
+import * as curves from "std:curves";
 
 // ============================================
 // Reverb

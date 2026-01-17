@@ -1,7 +1,7 @@
 // std:lyrics (v5)
 // Lyrics, phonetics, pronunciation, and vocal text handling
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Basic Lyric Events

@@ -1,7 +1,7 @@
 // std:serial (v5.1)
 // Serialism: twelve-tone technique, tone rows, matrix operations, set theory
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Tone Row Creation
@@ -684,4 +684,3 @@ export fn attackSeries(row, unit) {
 
   return result;
 }
-

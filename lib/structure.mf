@@ -1,7 +1,7 @@
 // std:structure (v5)
 // Musical form, sections, and repeat structures
 
-import core;
+import * as core from "std:core";
 
 // ============================================
 // Section Markers

@@ -13,6 +13,12 @@ export const clap = "clap";
 export const perc1 = "perc1";
 export const perc2 = "perc2";
 
+fn clamp01(value) {
+  if (value < 0) { return 0; }
+  if (value > 1) { return 1; }
+  return value;
+}
+
 fn cloneEvent(ev) {
   if (ev.type == "note") {
     return {
@@ -178,7 +184,7 @@ export fn ghost(c, amount) {
       if (vel == null) {
         vel = 1;
       }
-      out.velocity = vel * amount;
+      out.velocity = clamp01(vel * amount);
       events[events.length] = out;
     } else {
       events[events.length] = cloneEvent(ev);

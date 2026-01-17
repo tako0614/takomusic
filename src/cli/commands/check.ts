@@ -17,7 +17,7 @@ export async function checkCommand(args: string[]): Promise<number> {
       return ExitCodes.STATIC_ERROR;
     }
     if (args[i] === '-h' || args[i] === '--help') {
-      console.log(`Usage: mf check
+      console.log(`Usage: mf check [file]
 
 Options:
   -h, --help  Show this help message
@@ -35,7 +35,12 @@ Options:
 
   const config = loadConfig(configPath);
   const baseDir = path.dirname(configPath);
-  const entryPath = path.join(baseDir, config.project.entry);
+
+  // Check for positional argument (file)
+  const fileArg = args.find(arg => !arg.startsWith('-'));
+  const entryPath = fileArg
+    ? path.resolve(process.cwd(), fileArg)
+    : path.join(baseDir, config.project.entry);
 
   // Check if entry file exists
   if (!fs.existsSync(entryPath)) {
