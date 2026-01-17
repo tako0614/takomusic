@@ -25,26 +25,27 @@ fn chordBarMinor(root) -> Clip {
 }
 
 fn progression() -> Clip {
-  return concat(
-    chordBarMajor(C4),
-    concat(
-      chordBarMinor(A3),
-      concat(
-        chordBarMajor(F3),
-        chordBarMajor(G3)
-      )
-    )
-  );
+  return concat(chordBarMajor(C4), concat(chordBarMinor(A3), concat(chordBarMajor(F3), chordBarMajor(G3))));
 }
 
 export fn main() -> Score {
   return score {
-    meta { title "Quickstart"; }
+    meta {
+      title "Quickstart";
+    }
 
-    meter { 1:1 -> 4/4; }
-    tempo { 1:1 -> 120bpm; }
+    meter {
+      1:1 -> 4/4;
+    }
 
-    sound "piano" kind instrument { range A0..C8; }
+    tempo {
+      1:1 -> 120;
+    }
+
+    sound "piano" kind instrument {
+      range A0 .. C8;
+    }
+
     sound "kit" kind drumKit {
       drumKeys { kick; snare; hhc; }
     }

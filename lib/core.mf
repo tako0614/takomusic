@@ -1,10 +1,3 @@
-// std:core (v4)
-
-// ============================================
-// Position and Event Utilities (exported for other stdlib modules)
-// ============================================
-
-// Convert position value to rational
 export fn posToRat(pos) {
   if (pos == null) {
     return null;
@@ -80,159 +73,54 @@ fn shiftPos(pos, offset) {
 
 fn shiftEvent(ev, offset) {
   if (ev.type == "note") {
-    return {
-      type: "note",
-      start: shiftPos(ev.start, offset),
-      dur: ev.dur,
-      pitch: ev.pitch,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      lyric: ev.lyric,
-      ext: ev.ext
-    };
+    return { type: "note", start: shiftPos(ev.start, offset), dur: ev.dur, pitch: ev.pitch, velocity: ev.velocity, voice: ev.voice, techniques: ev.techniques, lyric: ev.lyric, ext: ev.ext };
   }
   if (ev.type == "chord") {
-    return {
-      type: "chord",
-      start: shiftPos(ev.start, offset),
-      dur: ev.dur,
-      pitches: ev.pitches,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      ext: ev.ext
-    };
+    return { type: "chord", start: shiftPos(ev.start, offset), dur: ev.dur, pitches: ev.pitches, velocity: ev.velocity, voice: ev.voice, techniques: ev.techniques, ext: ev.ext };
   }
   if (ev.type == "drumHit") {
-    return {
-      type: "drumHit",
-      start: shiftPos(ev.start, offset),
-      dur: ev.dur,
-      key: ev.key,
-      velocity: ev.velocity,
-      techniques: ev.techniques,
-      ext: ev.ext
-    };
+    return { type: "drumHit", start: shiftPos(ev.start, offset), dur: ev.dur, key: ev.key, velocity: ev.velocity, techniques: ev.techniques, ext: ev.ext };
   }
   if (ev.type == "control") {
-    return {
-      type: "control",
-      start: shiftPos(ev.start, offset),
-      kind: ev.kind,
-      data: ev.data,
-      ext: ev.ext
-    };
+    return { type: "control", start: shiftPos(ev.start, offset), kind: ev.kind, data: ev.data, ext: ev.ext };
   }
   if (ev.type == "automation") {
-    return {
-      type: "automation",
-      param: ev.param,
-      start: shiftPos(ev.start, offset),
-      end: shiftPos(ev.end, offset),
-      curve: ev.curve,
-      ext: ev.ext
-    };
+    return { type: "automation", param: ev.param, start: shiftPos(ev.start, offset), end: shiftPos(ev.end, offset), curve: ev.curve, ext: ev.ext };
   }
   if (ev.type == "marker") {
-    return {
-      type: "marker",
-      pos: shiftPos(ev.pos, offset),
-      kind: ev.kind,
-      label: ev.label
-    };
+    return { type: "marker", pos: shiftPos(ev.pos, offset), kind: ev.kind, label: ev.label };
   }
   if (ev.type == "breath") {
-    return {
-      type: "breath",
-      start: shiftPos(ev.start, offset),
-      dur: ev.dur,
-      intensity: ev.intensity,
-      ext: ev.ext
-    };
+    return { type: "breath", start: shiftPos(ev.start, offset), dur: ev.dur, intensity: ev.intensity, ext: ev.ext };
   }
   return ev;
 }
 
-// Clone an event (create a copy without modifying position)
-// Handles all event types with all their properties
 export fn cloneEvent(ev) {
   if (ev.type == "note") {
-    return {
-      type: "note",
-      start: ev.start,
-      dur: ev.dur,
-      pitch: ev.pitch,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      lyric: ev.lyric,
-      ext: ev.ext
-    };
+    return { type: "note", start: ev.start, dur: ev.dur, pitch: ev.pitch, velocity: ev.velocity, voice: ev.voice, techniques: ev.techniques, lyric: ev.lyric, ext: ev.ext };
   }
   if (ev.type == "chord") {
-    return {
-      type: "chord",
-      start: ev.start,
-      dur: ev.dur,
-      pitches: ev.pitches,
-      velocity: ev.velocity,
-      voice: ev.voice,
-      techniques: ev.techniques,
-      ext: ev.ext
-    };
+    return { type: "chord", start: ev.start, dur: ev.dur, pitches: ev.pitches, velocity: ev.velocity, voice: ev.voice, techniques: ev.techniques, ext: ev.ext };
   }
   if (ev.type == "drumHit") {
-    return {
-      type: "drumHit",
-      start: ev.start,
-      dur: ev.dur,
-      key: ev.key,
-      velocity: ev.velocity,
-      techniques: ev.techniques,
-      ext: ev.ext
-    };
+    return { type: "drumHit", start: ev.start, dur: ev.dur, key: ev.key, velocity: ev.velocity, techniques: ev.techniques, ext: ev.ext };
   }
   if (ev.type == "control") {
-    return {
-      type: "control",
-      start: ev.start,
-      kind: ev.kind,
-      data: ev.data,
-      ext: ev.ext
-    };
+    return { type: "control", start: ev.start, kind: ev.kind, data: ev.data, ext: ev.ext };
   }
   if (ev.type == "automation") {
-    return {
-      type: "automation",
-      param: ev.param,
-      start: ev.start,
-      end: ev.end,
-      curve: ev.curve,
-      ext: ev.ext
-    };
+    return { type: "automation", param: ev.param, start: ev.start, end: ev.end, curve: ev.curve, ext: ev.ext };
   }
   if (ev.type == "marker") {
-    return {
-      type: "marker",
-      pos: ev.pos,
-      kind: ev.kind,
-      label: ev.label
-    };
+    return { type: "marker", pos: ev.pos, kind: ev.kind, label: ev.label };
   }
   if (ev.type == "breath") {
-    return {
-      type: "breath",
-      start: ev.start,
-      dur: ev.dur,
-      intensity: ev.intensity,
-      ext: ev.ext
-    };
+    return { type: "breath", start: ev.start, dur: ev.dur, intensity: ev.intensity, ext: ev.ext };
   }
   return ev;
 }
 
-// Calculate clip length from events
 export fn clipLen(c) {
   if (c.length != null) {
     return c.length;
@@ -298,7 +186,8 @@ export fn repeat(c, count) {
   }
   const len = clipLength(c);
   let events = [];
-  for (i in 0..(count - 1)) {
+  const iterations = count - 1;
+  for (i in 0 .. iterations) {
     const offset = len * i;
     for (ev in c.events) {
       events[events.length] = shiftEvent(ev, offset);
@@ -307,87 +196,63 @@ export fn repeat(c, count) {
   return { events: events, length: len * count };
 }
 
-// Slice a clip to extract a time range
-// By default, includes events that START within [start, end)
-// Use mode: "overlap" to include events that overlap with the range
-// Use trim: true to trim events that extend beyond the range
 export fn slice(c, startPos, endPos, mode, trim) {
   const start = posToRat(startPos);
   const end = posToRat(endPos);
   let events = [];
-
   for (ev in c.events) {
     const evStart = eventStartRat(ev);
     if (evStart == null) {
-      continue;
+
     }
     const evEnd = eventEndRat(ev);
-
     let include = false;
-
     if (mode == "overlap") {
-      // Include events that overlap with [start, end)
-      // Event overlaps if: evStart < end AND evEnd > start
       if (evEnd != null) {
         include = evStart < end && evEnd > start;
       } else {
-        // Point event - check if it's in range
         include = evStart >= start && evStart < end;
       }
     } else {
-      // Default: include events that START within [start, end)
       include = evStart >= start && evStart < end;
     }
-
     if (!include) {
-      continue;
+
     }
-
-    // Create a copy of the event, shifted to start from 0
     let outEvent = shiftEvent(ev, 0 / 1 - start);
-
-    // Trim events if requested
     if (trim == true && evEnd != null) {
       const newStart = eventStartRat(outEvent);
       const newEnd = newStart + ev.dur;
       const sliceEnd = end - start;
-
-      // Trim if event starts before 0 (only in overlap mode)
       if (newStart < 0 / 1) {
         const cutAmount = 0 / 1 - newStart;
-        outEvent = shiftEvent(ev, 0 / 1 - (evStart + cutAmount));
+        outEvent = shiftEvent(ev, 0 / 1 - evStart + cutAmount);
         if (ev.dur != null) {
           outEvent.dur = ev.dur - cutAmount;
         }
       }
-
-      // Trim if event extends beyond slice end
       if (newEnd > sliceEnd && ev.dur != null) {
         const newDur = sliceEnd - eventStartRat(outEvent);
         if (newDur > 0 / 1) {
           outEvent.dur = newDur;
         } else {
-          continue;  // Skip events with no duration left
+
         }
       }
     }
-
     events[events.length] = outEvent;
   }
   return { events: events, length: end - start };
 }
 
-// Simplified slice - just start position, end exclusive (original behavior)
 export fn sliceFrom(c, startPos, endPos) {
   return slice(c, startPos, endPos, null, null);
 }
 
-// Slice with overlap mode - includes events that overlap with range
 export fn sliceOverlap(c, startPos, endPos) {
   return slice(c, startPos, endPos, "overlap", false);
 }
 
-// Slice with trimming - includes overlapping events and trims them to fit
 export fn sliceTrim(c, startPos, endPos) {
   return slice(c, startPos, endPos, "overlap", true);
 }
@@ -415,14 +280,7 @@ fn copyTracks(tracks) {
 export fn withTrack(sc, trk) {
   const tracks = copyTracks(sc.tracks);
   tracks[tracks.length] = trk;
-  return {
-    meta: sc.meta,
-    tempoMap: sc.tempoMap,
-    meterMap: sc.meterMap,
-    sounds: sc.sounds,
-    tracks: tracks,
-    markers: sc.markers
-  };
+  return { meta: sc.meta, tempoMap: sc.tempoMap, meterMap: sc.meterMap, sounds: sc.sounds, tracks: tracks, markers: sc.markers };
 }
 
 export fn mapTracks(sc, f) {
@@ -430,17 +288,9 @@ export fn mapTracks(sc, f) {
   for (trk in sc.tracks) {
     tracks[tracks.length] = f(trk);
   }
-  return {
-    meta: sc.meta,
-    tempoMap: sc.tempoMap,
-    meterMap: sc.meterMap,
-    sounds: sc.sounds,
-    tracks: tracks,
-    markers: sc.markers
-  };
+  return { meta: sc.meta, tempoMap: sc.tempoMap, meterMap: sc.meterMap, sounds: sc.sounds, tracks: tracks, markers: sc.markers };
 }
 
-// getTracks - extract all tracks from a score
 export fn getTracks(sc) {
   if (sc == null) {
     return [];
@@ -451,7 +301,6 @@ export fn getTracks(sc) {
   return [];
 }
 
-// shift - shift all event positions by offset
 export fn shift(c, offset) {
   let events = [];
   for (ev in c.events) {
@@ -464,19 +313,16 @@ export fn shift(c, offset) {
   return { events: events, length: length };
 }
 
-// padTo - extend clip length to at least endPos
 export fn padTo(c, endPos) {
   const currentLen = clipLength(c);
   const target = posToRat(endPos);
   let newLength = currentLen;
-  if (target != null && (currentLen == null || target > currentLen)) {
+  if (target != null && currentLen == null || target > currentLen) {
     newLength = target;
   }
   return { events: c.events, length: newLength };
 }
 
-// updateEvent - create modified copy of event with updated fields
-// Usage: updateEvent(event, { start: newStart, dur: newDur, velocity: 0.8, ... })
 fn getOrDefault(newVal, oldVal) {
   if (newVal != null) {
     return newVal;
@@ -486,81 +332,28 @@ fn getOrDefault(newVal, oldVal) {
 
 export fn updateEvent(ev, upd) {
   if (ev.type == "note") {
-    return {
-      type: "note",
-      start: getOrDefault(upd.start, ev.start),
-      dur: getOrDefault(upd.dur, ev.dur),
-      pitch: getOrDefault(upd.pitch, ev.pitch),
-      velocity: getOrDefault(upd.velocity, ev.velocity),
-      voice: getOrDefault(upd.voice, ev.voice),
-      techniques: getOrDefault(upd.techniques, ev.techniques),
-      lyric: getOrDefault(upd.lyric, ev.lyric),
-      ext: ev.ext
-    };
+    return { type: "note", start: getOrDefault(upd.start, ev.start), dur: getOrDefault(upd.dur, ev.dur), pitch: getOrDefault(upd.pitch, ev.pitch), velocity: getOrDefault(upd.velocity, ev.velocity), voice: getOrDefault(upd.voice, ev.voice), techniques: getOrDefault(upd.techniques, ev.techniques), lyric: getOrDefault(upd.lyric, ev.lyric), ext: ev.ext };
   }
   if (ev.type == "chord") {
-    return {
-      type: "chord",
-      start: getOrDefault(upd.start, ev.start),
-      dur: getOrDefault(upd.dur, ev.dur),
-      pitches: getOrDefault(upd.pitches, ev.pitches),
-      velocity: getOrDefault(upd.velocity, ev.velocity),
-      voice: getOrDefault(upd.voice, ev.voice),
-      techniques: getOrDefault(upd.techniques, ev.techniques),
-      ext: ev.ext
-    };
+    return { type: "chord", start: getOrDefault(upd.start, ev.start), dur: getOrDefault(upd.dur, ev.dur), pitches: getOrDefault(upd.pitches, ev.pitches), velocity: getOrDefault(upd.velocity, ev.velocity), voice: getOrDefault(upd.voice, ev.voice), techniques: getOrDefault(upd.techniques, ev.techniques), ext: ev.ext };
   }
   if (ev.type == "drumHit") {
-    return {
-      type: "drumHit",
-      start: getOrDefault(upd.start, ev.start),
-      dur: getOrDefault(upd.dur, ev.dur),
-      key: getOrDefault(upd.key, ev.key),
-      velocity: getOrDefault(upd.velocity, ev.velocity),
-      techniques: getOrDefault(upd.techniques, ev.techniques),
-      ext: ev.ext
-    };
+    return { type: "drumHit", start: getOrDefault(upd.start, ev.start), dur: getOrDefault(upd.dur, ev.dur), key: getOrDefault(upd.key, ev.key), velocity: getOrDefault(upd.velocity, ev.velocity), techniques: getOrDefault(upd.techniques, ev.techniques), ext: ev.ext };
   }
   if (ev.type == "breath") {
-    return {
-      type: "breath",
-      start: getOrDefault(upd.start, ev.start),
-      dur: getOrDefault(upd.dur, ev.dur),
-      intensity: getOrDefault(upd.intensity, ev.intensity),
-      ext: ev.ext
-    };
+    return { type: "breath", start: getOrDefault(upd.start, ev.start), dur: getOrDefault(upd.dur, ev.dur), intensity: getOrDefault(upd.intensity, ev.intensity), ext: ev.ext };
   }
   if (ev.type == "control") {
-    return {
-      type: "control",
-      start: getOrDefault(upd.start, ev.start),
-      kind: getOrDefault(upd.kind, ev.kind),
-      data: getOrDefault(upd.data, ev.data),
-      ext: ev.ext
-    };
+    return { type: "control", start: getOrDefault(upd.start, ev.start), kind: getOrDefault(upd.kind, ev.kind), data: getOrDefault(upd.data, ev.data), ext: ev.ext };
   }
   if (ev.type == "automation") {
-    return {
-      type: "automation",
-      param: getOrDefault(upd.param, ev.param),
-      start: getOrDefault(upd.start, ev.start),
-      end: getOrDefault(upd.end, ev.end),
-      curve: getOrDefault(upd.curve, ev.curve),
-      ext: ev.ext
-    };
+    return { type: "automation", param: getOrDefault(upd.param, ev.param), start: getOrDefault(upd.start, ev.start), end: getOrDefault(upd.end, ev.end), curve: getOrDefault(upd.curve, ev.curve), ext: ev.ext };
   }
   if (ev.type == "marker") {
-    return {
-      type: "marker",
-      pos: getOrDefault(upd.start, ev.pos),
-      kind: getOrDefault(upd.kind, ev.kind),
-      label: getOrDefault(upd.label, ev.label)
-    };
+    return { type: "marker", pos: getOrDefault(upd.start, ev.pos), kind: getOrDefault(upd.kind, ev.kind), label: getOrDefault(upd.label, ev.label) };
   }
   return ev;
 }
-
-// Utility functions
 
 export fn max(a, b) {
   if (a > b) {
@@ -584,7 +377,7 @@ export fn abs(a) {
 }
 
 fn floorNum(value) {
-  return value - (value % 1);
+  return value - value % 1;
 }
 
 export fn floor(a) {
@@ -610,16 +403,10 @@ export fn ceil(a) {
   return f;
 }
 
-// length - returns the length of a clip
 export fn length(c) {
   return clipLength(c);
 }
 
-// ============================================
-// Generic Array Functions
-// ============================================
-
-// map - apply function to each element
 export fn map(items, f) {
   let out = [];
   for (item in items) {
@@ -628,7 +415,6 @@ export fn map(items, f) {
   return out;
 }
 
-// filter - keep elements matching predicate
 export fn filter(items, pred) {
   let out = [];
   for (item in items) {
@@ -639,7 +425,6 @@ export fn filter(items, pred) {
   return out;
 }
 
-// fold - reduce array to single value
 export fn fold(items, init, f) {
   let acc = init;
   for (item in items) {
@@ -648,7 +433,6 @@ export fn fold(items, init, f) {
   return acc;
 }
 
-// flatMap - map and flatten results
 export fn flatMap(items, f) {
   let out = [];
   for (item in items) {
@@ -660,20 +444,18 @@ export fn flatMap(items, f) {
   return out;
 }
 
-// zip - combine two arrays into array of pairs
 export fn zip(a, b) {
   let out = [];
   let len = a.length;
   if (b.length < len) {
     len = b.length;
   }
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. len - 1) {
     out[out.length] = [a[i], b[i]];
   }
   return out;
 }
 
-// enumerate - add indices to elements
 export fn enumerate(items) {
   let out = [];
   let i = 0;
@@ -684,7 +466,6 @@ export fn enumerate(items) {
   return out;
 }
 
-// range - generate sequence of integers
 export fn range(start, end, step) {
   let stepVal = step;
   if (stepVal == null) {
@@ -693,7 +474,7 @@ export fn range(start, end, step) {
   let out = [];
   if (stepVal > 0) {
     let idx = start;
-    for (_ in 0..10000) {
+    for (_ in 0 .. 10000) {
       if (idx >= end) {
         return out;
       }
@@ -702,7 +483,7 @@ export fn range(start, end, step) {
     }
   } else if (stepVal < 0) {
     let idx = start;
-    for (_ in 0..10000) {
+    for (_ in 0 .. 10000) {
       if (idx <= end) {
         return out;
       }
@@ -713,7 +494,6 @@ export fn range(start, end, step) {
   return out;
 }
 
-// find - find first element matching predicate
 export fn find(items, pred) {
   for (item in items) {
     if (pred(item)) {
@@ -723,7 +503,6 @@ export fn find(items, pred) {
   return null;
 }
 
-// findIndex - find index of first matching element
 export fn findIndex(items, pred) {
   let i = 0;
   for (item in items) {
@@ -735,7 +514,6 @@ export fn findIndex(items, pred) {
   return -1;
 }
 
-// every - check if all elements match predicate
 export fn every(items, pred) {
   for (item in items) {
     if (!pred(item)) {
@@ -745,7 +523,6 @@ export fn every(items, pred) {
   return true;
 }
 
-// some - check if any element matches predicate
 export fn some(items, pred) {
   for (item in items) {
     if (pred(item)) {
@@ -755,7 +532,6 @@ export fn some(items, pred) {
   return false;
 }
 
-// includes - check if array contains value
 export fn includes(items, value) {
   for (item in items) {
     if (item == value) {
@@ -765,7 +541,6 @@ export fn includes(items, value) {
   return false;
 }
 
-// take - take first n elements
 export fn take(items, n) {
   let out = [];
   let count = 0;
@@ -779,7 +554,6 @@ export fn take(items, n) {
   return out;
 }
 
-// drop - drop first n elements
 export fn drop(items, n) {
   let out = [];
   let count = 0;
@@ -792,23 +566,18 @@ export fn drop(items, n) {
   return out;
 }
 
-// ============================================
-// Extended Clip Operations
-// ============================================
-
-// merge - overlay multiple clips at once
 export fn merge(clips) {
   if (clips.length == 0) {
     return { events: [], length: 0 / 1 };
   }
   let result = clips[0];
-  for (i in 1..(clips.length - 1)) {
+  const lastIdx = clips.length - 1;
+  for (i in 1 .. lastIdx) {
     result = overlay(result, clips[i]);
   }
   return result;
 }
 
-// reverse - reverse the temporal order of events
 export fn reverse(c) {
   const len = clipLength(c);
   if (len == null) {
@@ -820,7 +589,6 @@ export fn reverse(c) {
     const evEnd = eventEndRat(ev);
     if (start == null || evEnd == null) {
       events[events.length] = ev;
-      continue;
     }
     const dur = evEnd - start;
     const newStart = len - evEnd;
@@ -829,7 +597,6 @@ export fn reverse(c) {
   return { events: events, length: len };
 }
 
-// invert - invert pitches around an axis
 export fn invert(c, axis) {
   let events = [];
   for (ev in c.events) {
@@ -849,24 +616,19 @@ export fn invert(c, axis) {
   return { events: events, length: c.length };
 }
 
-// retrograde - alias for reverse (music theory term)
 export fn retrograde(c) {
   return reverse(c);
 }
 
-// split - split clip at given positions into multiple clips
 export fn split(c, positions) {
   if (positions.length == 0) {
     return [c];
   }
-  // Sort positions
   let sorted = [];
   for (p in positions) {
     sorted[sorted.length] = posToRat(p);
   }
-  // Sort using native O(n log n) sort
   sorted = sort(sorted);
-
   let result = [];
   let prevPos = 0 / 1;
   for (pos in sorted) {
@@ -875,7 +637,6 @@ export fn split(c, positions) {
     }
     prevPos = pos;
   }
-  // Add remaining
   const len = clipLength(c);
   if (len != null && prevPos < len) {
     result[result.length] = slice(c, prevPos, len);
@@ -883,7 +644,6 @@ export fn split(c, positions) {
   return result;
 }
 
-// augment - double all durations (augmentation in music theory)
 export fn augment(c, factor) {
   let f = factor;
   if (f == null) {
@@ -916,7 +676,6 @@ export fn augment(c, factor) {
   return { events: events, length: newLen };
 }
 
-// diminish - halve all durations (diminution in music theory)
 export fn diminish(c, factor) {
   let f = factor;
   if (f == null) {

@@ -1,213 +1,82 @@
-// std:gamelan (v5.5)
-// Indonesian gamelan music utilities
-// Supports Javanese and Balinese gamelan traditions
-
-// ============================================
-// Tuning Systems (Laras)
-// ============================================
-
-// Slendro (5-tone scale) - approximate cents from Western
 export fn slendro() {
-  return {
-    name: "slendro",
-    tones: 5,
-    // Approximate intervals (varies by gamelan)
-    cents: [0, 240, 480, 720, 960],
-    pitchNames: ["nem", "barang", "gulu", "dada", "lima"]
-  };
+  return { name: "slendro", tones: 5, cents: [0, 240, 480, 720, 960], pitchNames: ["nem", "barang", "gulu", "dada", "lima"] };
 }
 
-// Pelog (7-tone scale)
 export fn pelog() {
-  return {
-    name: "pelog",
-    tones: 7,
-    // Approximate intervals
-    cents: [0, 120, 270, 540, 670, 780, 950],
-    pitchNames: ["nem", "barang", "gulu", "dada", "lima", "nem", "barang"]
-  };
+  return { name: "pelog", tones: 7, cents: [0, 120, 270, 540, 670, 780, 950], pitchNames: ["nem", "barang", "gulu", "dada", "lima", "nem", "barang"] };
 }
 
-// Pelog bem (subset for pathet bem)
 export fn pelogBem() {
-  return {
-    name: "pelogBem",
-    tones: 5,
-    cents: [0, 120, 540, 670, 950],
-    degrees: [1, 2, 4, 5, 7]
-  };
+  return { name: "pelogBem", tones: 5, cents: [0, 120, 540, 670, 950], degrees: [1, 2, 4, 5, 7] };
 }
 
-// Pelog barang (subset for pathet barang)
 export fn pelogBarang() {
-  return {
-    name: "pelogBarang",
-    tones: 5,
-    cents: [0, 270, 540, 780, 950],
-    degrees: [1, 3, 4, 6, 7]
-  };
+  return { name: "pelogBarang", tones: 5, cents: [0, 270, 540, 780, 950], degrees: [1, 3, 4, 6, 7] };
 }
 
-// Convert gamelan pitch to frequency
 export fn toFrequency(laras, degree, octave, baseFreq) {
   let base = baseFreq;
   if (base == null) {
-    base = 280;  // Approximate gamelan reference
+    base = 280;
   }
-
-  const idx = (degree - 1) % laras.cents.length;
-  const cents = laras.cents[idx] + (octave * 1200);
-
-  return base * (2 ** (cents / 1200));
+  const idx = degree - 1 % laras.cents.length;
+  const cents = laras.cents[idx] + octave * 1200;
+  return base * 2 ** cents / 1200;
 }
 
-// ============================================
-// Pathet (Modal System)
-// ============================================
-
-// Slendro pathet
 export fn pathetNem() {
-  return {
-    name: "pathetNem",
-    laras: "slendro",
-    gong: 2,  // Pitch 2 (nem) as gong tone
-    dominant: 5,
-    hierarchy: [2, 5, 1, 6, 3]  // Pitch importance
-  };
+  return { name: "pathetNem", laras: "slendro", gong: 2, dominant: 5, hierarchy: [2, 5, 1, 6, 3] };
 }
 
 export fn pathetSanga() {
-  return {
-    name: "pathetSanga",
-    laras: "slendro",
-    gong: 5,
-    dominant: 1,
-    hierarchy: [5, 1, 2, 6, 3]
-  };
+  return { name: "pathetSanga", laras: "slendro", gong: 5, dominant: 1, hierarchy: [5, 1, 2, 6, 3] };
 }
 
 export fn pathetManyura() {
-  return {
-    name: "pathetManyura",
-    laras: "slendro",
-    gong: 6,
-    dominant: 2,
-    hierarchy: [6, 2, 3, 5, 1]
-  };
+  return { name: "pathetManyura", laras: "slendro", gong: 6, dominant: 2, hierarchy: [6, 2, 3, 5, 1] };
 }
 
-// Pelog pathet
 export fn pathetLima() {
-  return {
-    name: "pathetLima",
-    laras: "pelog",
-    gong: 5,
-    dominant: 1,
-    avoided: [4, 7]
-  };
+  return { name: "pathetLima", laras: "pelog", gong: 5, dominant: 1, avoided: [4, 7] };
 }
 
 export fn pathetBarang() {
-  return {
-    name: "pathetBarang",
-    laras: "pelog",
-    gong: 7,
-    dominant: 3,
-    avoided: [1, 4]
-  };
+  return { name: "pathetBarang", laras: "pelog", gong: 7, dominant: 3, avoided: [1, 4] };
 }
 
-// ============================================
-// Colotomic Structure (Bentuk)
-// ============================================
-
-// Create gong cycle (basic structure)
 export fn gongCycle(length) {
-  return {
-    type: "colotomic",
-    length: length,
-    gong: length,  // Gong at end
-    markers: []
-  };
+  return { type: "colotomic", length: length, gong: length, markers: [] };
 }
 
-// Lancaran (16 beats)
 export fn lancaran() {
-  return {
-    type: "colotomic",
-    name: "lancaran",
-    length: 16,
-    structure: {
-      gong: [16],
-      kenong: [4, 8, 12, 16],
-      kempul: [8, 12],
-      ketuk: [2, 4, 6, 8, 10, 12, 14, 16],
-      kempyang: [1, 3, 5, 7, 9, 11, 13, 15]
-    }
-  };
+  return { type: "colotomic", name: "lancaran", length: 16, structure: { gong: [16], kenong: [4, 8, 12, 16], kempul: [8, 12], ketuk: [2, 4, 6, 8, 10, 12, 14, 16], kempyang: [1, 3, 5, 7, 9, 11, 13, 15] } };
 }
 
-// Ketawang (16 beats, different pattern)
 export fn ketawang() {
-  return {
-    type: "colotomic",
-    name: "ketawang",
-    length: 16,
-    structure: {
-      gong: [16],
-      kenong: [8, 16],
-      kempul: [4, 12],
-      ketuk: [2, 6, 10, 14]
-    }
-  };
+  return { type: "colotomic", name: "ketawang", length: 16, structure: { gong: [16], kenong: [8, 16], kempul: [4, 12], ketuk: [2, 6, 10, 14] } };
 }
 
-// Ladrang (32 beats)
 export fn ladrang() {
-  return {
-    type: "colotomic",
-    name: "ladrang",
-    length: 32,
-    structure: {
-      gong: [32],
-      kenong: [8, 16, 24, 32],
-      kempul: [12, 20, 28],
-      ketuk: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32]
-    }
-  };
+  return { type: "colotomic", name: "ladrang", length: 32, structure: { gong: [32], kenong: [8, 16, 24, 32], kempul: [12, 20, 28], ketuk: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32] } };
 }
 
-// Gendhing (64 or 128 beats)
 export fn gendhing(kepatihan) {
   let len = 64;
   if (kepatihan == 4) {
     len = 128;
   }
-
-  return {
-    type: "colotomic",
-    name: "gendhing",
-    kepatihan: kepatihan,
-    length: len,
-    structure: {
-      gong: [len],
-      kenong: generateMarkers(len, 4),
-      kempul: generateMarkers(len, 8),
-      ketuk: generateMarkers(len, 2)
-    }
-  };
+  return { type: "colotomic", name: "gendhing", kepatihan: kepatihan, length: len, structure: { gong: [len], kenong: generateMarkers(len, 4), kempul: generateMarkers(len, 8), ketuk: generateMarkers(len, 2) } };
 }
 
 fn generateMarkers(total, division) {
   let markers = [];
   const interval = total / division;
-  for (i in 1..division) {
+  for (i in 1 .. division) {
     markers[markers.length] = i * interval;
   }
   return markers;
 }
 
-// Check if beat has instrument stroke
 export fn hasStroke(structure, instrument, beat) {
   const markers = structure.structure[instrument];
   if (markers == null) {
@@ -221,22 +90,11 @@ export fn hasStroke(structure, instrument, beat) {
   return false;
 }
 
-// ============================================
-// Balungan (Core Melody)
-// ============================================
-
-// Create balungan phrase
 export fn balungan(pitches) {
-  return {
-    type: "balungan",
-    pitches: pitches,
-    length: pitches.length
-  };
+  return { type: "balungan", pitches: pitches, length: pitches.length };
 }
 
-// Seleh (cadential) patterns
 export fn seleh(targetPitch) {
-  // Common approach patterns to target pitch
   if (targetPitch == 2) {
     return [3, 2];
   } else if (targetPitch == 5) {
@@ -249,59 +107,39 @@ export fn seleh(targetPitch) {
   return [targetPitch];
 }
 
-// Transpose balungan
 export fn transposeBalungan(bal, interval, laras) {
   let pitches = [];
   for (p in bal.pitches) {
     if (p == 0) {
-      pitches[pitches.length] = 0;  // Rest
+      pitches[pitches.length] = 0;
     } else {
       let newP = p + interval;
-      // Wrap within laras
-      while (newP > laras.tones) {
-        newP = newP - laras.tones;
-      }
-      while (newP < 1) {
-        newP = newP + laras.tones;
-      }
       pitches[pitches.length] = newP;
     }
   }
   return balungan(pitches);
 }
 
-// ============================================
-// Elaboration (Garap)
-// ============================================
-
-// Simple panerusan (elaboration) pattern
 export fn elaborate(balunganPitch, style) {
   if (style == "mlaku") {
-    // Walking pattern
     return [balunganPitch, balunganPitch + 1, balunganPitch, balunganPitch - 1];
   } else if (style == "nibani") {
-    // Sparse pattern
     return [0, balunganPitch, 0, balunganPitch];
   } else if (style == "mipil") {
-    // Plucking pattern
     return [balunganPitch, balunganPitch + 2, balunganPitch + 1, balunganPitch];
   }
   return [balunganPitch];
 }
 
-// Generate bonang pattern
 export fn bonangPattern(balungan, style) {
   let result = [];
-
   for (pitch in balungan.pitches) {
     if (style == "pipilan") {
-      // Alternating octaves
       result[result.length] = pitch;
-      result[result.length] = pitch + 5;  // Higher octave
+      result[result.length] = pitch + 5;
       result[result.length] = pitch;
       result[result.length] = pitch + 5;
     } else if (style == "gembyang") {
-      // Octave pairs
       result[result.length] = [pitch, pitch + 5];
       result[result.length] = 0;
       result[result.length] = [pitch, pitch + 5];
@@ -313,102 +151,65 @@ export fn bonangPattern(balungan, style) {
       result[result.length] = pitch + 1;
     }
   }
-
   return result;
 }
 
-// Generate gender pattern
 export fn genderPattern(balungan, pathet) {
   let result = [];
-
   for (pitch in balungan.pitches) {
-    // Gender plays interlocking patterns
     const lower = pitch - 2;
     const upper = pitch + 2;
-
-    result[result.length] = {
-      right: pitch,
-      left: lower
-    };
-    result[result.length] = {
-      right: upper,
-      left: pitch
-    };
+    result[result.length] = { right: pitch, left: lower };
+    result[result.length] = { right: upper, left: pitch };
   }
-
   return result;
 }
 
-// ============================================
-// Irama (Tempo Levels)
-// ============================================
+export const IRAMA_LANCAR = 1;
 
-// Irama levels
-export const IRAMA_LANCAR = 1;     // Fast, 1:1
-export const IRAMA_TANGGUNG = 2;   // 2:1
-export const IRAMA_DADI = 4;       // 4:1
-export const IRAMA_WILED = 8;      // 8:1
-export const IRAMA_RANGKEP = 16;   // 16:1
+export const IRAMA_TANGGUNG = 2;
 
-// Expand balungan for irama
+export const IRAMA_DADI = 4;
+
+export const IRAMA_WILED = 8;
+
+export const IRAMA_RANGKEP = 16;
+
 export fn expandForIrama(balungan, irama) {
   let result = [];
-
   for (pitch in balungan.pitches) {
-    for (_ in 0..(irama - 1)) {
+    for (_ in 0 .. irama - 1) {
       result[result.length] = pitch;
     }
   }
-
   return balungan(result);
 }
 
-// Get elaboration density for irama
 export fn elaborationDensity(irama) {
-  return irama * 2;  // Notes per balungan beat
+  return irama * 2;
 }
 
-// ============================================
-// Balinese Gamelan
-// ============================================
-
-// Balinese pelog (different from Javanese)
 export fn pelogBali() {
-  return {
-    name: "pelogBali",
-    tones: 5,
-    cents: [0, 125, 550, 675, 825],
-    pitchNames: ["ding", "dong", "deng", "dung", "dang"]
-  };
+  return { name: "pelogBali", tones: 5, cents: [0, 125, 550, 675, 825], pitchNames: ["ding", "dong", "deng", "dung", "dang"] };
 }
 
-// Balinese slendro
 export fn slendroBali() {
-  return {
-    name: "slendroBali",
-    tones: 5,
-    cents: [0, 230, 470, 700, 950],
-    pitchNames: ["ding", "dong", "deng", "dung", "dang"]
-  };
+  return { name: "slendroBali", tones: 5, cents: [0, 230, 470, 700, 950], pitchNames: ["ding", "dong", "deng", "dung", "dang"] };
 }
 
-// Kotekan (interlocking pattern)
 export fn kotekan(melody, style) {
-  let polos = [];   // On-beat part
-  let sangsih = []; // Off-beat part
-
+  let polos = [];
+  let sangsih = [];
   if (style == "empat") {
-    // 4-note kotekan
-    for (i in 0..(melody.length - 1)) {
+    for (i in 0 .. melody.length - 1) {
       const note = melody[i];
       polos[polos.length] = note;
-      polos[polos.length] = 0;  // Rest
+      polos[polos.length] = 0;
       sangsih[sangsih.length] = 0;
       sangsih[sangsih.length] = note + 1;
     }
   } else if (style == "telu") {
-    // 3-note kotekan
-    for (i in 0..(melody.length - 1)) {
+    for (i in 0 .. melody.length - 1) {
       const note = melody[i];
       polos[polos.length] = note;
       polos[polos.length] = 0;
@@ -418,8 +219,7 @@ export fn kotekan(melody, style) {
       sangsih[sangsih.length] = 0;
     }
   } else if (style == "norot") {
-    // Neighbor-tone kotekan
-    for (i in 0..(melody.length - 1)) {
+    for (i in 0 .. melody.length - 1) {
       const note = melody[i];
       polos[polos.length] = note;
       polos[polos.length] = note - 1;
@@ -427,19 +227,14 @@ export fn kotekan(melody, style) {
       sangsih[sangsih.length] = note;
     }
   }
-
-  return {
-    polos: polos,
-    sangsih: sangsih
-  };
+  return { polos: polos, sangsih: sangsih };
 }
 
-// Kebyar accent patterns
 export fn kebyarAccent(length) {
   let pattern = [];
-  for (i in 0..(length - 1)) {
+  for (i in 0 .. length - 1) {
     if (i == 0) {
-      pattern[i] = 1.0;  // Strong
+      pattern[i] = 1;
     } else if (i % 4 == 0) {
       pattern[i] = 0.8;
     } else if (i % 2 == 0) {
@@ -451,44 +246,18 @@ export fn kebyarAccent(length) {
   return pattern;
 }
 
-// ============================================
-// Composition Helpers
-// ============================================
-
-// Create gending (composition)
 export fn gending(name, laras, pathet, bentuk, balunganSections) {
-  return {
-    type: "gending",
-    name: name,
-    laras: laras,
-    pathet: pathet,
-    bentuk: bentuk,
-    sections: balunganSections
-  };
+  return { type: "gending", name: name, laras: laras, pathet: pathet, bentuk: bentuk, sections: balunganSections };
 }
 
-// Create buka (introduction)
 export fn buka(instrument, melody) {
-  return {
-    type: "buka",
-    instrument: instrument,
-    melody: melody
-  };
+  return { type: "buka", instrument: instrument, melody: melody };
 }
 
-// Create suwukan (ending)
 export fn suwukan(melody) {
-  return {
-    type: "suwukan",
-    melody: melody
-  };
+  return { type: "suwukan", melody: melody };
 }
 
-// ============================================
-// Utility
-// ============================================
-
-// Check if pitch is in pathet
 export fn isInPathet(pitch, pathet) {
   if (pathet.avoided != null) {
     for (a in pathet.avoided) {
@@ -500,10 +269,9 @@ export fn isInPathet(pitch, pathet) {
   return true;
 }
 
-// Get pitch importance in pathet
 export fn pitchImportance(pitch, pathet) {
   if (pathet.hierarchy != null) {
-    for (i in 0..(pathet.hierarchy.length - 1)) {
+    for (i in 0 .. pathet.hierarchy.length - 1) {
       if (pathet.hierarchy[i] == pitch) {
         return pathet.hierarchy.length - i;
       }
@@ -512,10 +280,9 @@ export fn pitchImportance(pitch, pathet) {
   return 1;
 }
 
-// Convert to MIDI (approximation)
 export fn toMidi(laras, degree, octave) {
-  const baseMidi = 60;  // Middle C
-  const idx = (degree - 1) % laras.cents.length;
+  const baseMidi = 60;
+  const idx = degree - 1 % laras.cents.length;
   const cents = laras.cents[idx];
   const midiOffset = cents / 100 + octave * 12;
   return baseMidi + midiOffset;

@@ -1,7 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tako-lang.example/schemas/IR_V4.schema.json",
-  "title": "Tako v4 Score IR",
+  "title": "Tako Score IR v4 (Current)",
+  "description": "Score IR schema version 4 - Current stable IR format. Compatible with TakoMusic language v4, v5, v6, v7, and future language versions. The IR schema version is independent from the language version and only changes when breaking changes to the Score JSON format are needed.",
   "type": "object",
   "required": [
     "tako",
@@ -23,7 +24,7 @@
         },
         "language": {
           "type": "string",
-          "description": "Language identifier (recommended: tako-v4)"
+          "description": "Language identifier (recommended format: tako-v7, tako-v6, etc. - indicates the language version that generated this IR)"
         },
         "sourceHash": {
           "type": "string",

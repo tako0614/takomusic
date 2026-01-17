@@ -1,4 +1,4 @@
-// std:lyrics (v5)
+// std:lyrics (v7.0)
 // Lyrics, phonetics, pronunciation, and vocal text handling
 
 import * as core from "std:core";
@@ -44,7 +44,7 @@ export fn wordToSyllables(syllables) {
   let result = [];
   const len = syllables.length;
 
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     let pos = "middle";
     if (len == 1) {
       pos = "single";
@@ -361,7 +361,7 @@ export fn parseLyricLine(line) {
   let current = "";
   let inWord = false;
 
-  for (i in 0..(line.length - 1)) {
+  for (i in 0 .. (line.length - 1)) {
     const ch = line[i];
     if (ch == " ") {
       if (current != "") {

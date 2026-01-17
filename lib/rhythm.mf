@@ -1,4 +1,4 @@
-// std:rhythm (v4)
+// std:rhythm (v7.0)
 // Rhythmic pattern generation utilities
 
 // euclidean - generate Euclidean rhythm pattern
@@ -10,7 +10,7 @@ export fn euclidean(hits, steps, rotation) {
   }
   if (hits >= steps) {
     let out = [];
-    for (i in 0..(steps - 1)) {
+    for (i in 0 .. (steps - 1)) {
       out[out.length] = true;
     }
     return out;
@@ -18,7 +18,7 @@ export fn euclidean(hits, steps, rotation) {
 
   // Bjorklund's algorithm
   let pattern = [];
-  for (i in 0..(steps - 1)) {
+  for (i in 0 .. (steps - 1)) {
     if (i < hits) {
       pattern[pattern.length] = [true];
     } else {
@@ -44,7 +44,7 @@ export fn euclidean(hits, steps, rotation) {
         if (r < 0) {
           r = r + len;
         }
-        for (i in 0..(len - 1)) {
+        for (i in 0 .. (len - 1)) {
           const idx = (i + r) % len;
           rotated[rotated.length] = out[idx];
         }
@@ -66,7 +66,7 @@ export fn euclidean(hits, steps, rotation) {
       return out;
     }
 
-    for (i in 0..(minLen - 1)) {
+    for (i in 0 .. (minLen - 1)) {
       let combined = [];
       for (v in pattern[i]) {
         combined[combined.length] = v;
@@ -80,7 +80,7 @@ export fn euclidean(hits, steps, rotation) {
       newPattern[newPattern.length] = combined;
     }
     // Append remaining
-    for (i in minLen..(pattern.length - divisor - 1)) {
+    for (i in minLen .. (pattern.length - divisor - 1)) {
       newPattern[newPattern.length] = pattern[i];
     }
     pattern = newPattern;
@@ -133,7 +133,7 @@ export fn polyrhythm(a, b, totalDur) {
   let events = [];
 
   // First voice
-  for (i in 0..(a - 1)) {
+  for (i in 0 .. (a - 1)) {
     events[events.length] = {
       type: "note",
       start: durA * i,
@@ -145,7 +145,7 @@ export fn polyrhythm(a, b, totalDur) {
   }
 
   // Second voice
-  for (i in 0..(b - 1)) {
+  for (i in 0 .. (b - 1)) {
     events[events.length] = {
       type: "note",
       start: durB * i,
@@ -354,7 +354,7 @@ export fn polyrhythmPitched(a, pitchesA, b, pitchesB, totalDur) {
   let events = [];
 
   // First voice
-  for (i in 0..(a - 1)) {
+  for (i in 0 .. (a - 1)) {
     const pitchIdx = i % pitchesA.length;
     events[events.length] = {
       type: "note",
@@ -367,7 +367,7 @@ export fn polyrhythmPitched(a, pitchesA, b, pitchesB, totalDur) {
   }
 
   // Second voice
-  for (i in 0..(b - 1)) {
+  for (i in 0 .. (b - 1)) {
     const pitchIdx = i % pitchesB.length;
     events[events.length] = {
       type: "note",
@@ -395,7 +395,7 @@ export fn polyrhythmDrums(a, keyA, b, keyB, totalDur) {
   let events = [];
 
   // First voice
-  for (i in 0..(a - 1)) {
+  for (i in 0 .. (a - 1)) {
     events[events.length] = {
       type: "drumHit",
       start: durA * i,
@@ -406,7 +406,7 @@ export fn polyrhythmDrums(a, keyA, b, keyB, totalDur) {
   }
 
   // Second voice
-  for (i in 0..(b - 1)) {
+  for (i in 0 .. (b - 1)) {
     events[events.length] = {
       type: "drumHit",
       start: durB * i,
@@ -518,7 +518,7 @@ export fn isorhythm(talea, color, numNotes) {
   let events = [];
   let pos = 0 / 1;
 
-  for (i in 0..(total - 1)) {
+  for (i in 0 .. (total - 1)) {
     const taleaIdx = i % talea.length;
     const colorIdx = i % color.length;
 
@@ -553,7 +553,7 @@ export fn isorhythmWithVelocity(talea, color, velocities, numNotes) {
   let events = [];
   let pos = 0 / 1;
 
-  for (i in 0..(total - 1)) {
+  for (i in 0 .. (total - 1)) {
     const taleaIdx = i % talea.length;
     const colorIdx = i % color.length;
     const velIdx = i % velocities.length;
@@ -673,7 +673,7 @@ export fn phaseShift(c, shiftPerRepeat, numRepeats) {
   let events = [];
   let totalLength = 0 / 1;
 
-  for (rep in 0..(numRepeats - 1)) {
+  for (rep in 0 .. (numRepeats - 1)) {
     const baseOffset = c.length * rep;
     const phaseOffset = shiftPerRepeat * rep;
 
@@ -740,7 +740,7 @@ export fn retrograde(c) {
   let events = [];
   const clipLength = c.length;
 
-  for (i in 0..(c.events.length - 1)) {
+  for (i in 0 .. (c.events.length - 1)) {
     const ev = c.events[c.events.length - 1 - i];
 
     if (ev.type == "note") {

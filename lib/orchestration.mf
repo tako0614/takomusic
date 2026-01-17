@@ -1,341 +1,135 @@
-// std:orchestration (v5.5)
-// Orchestration utilities for instrument ranges, combinations, and scoring
-// Supports standard orchestral, band, and chamber configurations
-
-// ============================================
-// Instrument Ranges (MIDI note numbers)
-// ============================================
-
-// Woodwinds
 export fn piccolo() {
-  return {
-    name: "piccolo",
-    family: "woodwind",
-    range: { low: 74, high: 102 },  // D5 - F7
-    transposition: 12,  // Sounds octave higher
-    clef: "treble"
-  };
+  return { name: "piccolo", family: "woodwind", range: { low: 74, high: 102 }, transposition: 12, clef: "treble" };
 }
 
 export fn flute() {
-  return {
-    name: "flute",
-    family: "woodwind",
-    range: { low: 60, high: 96 },  // C4 - C7
-    transposition: 0,
-    clef: "treble"
-  };
+  return { name: "flute", family: "woodwind", range: { low: 60, high: 96 }, transposition: 0, clef: "treble" };
 }
 
 export fn altoFlute() {
-  return {
-    name: "altoFlute",
-    family: "woodwind",
-    range: { low: 55, high: 91 },  // G3 - G6
-    transposition: -5,  // Sounds P4 lower
-    clef: "treble"
-  };
+  return { name: "altoFlute", family: "woodwind", range: { low: 55, high: 91 }, transposition: -5, clef: "treble" };
 }
 
 export fn oboe() {
-  return {
-    name: "oboe",
-    family: "woodwind",
-    range: { low: 58, high: 91 },  // Bb3 - G6
-    transposition: 0,
-    clef: "treble"
-  };
+  return { name: "oboe", family: "woodwind", range: { low: 58, high: 91 }, transposition: 0, clef: "treble" };
 }
 
 export fn englishHorn() {
-  return {
-    name: "englishHorn",
-    family: "woodwind",
-    range: { low: 52, high: 81 },  // E3 - A5 (written)
-    transposition: -7,  // Sounds P5 lower
-    clef: "treble"
-  };
+  return { name: "englishHorn", family: "woodwind", range: { low: 52, high: 81 }, transposition: -7, clef: "treble" };
 }
 
 export fn clarinet() {
-  return {
-    name: "clarinet",
-    family: "woodwind",
-    range: { low: 50, high: 94 },  // D3 - Bb6 (written)
-    transposition: -2,  // Bb clarinet, sounds M2 lower
-    clef: "treble"
-  };
+  return { name: "clarinet", family: "woodwind", range: { low: 50, high: 94 }, transposition: -2, clef: "treble" };
 }
 
 export fn clarinetA() {
-  return {
-    name: "clarinetA",
-    family: "woodwind",
-    range: { low: 50, high: 94 },
-    transposition: -3,  // A clarinet, sounds m3 lower
-    clef: "treble"
-  };
+  return { name: "clarinetA", family: "woodwind", range: { low: 50, high: 94 }, transposition: -3, clef: "treble" };
 }
 
 export fn bassClarinet() {
-  return {
-    name: "bassClarinet",
-    family: "woodwind",
-    range: { low: 38, high: 77 },  // Bb1 - F5 (written)
-    transposition: -14,  // Sounds M9 lower
-    clef: "treble"
-  };
+  return { name: "bassClarinet", family: "woodwind", range: { low: 38, high: 77 }, transposition: -14, clef: "treble" };
 }
 
 export fn bassoon() {
-  return {
-    name: "bassoon",
-    family: "woodwind",
-    range: { low: 34, high: 75 },  // Bb1 - Eb5
-    transposition: 0,
-    clef: "bass"
-  };
+  return { name: "bassoon", family: "woodwind", range: { low: 34, high: 75 }, transposition: 0, clef: "bass" };
 }
 
 export fn contrabassoon() {
-  return {
-    name: "contrabassoon",
-    family: "woodwind",
-    range: { low: 22, high: 58 },  // Bb0 - Bb3
-    transposition: -12,  // Sounds octave lower
-    clef: "bass"
-  };
+  return { name: "contrabassoon", family: "woodwind", range: { low: 22, high: 58 }, transposition: -12, clef: "bass" };
 }
 
-// Brass
 export fn horn() {
-  return {
-    name: "horn",
-    family: "brass",
-    range: { low: 34, high: 77 },  // Bb1 - F5 (written)
-    transposition: -7,  // Horn in F, sounds P5 lower
-    clef: "treble"
-  };
+  return { name: "horn", family: "brass", range: { low: 34, high: 77 }, transposition: -7, clef: "treble" };
 }
 
 export fn trumpet() {
-  return {
-    name: "trumpet",
-    family: "brass",
-    range: { low: 55, high: 82 },  // G3 - Bb5 (written)
-    transposition: -2,  // Bb trumpet
-    clef: "treble"
-  };
+  return { name: "trumpet", family: "brass", range: { low: 55, high: 82 }, transposition: -2, clef: "treble" };
 }
 
 export fn trumpetC() {
-  return {
-    name: "trumpetC",
-    family: "brass",
-    range: { low: 55, high: 82 },
-    transposition: 0,  // C trumpet
-    clef: "treble"
-  };
+  return { name: "trumpetC", family: "brass", range: { low: 55, high: 82 }, transposition: 0, clef: "treble" };
 }
 
 export fn trombone() {
-  return {
-    name: "trombone",
-    family: "brass",
-    range: { low: 40, high: 72 },  // E2 - C5
-    transposition: 0,
-    clef: "bass"
-  };
+  return { name: "trombone", family: "brass", range: { low: 40, high: 72 }, transposition: 0, clef: "bass" };
 }
 
 export fn bassTrombone() {
-  return {
-    name: "bassTrombone",
-    family: "brass",
-    range: { low: 34, high: 67 },  // Bb1 - G4
-    transposition: 0,
-    clef: "bass"
-  };
+  return { name: "bassTrombone", family: "brass", range: { low: 34, high: 67 }, transposition: 0, clef: "bass" };
 }
 
 export fn tuba() {
-  return {
-    name: "tuba",
-    family: "brass",
-    range: { low: 28, high: 58 },  // E1 - Bb3
-    transposition: 0,
-    clef: "bass"
-  };
+  return { name: "tuba", family: "brass", range: { low: 28, high: 58 }, transposition: 0, clef: "bass" };
 }
 
-// Strings
 export fn violin() {
-  return {
-    name: "violin",
-    family: "strings",
-    range: { low: 55, high: 103 },  // G3 - G7
-    transposition: 0,
-    clef: "treble",
-    openStrings: [55, 62, 69, 76]  // G3, D4, A4, E5
-  };
+  return { name: "violin", family: "strings", range: { low: 55, high: 103 }, transposition: 0, clef: "treble", openStrings: [55, 62, 69, 76] };
 }
 
 export fn viola() {
-  return {
-    name: "viola",
-    family: "strings",
-    range: { low: 48, high: 93 },  // C3 - A6
-    transposition: 0,
-    clef: "alto",
-    openStrings: [48, 55, 62, 69]  // C3, G3, D4, A4
-  };
+  return { name: "viola", family: "strings", range: { low: 48, high: 93 }, transposition: 0, clef: "alto", openStrings: [48, 55, 62, 69] };
 }
 
 export fn cello() {
-  return {
-    name: "cello",
-    family: "strings",
-    range: { low: 36, high: 84 },  // C2 - C6
-    transposition: 0,
-    clef: "bass",
-    openStrings: [36, 43, 50, 57]  // C2, G2, D3, A3
-  };
+  return { name: "cello", family: "strings", range: { low: 36, high: 84 }, transposition: 0, clef: "bass", openStrings: [36, 43, 50, 57] };
 }
 
 export fn contrabass() {
-  return {
-    name: "contrabass",
-    family: "strings",
-    range: { low: 28, high: 67 },  // E1 - G4
-    transposition: -12,  // Sounds octave lower
-    clef: "bass",
-    openStrings: [28, 33, 38, 43]  // E1, A1, D2, G2
-  };
+  return { name: "contrabass", family: "strings", range: { low: 28, high: 67 }, transposition: -12, clef: "bass", openStrings: [28, 33, 38, 43] };
 }
 
 export fn harp() {
-  return {
-    name: "harp",
-    family: "strings",
-    range: { low: 24, high: 103 },  // C1 - G7
-    transposition: 0,
-    clef: "grand"
-  };
+  return { name: "harp", family: "strings", range: { low: 24, high: 103 }, transposition: 0, clef: "grand" };
 }
 
-// Percussion (pitched)
 export fn timpani() {
-  return {
-    name: "timpani",
-    family: "percussion",
-    range: { low: 40, high: 55 },  // E2 - G3 (standard set)
-    transposition: 0,
-    clef: "bass"
-  };
+  return { name: "timpani", family: "percussion", range: { low: 40, high: 55 }, transposition: 0, clef: "bass" };
 }
 
 export fn xylophone() {
-  return {
-    name: "xylophone",
-    family: "percussion",
-    range: { low: 65, high: 108 },  // F4 - C8
-    transposition: 12,  // Sounds octave higher
-    clef: "treble"
-  };
+  return { name: "xylophone", family: "percussion", range: { low: 65, high: 108 }, transposition: 12, clef: "treble" };
 }
 
 export fn marimba() {
-  return {
-    name: "marimba",
-    family: "percussion",
-    range: { low: 45, high: 96 },  // A2 - C7
-    transposition: 0,
-    clef: "grand"
-  };
+  return { name: "marimba", family: "percussion", range: { low: 45, high: 96 }, transposition: 0, clef: "grand" };
 }
 
 export fn vibraphone() {
-  return {
-    name: "vibraphone",
-    family: "percussion",
-    range: { low: 53, high: 89 },  // F3 - F6
-    transposition: 0,
-    clef: "treble"
-  };
+  return { name: "vibraphone", family: "percussion", range: { low: 53, high: 89 }, transposition: 0, clef: "treble" };
 }
 
 export fn glockenspiel() {
-  return {
-    name: "glockenspiel",
-    family: "percussion",
-    range: { low: 79, high: 108 },  // G5 - C8
-    transposition: 24,  // Sounds 2 octaves higher
-    clef: "treble"
-  };
+  return { name: "glockenspiel", family: "percussion", range: { low: 79, high: 108 }, transposition: 24, clef: "treble" };
 }
 
 export fn celesta() {
-  return {
-    name: "celesta",
-    family: "percussion",
-    range: { low: 60, high: 108 },  // C4 - C8
-    transposition: 12,  // Sounds octave higher
-    clef: "grand"
-  };
+  return { name: "celesta", family: "percussion", range: { low: 60, high: 108 }, transposition: 12, clef: "grand" };
 }
 
 export fn tubularBells() {
-  return {
-    name: "tubularBells",
-    family: "percussion",
-    range: { low: 60, high: 77 },  // C4 - F5
-    transposition: 0,
-    clef: "treble"
-  };
+  return { name: "tubularBells", family: "percussion", range: { low: 60, high: 77 }, transposition: 0, clef: "treble" };
 }
 
-// Keyboard
 export fn piano() {
-  return {
-    name: "piano",
-    family: "keyboard",
-    range: { low: 21, high: 108 },  // A0 - C8
-    transposition: 0,
-    clef: "grand"
-  };
+  return { name: "piano", family: "keyboard", range: { low: 21, high: 108 }, transposition: 0, clef: "grand" };
 }
 
 export fn organ() {
-  return {
-    name: "organ",
-    family: "keyboard",
-    range: { low: 36, high: 96 },  // C2 - C7 (manuals)
-    pedalRange: { low: 24, high: 55 },  // C1 - G3
-    transposition: 0,
-    clef: "grand"
-  };
+  return { name: "organ", family: "keyboard", range: { low: 36, high: 96 }, pedalRange: { low: 24, high: 55 }, transposition: 0, clef: "grand" };
 }
 
-// ============================================
-// Range Checking
-// ============================================
-
-// Check if pitch is in playable range
 export fn isInRange(instrument, pitch) {
   return pitch >= instrument.range.low && pitch <= instrument.range.high;
 }
 
-// Get concert pitch from written pitch
 export fn toConcertPitch(instrument, writtenPitch) {
   return writtenPitch + instrument.transposition;
 }
 
-// Get written pitch from concert pitch
 export fn toWrittenPitch(instrument, concertPitch) {
   return concertPitch - instrument.transposition;
 }
 
-// Check if chord is playable
 export fn isChordPlayable(instrument, chord) {
   for (pitch in chord) {
     if (!isInRange(instrument, pitch)) {
@@ -345,174 +139,54 @@ export fn isChordPlayable(instrument, chord) {
   return true;
 }
 
-// ============================================
-// Orchestral Sections
-// ============================================
-
 export fn woodwindSection() {
-  return {
-    name: "woodwinds",
-    instruments: [
-      { instrument: piccolo(), count: 1 },
-      { instrument: flute(), count: 2 },
-      { instrument: oboe(), count: 2 },
-      { instrument: englishHorn(), count: 1 },
-      { instrument: clarinet(), count: 2 },
-      { instrument: bassClarinet(), count: 1 },
-      { instrument: bassoon(), count: 2 },
-      { instrument: contrabassoon(), count: 1 }
-    ]
-  };
+  return { name: "woodwinds", instruments: [{ instrument: piccolo(), count: 1 }, { instrument: flute(), count: 2 }, { instrument: oboe(), count: 2 }, { instrument: englishHorn(), count: 1 }, { instrument: clarinet(), count: 2 }, { instrument: bassClarinet(), count: 1 }, { instrument: bassoon(), count: 2 }, { instrument: contrabassoon(), count: 1 }] };
 }
 
 export fn brassSection() {
-  return {
-    name: "brass",
-    instruments: [
-      { instrument: horn(), count: 4 },
-      { instrument: trumpet(), count: 3 },
-      { instrument: trombone(), count: 2 },
-      { instrument: bassTrombone(), count: 1 },
-      { instrument: tuba(), count: 1 }
-    ]
-  };
+  return { name: "brass", instruments: [{ instrument: horn(), count: 4 }, { instrument: trumpet(), count: 3 }, { instrument: trombone(), count: 2 }, { instrument: bassTrombone(), count: 1 }, { instrument: tuba(), count: 1 }] };
 }
 
 export fn stringSection() {
-  return {
-    name: "strings",
-    instruments: [
-      { instrument: violin(), count: 16, divisi: "I/II" },
-      { instrument: viola(), count: 12 },
-      { instrument: cello(), count: 10 },
-      { instrument: contrabass(), count: 8 },
-      { instrument: harp(), count: 2 }
-    ]
-  };
+  return { name: "strings", instruments: [{ instrument: violin(), count: 16, divisi: "I/II" }, { instrument: viola(), count: 12 }, { instrument: cello(), count: 10 }, { instrument: contrabass(), count: 8 }, { instrument: harp(), count: 2 }] };
 }
 
 export fn percussionSection() {
-  return {
-    name: "percussion",
-    instruments: [
-      { instrument: timpani(), count: 4 },
-      { instrument: xylophone(), count: 1 },
-      { instrument: marimba(), count: 1 },
-      { instrument: vibraphone(), count: 1 },
-      { instrument: glockenspiel(), count: 1 },
-      { instrument: tubularBells(), count: 1 }
-    ]
-  };
+  return { name: "percussion", instruments: [{ instrument: timpani(), count: 4 }, { instrument: xylophone(), count: 1 }, { instrument: marimba(), count: 1 }, { instrument: vibraphone(), count: 1 }, { instrument: glockenspiel(), count: 1 }, { instrument: tubularBells(), count: 1 }] };
 }
 
-// ============================================
-// Ensemble Configurations
-// ============================================
-
-// Standard symphony orchestra
 export fn symphonyOrchestra() {
-  return {
-    name: "symphonyOrchestra",
-    sections: [
-      woodwindSection(),
-      brassSection(),
-      stringSection(),
-      percussionSection()
-    ]
-  };
+  return { name: "symphonyOrchestra", sections: [woodwindSection(), brassSection(), stringSection(), percussionSection()] };
 }
 
-// Chamber orchestra
 export fn chamberOrchestra() {
-  return {
-    name: "chamberOrchestra",
-    instruments: [
-      { instrument: flute(), count: 1 },
-      { instrument: oboe(), count: 1 },
-      { instrument: clarinet(), count: 1 },
-      { instrument: bassoon(), count: 1 },
-      { instrument: horn(), count: 2 },
-      { instrument: violin(), count: 8, divisi: "I/II" },
-      { instrument: viola(), count: 4 },
-      { instrument: cello(), count: 4 },
-      { instrument: contrabass(), count: 2 }
-    ]
-  };
+  return { name: "chamberOrchestra", instruments: [{ instrument: flute(), count: 1 }, { instrument: oboe(), count: 1 }, { instrument: clarinet(), count: 1 }, { instrument: bassoon(), count: 1 }, { instrument: horn(), count: 2 }, { instrument: violin(), count: 8, divisi: "I/II" }, { instrument: viola(), count: 4 }, { instrument: cello(), count: 4 }, { instrument: contrabass(), count: 2 }] };
 }
 
-// String quartet
 export fn stringQuartet() {
-  return {
-    name: "stringQuartet",
-    instruments: [
-      { instrument: violin(), part: "Violin I" },
-      { instrument: violin(), part: "Violin II" },
-      { instrument: viola(), part: "Viola" },
-      { instrument: cello(), part: "Cello" }
-    ]
-  };
+  return { name: "stringQuartet", instruments: [{ instrument: violin(), part: "Violin I" }, { instrument: violin(), part: "Violin II" }, { instrument: viola(), part: "Viola" }, { instrument: cello(), part: "Cello" }] };
 }
 
-// Wind quintet
 export fn windQuintet() {
-  return {
-    name: "windQuintet",
-    instruments: [
-      { instrument: flute(), part: "Flute" },
-      { instrument: oboe(), part: "Oboe" },
-      { instrument: clarinet(), part: "Clarinet" },
-      { instrument: horn(), part: "Horn" },
-      { instrument: bassoon(), part: "Bassoon" }
-    ]
-  };
+  return { name: "windQuintet", instruments: [{ instrument: flute(), part: "Flute" }, { instrument: oboe(), part: "Oboe" }, { instrument: clarinet(), part: "Clarinet" }, { instrument: horn(), part: "Horn" }, { instrument: bassoon(), part: "Bassoon" }] };
 }
 
-// Brass quintet
 export fn brassQuintet() {
-  return {
-    name: "brassQuintet",
-    instruments: [
-      { instrument: trumpet(), part: "Trumpet I" },
-      { instrument: trumpet(), part: "Trumpet II" },
-      { instrument: horn(), part: "Horn" },
-      { instrument: trombone(), part: "Trombone" },
-      { instrument: tuba(), part: "Tuba" }
-    ]
-  };
+  return { name: "brassQuintet", instruments: [{ instrument: trumpet(), part: "Trumpet I" }, { instrument: trumpet(), part: "Trumpet II" }, { instrument: horn(), part: "Horn" }, { instrument: trombone(), part: "Trombone" }, { instrument: tuba(), part: "Tuba" }] };
 }
 
-// Piano trio
 export fn pianoTrio() {
-  return {
-    name: "pianoTrio",
-    instruments: [
-      { instrument: piano(), part: "Piano" },
-      { instrument: violin(), part: "Violin" },
-      { instrument: cello(), part: "Cello" }
-    ]
-  };
+  return { name: "pianoTrio", instruments: [{ instrument: piano(), part: "Piano" }, { instrument: violin(), part: "Violin" }, { instrument: cello(), part: "Cello" }] };
 }
 
-// ============================================
-// Doubling and Combination
-// ============================================
-
-// Double a line with another instrument
 export fn doubling(primaryInstrument, doublingInstrument, intervalOffset) {
   let offset = intervalOffset;
   if (offset == null) {
     offset = 0;
   }
-
-  return {
-    type: "doubling",
-    primary: primaryInstrument,
-    doubling: doublingInstrument,
-    interval: offset  // 0 = unison, 12 = octave, etc.
-  };
+  return { type: "doubling", primary: primaryInstrument, doubling: doublingInstrument, interval: offset };
 }
 
-// Common orchestral doublings
 export fn fluteOboUnison() {
   return doubling(flute(), oboe(), 0);
 }
@@ -522,84 +196,54 @@ export fn fluteViolinOctave() {
 }
 
 export fn celloContrabassOctave() {
-  return doubling(cello(), contrabass(), 12);  // Contrabass octave below
+  return doubling(cello(), contrabass(), 12);
 }
 
 export fn trumpetHornUnison() {
   return doubling(trumpet(), horn(), 0);
 }
 
-// Create tutti doubling
 export fn tuttiUnison(instruments, pitches) {
   let parts = [];
   for (inst in instruments) {
-    parts[parts.length] = {
-      instrument: inst,
-      pitches: pitches
-    };
+    parts[parts.length] = { instrument: inst, pitches: pitches };
   }
-  return {
-    type: "tutti",
-    parts: parts
-  };
+  return { type: "tutti", parts: parts };
 }
 
-// ============================================
-// Scoring Techniques
-// ============================================
-
-// Distribute chord across instruments
 export fn distributeChord(chord, instruments) {
   let assignment = [];
   const numPitches = chord.length;
   const numInstruments = instruments.length;
-
-  for (i in 0..(numPitches - 1)) {
+  for (i in 0 .. numPitches - 1) {
     const instIndex = i % numInstruments;
     const inst = instruments[instIndex];
     const pitch = chord[i];
-
-    // Check if in range
     if (isInRange(inst, pitch)) {
-      assignment[assignment.length] = {
-        instrument: inst,
-        pitch: pitch
-      };
+      assignment[assignment.length] = { instrument: inst, pitch: pitch };
     }
   }
-
   return assignment;
 }
 
-// Close voicing (notes within octave)
 export fn closeVoicing(chord, topPitch) {
   let voiced = [];
   let current = topPitch;
-
-  // Sort chord descending
   let sorted = sortDescending(chord);
-
   for (pc in sorted) {
-    // Find nearest pitch class below current
-    while (current % 12 != pc % 12) {
-      current = current - 1;
-    }
     voiced[voiced.length] = current;
     current = current - 1;
   }
-
   return voiced;
 }
 
 fn sortDescending(arr) {
-  // Simple bubble sort descending
   let result = [];
   for (a in arr) {
     result[result.length] = a;
   }
-
-  for (i in 0..(result.length - 2)) {
-    for (j in 0..(result.length - i - 2)) {
+  for (i in 0 .. result.length - 2) {
+    for (j in 0 .. result.length - i - 2) {
       if (result[j] < result[j + 1]) {
         const temp = result[j];
         result[j] = result[j + 1];
@@ -607,120 +251,98 @@ fn sortDescending(arr) {
       }
     }
   }
-
   return result;
 }
 
-// Open voicing (spread across multiple octaves)
 export fn openVoicing(chord, bassPitch, soprano) {
   let voiced = [];
-
-  // Bass note
   voiced[0] = bassPitch;
-
-  // Distribute remaining notes
   let current = bassPitch + 12;
-  for (i in 1..(chord.length - 1)) {
+  for (i in 1 .. chord.length - 1) {
     const pc = chord[i] % 12;
-    while (current % 12 != pc) {
-      current = current + 1;
-    }
     voiced[voiced.length] = current;
-    current = current + 3;  // Spread out
+    current = current + 3;
   }
-
   return voiced;
 }
 
-// ============================================
-// Dynamic Balance
-// ============================================
-
-// Relative power of instrument families (rough guide)
 export fn dynamicWeight(instrument) {
   if (instrument.family == "brass") {
-    return 1.5;  // Loudest
+    return 1.5;
   } else if (instrument.family == "percussion") {
     return 1.3;
   } else if (instrument.family == "woodwind") {
-    return 1.0;
+    return 1;
   } else if (instrument.family == "strings") {
-    return 0.8;  // Need more for balance
+    return 0.8;
   }
-  return 1.0;
+  return 1;
 }
 
-// Calculate balance for tutti chord
 export fn balanceCheck(assignments) {
   let totalWeight = 0;
   let familyWeights = {};
-
   for (a in assignments) {
     const weight = dynamicWeight(a.instrument);
     totalWeight = totalWeight + weight;
-
     const family = a.instrument.family;
     if (familyWeights[family] == null) {
       familyWeights[family] = 0;
     }
     familyWeights[family] = familyWeights[family] + weight;
   }
-
-  return {
-    total: totalWeight,
-    byFamily: familyWeights
-  };
+  return { total: totalWeight, byFamily: familyWeights };
 }
 
-// ============================================
-// Articulation and Effects
-// ============================================
-
-// String techniques
 export const ARCO = "arco";
+
 export const PIZZICATO = "pizz";
+
 export const COL_LEGNO = "colLegno";
+
 export const SUL_TASTO = "sulTasto";
+
 export const SUL_PONTICELLO = "sulPont";
+
 export const TREMOLO = "tremolo";
+
 export const HARMONICS = "harmonics";
+
 export const MUTE = "mute";
+
 export const DIVISI = "divisi";
 
-// Brass techniques
 export const OPEN = "open";
+
 export const STOPPED = "stopped";
+
 export const MUTED = "muted";
+
 export const CUIVRE = "cuivre";
+
 export const FLUTTER = "flutter";
 
-// Woodwind techniques
 export const LEGATO = "legato";
+
 export const STACCATO = "staccato";
+
 export const FLUTTER_TONGUE = "flutterTongue";
+
 export const DOUBLE_TONGUE = "doubleTongue";
+
 export const SLAP_TONGUE = "slapTongue";
+
 export const MULTIPHONIC = "multiphonic";
 
-// Apply technique to part
 export fn withTechnique(part, technique) {
-  return {
-    part: part,
-    technique: technique
-  };
+  return { part: part, technique: technique };
 }
 
-// ============================================
-// Register and Tessitura
-// ============================================
-
-// Get register description
 export fn getRegister(instrument, pitch) {
   const range = instrument.range;
   const span = range.high - range.low;
   const position = pitch - range.low;
   const percent = position / span;
-
   if (percent < 0.2) {
     return "low";
   } else if (percent < 0.4) {
@@ -734,21 +356,14 @@ export fn getRegister(instrument, pitch) {
   }
 }
 
-// Get comfortable playing range (tessitura)
 export fn tessitura(instrument) {
   const range = instrument.range;
   const span = range.high - range.low;
-
-  return {
-    low: range.low + (span * 0.2),
-    high: range.high - (span * 0.15)
-  };
+  return { low: range.low + span * 0.2, high: range.high - span * 0.15 };
 }
 
-// Check if passage is in comfortable range
 export fn isInTessitura(instrument, pitches) {
   const tess = tessitura(instrument);
-
   for (p in pitches) {
     if (p < tess.low || p > tess.high) {
       return false;
@@ -757,44 +372,13 @@ export fn isInTessitura(instrument, pitches) {
   return true;
 }
 
-// ============================================
-// Score Order
-// ============================================
-
-// Standard orchestral score order
 export fn scoreOrder() {
-  return [
-    // Woodwinds
-    "piccolo", "flute", "altoFlute",
-    "oboe", "englishHorn",
-    "clarinet", "clarinetA", "bassClarinet",
-    "bassoon", "contrabassoon",
-    // Brass
-    "horn",
-    "trumpet", "trumpetC",
-    "trombone", "bassTrombone",
-    "tuba",
-    // Percussion
-    "timpani",
-    "percussion",  // Grouped
-    // Keyboards
-    "celesta", "piano", "organ",
-    // Harp
-    "harp",
-    // Voices (if any)
-    // Strings
-    "violin",
-    "viola",
-    "cello",
-    "contrabass"
-  ];
+  return ["piccolo", "flute", "altoFlute", "oboe", "englishHorn", "clarinet", "clarinetA", "bassClarinet", "bassoon", "contrabassoon", "horn", "trumpet", "trumpetC", "trombone", "bassTrombone", "tuba", "timpani", "percussion", "celesta", "piano", "organ", "harp", "violin", "viola", "cello", "contrabass"];
 }
 
-// Sort instruments by score order
 export fn sortByScoreOrder(instruments) {
   const order = scoreOrder();
   let result = [];
-
   for (name in order) {
     for (inst in instruments) {
       if (inst.name == name) {
@@ -802,33 +386,15 @@ export fn sortByScoreOrder(instruments) {
       }
     }
   }
-
   return result;
 }
 
-// ============================================
-// Cue Notes
-// ============================================
-
-// Create cue for a part
 export fn cue(targetInstrument, sourceInstrument, pitches) {
-  return {
-    type: "cue",
-    target: targetInstrument,
-    source: sourceInstrument,
-    pitches: pitches,
-    size: "small"  // Cue notes are small
-  };
+  return { type: "cue", target: targetInstrument, source: sourceInstrument, pitches: pitches, size: "small" };
 }
 
-// ============================================
-// Utility
-// ============================================
-
-// Get all instruments in an ensemble
 export fn getAllInstruments(ensemble) {
   let result = [];
-
   if (ensemble.sections != null) {
     for (section in ensemble.sections) {
       for (entry in section.instruments) {
@@ -840,34 +406,27 @@ export fn getAllInstruments(ensemble) {
       result[result.length] = entry.instrument;
     }
   }
-
   return result;
 }
 
-// Find instruments that can play a pitch
 export fn findInstrumentsForPitch(ensemble, pitch) {
   let suitable = [];
   const instruments = getAllInstruments(ensemble);
-
   for (inst in instruments) {
     if (isInRange(inst, pitch)) {
       suitable[suitable.length] = inst;
     }
   }
-
   return suitable;
 }
 
-// Calculate total range of ensemble
 export fn ensembleRange(ensemble) {
   const instruments = getAllInstruments(ensemble);
   let lowest = 127;
   let highest = 0;
-
   for (inst in instruments) {
     const concertLow = toConcertPitch(inst, inst.range.low);
     const concertHigh = toConcertPitch(inst, inst.range.high);
-
     if (concertLow < lowest) {
       lowest = concertLow;
     }
@@ -875,10 +434,5 @@ export fn ensembleRange(ensemble) {
       highest = concertHigh;
     }
   }
-
-  return {
-    lowest: lowest,
-    highest: highest,
-    span: highest - lowest
-  };
+  return { lowest: lowest, highest: highest, span: highest - lowest };
 }

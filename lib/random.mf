@@ -1,11 +1,11 @@
-// std:random (v4)
-
 const RNG_A = 1664525;
+
 const RNG_C = 1013904223;
+
 const RNG_M = 4294967296;
 
 fn nextState(state) {
-  return (state * RNG_A + RNG_C) % RNG_M;
+  return state * RNG_A + RNG_C % RNG_M;
 }
 
 export fn rng(seed) {
@@ -28,6 +28,6 @@ export fn nextInt(r, lo, hi) {
     return [{ state: r.state }, lo];
   }
   const next = nextState(r.state);
-  const value = lo + (next % span);
+  const value = lo + next % span;
   return [{ state: next }, value];
 }

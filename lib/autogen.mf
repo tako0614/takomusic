@@ -1,6 +1,3 @@
-// std:autogen (v7.0)
-// Automatic generation helpers (countermelody, bass, accompaniment).
-
 import { motif, note } from "std:motif";
 
 fn normalizeChord(ch) {
@@ -50,10 +47,6 @@ export fn isAvailable() {
   return true;
 }
 
-// Generate a simple countermelody by transposition.
-// melody: motif
-// interval: semitones (default: 7)
-// preferContrary: when true, invert direction per melodic motion
 export fn counterMelody(melody, interval, preferContrary, velocityScale) {
   if (melody == null || melody.notes == null) {
     return motif([]);
@@ -63,10 +56,8 @@ export fn counterMelody(melody, interval, preferContrary, velocityScale) {
     intv = 7;
   }
   const scale = defaultVal(velocityScale, 0.7);
-
   let notes = [];
   let prevPitch = null;
-
   for (n in melody.notes) {
     let dir = 1;
     if (preferContrary && prevPitch != null) {
@@ -77,22 +68,16 @@ export fn counterMelody(melody, interval, preferContrary, velocityScale) {
         dir = 1;
       }
     }
-
     let vel = n.velocity;
     if (vel == null) {
       vel = 0.8;
     }
-
-    notes[notes.length] = note(n.pitch + (intv * dir), n.duration, vel * scale);
+    notes[notes.length] = note(n.pitch + intv * dir, n.duration, vel * scale);
     prevPitch = n.pitch;
   }
-
   return motif(notes);
 }
 
-// Generate a bassline from chord roots or pitch list.
-// duration: per-note duration (default: 1/4)
-// octave: pitch shift (default: -12)
 export fn bassline(chords, duration, octave, velocity) {
   if (chords == null) {
     return motif([]);
@@ -100,7 +85,6 @@ export fn bassline(chords, duration, octave, velocity) {
   const dur = defaultDur(duration, 1 / 4);
   const oct = defaultVal(octave, -12);
   const vel = defaultVal(velocity, 0.7);
-
   let notes = [];
   for (ch in chords) {
     const root = rootFromChord(ch);
@@ -108,13 +92,9 @@ export fn bassline(chords, duration, octave, velocity) {
       notes[notes.length] = note(root + oct, dur, vel);
     }
   }
-
   return motif(notes);
 }
 
-// Generate a broken-chord accompaniment.
-// pattern: chord indices (default: [0, 1, 2, 1])
-// duration: per-note duration (default: 1/8)
 export fn accompaniment(chords, pattern, duration, octave, velocity) {
   if (chords == null) {
     return motif([]);
@@ -126,12 +106,11 @@ export fn accompaniment(chords, pattern, duration, octave, velocity) {
   const dur = defaultDur(duration, 1 / 8);
   const oct = defaultVal(octave, 0);
   const vel = defaultVal(velocity, 0.6);
-
   let notes = [];
   for (ch in chords) {
     const chord = normalizeChord(ch);
     if (chord.length == 0) {
-      continue;
+
     }
     for (step in patt) {
       let idx = step % chord.length;
@@ -142,11 +121,9 @@ export fn accompaniment(chords, pattern, duration, octave, velocity) {
       notes[notes.length] = note(pitch, dur, vel);
     }
   }
-
   return motif(notes);
 }
 
-// Convert motif to a clip
 export fn motifToClip(m, start) {
   if (m == null || m.notes == null) {
     return { events: [], length: 0 / 1 };
@@ -157,41 +134,24 @@ export fn motifToClip(m, start) {
   }
   let events = [];
   for (n in m.notes) {
-    events[events.length] = {
-      type: "note",
-      pitch: n.pitch,
-      start: time,
-      dur: n.duration,
-      velocity: n.velocity
-    };
+    events[events.length] = { type: "note", pitch: n.pitch, start: time, dur: n.duration, velocity: n.velocity };
     time = time + n.duration;
   }
   return { events: events, length: time };
 }
 
-// Generic dispatcher
-// spec.kind: "counterMelody" | "bassline" | "accompaniment"
 export fn generate(spec) {
   if (spec == null || spec.kind == null) {
     return { kind: "Err", error: "autogen spec.kind is required" };
   }
   if (spec.kind == "counterMelody") {
-    return {
-      kind: "Ok",
-      value: counterMelody(spec.melody, spec.interval, spec.preferContrary, spec.velocityScale)
-    };
+    return { kind: "Ok", value: counterMelody(spec.melody, spec.interval, spec.preferContrary, spec.velocityScale) };
   }
   if (spec.kind == "bassline") {
-    return {
-      kind: "Ok",
-      value: bassline(spec.chords, spec.duration, spec.octave, spec.velocity)
-    };
+    return { kind: "Ok", value: bassline(spec.chords, spec.duration, spec.octave, spec.velocity) };
   }
   if (spec.kind == "accompaniment") {
-    return {
-      kind: "Ok",
-      value: accompaniment(spec.chords, spec.pattern, spec.duration, spec.octave, spec.velocity)
-    };
+    return { kind: "Ok", value: accompaniment(spec.chords, spec.pattern, spec.duration, spec.octave, spec.velocity) };
   }
   return { kind: "Err", error: "unknown autogen kind: " + spec.kind };
 }

@@ -1,4 +1,4 @@
-// std:microtonal (v5.3)
+// std:microtonal (v7.0)
 // Microtonal and xenharmonic music utilities
 // Supports EDO systems, just intonation, and various tuning systems
 
@@ -523,7 +523,7 @@ export fn toScalaFormat(scale, name) {
   result = result + (scale.length - 1) + "\n";
   result = result + "!\n";
 
-  for (i in 1..(scale.length - 1)) {
+  for (i in 1 .. (scale.length - 1)) {
     const r = scale[i];
     if (r.type == "ratio") {
       result = result + r.numerator + "/" + r.denominator + "\n";

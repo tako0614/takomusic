@@ -1,4 +1,4 @@
-// std:harmony (v6.0)
+// std:harmony (v7.0)
 // Harmonic analysis and functional harmony utilities
 // Key detection, chord function analysis, voice leading optimization
 
@@ -61,7 +61,7 @@ fn minorProfile() {
 fn rotateArray(arr, n) {
   let result = [];
   const len = arr.length;
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     const idx = (i + n) % len;
     result[i] = arr[idx];
   }
@@ -209,8 +209,8 @@ fn normalizeChord(chord) {
   }
 
   // Sort ascending
-  for (i in 0..(normalized.length - 2)) {
-    for (j in 0..(normalized.length - i - 2)) {
+  for (i in 0 .. (normalized.length - 2)) {
+    for (j in 0 .. (normalized.length - i - 2)) {
       if (normalized[j] > normalized[j + 1]) {
         const temp = normalized[j];
         normalized[j] = normalized[j + 1];
@@ -227,7 +227,7 @@ fn arraysMatch(a, b) {
   if (a.length != b.length) {
     return false;
   }
-  for (i in 0..(a.length - 1)) {
+  for (i in 0 .. (a.length - 1)) {
     if (a[i] != b[i]) {
       return false;
     }
@@ -280,7 +280,7 @@ export fn identifyChord(chord) {
 
       // Rotate template for inversion
       let rotated = [];
-      for (i in 0..(template.length - 1)) {
+      for (i in 0 .. (template.length - 1)) {
         const idx = (i + inv) % template.length;
         let val = template[idx] - template[inv];
         if (val < 0) {
@@ -290,8 +290,8 @@ export fn identifyChord(chord) {
       }
 
       // Sort rotated
-      for (i in 0..(rotated.length - 2)) {
-        for (j in 0..(rotated.length - i - 2)) {
+      for (i in 0 .. (rotated.length - 2)) {
+        for (j in 0 .. (rotated.length - i - 2)) {
           if (rotated[j] > rotated[j + 1]) {
             const temp = rotated[j];
             rotated[j] = rotated[j + 1];
@@ -487,8 +487,8 @@ export fn calculateDissonance(chord) {
   // Dissonance values for intervals (in semitones mod 12)
   const dissonanceValues = [0, 1, 0.8, 0.2, 0.15, 0.1, 0.9, 0.05, 0.2, 0.15, 0.7, 0.85];
 
-  for (i in 0..(chord.length - 2)) {
-    for (j in (i + 1)..(chord.length - 1)) {
+  for (i in 0 .. (chord.length - 2)) {
+    for (j in (i + 1) .. (chord.length - 1)) {
       const interval = (chord[j] - chord[i]) % 12;
       let absInterval = interval;
       if (absInterval < 0) {
@@ -535,7 +535,7 @@ export fn voiceLeadingDistance(chord1, chord2) {
     return 999;  // Different voice count
   }
 
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     let diff = chord2[i] - chord1[i];
     if (diff < 0) {
       diff = -diff;
@@ -594,7 +594,7 @@ export fn optimalVoiceLead(fromChord, toPitchClasses, voiceCount) {
 
   // Simple approach: move each voice to nearest target pitch class
   let result = [];
-  for (i in 0..(voiceCount - 1)) {
+  for (i in 0 .. (voiceCount - 1)) {
     const fromNote = fromChord[i];
     let bestNote = fromNote;
     let bestMove = 12;
@@ -622,8 +622,8 @@ export fn hasParallelFifths(chord1, chord2) {
   const len = chord1.length;
   if (len < 2) { return false; }
 
-  for (i in 0..(len - 2)) {
-    for (j in (i + 1)..(len - 1)) {
+  for (i in 0 .. (len - 2)) {
+    for (j in (i + 1) .. (len - 1)) {
       const int1 = (chord1[j] - chord1[i]) % 12;
       const int2 = (chord2[j] - chord2[i]) % 12;
 
@@ -645,8 +645,8 @@ export fn hasParallelOctaves(chord1, chord2) {
   const len = chord1.length;
   if (len < 2) { return false; }
 
-  for (i in 0..(len - 2)) {
-    for (j in (i + 1)..(len - 1)) {
+  for (i in 0 .. (len - 2)) {
+    for (j in (i + 1) .. (len - 1)) {
       const int1 = (chord1[j] - chord1[i]) % 12;
       const int2 = (chord2[j] - chord2[i]) % 12;
 
@@ -670,7 +670,7 @@ export fn voiceLeadingQuality(progression) {
 
   let score = 1.0;
 
-  for (i in 1..(progression.length - 1)) {
+  for (i in 1 .. (progression.length - 1)) {
     const prev = progression[i - 1];
     const curr = progression[i];
 
@@ -722,7 +722,7 @@ export fn circleOfFifths(startRoot, steps, quality) {
   let progression = [];
   let current = startRoot;
 
-  for (i in 0..(steps - 1)) {
+  for (i in 0 .. (steps - 1)) {
     if (quality == "major") {
       progression[i] = [current, current + 4, current + 7];
     } else if (quality == "minor") {

@@ -1,7 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tako-lang.example/schemas/PROFILE_V3.schema.json",
-  "title": "Tako v3 Render Profile",
+  "title": "Tako Render Profile v1 (Current)",
+  "description": "Render Profile schema version 1 - Current stable profile format. Compatible with all TakoMusic language versions (v3-v7+). Note: The filename contains 'V3' for historical reasons, but the actual schema version is profileVersion=1.",
   "type": "object",
   "required": [
     "tako",

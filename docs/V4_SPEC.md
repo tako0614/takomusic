@@ -4,7 +4,7 @@
 
 Tako v4 は v3 の実用経験から得られた課題を解決し、言語としての表現力とエコシステムの成熟度を大幅に向上させるメジャーアップデートである。
 
-※ リポジトリの現状実装に対する棚卸しは `docs/V4_STATUS.md` を参照。
+※ リポジトリの現状実装に対する棚卸しは `docs/V7_STATUS.md` を参照。
 
 ### 主要目標
 
@@ -750,7 +750,7 @@ compatibility = "v3"  # v3 互換モードで実行
 
 ## Part 7: Implementation Roadmap
 
-> **Note**: 実装状況の詳細は [V4_STATUS.md](V4_STATUS.md) を参照。
+> **Note**: 実装状況の詳細は [V7_STATUS.md](V7_STATUS.md) を参照。
 
 ### Phase 1: Core Language ✅
 - [x] 型システム強化（`enum` / `type` alias）

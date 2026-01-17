@@ -1,4 +1,4 @@
-// std:cluster (v5.4)
+// std:cluster (v7.0)
 // Tone clusters and sound mass composition
 // Techniques from Cowell, Ligeti, Penderecki, and Xenakis
 
@@ -362,7 +362,7 @@ export fn morphSequence(clusterA, clusterB, steps) {
 export fn glissandoCluster(startCluster, endCluster, duration, voiceCount) {
   let voices = [];
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     const t = v / (voiceCount - 1);
     const startPitch = startCluster.low + t * (startCluster.high - startCluster.low);
     const endPitch = endCluster.low + t * (endCluster.high - endCluster.low);
@@ -392,7 +392,7 @@ export fn micropolyphony(cluster, voiceCount, rhythmDensity, duration, seed) {
   let voices = [];
   const pitchCount = cluster.pitches.length;
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let events = [];
     let time = 0 / 1;
 
@@ -632,8 +632,8 @@ export fn contains(cluster, pitch) {
 export fn getIntervals(cluster) {
   let intervals = [];
 
-  for (i in 0..(cluster.pitches.length - 2)) {
-    for (j in (i + 1)..(cluster.pitches.length - 1)) {
+  for (i in 0 .. (cluster.pitches.length - 2)) {
+    for (j in (i + 1) .. (cluster.pitches.length - 1)) {
       const interval = cluster.pitches[j] - cluster.pitches[i];
       intervals[intervals.length] = interval;
     }
@@ -651,12 +651,12 @@ export fn distribute(cluster, voiceCount) {
   let voices = [];
   const pitchesPerVoice = cluster.pitches.length / voiceCount;
 
-  for (v in 0..(voiceCount - 1)) {
+  for (v in 0 .. (voiceCount - 1)) {
     let voicePitches = [];
     const startIdx = v * pitchesPerVoice;
     const endIdx = (v + 1) * pitchesPerVoice;
 
-    for (i in 0..(cluster.pitches.length - 1)) {
+    for (i in 0 .. (cluster.pitches.length - 1)) {
       if (i >= startIdx && i < endIdx) {
         voicePitches[voicePitches.length] = cluster.pitches[i];
       }
@@ -677,12 +677,12 @@ export fn arpeggiate(cluster, direction, duration) {
   let pitches = cluster.pitches;
   if (direction == "down") {
     pitches = [];
-    for (i in 0..(cluster.pitches.length - 1)) {
+    for (i in 0 .. (cluster.pitches.length - 1)) {
       pitches[i] = cluster.pitches[cluster.pitches.length - 1 - i];
     }
   }
 
-  for (i in 0..(noteCount - 1)) {
+  for (i in 0 .. (noteCount - 1)) {
     events[events.length] = {
       pitch: pitches[i],
       start: i * noteDur,
@@ -704,7 +704,7 @@ export fn roll(cluster, rollDuration, sustainDuration) {
   const noteCount = cluster.pitches.length;
   const onsetGap = rollDuration / noteCount;
 
-  for (i in 0..(noteCount - 1)) {
+  for (i in 0 .. (noteCount - 1)) {
     events[events.length] = {
       pitch: cluster.pitches[i],
       start: i * onsetGap,

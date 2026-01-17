@@ -1,7 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tako-lang.example/schemas/IR_V3.schema.json",
-  "title": "Tako v3 Score IR",
+  "title": "Tako Score IR v3 (Legacy)",
+  "description": "Score IR schema version 3 - Legacy schema maintained for backward compatibility. Current language versions (v4-v7+) output IR v4. This schema validates IR v3 output from older compilers.",
   "type": "object",
   "required": [
     "tako",

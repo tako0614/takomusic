@@ -2,6 +2,15 @@
 
 All notable changes to TakoMusic are documented in this file.
 
+**Version Clarification:**
+- **Package/Language Version** (e.g., 7.0.0, 4.0.0) - TakoMusic language and compiler version
+- **IR Version** (`tako.irVersion`) - Score IR schema version (currently v4, backward compatible with v3)
+- **Profile Version** (`tako.profileVersion`) - Render profile schema version (currently v1)
+
+The language evolves independently from the IR schema. IR v4 is compatible with language v4, v5, v6, v7, etc.
+
+---
+
 ## [7.0.0] - 2026-01-17
 
 ### Highlights
@@ -10,6 +19,12 @@ All notable changes to TakoMusic are documented in this file.
 - Added in-browser WAV export and kept MIDI export.
 - Removed AI, billing, and server-side dependencies from the web stack.
 - Updated v7 docs and VSCode extension metadata.
+- All standard library modules updated to v7.0 tag
+
+**Version Info:**
+- Language: v7.0
+- IR Schema: v4 (unchanged - backward compatible)
+- Profile Schema: v1 (unchanged)
 
 ## [4.0.0] - 2026-01-01
 
@@ -17,9 +32,14 @@ All notable changes to TakoMusic are documented in this file.
 
 - **Versioning**: Package version updated from 3.x to 4.0.0
 - **Class Naming**: Internal classes renamed (V3Lexer -> V4Lexer, V3Parser -> V4Parser, etc.)
-- **IR Version**: Output IR uses `irVersion: 4`
+- **IR Version**: Output IR uses `irVersion: 4` (Score IR schema)
 
-### Language Features (v4)
+**Version Info:**
+- Language: v4.0
+- IR Schema: v4 (new)
+- Profile Schema: v1 (unchanged)
+
+### Language Features
 
 All v4 language features are now stable:
 
@@ -69,7 +89,7 @@ All v4 language features are now stable:
 ### Documentation
 
 - Updated `docs/V4_SPEC.md` with accurate implementation status
-- Updated `docs/V4_STATUS.md` with comprehensive feature tracking
+- Updated `docs/V7_STATUS.md` (formerly V4_STATUS.md) with comprehensive feature tracking
 - Updated `docs/BUILTINS.md` with arp() and triplet()/tuplet() documentation
 - All CLI help now references v4
 

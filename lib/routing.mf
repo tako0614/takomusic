@@ -1,4 +1,4 @@
-// std:routing (v5.2)
+// std:routing (v7.0)
 // Audio/MIDI routing and signal flow utilities
 // For defining instrument assignments, bus routing, and signal chains
 

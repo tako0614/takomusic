@@ -1,311 +1,109 @@
-// std:effects (v5)
-// Audio effects automation: reverb, delay, EQ, compression, etc.
-
 import * as core from "std:core";
 import * as curves from "std:curves";
 
-// ============================================
-// Reverb
-// ============================================
-
-// Reverb send level automation
 export fn reverbSend(start, end, fromLevel, toLevel) {
-  return {
-    type: "automation",
-    param: "reverbSend",
-    start: start,
-    end: end,
-    curve: curves.linear(fromLevel, toLevel)
-  };
+  return { type: "automation", param: "reverbSend", start: start, end: end, curve: curves.linear(fromLevel, toLevel) };
 }
 
-// Reverb room size
 export fn reverbSize(start, end, fromSize, toSize) {
-  return {
-    type: "automation",
-    param: "reverbSize",
-    start: start,
-    end: end,
-    curve: curves.linear(fromSize, toSize)
-  };
+  return { type: "automation", param: "reverbSize", start: start, end: end, curve: curves.linear(fromSize, toSize) };
 }
 
-// Reverb decay time
 export fn reverbDecay(start, end, fromDecay, toDecay) {
-  return {
-    type: "automation",
-    param: "reverbDecay",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDecay, toDecay)
-  };
+  return { type: "automation", param: "reverbDecay", start: start, end: end, curve: curves.linear(fromDecay, toDecay) };
 }
 
-// Reverb damping (high frequency absorption)
 export fn reverbDamping(start, end, fromDamp, toDamp) {
-  return {
-    type: "automation",
-    param: "reverbDamping",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDamp, toDamp)
-  };
+  return { type: "automation", param: "reverbDamping", start: start, end: end, curve: curves.linear(fromDamp, toDamp) };
 }
 
-// Reverb pre-delay
 export fn reverbPreDelay(start, end, fromDelay, toDelay) {
-  return {
-    type: "automation",
-    param: "reverbPreDelay",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDelay, toDelay)
-  };
+  return { type: "automation", param: "reverbPreDelay", start: start, end: end, curve: curves.linear(fromDelay, toDelay) };
 }
 
-// Reverb mix (dry/wet)
 export fn reverbMix(start, end, fromMix, toMix) {
-  return {
-    type: "automation",
-    param: "reverbMix",
-    start: start,
-    end: end,
-    curve: curves.linear(fromMix, toMix)
-  };
+  return { type: "automation", param: "reverbMix", start: start, end: end, curve: curves.linear(fromMix, toMix) };
 }
 
-// Reverb preset events
 export fn reverbPreset(pos, preset) {
-  return {
-    type: "control",
-    start: pos,
-    kind: "reverbPreset",
-    data: { preset: preset }
-  };
+  return { type: "control", start: pos, kind: "reverbPreset", data: { preset: preset } };
 }
 
-// Common reverb presets
-export const REVERB_PRESETS = {
-  room: { size: 0.3, decay: 1.0, damping: 0.5 },
-  hall: { size: 0.7, decay: 2.5, damping: 0.3 },
-  cathedral: { size: 0.95, decay: 4.0, damping: 0.2 },
-  plate: { size: 0.5, decay: 1.5, damping: 0.7 },
-  chamber: { size: 0.4, decay: 1.2, damping: 0.4 },
-  spring: { size: 0.2, decay: 0.8, damping: 0.6 },
-  ambient: { size: 0.8, decay: 3.0, damping: 0.1 }
-};
+export const REVERB_PRESETS = { room: { size: 0.3, decay: 1, damping: 0.5 }, hall: { size: 0.7, decay: 2.5, damping: 0.3 }, cathedral: { size: 0.95, decay: 4, damping: 0.2 }, plate: { size: 0.5, decay: 1.5, damping: 0.7 }, chamber: { size: 0.4, decay: 1.2, damping: 0.4 }, spring: { size: 0.2, decay: 0.8, damping: 0.6 }, ambient: { size: 0.8, decay: 3, damping: 0.1 } };
 
-// ============================================
-// Delay
-// ============================================
-
-// Delay send level
 export fn delaySend(start, end, fromLevel, toLevel) {
-  return {
-    type: "automation",
-    param: "delaySend",
-    start: start,
-    end: end,
-    curve: curves.linear(fromLevel, toLevel)
-  };
+  return { type: "automation", param: "delaySend", start: start, end: end, curve: curves.linear(fromLevel, toLevel) };
 }
 
-// Delay time (in ms or beats)
 export fn delayTime(start, end, fromTime, toTime) {
-  return {
-    type: "automation",
-    param: "delayTime",
-    start: start,
-    end: end,
-    curve: curves.linear(fromTime, toTime)
-  };
+  return { type: "automation", param: "delayTime", start: start, end: end, curve: curves.linear(fromTime, toTime) };
 }
 
-// Delay feedback
 export fn delayFeedback(start, end, fromFb, toFb) {
-  return {
-    type: "automation",
-    param: "delayFeedback",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFb, toFb)
-  };
+  return { type: "automation", param: "delayFeedback", start: start, end: end, curve: curves.linear(fromFb, toFb) };
 }
 
-// Delay mix
 export fn delayMix(start, end, fromMix, toMix) {
-  return {
-    type: "automation",
-    param: "delayMix",
-    start: start,
-    end: end,
-    curve: curves.linear(fromMix, toMix)
-  };
+  return { type: "automation", param: "delayMix", start: start, end: end, curve: curves.linear(fromMix, toMix) };
 }
 
-// Ping-pong delay pan
 export fn delayPingPong(start, end, enabled) {
-  return {
-    type: "control",
-    start: start,
-    kind: "delayPingPong",
-    data: { enabled: enabled }
-  };
+  return { type: "control", start: start, kind: "delayPingPong", data: { enabled: enabled } };
 }
 
-// Tempo-synced delay
 export fn delaySyncTime(pos, division) {
-  // division: "1/4", "1/8", "1/8T", "1/16", etc.
-  return {
-    type: "control",
-    start: pos,
-    kind: "delaySyncTime",
-    data: { division: division }
-  };
+  return { type: "control", start: pos, kind: "delaySyncTime", data: { division: division } };
 }
 
-// ============================================
-// EQ (Equalizer)
-// ============================================
-
-// Parametric EQ band
 export fn eqBand(start, end, band, fromFreq, toFreq, fromGain, toGain, fromQ, toQ) {
   let events = [];
-
-  events[events.length] = {
-    type: "automation",
-    param: "eq" + band + "Freq",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFreq, toFreq)
-  };
-
-  events[events.length] = {
-    type: "automation",
-    param: "eq" + band + "Gain",
-    start: start,
-    end: end,
-    curve: curves.linear(fromGain, toGain)
-  };
-
+  events[events.length] = { type: "automation", param: "eq" + band + "Freq", start: start, end: end, curve: curves.linear(fromFreq, toFreq) };
+  events[events.length] = { type: "automation", param: "eq" + band + "Gain", start: start, end: end, curve: curves.linear(fromGain, toGain) };
   if (fromQ != null) {
-    events[events.length] = {
-      type: "automation",
-      param: "eq" + band + "Q",
-      start: start,
-      end: end,
-      curve: curves.linear(fromQ, toQ)
-    };
+    events[events.length] = { type: "automation", param: "eq" + band + "Q", start: start, end: end, curve: curves.linear(fromQ, toQ) };
   }
-
   return { events: events, length: end };
 }
 
-// Low shelf EQ
 export fn eqLowShelf(start, end, fromFreq, toFreq, fromGain, toGain) {
   let events = [];
-  events[events.length] = {
-    type: "automation",
-    param: "eqLowShelfFreq",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFreq, toFreq)
-  };
-  events[events.length] = {
-    type: "automation",
-    param: "eqLowShelfGain",
-    start: start,
-    end: end,
-    curve: curves.linear(fromGain, toGain)
-  };
+  events[events.length] = { type: "automation", param: "eqLowShelfFreq", start: start, end: end, curve: curves.linear(fromFreq, toFreq) };
+  events[events.length] = { type: "automation", param: "eqLowShelfGain", start: start, end: end, curve: curves.linear(fromGain, toGain) };
   return { events: events, length: end };
 }
 
-// High shelf EQ
 export fn eqHighShelf(start, end, fromFreq, toFreq, fromGain, toGain) {
   let events = [];
-  events[events.length] = {
-    type: "automation",
-    param: "eqHighShelfFreq",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFreq, toFreq)
-  };
-  events[events.length] = {
-    type: "automation",
-    param: "eqHighShelfGain",
-    start: start,
-    end: end,
-    curve: curves.linear(fromGain, toGain)
-  };
+  events[events.length] = { type: "automation", param: "eqHighShelfFreq", start: start, end: end, curve: curves.linear(fromFreq, toFreq) };
+  events[events.length] = { type: "automation", param: "eqHighShelfGain", start: start, end: end, curve: curves.linear(fromGain, toGain) };
   return { events: events, length: end };
 }
 
-// Low-pass filter
 export fn lowPass(start, end, fromFreq, toFreq, fromRes, toRes) {
   let events = [];
-  events[events.length] = {
-    type: "automation",
-    param: "lowPassFreq",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFreq, toFreq)
-  };
+  events[events.length] = { type: "automation", param: "lowPassFreq", start: start, end: end, curve: curves.linear(fromFreq, toFreq) };
   if (fromRes != null) {
-    events[events.length] = {
-      type: "automation",
-      param: "lowPassRes",
-      start: start,
-      end: end,
-      curve: curves.linear(fromRes, toRes)
-    };
+    events[events.length] = { type: "automation", param: "lowPassRes", start: start, end: end, curve: curves.linear(fromRes, toRes) };
   }
   return { events: events, length: end };
 }
 
-// High-pass filter
 export fn highPass(start, end, fromFreq, toFreq, fromRes, toRes) {
   let events = [];
-  events[events.length] = {
-    type: "automation",
-    param: "highPassFreq",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFreq, toFreq)
-  };
+  events[events.length] = { type: "automation", param: "highPassFreq", start: start, end: end, curve: curves.linear(fromFreq, toFreq) };
   if (fromRes != null) {
-    events[events.length] = {
-      type: "automation",
-      param: "highPassRes",
-      start: start,
-      end: end,
-      curve: curves.linear(fromRes, toRes)
-    };
+    events[events.length] = { type: "automation", param: "highPassRes", start: start, end: end, curve: curves.linear(fromRes, toRes) };
   }
   return { events: events, length: end };
 }
 
-// Band-pass filter
 export fn bandPass(start, end, fromFreq, toFreq, fromQ, toQ) {
   let events = [];
-  events[events.length] = {
-    type: "automation",
-    param: "bandPassFreq",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFreq, toFreq)
-  };
-  events[events.length] = {
-    type: "automation",
-    param: "bandPassQ",
-    start: start,
-    end: end,
-    curve: curves.linear(fromQ, toQ)
-  };
+  events[events.length] = { type: "automation", param: "bandPassFreq", start: start, end: end, curve: curves.linear(fromFreq, toFreq) };
+  events[events.length] = { type: "automation", param: "bandPassQ", start: start, end: end, curve: curves.linear(fromQ, toQ) };
   return { events: events, length: end };
 }
 
-// Filter sweep
 export fn filterSweep(start, end, filterType, fromFreq, toFreq) {
   if (filterType == "lowPass") {
     return lowPass(start, end, fromFreq, toFreq, null, null);
@@ -316,66 +114,26 @@ export fn filterSweep(start, end, filterType, fromFreq, toFreq) {
   return lowPass(start, end, fromFreq, toFreq, null, null);
 }
 
-// ============================================
-// Compression
-// ============================================
-
-// Compressor threshold
 export fn compThreshold(start, end, fromTh, toTh) {
-  return {
-    type: "automation",
-    param: "compThreshold",
-    start: start,
-    end: end,
-    curve: curves.linear(fromTh, toTh)
-  };
+  return { type: "automation", param: "compThreshold", start: start, end: end, curve: curves.linear(fromTh, toTh) };
 }
 
-// Compressor ratio
 export fn compRatio(start, end, fromRatio, toRatio) {
-  return {
-    type: "automation",
-    param: "compRatio",
-    start: start,
-    end: end,
-    curve: curves.linear(fromRatio, toRatio)
-  };
+  return { type: "automation", param: "compRatio", start: start, end: end, curve: curves.linear(fromRatio, toRatio) };
 }
 
-// Compressor attack
 export fn compAttack(start, end, fromAttack, toAttack) {
-  return {
-    type: "automation",
-    param: "compAttack",
-    start: start,
-    end: end,
-    curve: curves.linear(fromAttack, toAttack)
-  };
+  return { type: "automation", param: "compAttack", start: start, end: end, curve: curves.linear(fromAttack, toAttack) };
 }
 
-// Compressor release
 export fn compRelease(start, end, fromRelease, toRelease) {
-  return {
-    type: "automation",
-    param: "compRelease",
-    start: start,
-    end: end,
-    curve: curves.linear(fromRelease, toRelease)
-  };
+  return { type: "automation", param: "compRelease", start: start, end: end, curve: curves.linear(fromRelease, toRelease) };
 }
 
-// Compressor makeup gain
 export fn compMakeup(start, end, fromGain, toGain) {
-  return {
-    type: "automation",
-    param: "compMakeup",
-    start: start,
-    end: end,
-    curve: curves.linear(fromGain, toGain)
-  };
+  return { type: "automation", param: "compMakeup", start: start, end: end, curve: curves.linear(fromGain, toGain) };
 }
 
-// Full compressor settings
 export fn compressor(start, end, threshold, ratio, attack, release, makeup) {
   let events = [];
   events[events.length] = compThreshold(start, end, threshold, threshold);
@@ -388,213 +146,74 @@ export fn compressor(start, end, threshold, ratio, attack, release, makeup) {
   return { events: events, length: end };
 }
 
-// ============================================
-// Distortion/Saturation
-// ============================================
-
-// Drive amount
 export fn drive(start, end, fromDrive, toDrive) {
-  return {
-    type: "automation",
-    param: "drive",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDrive, toDrive)
-  };
+  return { type: "automation", param: "drive", start: start, end: end, curve: curves.linear(fromDrive, toDrive) };
 }
 
-// Saturation
 export fn saturation(start, end, fromSat, toSat) {
-  return {
-    type: "automation",
-    param: "saturation",
-    start: start,
-    end: end,
-    curve: curves.linear(fromSat, toSat)
-  };
+  return { type: "automation", param: "saturation", start: start, end: end, curve: curves.linear(fromSat, toSat) };
 }
 
-// Distortion type
 export fn distortionType(pos, dtype) {
-  return {
-    type: "control",
-    start: pos,
-    kind: "distortionType",
-    data: { type: dtype }
-  };
+  return { type: "control", start: pos, kind: "distortionType", data: { type: dtype } };
 }
 
-// ============================================
-// Modulation Effects
-// ============================================
-
-// Chorus
 export fn chorusDepth(start, end, fromDepth, toDepth) {
-  return {
-    type: "automation",
-    param: "chorusDepth",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDepth, toDepth)
-  };
+  return { type: "automation", param: "chorusDepth", start: start, end: end, curve: curves.linear(fromDepth, toDepth) };
 }
 
 export fn chorusRate(start, end, fromRate, toRate) {
-  return {
-    type: "automation",
-    param: "chorusRate",
-    start: start,
-    end: end,
-    curve: curves.linear(fromRate, toRate)
-  };
+  return { type: "automation", param: "chorusRate", start: start, end: end, curve: curves.linear(fromRate, toRate) };
 }
 
 export fn chorusMix(start, end, fromMix, toMix) {
-  return {
-    type: "automation",
-    param: "chorusMix",
-    start: start,
-    end: end,
-    curve: curves.linear(fromMix, toMix)
-  };
+  return { type: "automation", param: "chorusMix", start: start, end: end, curve: curves.linear(fromMix, toMix) };
 }
 
-// Flanger
 export fn flangerDepth(start, end, fromDepth, toDepth) {
-  return {
-    type: "automation",
-    param: "flangerDepth",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDepth, toDepth)
-  };
+  return { type: "automation", param: "flangerDepth", start: start, end: end, curve: curves.linear(fromDepth, toDepth) };
 }
 
 export fn flangerRate(start, end, fromRate, toRate) {
-  return {
-    type: "automation",
-    param: "flangerRate",
-    start: start,
-    end: end,
-    curve: curves.linear(fromRate, toRate)
-  };
+  return { type: "automation", param: "flangerRate", start: start, end: end, curve: curves.linear(fromRate, toRate) };
 }
 
 export fn flangerFeedback(start, end, fromFb, toFb) {
-  return {
-    type: "automation",
-    param: "flangerFeedback",
-    start: start,
-    end: end,
-    curve: curves.linear(fromFb, toFb)
-  };
+  return { type: "automation", param: "flangerFeedback", start: start, end: end, curve: curves.linear(fromFb, toFb) };
 }
 
-// Phaser
 export fn phaserDepth(start, end, fromDepth, toDepth) {
-  return {
-    type: "automation",
-    param: "phaserDepth",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDepth, toDepth)
-  };
+  return { type: "automation", param: "phaserDepth", start: start, end: end, curve: curves.linear(fromDepth, toDepth) };
 }
 
 export fn phaserRate(start, end, fromRate, toRate) {
-  return {
-    type: "automation",
-    param: "phaserRate",
-    start: start,
-    end: end,
-    curve: curves.linear(fromRate, toRate)
-  };
+  return { type: "automation", param: "phaserRate", start: start, end: end, curve: curves.linear(fromRate, toRate) };
 }
 
 export fn phaserStages(pos, stages) {
-  return {
-    type: "control",
-    start: pos,
-    kind: "phaserStages",
-    data: { stages: stages }
-  };
+  return { type: "control", start: pos, kind: "phaserStages", data: { stages: stages } };
 }
 
-// ============================================
-// Tremolo & Vibrato (amplitude/pitch LFO)
-// ============================================
-
-// Tremolo (amplitude modulation)
 export fn tremoloDepth(start, end, fromDepth, toDepth) {
-  return {
-    type: "automation",
-    param: "tremoloDepth",
-    start: start,
-    end: end,
-    curve: curves.linear(fromDepth, toDepth)
-  };
+  return { type: "automation", param: "tremoloDepth", start: start, end: end, curve: curves.linear(fromDepth, toDepth) };
 }
 
 export fn tremoloRate(start, end, fromRate, toRate) {
-  return {
-    type: "automation",
-    param: "tremoloRate",
-    start: start,
-    end: end,
-    curve: curves.linear(fromRate, toRate)
-  };
+  return { type: "automation", param: "tremoloRate", start: start, end: end, curve: curves.linear(fromRate, toRate) };
 }
 
-// ============================================
-// Effect Bypass/Enable
-// ============================================
-
-// Enable/disable effect
 export fn effectBypass(pos, effectName, bypassed) {
-  return {
-    type: "control",
-    start: pos,
-    kind: "effectBypass",
-    data: { effect: effectName, bypassed: bypassed }
-  };
+  return { type: "control", start: pos, kind: "effectBypass", data: { effect: effectName, bypassed: bypassed } };
 }
 
-// ============================================
-// Send Effects
-// ============================================
-
-// Generic send level to effect bus
 export fn sendLevel(start, end, busName, fromLevel, toLevel) {
-  return {
-    type: "automation",
-    param: "send_" + busName,
-    start: start,
-    end: end,
-    curve: curves.linear(fromLevel, toLevel)
-  };
+  return { type: "automation", param: "send_" + busName, start: start, end: end, curve: curves.linear(fromLevel, toLevel) };
 }
 
-// ============================================
-// Convolution/IR
-// ============================================
-
-// Load impulse response
 export fn loadIR(pos, irName) {
-  return {
-    type: "control",
-    start: pos,
-    kind: "loadIR",
-    data: { ir: irName }
-  };
+  return { type: "control", start: pos, kind: "loadIR", data: { ir: irName } };
 }
 
-// Convolution mix
 export fn convolutionMix(start, end, fromMix, toMix) {
-  return {
-    type: "automation",
-    param: "convolutionMix",
-    start: start,
-    end: end,
-    curve: curves.linear(fromMix, toMix)
-  };
+  return { type: "automation", param: "convolutionMix", start: start, end: end, curve: curves.linear(fromMix, toMix) };
 }

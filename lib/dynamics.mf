@@ -1,4 +1,4 @@
-// std:dynamics (v4)
+// std:dynamics (v7.0)
 // Standard dynamic levels and crescendo/diminuendo generators
 
 import { cloneEvent, posToRat, clipLen } from "std:core";

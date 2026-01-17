@@ -1,227 +1,104 @@
-// std:texture (v5.4)
-// Textural composition utilities
-// For creating musical textures, density control, and layering
-
-// ============================================
-// Texture Types
-// ============================================
-
-// Monophonic texture (single line)
 export fn monophonic(pitches, durations, velocity) {
   let vel = velocity;
   if (vel == null) {
     vel = 0.8;
   }
-
   let events = [];
   let time = 0 / 1;
-
-  for (i in 0..(pitches.length - 1)) {
-    events[events.length] = {
-      type: "note",
-      pitch: pitches[i],
-      start: time,
-      duration: durations[i % durations.length],
-      velocity: vel
-    };
+  for (i in 0 .. pitches.length - 1) {
+    events[events.length] = { type: "note", pitch: pitches[i], start: time, duration: durations[i % durations.length], velocity: vel };
     time = time + durations[i % durations.length];
   }
-
-  return {
-    type: "texture",
-    textureType: "monophonic",
-    events: events
-  };
+  return { type: "texture", textureType: "monophonic", events: events };
 }
 
-// Homophonic texture (melody with chordal accompaniment)
 export fn homophonic(melody, chords, melodyDurations, chordDuration) {
   let events = [];
   let time = 0 / 1;
-
-  for (i in 0..(melody.length - 1)) {
-    // Melody note
-    events[events.length] = {
-      type: "note",
-      pitch: melody[i],
-      start: time,
-      duration: melodyDurations[i % melodyDurations.length],
-      velocity: 0.85,
-      voice: "melody"
-    };
-
-    // Accompanying chord
+  for (i in 0 .. melody.length - 1) {
+    events[events.length] = { type: "note", pitch: melody[i], start: time, duration: melodyDurations[i % melodyDurations.length], velocity: 0.85, voice: "melody" };
     const chord = chords[i % chords.length];
     for (p in chord) {
-      events[events.length] = {
-        type: "note",
-        pitch: p,
-        start: time,
-        duration: chordDuration,
-        velocity: 0.6,
-        voice: "accompaniment"
-      };
+      events[events.length] = { type: "note", pitch: p, start: time, duration: chordDuration, velocity: 0.6, voice: "accompaniment" };
     }
-
     time = time + melodyDurations[i % melodyDurations.length];
   }
-
-  return {
-    type: "texture",
-    textureType: "homophonic",
-    events: events
-  };
+  return { type: "texture", textureType: "homophonic", events: events };
 }
 
-// Polyphonic texture (multiple independent voices)
 export fn polyphonic(voices) {
   let events = [];
-
-  for (i in 0..(voices.length - 1)) {
+  for (i in 0 .. voices.length - 1) {
     const voice = voices[i];
     for (event in voice.events) {
-      let newEvent = {
-        type: event.type,
-        pitch: event.pitch,
-        start: event.start,
-        duration: event.duration,
-        velocity: event.velocity,
-        voice: "voice" + i
-      };
+      let newEvent = { type: event.type, pitch: event.pitch, start: event.start, duration: event.duration, velocity: event.velocity, voice: "voice" + i };
       events[events.length] = newEvent;
     }
   }
-
-  return {
-    type: "texture",
-    textureType: "polyphonic",
-    voiceCount: voices.length,
-    events: events
-  };
+  return { type: "texture", textureType: "polyphonic", voiceCount: voices.length, events: events };
 }
 
-// Heterophonic texture (simultaneous variations)
 export fn heterophonic(baseLine, variations) {
   let events = [];
-
-  // Base line
   for (event in baseLine.events) {
     events[events.length] = event;
   }
-
-  // Variations (slightly offset)
-  for (i in 0..(variations.length - 1)) {
+  for (i in 0 .. variations.length - 1) {
     const variation = variations[i];
     for (event in variation.events) {
-      events[events.length] = {
-        type: event.type,
-        pitch: event.pitch,
-        start: event.start,
-        duration: event.duration,
-        velocity: event.velocity * 0.8,
-        voice: "variation" + i
-      };
+      events[events.length] = { type: event.type, pitch: event.pitch, start: event.start, duration: event.duration, velocity: event.velocity * 0.8, voice: "variation" + i };
     }
   }
-
-  return {
-    type: "texture",
-    textureType: "heterophonic",
-    events: events
-  };
+  return { type: "texture", textureType: "heterophonic", events: events };
 }
 
-// ============================================
-// Density Control
-// ============================================
-
-// Calculate note density (notes per beat)
 export fn calculateDensity(texture, totalDuration) {
   return texture.events.length / totalDuration;
 }
 
-// Create texture with target density
 export fn withDensity(pitches, targetDensity, totalDuration, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   const noteCount = targetDensity * totalDuration;
   let events = [];
-
-  for (i in 0..(noteCount - 1)) {
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const pitchIdx = ((rng / 2147483648) * pitches.length);
-    let idx = pitchIdx - (pitchIdx % 1);
-
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const startTime = (rng / 2147483648) * totalDuration;
-
-    events[events.length] = {
-      type: "note",
-      pitch: pitches[idx],
-      start: startTime,
-      duration: 1/4,
-      velocity: 0.7
-    };
+  for (i in 0 .. noteCount - 1) {
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const pitchIdx = rng / 2147483648 * pitches.length;
+    let idx = pitchIdx - pitchIdx % 1;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const startTime = rng / 2147483648 * totalDuration;
+    events[events.length] = { type: "note", pitch: pitches[idx], start: startTime, duration: 1 / 4, velocity: 0.7 };
   }
-
-  return {
-    type: "texture",
-    textureType: "stochastic",
-    density: targetDensity,
-    events: events
-  };
+  return { type: "texture", textureType: "stochastic", density: targetDensity, events: events };
 }
 
-// Gradually change density over time
 export fn densityGradient(pitches, startDensity, endDensity, totalDuration, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   let events = [];
   const segments = 16;
   const segmentDur = totalDuration / segments;
-
-  for (seg in 0..(segments - 1)) {
+  for (seg in 0 .. segments - 1) {
     const t = seg / segments;
-    const density = startDensity + (endDensity - startDensity) * t;
+    const density = startDensity + endDensity - startDensity * t;
     const noteCount = density * segmentDur;
-
-    for (_ in 0..(noteCount - 1)) {
-      rng = (rng * 1103515245 + 12345) % 2147483648;
-      const pitchIdx = ((rng / 2147483648) * pitches.length);
-      let idx = pitchIdx - (pitchIdx % 1);
-
-      rng = (rng * 1103515245 + 12345) % 2147483648;
-      const offset = (rng / 2147483648) * segmentDur;
+    for (_ in 0 .. noteCount - 1) {
+      rng = rng * 1103515245 + 12345 % 2147483648;
+      const pitchIdx = rng / 2147483648 * pitches.length;
+      let idx = pitchIdx - pitchIdx % 1;
+      rng = rng * 1103515245 + 12345 % 2147483648;
+      const offset = rng / 2147483648 * segmentDur;
       const startTime = seg * segmentDur + offset;
-
-      events[events.length] = {
-        type: "note",
-        pitch: pitches[idx],
-        start: startTime,
-        duration: 1/4,
-        velocity: 0.7
-      };
+      events[events.length] = { type: "note", pitch: pitches[idx], start: startTime, duration: 1 / 4, velocity: 0.7 };
     }
   }
-
-  return {
-    type: "texture",
-    textureType: "gradient",
-    events: events
-  };
+  return { type: "texture", textureType: "gradient", events: events };
 }
 
-// ============================================
-// Layering
-// ============================================
-
-// Layer multiple textures
 export fn layer(textures) {
   let events = [];
   for (texture in textures) {
@@ -229,503 +106,250 @@ export fn layer(textures) {
       events[events.length] = event;
     }
   }
-
-  return {
-    type: "texture",
-    textureType: "layered",
-    layerCount: textures.length,
-    events: events
-  };
+  return { type: "texture", textureType: "layered", layerCount: textures.length, events: events };
 }
 
-// Layer with offset
 export fn layerWithOffset(texture, offsets) {
   let events = [];
-
-  for (i in 0..(offsets.length - 1)) {
+  for (i in 0 .. offsets.length - 1) {
     const offset = offsets[i];
     for (event in texture.events) {
-      events[events.length] = {
-        type: event.type,
-        pitch: event.pitch,
-        start: event.start + offset,
-        duration: event.duration,
-        velocity: event.velocity,
-        voice: "layer" + i
-      };
+      events[events.length] = { type: event.type, pitch: event.pitch, start: event.start + offset, duration: event.duration, velocity: event.velocity, voice: "layer" + i };
     }
   }
-
-  return {
-    type: "texture",
-    textureType: "layeredOffset",
-    events: events
-  };
+  return { type: "texture", textureType: "layeredOffset", events: events };
 }
 
-// Stagger entries (gradual buildup)
 export fn staggeredEntry(voices, entryInterval) {
   let events = [];
-
-  for (i in 0..(voices.length - 1)) {
+  for (i in 0 .. voices.length - 1) {
     const offset = i * entryInterval;
     for (event in voices[i].events) {
-      events[events.length] = {
-        type: event.type,
-        pitch: event.pitch,
-        start: event.start + offset,
-        duration: event.duration,
-        velocity: event.velocity,
-        voice: "voice" + i
-      };
+      events[events.length] = { type: event.type, pitch: event.pitch, start: event.start + offset, duration: event.duration, velocity: event.velocity, voice: "voice" + i };
     }
   }
-
-  return {
-    type: "texture",
-    textureType: "staggered",
-    events: events
-  };
+  return { type: "texture", textureType: "staggered", events: events };
 }
 
-// ============================================
-// Pointillistic Texture
-// ============================================
-
-// Create pointillistic texture (isolated notes)
 export fn pointillistic(pitches, density, register, duration, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   let events = [];
   const noteCount = density * duration;
-
-  for (_ in 0..(noteCount - 1)) {
-    // Random pitch from set
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const pitchIdx = ((rng / 2147483648) * pitches.length);
-    let idx = pitchIdx - (pitchIdx % 1);
+  for (_ in 0 .. noteCount - 1) {
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const pitchIdx = rng / 2147483648 * pitches.length;
+    let idx = pitchIdx - pitchIdx % 1;
     let pitch = pitches[idx];
-
-    // Random octave within register
-    rng = (rng * 1103515245 + 12345) % 2147483648;
+    rng = rng * 1103515245 + 12345 % 2147483648;
     const octaveRange = register.high - register.low;
-    const octave = register.low + ((rng / 2147483648) * octaveRange);
-    let oct = octave - (octave % 1);
+    const octave = register.low + rng / 2147483648 * octaveRange;
+    let oct = octave - octave % 1;
     pitch = pitch + oct * 12;
-
-    // Random start time
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const startTime = (rng / 2147483648) * duration;
-
-    // Random short duration
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const noteDur = 1/16 + (rng / 2147483648) * 1/8;
-
-    // Random velocity with wide dynamics
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const vel = 0.3 + (rng / 2147483648) * 0.6;
-
-    events[events.length] = {
-      type: "note",
-      pitch: pitch,
-      start: startTime,
-      duration: noteDur,
-      velocity: vel
-    };
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const startTime = rng / 2147483648 * duration;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const noteDur = 1 / 16 + rng / 2147483648 * 1 / 8;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const vel = 0.3 + rng / 2147483648 * 0.6;
+    events[events.length] = { type: "note", pitch: pitch, start: startTime, duration: noteDur, velocity: vel };
   }
-
-  return {
-    type: "texture",
-    textureType: "pointillistic",
-    events: events
-  };
+  return { type: "texture", textureType: "pointillistic", events: events };
 }
 
-// ============================================
-// Cloud Texture
-// ============================================
-
-// Create sound cloud (cluster of notes)
 export fn cloud(centerPitch, spread, noteCount, duration, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   let events = [];
-
-  for (_ in 0..(noteCount - 1)) {
-    // Gaussian-ish distribution around center
-    rng = (rng * 1103515245 + 12345) % 2147483648;
+  for (_ in 0 .. noteCount - 1) {
+    rng = rng * 1103515245 + 12345 % 2147483648;
     const r1 = rng / 2147483648;
-    rng = (rng * 1103515245 + 12345) % 2147483648;
+    rng = rng * 1103515245 + 12345 % 2147483648;
     const r2 = rng / 2147483648;
-
-    // Box-Muller approximation
     let offset = 0;
     if (r1 > 0.001) {
-      const factor = (-2 * r1) ** 0.5;  // Simplified
-      offset = factor * spread * (r2 - 0.5) * 2;
+      const factor = -2 * r1 ** 0.5;
+      offset = factor * spread * r2 - 0.5 * 2;
     }
-
     let pitch = centerPitch + offset;
-    pitch = pitch - (pitch % 1);  // Round to integer
-
-    // Random timing within duration
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const startTime = (rng / 2147483648) * duration;
-
-    // Varying note lengths
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const noteDur = 1/8 + (rng / 2147483648) * 1/2;
-
-    events[events.length] = {
-      type: "note",
-      pitch: pitch,
-      start: startTime,
-      duration: noteDur,
-      velocity: 0.5 + (rng / 2147483648) * 0.3
-    };
+    pitch = pitch - pitch % 1;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const startTime = rng / 2147483648 * duration;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const noteDur = 1 / 8 + rng / 2147483648 * 1 / 2;
+    events[events.length] = { type: "note", pitch: pitch, start: startTime, duration: noteDur, velocity: 0.5 + rng / 2147483648 * 0.3 };
   }
-
-  return {
-    type: "texture",
-    textureType: "cloud",
-    center: centerPitch,
-    spread: spread,
-    events: events
-  };
+  return { type: "texture", textureType: "cloud", center: centerPitch, spread: spread, events: events };
 }
 
-// Evolving cloud (center and spread change over time)
 export fn evolvingCloud(startCenter, endCenter, startSpread, endSpread, noteCount, duration, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   let events = [];
-
-  for (_ in 0..(noteCount - 1)) {
-    // Random timing
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const startTime = (rng / 2147483648) * duration;
+  for (_ in 0 .. noteCount - 1) {
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const startTime = rng / 2147483648 * duration;
     const t = startTime / duration;
-
-    // Interpolate center and spread
-    const center = startCenter + (endCenter - startCenter) * t;
-    const spread = startSpread + (endSpread - startSpread) * t;
-
-    // Random offset from center
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const offset = (rng / 2147483648 - 0.5) * 2 * spread;
-
+    const center = startCenter + endCenter - startCenter * t;
+    const spread = startSpread + endSpread - startSpread * t;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const offset = rng / 2147483648 - 0.5 * 2 * spread;
     let pitch = center + offset;
-    pitch = pitch - (pitch % 1);
-
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const noteDur = 1/8 + (rng / 2147483648) * 1/2;
-
-    events[events.length] = {
-      type: "note",
-      pitch: pitch,
-      start: startTime,
-      duration: noteDur,
-      velocity: 0.6
-    };
+    pitch = pitch - pitch % 1;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const noteDur = 1 / 8 + rng / 2147483648 * 1 / 2;
+    events[events.length] = { type: "note", pitch: pitch, start: startTime, duration: noteDur, velocity: 0.6 };
   }
-
-  return {
-    type: "texture",
-    textureType: "evolvingCloud",
-    events: events
-  };
+  return { type: "texture", textureType: "evolvingCloud", events: events };
 }
 
-// ============================================
-// Granular Texture
-// ============================================
-
-// Create granular texture from source material
 export fn granular(sourcePitches, grainSize, grainDensity, duration, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   let events = [];
   const grainCount = grainDensity * duration;
-
-  for (_ in 0..(grainCount - 1)) {
-    // Random position in source
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const sourceIdx = ((rng / 2147483648) * sourcePitches.length);
-    let idx = sourceIdx - (sourceIdx % 1);
-
-    // Random start time
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const startTime = (rng / 2147483648) * duration;
-
-    // Slight pitch variation
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    const pitchVar = (rng / 2147483648 - 0.5) * 2;  // ±1 semitone
-
+  for (_ in 0 .. grainCount - 1) {
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const sourceIdx = rng / 2147483648 * sourcePitches.length;
+    let idx = sourceIdx - sourceIdx % 1;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const startTime = rng / 2147483648 * duration;
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    const pitchVar = rng / 2147483648 - 0.5 * 2;
     let pitch = sourcePitches[idx] + pitchVar;
-    pitch = pitch - (pitch % 1);
-
-    // Grain envelope (implied by short duration)
-    events[events.length] = {
-      type: "note",
-      pitch: pitch,
-      start: startTime,
-      duration: grainSize,
-      velocity: 0.4 + (rng / 2147483648) * 0.3
-    };
+    pitch = pitch - pitch % 1;
+    events[events.length] = { type: "note", pitch: pitch, start: startTime, duration: grainSize, velocity: 0.4 + rng / 2147483648 * 0.3 };
   }
-
-  return {
-    type: "texture",
-    textureType: "granular",
-    grainSize: grainSize,
-    events: events
-  };
+  return { type: "texture", textureType: "granular", grainSize: grainSize, events: events };
 }
 
-// Time-stretch using granular
 export fn timeStretch(sourcePitches, sourceDurations, stretchFactor, grainSize, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   let events = [];
   let sourceTime = 0 / 1;
   let outputTime = 0 / 1;
-
-  for (i in 0..(sourcePitches.length - 1)) {
+  for (i in 0 .. sourcePitches.length - 1) {
     const pitch = sourcePitches[i];
     const dur = sourceDurations[i % sourceDurations.length];
     const stretchedDur = dur * stretchFactor;
-
-    // Fill stretched duration with grains
     let grainTime = 0 / 1;
-    while (grainTime < stretchedDur) {
-      rng = (rng * 1103515245 + 12345) % 2147483648;
-      const jitter = (rng / 2147483648 - 0.5) * grainSize;
-
-      events[events.length] = {
-        type: "note",
-        pitch: pitch,
-        start: outputTime + grainTime + jitter,
-        duration: grainSize,
-        velocity: 0.6
-      };
-
-      grainTime = grainTime + grainSize * 0.5;  // 50% overlap
-    }
-
     outputTime = outputTime + stretchedDur;
   }
-
-  return {
-    type: "texture",
-    textureType: "timeStretched",
-    stretchFactor: stretchFactor,
-    events: events
-  };
+  return { type: "texture", textureType: "timeStretched", stretchFactor: stretchFactor, events: events };
 }
 
-// ============================================
-// Rhythmic Texture
-// ============================================
-
-// Create rhythmic texture with pattern
 export fn rhythmicTexture(pattern, pitches, baseDuration) {
   let events = [];
   let time = 0 / 1;
   let pitchIdx = 0;
-
   for (hit in pattern) {
     if (hit == 1) {
-      events[events.length] = {
-        type: "note",
-        pitch: pitches[pitchIdx % pitches.length],
-        start: time,
-        duration: baseDuration,
-        velocity: 0.8
-      };
+      events[events.length] = { type: "note", pitch: pitches[pitchIdx % pitches.length], start: time, duration: baseDuration, velocity: 0.8 };
       pitchIdx = pitchIdx + 1;
     }
     time = time + baseDuration;
   }
-
-  return {
-    type: "texture",
-    textureType: "rhythmic",
-    events: events
-  };
+  return { type: "texture", textureType: "rhythmic", events: events };
 }
 
-// Polyrhythmic texture
 export fn polyrhythmicTexture(patterns, pitchSets, baseDuration) {
   let events = [];
-
-  for (i in 0..(patterns.length - 1)) {
+  for (i in 0 .. patterns.length - 1) {
     const pattern = patterns[i];
     const pitches = pitchSets[i];
     let time = 0 / 1;
     let pitchIdx = 0;
-
     for (hit in pattern) {
       if (hit == 1) {
-        events[events.length] = {
-          type: "note",
-          pitch: pitches[pitchIdx % pitches.length],
-          start: time,
-          duration: baseDuration,
-          velocity: 0.7,
-          voice: "rhythm" + i
-        };
+        events[events.length] = { type: "note", pitch: pitches[pitchIdx % pitches.length], start: time, duration: baseDuration, velocity: 0.7, voice: "rhythm" + i };
         pitchIdx = pitchIdx + 1;
       }
       time = time + baseDuration;
     }
   }
-
-  return {
-    type: "texture",
-    textureType: "polyrhythmic",
-    events: events
-  };
+  return { type: "texture", textureType: "polyrhythmic", events: events };
 }
 
-// ============================================
-// Texture Transformations
-// ============================================
-
-// Thin out texture (remove notes randomly)
 export fn thin(texture, keepProbability, seed) {
   let rng = seed;
   if (rng == null) {
     rng = 12345;
   }
-
   let events = [];
   for (event in texture.events) {
-    rng = (rng * 1103515245 + 12345) % 2147483648;
-    if ((rng / 2147483648) < keepProbability) {
+    rng = rng * 1103515245 + 12345 % 2147483648;
+    if (rng / 2147483648 < keepProbability) {
       events[events.length] = event;
     }
   }
-
-  return {
-    type: "texture",
-    textureType: texture.textureType + "_thinned",
-    events: events
-  };
+  return { type: "texture", textureType: texture.textureType + "_thinned", events: events };
 }
 
-// Thicken texture (double notes with variation)
 export fn thicken(texture, doublingInterval, velocityReduction) {
   let events = [];
-
   for (event in texture.events) {
     events[events.length] = event;
-
-    // Add doubled note
-    events[events.length] = {
-      type: event.type,
-      pitch: event.pitch + doublingInterval,
-      start: event.start,
-      duration: event.duration,
-      velocity: event.velocity * velocityReduction
-    };
+    events[events.length] = { type: event.type, pitch: event.pitch + doublingInterval, start: event.start, duration: event.duration, velocity: event.velocity * velocityReduction };
   }
-
-  return {
-    type: "texture",
-    textureType: texture.textureType + "_thickened",
-    events: events
-  };
+  return { type: "texture", textureType: texture.textureType + "_thickened", events: events };
 }
 
-// Transpose texture
 export fn transposeTexture(texture, semitones) {
   let events = [];
   for (event in texture.events) {
-    events[events.length] = {
-      type: event.type,
-      pitch: event.pitch + semitones,
-      start: event.start,
-      duration: event.duration,
-      velocity: event.velocity,
-      voice: event.voice
-    };
+    events[events.length] = { type: event.type, pitch: event.pitch + semitones, start: event.start, duration: event.duration, velocity: event.velocity, voice: event.voice };
   }
-
-  return {
-    type: "texture",
-    textureType: texture.textureType,
-    events: events
-  };
+  return { type: "texture", textureType: texture.textureType, events: events };
 }
 
-// Time-scale texture
 export fn scaleTime(texture, factor) {
   let events = [];
   for (event in texture.events) {
-    events[events.length] = {
-      type: event.type,
-      pitch: event.pitch,
-      start: event.start * factor,
-      duration: event.duration * factor,
-      velocity: event.velocity,
-      voice: event.voice
-    };
+    events[events.length] = { type: event.type, pitch: event.pitch, start: event.start * factor, duration: event.duration * factor, velocity: event.velocity, voice: event.voice };
   }
-
-  return {
-    type: "texture",
-    textureType: texture.textureType,
-    events: events
-  };
+  return { type: "texture", textureType: texture.textureType, events: events };
 }
 
-// ============================================
-// Texture Analysis
-// ============================================
-
-// Get pitch range
 export fn getPitchRange(texture) {
   let min = 127;
   let max = 0;
-
   for (event in texture.events) {
-    if (event.pitch < min) { min = event.pitch; }
-    if (event.pitch > max) { max = event.pitch; }
+    if (event.pitch < min) {
+      min = event.pitch;
+    }
+    if (event.pitch > max) {
+      max = event.pitch;
+    }
   }
-
   return { low: min, high: max, range: max - min };
 }
 
-// Get temporal span
 export fn getTemporalSpan(texture) {
   let minStart = 1000000;
   let maxEnd = 0;
-
   for (event in texture.events) {
-    if (event.start < minStart) { minStart = event.start; }
+    if (event.start < minStart) {
+      minStart = event.start;
+    }
     const end = event.start + event.duration;
-    if (end > maxEnd) { maxEnd = end; }
+    if (end > maxEnd) {
+      maxEnd = end;
+    }
   }
-
   return { start: minStart, end: maxEnd, duration: maxEnd - minStart };
 }
 
-// Count voices/layers
 export fn countVoices(texture) {
   let voices = {};
   for (event in texture.events) {
@@ -734,7 +358,6 @@ export fn countVoices(texture) {
       voices[v] = true;
     }
   }
-
   let count = 0;
   for (v in voices) {
     count = count + 1;

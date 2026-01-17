@@ -1,4 +1,4 @@
-// std:tuning (v4)
+// std:tuning (v7.0)
 // Functions for working with alternative tuning systems and microtonal music
 
 // ============================================================================
@@ -453,7 +453,7 @@ const JUST_CENTS_BY_SEMITONE = [
 // tonic: the tonic pitch (all intervals calculated relative to this)
 // returns: clip with just-intoned pitches
 export fn applyJustIntonation(c, tonic) {
-  return applyTuning(c, tonic, fn(semitones) {
+  return applyTuning(c, tonic, (semitones) => {
     return JUST_CENTS_BY_SEMITONE[semitones];
   });
 }
@@ -475,7 +475,7 @@ const PYTHAGOREAN_CENTS_BY_SEMITONE = [
 ];
 
 export fn applyPythagorean(c, tonic) {
-  return applyTuning(c, tonic, fn(semitones) {
+  return applyTuning(c, tonic, (semitones) => {
     return PYTHAGOREAN_CENTS_BY_SEMITONE[semitones];
   });
 }
@@ -497,7 +497,7 @@ const MEANTONE_CENTS_BY_SEMITONE = [
 ];
 
 export fn applyMeantone(c, tonic) {
-  return applyTuning(c, tonic, fn(semitones) {
+  return applyTuning(c, tonic, (semitones) => {
     return MEANTONE_CENTS_BY_SEMITONE[semitones];
   });
 }

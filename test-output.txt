@@ -1,0 +1,1334 @@
+
+> takomusic@7.0.0 test
+> vitest
+
+
+[7m[1m[34m DEV [39m[22m[27m [34mv1.6.1[39m [90mC:/Users/shout/Desktop/github/takomusic[39m
+
+ [32m✓[39m src/__tests__/suggestions.test.ts [2m ([22m[2m65 tests[22m[2m)[22m[90m 39[2mms[22m[39m
+ [32m✓[39m src/__tests__/normalize.test.ts [2m ([22m[2m47 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m src/__tests__/cli-errorHandler.test.ts [2m ([22m[2m35 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m src/__tests__/builtins.test.ts [2m ([22m[2m42 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m src/__tests__/cli-richFormatter.test.ts [2m ([22m[2m34 tests[22m[2m)[22m[90m 52[2mms[22m[39m
+ [32m✓[39m src/__tests__/cli-sourceSnippet.test.ts [2m ([22m[2m51 tests[22m[2m)[22m[90m 89[2mms[22m[39m
+ [32m✓[39m src/__tests__/lsp-server.test.ts [2m ([22m[2m34 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m src/__tests__/parser.test.ts [2m ([22m[2m73 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m src/__tests__/lexer.test.ts [2m ([22m[2m61 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m src/__tests__/validation.test.ts [2m ([22m[2m58 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m src/__tests__/musicxml-export.test.ts [2m ([22m[2m40 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m src/__tests__/formatter.test.ts [2m ([22m[2m61 tests[22m[2m)[22m[90m 32[2mms[22m[39m
+ [32m✓[39m src/__tests__/package-manager.test.ts [2m ([22m[2m38 tests[22m[2m)[22m[90m 73[2mms[22m[39m
+ [33m❯[39m src/__tests__/compiler-integration.test.ts [2m ([22m[2m22 tests[22m [2m|[22m [31m1 failed[39m[2m)[22m[90m 226[2mms[22m[39m
+[31m   [33m❯[31m src/__tests__/compiler-integration.test.ts[2m > [22mCompiler Integration Tests[2m > [22mcontrol flow[2m > [22mcompiles if-else statements[39m
+[31m     → [parser] Found 15 error(s). First: Expected identifier at C:\Users\shout\AppData\Local\Temp\mf-compiler-test-1768669082704-bltetdoagr\main.mf:3:7[39m
+ [32m✓[39m src/__tests__/midi-import.test.ts [2m ([22m[2m18 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m src/__tests__/evaluator.test.ts [2m ([22m[2m31 tests[22m[2m)[22m[90m 262[2mms[22m[39m
+ [32m✓[39m src/__tests__/scope.test.ts [2m ([22m[2m40 tests[22m[2m)[22m[90m 32[2mms[22m[39m
+ [32m✓[39m src/__tests__/validator.test.ts [2m ([22m[2m27 tests[22m[2m)[22m[90m 148[2mms[22m[39m
+ [33m❯[39m src/__tests__/stdlib.test.ts [2m ([22m[2m28 tests[22m [2m|[22m [31m3 failed[39m[2m)[22m[33m 327[2mms[22m[39m
+[31m   [33m❯[31m src/__tests__/stdlib.test.ts[2m > [22mstd:markov[2m > [22mstateKey and splitState round trip[39m
+[31m     → [parser] Found 37 error(s). First: Expected identifier at C:\Users\shout\Desktop\github\takomusic\lib\algorithm.mf:397:8[39m
+[31m   [33m❯[31m src/__tests__/stdlib.test.ts[2m > [22mstd:constraint[2m > [22msolves simple allDifferent[39m
+[31m     → [parser] Found 54 error(s). First: Unexpected token in expression at C:\Users\shout\Desktop\github\takomusic\lib\constraint.mf:106:3[39m
+[31m   [33m❯[31m src/__tests__/stdlib.test.ts[2m > [22mstd:autogen[2m > [22mbuilds a bassline motif[39m
+[31m     → [parser] Found 14 error(s). First: Expected identifier at C:\Users\shout\AppData\Local\Temp\mf-test-1768669082865-t9m31a12y\main.mf:7:9[39m
+ [32m✓[39m src/__tests__/browser.test.ts [2m ([22m[2m41 tests[22m[2m)[22m[90m 244[2mms[22m[39m
+ [32m✓[39m src/__tests__/stdlib-registry.test.ts [2m ([22m[2m41 tests[22m[2m)[22m[90m 44[2mms[22m[39m
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mhelp and usage[2m > [22m[2mshows help with --help flag[22m[39m
+Usage: mf install [command] [options]
+
+HTTP URL-based package management (like Go modules / Deno).
+No central registry - packages are fetched directly from URLs.
+
+Commands:
+  <url> [url...]      Install package(s) from URL(s)
+  add <url> [url...]  Same as above (explicit)
+  remove <url>        Remove a package from cache
+  list, ls            List installed packages
+  verify              Verify package hashes match lock file
+  update              Re-fetch all packages from URLs
+
+URL Formats:
+  Full URL:           https://example.com/lib/chords.mf
+  GitHub shorthand:   github.com/user/repo/lib/chords.mf
+  GitLab shorthand:   gitlab.com/user/repo/lib/utils.mf
+
+Examples:
+  mf install github.com/takomusic/stdlib/chords.mf
+  mf install https://example.com/my-lib.mf
+  mf install list
+  mf install verify
+  mf install update
+
+Import in code:
+  import { chord } from "github.com/user/repo/lib/chords.mf";
+  import { func } from "https://example.com/lib/utils.mf";
+
+Files:
+  mf.lock       Lock file with package hashes
+  .mf_cache/    Local cache of downloaded packages
+
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mhelp and usage[2m > [22m[2mshows help with -h flag[22m[39m
+Usage: mf install [command] [options]
+
+HTTP URL-based package management (like Go modules / Deno).
+No central registry - packages are fetched directly from URLs.
+
+Commands:
+  <url> [url...]      Install package(s) from URL(s)
+  add <url> [url...]  Same as above (explicit)
+  remove <url>        Remove a package from cache
+  list, ls            List installed packages
+  verify              Verify package hashes match lock file
+  update              Re-fetch all packages from URLs
+
+URL Formats:
+  Full URL:           https://example.com/lib/chords.mf
+  GitHub shorthand:   github.com/user/repo/lib/chords.mf
+  GitLab shorthand:   gitlab.com/user/repo/lib/utils.mf
+
+Examples:
+  mf install github.com/takomusic/stdlib/chords.mf
+  mf install https://example.com/my-lib.mf
+  mf install list
+  mf install verify
+  mf install update
+
+Import in code:
+  import { chord } from "github.com/user/repo/lib/chords.mf";
+  import { func } from "https://example.com/lib/utils.mf";
+
+Files:
+  mf.lock       Lock file with package hashes
+  .mf_cache/    Local cache of downloaded packages
+
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mhelp and usage[2m > [22m[2mshows help when no arguments provided[22m[39m
+Usage: mf install [command] [options]
+
+HTTP URL-based package management (like Go modules / Deno).
+No central registry - packages are fetched directly from URLs.
+
+Commands:
+  <url> [url...]      Install package(s) from URL(s)
+  add <url> [url...]  Same as above (explicit)
+  remove <url>        Remove a package from cache
+  list, ls            List installed packages
+  verify              Verify package hashes match lock file
+  update              Re-fetch all packages from URLs
+
+URL Formats:
+  Full URL:           https://example.com/lib/chords.mf
+  GitHub shorthand:   github.com/user/repo/lib/chords.mf
+  GitLab shorthand:   gitlab.com/user/repo/lib/utils.mf
+
+Examples:
+  mf install github.com/takomusic/stdlib/chords.mf
+  mf install https://example.com/my-lib.mf
+  mf install list
+  mf install verify
+  mf install update
+
+Import in code:
+  import { chord } from "github.com/user/repo/lib/chords.mf";
+  import { func } from "https://example.com/lib/utils.mf";
+
+Files:
+  mf.lock       Lock file with package hashes
+  .mf_cache/    Local cache of downloaded packages
+
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mfails when no URL specified[22m[39m
+Usage: mf install <url> [url...]
+
+[90mstderr[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mfails when no URL specified[22m[39m
+error: No package URL specified
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2maccepts URL as direct argument[22m[39m
+fetching: https://example.com/test.mf
+  → https://example.com/test.mf
+installed: https://example.com/test.mf
+  hash: abc123def456...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083014-f2nny8sjvi8\.mf_cache\test.mf
+
+Successfully installed 1 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2maccepts URL with add subcommand[22m[39m
+fetching: https://example.com/test.mf
+  → https://example.com/test.mf
+installed: https://example.com/test.mf
+  hash: abc123def456...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083018-c77jv073us7\.mf_cache\test.mf
+
+Successfully installed 1 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mhandles multiple URLs[22m[39m
+fetching: https://example.com/test1.mf
+  → https://example.com/test1.mf
+installed: https://example.com/test.mf
+  hash: abc123def456...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083020-56womm4qz85\.mf_cache\test.mf
+fetching: https://example.com/test2.mf
+  → https://example.com/test2.mf
+installed: https://example.com/test.mf
+  hash: abc123def456...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083020-56womm4qz85\.mf_cache\test.mf
+
+Successfully installed 2 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mhandles GitHub shorthand URLs[22m[39m
+fetching: github.com/user/repo/lib/test.mf
+  → https://raw.githubusercontent.com/user/repo/main/lib/test.mf
+installed: https://raw.githubusercontent.com/user/repo/main/lib/test.mf
+  hash: abc123def456...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083022-hrqh4nfc2ta\.mf_cache\test.mf
+
+Successfully installed 1 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mskips already cached packages[22m[39m
+cached: https://example.com/test.mf
+  → https://example.com/test.mf
+
+Successfully installed 1 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mhandles installation errors gracefully[22m[39m
+fetching: https://example.com/test.mf
+  → https://example.com/test.mf
+
+Installed 0 package(s), 1 failed
+
+[90mstderr[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mhandles installation errors gracefully[22m[39m
+failed: https://example.com/test.mf
+  Network error
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mreports partial success when some packages fail[22m[39m
+fetching: https://example.com/test1.mf
+  → https://example.com/test1.mf
+installed: https://example.com/test1.mf
+  hash: abc123...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083028-cet46twgsol\.mf_cache\test1.mf
+fetching: https://example.com/test2.mf
+  → https://example.com/test2.mf
+
+Installed 1 package(s), 1 failed
+
+[90mstderr[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2madd subcommand[2m > [22m[2mreports partial success when some packages fail[22m[39m
+failed: https://example.com/test2.mf
+  Failed to fetch
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mremove subcommand[2m > [22m[2mfails when no URL specified[22m[39m
+Usage: mf install remove <url> [url...]
+
+[90mstderr[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mremove subcommand[2m > [22m[2mfails when no URL specified[22m[39m
+error: No package URL specified
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mremove subcommand[2m > [22m[2mremoves specified package[22m[39m
+removed: https://example.com/test.mf
+
+Removed 1 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mremove subcommand[2m > [22m[2maccepts rm as alias[22m[39m
+removed: https://example.com/test.mf
+
+Removed 1 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mremove subcommand[2m > [22m[2mhandles non-existent package[22m[39m
+not found: https://example.com/nonexistent.mf
+
+Removed 0 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mremove subcommand[2m > [22m[2mhandles multiple removals[22m[39m
+removed: https://example.com/test1.mf
+removed: https://example.com/test2.mf
+
+Removed 2 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mlist subcommand[2m > [22m[2mlists installed packages[22m[39m
+1 package(s) installed:
+
+https://example.com/test.mf
+  hash: abc123def456...
+  fetched: 2024-01-01T00:00:00Z
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mlist subcommand[2m > [22m[2maccepts ls as alias[22m[39m
+No packages installed.
+
+Install packages with:
+  mf install github.com/user/repo/lib/chords.mf
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mlist subcommand[2m > [22m[2mhandles empty package list[22m[39m
+No packages installed.
+
+Install packages with:
+  mf install github.com/user/repo/lib/chords.mf
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mlist subcommand[2m > [22m[2mdisplays multiple packages[22m[39m
+2 package(s) installed:
+
+https://example.com/test1.mf
+  hash: abc123...
+  fetched: 2024-01-01T00:00:00Z
+https://example.com/test2.mf
+  hash: def456...
+  fetched: 2024-01-02T00:00:00Z
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mverify subcommand[2m > [22m[2mverifies all packages successfully[22m[39m
+Verifying installed packages...
+
+✓ 1 package(s) valid
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mverify subcommand[2m > [22m[2mreports invalid packages[22m[39m
+Verifying installed packages...
+
+✗ 1 package(s) modified:
+  - https://example.com/modified.mf
+
+Run "mf install update" to re-fetch packages.
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mverify subcommand[2m > [22m[2mreports missing packages[22m[39m
+Verifying installed packages...
+
+? 1 package(s) missing:
+  - https://example.com/missing.mf
+
+Run "mf install update" to re-fetch packages.
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mverify subcommand[2m > [22m[2mhandles mixed results[22m[39m
+Verifying installed packages...
+
+✓ 1 package(s) valid
+✗ 1 package(s) modified:
+  - https://example.com/invalid.mf
+? 1 package(s) missing:
+  - https://example.com/missing.mf
+
+Run "mf install update" to re-fetch packages.
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mupdate subcommand[2m > [22m[2mupdates all packages successfully[22m[39m
+Updating all packages...
+
+Updated 1 package(s):
+  - https://example.com/test.mf
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mupdate subcommand[2m > [22m[2mhandles update failures[22m[39m
+Updating all packages...
+
+Failed to update 1 package(s):
+  - https://example.com/test.mf
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mupdate subcommand[2m > [22m[2mhandles partial success[22m[39m
+Updating all packages...
+
+Updated 1 package(s):
+  - https://example.com/test1.mf
+Failed to update 1 package(s):
+  - https://example.com/test2.mf
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mupdate subcommand[2m > [22m[2mhandles no packages to update[22m[39m
+Updating all packages...
+
+No packages to update.
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2merror handling[2m > [22m[2mhandles package manager errors gracefully[22m[39m
+fetching: https://example.com/test.mf
+  → https://example.com/test.mf
+
+Installed 0 package(s), 1 failed
+
+[90mstderr[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2merror handling[2m > [22m[2mhandles package manager errors gracefully[22m[39m
+failed: https://example.com/test.mf
+  Unexpected error
+
+[90mstderr[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2merror handling[2m > [22m[2mhandles invalid URL errors[22m[39m
+error: Invalid URL
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mURL normalization[2m > [22m[2mnormalizes GitHub shorthand[22m[39m
+fetching: github.com/user/repo/lib/test.mf
+  → https://raw.githubusercontent.com/user/repo/main/lib/test.mf
+installed: https://raw.githubusercontent.com/user/repo/main/lib/test.mf
+  hash: abc123...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083060-sv6w3resmxp\.mf_cache\test.mf
+
+Successfully installed 1 package(s)
+
+[90mstdout[2m | src/__tests__/cli-install.test.ts[2m > [22m[2minstall command - Smoke Tests[2m > [22m[2mURL normalization[2m > [22m[2maccepts full HTTPS URLs[22m[39m
+fetching: https://example.com/lib/test.mf
+  → https://example.com/lib/test.mf
+installed: https://example.com/lib/test.mf
+  hash: abc123...
+  path: ..\..\..\AppData\Local\Temp\mf-install-test-1768669083062-bccqj7chox4\.mf_cache\test.mf
+
+Successfully installed 1 package(s)
+
+ [32m✓[39m src/__tests__/cli-install.test.ts [2m ([22m[2m32 tests[22m[2m)[22m[90m 59[2mms[22m[39m
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mhelp and usage[2m > [22m[2mshows help with --help flag[22m[39m
+Usage: mf init [dir] [options]
+
+Options:
+  -t, --template <name>  Use a project template
+  -l, --list             List available templates
+  -h, --help             Show this help message
+
+Available templates:
+  default      Starter project with vocal and piano tracks
+  piano        Piano solo template
+  vocaloid     Vocal synthesis template
+  minimal      Minimal starting template
+
+Examples:
+  mf init
+  mf init my-project
+  mf init -t piano
+  mf init my-song -t vocaloid
+
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mhelp and usage[2m > [22m[2mshows help with -h flag[22m[39m
+Usage: mf init [dir] [options]
+
+Options:
+  -t, --template <name>  Use a project template
+  -l, --list             List available templates
+  -h, --help             Show this help message
+
+Available templates:
+  default      Starter project with vocal and piano tracks
+  piano        Piano solo template
+  vocaloid     Vocal synthesis template
+  minimal      Minimal starting template
+
+Examples:
+  mf init
+  mf init my-project
+  mf init -t piano
+  mf init my-song -t vocaloid
+
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplate listing[2m > [22m[2mlists available templates with --list flag[22m[39m
+Available Templates:
+
+  default      Default
+              Starter project with vocal and piano tracks
+
+  piano        Piano
+              Piano solo template
+
+  vocaloid     Vocaloid
+              Vocal synthesis template
+
+  minimal      Minimal
+              Minimal starting template
+
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplate listing[2m > [22m[2mlists available templates with -l flag[22m[39m
+Available Templates:
+
+  default      Default
+              Starter project with vocal and piano tracks
+
+  piano        Piano
+              Piano solo template
+
+  vocaloid     Vocaloid
+              Vocal synthesis template
+
+  minimal      Minimal
+              Minimal starting template
+
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdefault initialization[2m > [22m[2minitializes project in current directory[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdefault initialization[2m > [22m[2mcreates valid mfconfig.toml[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdefault initialization[2m > [22m[2mcreates valid main.mf with default template[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdefault initialization[2m > [22m[2mcreates valid render profile[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdefault initialization[2m > [22m[2mcreates .gitignore with proper excludes[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdefault initialization[2m > [22m[2mfails when project already initialized[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstderr[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdefault initialization[2m > [22m[2mfails when project already initialized[22m[39m
+Project already initialized (mfconfig.toml exists)
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtarget directory[2m > [22m[2minitializes in specified directory[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtarget directory[2m > [22m[2mcreates target directory if it does not exist[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplates[2m > [22m[2minitializes with default template[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplates[2m > [22m[2minitializes with piano template[22m[39m
+Initializing TakoMusic project with "Piano" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Piano" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplates[2m > [22m[2minitializes with vocaloid template[22m[39m
+Initializing TakoMusic project with "Vocaloid" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Vocaloid" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplates[2m > [22m[2minitializes with minimal template[22m[39m
+Initializing TakoMusic project with "Minimal" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Minimal" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplates[2m > [22m[2mfails with unknown template[22m[39m
+Run "mf init --list" to see available templates.
+
+[90mstderr[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplates[2m > [22m[2mfails with unknown template[22m[39m
+Unknown template: nonexistent
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplates[2m > [22m[2mcombines directory and template options[22m[39m
+Initializing TakoMusic project with "Piano" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Piano" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mfile preservation[2m > [22m[2mdoes not overwrite existing src/main.mf[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mfile preservation[2m > [22m[2mdoes not overwrite existing .gitignore[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mfile preservation[2m > [22m[2mdoes not overwrite existing profile[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplate content validation[2m > [22m[2mdefault template contains vocal and piano tracks[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplate content validation[2m > [22m[2mpiano template is minimal and functional[22m[39m
+Initializing TakoMusic project with "Piano" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Piano" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplate content validation[2m > [22m[2mvocaloid template includes vocal synthesis[22m[39m
+Initializing TakoMusic project with "Vocaloid" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Vocaloid" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mtemplate content validation[2m > [22m[2mminimal template is bare bones[22m[39m
+Initializing TakoMusic project with "Minimal" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Minimal" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstderr[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2moption parsing[2m > [22m[2mrequires template value after --template flag[22m[39m
+--template requires a value
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2moption parsing[2m > [22m[2mhandles multiple flags correctly[22m[39m
+Initializing TakoMusic project with "Piano" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Piano" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2moption parsing[2m > [22m[2mignores unknown flags gracefully[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdirectory structure[2m > [22m[2mcreates all required directories[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mdirectory structure[2m > [22m[2mdoes not create duplicate directories[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: dist/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mintegration[2m > [22m[2mcreates a project that can be checked[22m[39m
+Initializing TakoMusic project with "Default" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Default" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+[90mstdout[2m | src/__tests__/cli-init.test.ts[2m > [22m[2minit command - Smoke Tests[2m > [22m[2mintegration[2m > [22m[2mcreates different content for different templates[22m[39m
+Initializing TakoMusic project with "Piano" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Piano" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+Initializing TakoMusic project with "Vocaloid" template...
+
+Created: src/
+Created: dist/
+Created: out/
+Created: profiles/
+Created: mfconfig.toml
+Created: src/main.mf
+Created: profiles/default.mf.profile.json
+Created: .gitignore
+
+TakoMusic project initialized with "Vocaloid" template!
+
+Next steps:
+  mf check        Check for errors
+  mf build        Build the project
+  mf render       Render with the default profile
+
+ [32m✓[39m src/__tests__/cli-init.test.ts [2m ([22m[2m32 tests[22m[2m)[22m[90m 265[2mms[22m[39m
+ [32m✓[39m src/__tests__/cli-repl.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+[90mstdout[2m | src/__tests__/cli-repl.test.ts[2m > [22m[2mrepl command - Smoke Tests[2m > [22m[2margument parsing[2m > [22m[2mshows help with --help flag[22m[39m
+Usage: mf repl [options]
+
+Start an interactive REPL session.
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  mf repl                Start the REPL
+
+
+[90mstdout[2m | src/__tests__/cli-repl.test.ts[2m > [22m[2mrepl command - Smoke Tests[2m > [22m[2margument parsing[2m > [22m[2mshows help with -h flag[22m[39m
+Usage: mf repl [options]
+
+Start an interactive REPL session.
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  mf repl                Start the REPL
+
+
+ [32m✓[39m src/__tests__/typecheck.test.ts [2m ([22m[2m23 tests[22m[2m)[22m[90m 187[2mms[22m[39m
+ [32m✓[39m src/__tests__/v4.compiler.test.ts [2m ([22m[2m7 tests[22m[2m)[22m[90m 139[2mms[22m[39m
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2margument parsing[2m > [22m[2mshows help with --help flag[22m[39m
+Usage: mf watch [options] [file]
+
+Watch for file changes and automatically rebuild.
+
+Options:
+  -b, --build       Build IR instead of just checking
+  -d, --debounce    Debounce time in ms (default: 300)
+  -v, --verbose     Show verbose output
+  -h, --help        Show this help message
+
+Examples:
+  mf watch                  Watch and check src/main.mf
+  mf watch -b               Watch and build
+  mf watch src/song.mf      Watch specific file
+  mf watch --debounce 500   Set debounce time to 500ms
+
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2margument parsing[2m > [22m[2mshows help with -h flag[22m[39m
+Usage: mf watch [options] [file]
+
+Watch for file changes and automatically rebuild.
+
+Options:
+  -b, --build       Build IR instead of just checking
+  -d, --debounce    Debounce time in ms (default: 300)
+  -v, --verbose     Show verbose output
+  -h, --help        Show this help message
+
+Examples:
+  mf watch                  Watch and check src/main.mf
+  mf watch -b               Watch and build
+  mf watch src/song.mf      Watch specific file
+  mf watch --debounce 500   Set debounce time to 500ms
+
+
+[90mstderr[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mfile validation[2m > [22m[2mfails when specified file does not exist[22m[39m
+error: File not found: C:\Users\shout\AppData\Local\Temp\mf-watch-test-1768669083308-rdgcdbot2c\nonexistent.mf
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mfile validation[2m > [22m[2maccepts absolute path to existing file[22m[39m
+Watching for changes in ..\..\..\AppData\Local\Temp\mf-watch-test-1768669083310-b7bs9o2geck
+Mode: check
+Press Ctrl+C to stop
+
+[01:58:03] Running check...
+No issues found.
+Done (104ms)
+
+
+ [33m❯[39m src/__tests__/cli-commands.test.ts [2m ([22m[2m10 tests[22m [2m|[22m [31m1 failed[39m[2m)[22m[90m 128[2mms[22m[39m
+[31m   [33m❯[31m src/__tests__/cli-commands.test.ts[2m > [22mCLI Commands - Smoke Tests[2m > [22mcheck command[2m > [22mfails for invalid syntax[39m
+[31m     → expected +0 not to be +0 // Object.is equality[39m
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mbuild command[2m > [22m[2mshows help with --help flag[22m[39m
+Usage: mf build [file.mf] [options]
+
+Arguments:
+  file.mf      Input file (optional if mfconfig.toml exists)
+
+Options:
+  -o, --output Output file path
+  -w, --watch  Watch for changes and rebuild
+  -h, --help   Show this help message
+
+Examples:
+  mf build                    # Build using mfconfig.toml
+  mf build song.mf            # Build single file (no config needed)
+  mf build song.mf -o out.json
+
+
+[90mstderr[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mbuild command[2m > [22m[2mfails when file does not exist[22m[39m
+File not found: C:\Users\shout\AppData\Local\Temp\mf-cli-test-1768669083346-7cumz1elsge\nonexistent.mf
+
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mbuild command[2m > [22m[2mcompiles valid minimal file[22m[39m
+Compiling...
+Generated: C:\Users\shout\AppData\Local\Temp\mf-cli-test-1768669083348-uibtteqby4e\test.mf.score.json
+Build complete in 0.10s
+
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mbuild command[2m > [22m[2mfails on syntax error[22m[39m
+Compiling...
+
+[90mstderr[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mbuild command[2m > [22m[2mfails on syntax error[22m[39m
+error: [parser] Found 1 error(s). First: Expected ';' at C:\Users\shout\AppData\Local\Temp\mf-cli-test-1768669083449-u7a75pe7mmj\broken.mf:1:23
+
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mfmt command[2m > [22m[2mshows help with --help flag[22m[39m
+Usage: mf fmt [options] [files...]
+
+Format TakoMusic source files.
+
+Options:
+  -c, --check   Check if files are formatted without writing changes
+  -h, --help    Show this help message
+
+Examples:
+  mf fmt                    Format all .mf files in current directory
+  mf fmt src/main.mf        Format specific file
+  mf fmt --check            Check formatting without changes
+
+
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mfmt command[2m > [22m[2mformats a single file[22m[39m
+Formatted: ..\..\..\AppData\Local\Temp\mf-cli-test-1768669083454-6m728s62lvn\test.mf
+
+[90mstderr[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mfmt command[2m > [22m[2mfails when file does not exist[22m[39m
+error: File not found: C:\Users\shout\AppData\Local\Temp\mf-cli-test-1768669083457-ypj0d0inoch\nonexistent.mf
+
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mcheck command[2m > [22m[2mshows help with --help flag[22m[39m
+Usage: mf check [file]
+
+Options:
+  -h, --help  Show this help message
+
+
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mcheck command[2m > [22m[2msucceeds for valid file[22m[39m
+No issues found.
+
+[90mstdout[2m | src/__tests__/cli-commands.test.ts[2m > [22m[2mCLI Commands - Smoke Tests[2m > [22m[2mcheck command[2m > [22m[2mfails for invalid syntax[22m[39m
+No issues found.
+
+ [32m✓[39m src/__tests__/kanji.test.ts [2m ([22m[2m53 tests[22m[2m)[22m[33m 437[2mms[22m[39m
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mfile validation[2m > [22m[2maccepts absolute path to existing file[22m[39m
+
+Stopping watch...
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts --build flag[22m[39m
+Watching for changes in ..\..\..\AppData\Local\Temp\mf-watch-test-1768669083728-7fasa8sh6h3
+Mode: build
+Press Ctrl+C to stop
+
+[01:58:03] Running build...
+Compiling...
+Generated: C:\Users\shout\AppData\Local\Temp\mf-watch-test-1768669083728-7fasa8sh6h3\test.mf.score.json
+Build complete in 0.00s
+Done (2ms)
+
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts --build flag[22m[39m
+
+Stopping watch...
+
+Stopping watch...
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts -b flag as shorthand[22m[39m
+Watching for changes in ..\..\..\AppData\Local\Temp\mf-watch-test-1768669084040-kguznnu5rb
+Mode: build
+Press Ctrl+C to stop
+
+[01:58:04] Running build...
+Compiling...
+Generated: C:\Users\shout\AppData\Local\Temp\mf-watch-test-1768669084040-kguznnu5rb\test.mf.score.json
+Build complete in 0.00s
+Done (1ms)
+
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts -b flag as shorthand[22m[39m
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts --verbose flag[22m[39m
+Watching for changes in ..\..\..\AppData\Local\Temp\mf-watch-test-1768669084353-al9lut52x3k
+Mode: check
+Press Ctrl+C to stop
+
+[01:58:04] Running check...
+No issues found.
+Done (1ms)
+
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts --verbose flag[22m[39m
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts --debounce with custom value[22m[39m
+Watching for changes in ..\..\..\AppData\Local\Temp\mf-watch-test-1768669084669-kinjjxpxqmk
+Mode: check
+Press Ctrl+C to stop
+
+[01:58:04] Running check...
+No issues found.
+Done (2ms)
+
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2maccepts --debounce with custom value[22m[39m
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+[90mstderr[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mmode options[2m > [22m[2mrejects unknown options[22m[39m
+Unknown option: --unknown-option
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mwatch behavior[2m > [22m[2mperforms initial check run[22m[39m
+Watching for changes in ..\..\..\AppData\Local\Temp\mf-watch-test-1768669084978-s6d0u4mzz7
+Mode: check
+Press Ctrl+C to stop
+
+[01:58:04] Running check...
+No issues found.
+Done (2ms)
+
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mwatch behavior[2m > [22m[2mperforms initial check run[22m[39m
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mwatch behavior[2m > [22m[2mhandles syntax errors gracefully[22m[39m
+Watching for changes in ..\..\..\AppData\Local\Temp\mf-watch-test-1768669085382-59efgkkord8
+Mode: check
+Press Ctrl+C to stop
+
+[01:58:05] Running check...
+No issues found.
+Done (2ms)
+
+
+[90mstdout[2m | src/__tests__/cli-watch.test.ts[2m > [22m[2mwatch command - Smoke Tests[2m > [22m[2mwatch behavior[2m > [22m[2mhandles syntax errors gracefully[22m[39m
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+Stopping watch...
+
+ [32m✓[39m src/__tests__/cli-watch.test.ts [2m ([22m[2m11 tests[22m[2m)[22m[33m 2488[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[1m[7m Failed Tests 5 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[31m[1m[7m FAIL [27m[22m[39m src/__tests__/cli-commands.test.ts[2m > [22mCLI Commands - Smoke Tests[2m > [22mcheck command[2m > [22mfails for invalid syntax
+[31m[1mAssertionError[22m: expected +0 not to be +0 // Object.is equality[39m
+[36m [2m❯[22m src/__tests__/cli-commands.test.ts:[2m128:28[22m[39m
+    [90m126| [39m
+    [90m127| [39m      [35mconst[39m exitCode [33m=[39m [35mawait[39m [34mcheckCommand[39m([inputFile])[33m;[39m
+    [90m128| [39m      [34mexpect[39m(exitCode)[33m.[39mnot[33m.[39m[34mtoBe[39m([33mExitCodes[39m[33m.[39m[33mSUCCESS[39m)[33m;[39m
+    [90m   | [39m                           [31m^[39m
+    [90m129| [39m    })[33m;[39m
+    [90m130| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m src/__tests__/compiler-integration.test.ts[2m > [22mCompiler Integration Tests[2m > [22mcontrol flow[2m > [22mcompiles if-else statements
+[31m[1mError[22m: [parser] Found 15 error(s). First: Expected identifier at C:\Users\shout\AppData\Local\Temp\mf-compiler-test-1768669082704-bltetdoagr\main.mf:3:7[39m
+[36m [2m❯[22m V4Parser.error src/parser.ts:[2m1865:12[22m[39m
+    [90m1863| [39m    [35mthis[39m[33m.[39mpanicMode [33m=[39m [35mtrue[39m[33m;[39m
+    [90m1864| [39m    [35mconst[39m loc [33m=[39m [35mthis[39m[33m.[39mfilePath [33m?[39m [32m`[39m[36m${[39m[35mthis[39m[33m.[39mfilePath[36m}[39m[32m:[39m[36m${[39mposition[33m.[39mline[36m}[39m[32m:[39m[36m${[39mp…
+    [90m1865| [39m    [35mreturn[39m [35mnew[39m [33mError[39m([32m`[parser] [39m[36m${[39mmessage[36m}[39m[32m at [39m[36m${[39mloc[36m}[39m[32m`[39m)[33m;[39m
+    [90m   | [39m           [31m^[39m
+    [90m1866| [39m  }
+    [90m1867| [39m}
+[90m [2m❯[22m V4Parser.parseProgram src/parser.ts:[2m192:20[22m[39m
+[90m [2m❯[22m V4Compiler.loadModule src/compiler.ts:[2m102:28[22m[39m
+[90m [2m❯[22m V4Compiler.compile src/compiler.ts:[2m41:25[22m[39m
+[90m [2m❯[22m src/__tests__/compiler-integration.test.ts:[2m307:27[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m src/__tests__/stdlib.test.ts[2m > [22mstd:markov[2m > [22mstateKey and splitState round trip
+[31m[1mError[22m: [parser] Found 37 error(s). First: Expected identifier at C:\Users\shout\Desktop\github\takomusic\lib\algorithm.mf:397:8[39m
+[36m [2m❯[22m V4Parser.error src/parser.ts:[2m1865:12[22m[39m
+    [90m1863| [39m    [35mthis[39m[33m.[39mpanicMode [33m=[39m [35mtrue[39m[33m;[39m
+    [90m1864| [39m    [35mconst[39m loc [33m=[39m [35mthis[39m[33m.[39mfilePath [33m?[39m [32m`[39m[36m${[39m[35mthis[39m[33m.[39mfilePath[36m}[39m[32m:[39m[36m${[39mposition[33m.[39mline[36m}[39m[32m:[39m[36m${[39mp…
+    [90m1865| [39m    [35mreturn[39m [35mnew[39m [33mError[39m([32m`[parser] [39m[36m${[39mmessage[36m}[39m[32m at [39m[36m${[39mloc[36m}[39m[32m`[39m)[33m;[39m
+    [90m   | [39m           [31m^[39m
+    [90m1866| [39m  }
+    [90m1867| [39m}
+[90m [2m❯[22m V4Parser.parseProgram src/parser.ts:[2m192:20[22m[39m
+[90m [2m❯[22m V4Compiler.loadModule src/compiler.ts:[2m102:28[22m[39m
+[90m [2m❯[22m V4Compiler.handleImport src/compiler.ts:[2m171:29[22m[39m
+[90m [2m❯[22m V4Compiler.evaluateModule src/compiler.ts:[2m126:12[22m[39m
+[90m [2m❯[22m V4Compiler.handleImport src/compiler.ts:[2m172:12[22m[39m
+[90m [2m❯[22m V4Compiler.evaluateModule src/compiler.ts:[2m126:12[22m[39m
+[90m [2m❯[22m V4Compiler.compile src/compiler.ts:[2m42:10[22m[39m
+[90m [2m❯[22m Module.compileToIR src/__tests__/helpers/testUtils.ts:[2m103:21[22m[39m
+[90m [2m❯[22m src/__tests__/stdlib.test.ts:[2m595:16[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m src/__tests__/stdlib.test.ts[2m > [22mstd:constraint[2m > [22msolves simple allDifferent
+[31m[1mError[22m: [parser] Found 54 error(s). First: Unexpected token in expression at C:\Users\shout\Desktop\github\takomusic\lib\constraint.mf:106:3[39m
+[36m [2m❯[22m V4Parser.error src/parser.ts:[2m1865:12[22m[39m
+    [90m1863| [39m    [35mthis[39m[33m.[39mpanicMode [33m=[39m [35mtrue[39m[33m;[39m
+    [90m1864| [39m    [35mconst[39m loc [33m=[39m [35mthis[39m[33m.[39mfilePath [33m?[39m [32m`[39m[36m${[39m[35mthis[39m[33m.[39mfilePath[36m}[39m[32m:[39m[36m${[39mposition[33m.[39mline[36m}[39m[32m:[39m[36m${[39mp…
+    [90m1865| [39m    [35mreturn[39m [35mnew[39m [33mError[39m([32m`[parser] [39m[36m${[39mmessage[36m}[39m[32m at [39m[36m${[39mloc[36m}[39m[32m`[39m)[33m;[39m
+    [90m   | [39m           [31m^[39m
+    [90m1866| [39m  }
+    [90m1867| [39m}
+[90m [2m❯[22m V4Parser.parseProgram src/parser.ts:[2m192:20[22m[39m
+[90m [2m❯[22m V4Compiler.loadModule src/compiler.ts:[2m102:28[22m[39m
+[90m [2m❯[22m V4Compiler.handleImport src/compiler.ts:[2m171:29[22m[39m
+[90m [2m❯[22m V4Compiler.evaluateModule src/compiler.ts:[2m126:12[22m[39m
+[90m [2m❯[22m V4Compiler.compile src/compiler.ts:[2m42:10[22m[39m
+[90m [2m❯[22m Module.compileToIR src/__tests__/helpers/testUtils.ts:[2m103:21[22m[39m
+[90m [2m❯[22m src/__tests__/stdlib.test.ts:[2m619:16[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m src/__tests__/stdlib.test.ts[2m > [22mstd:autogen[2m > [22mbuilds a bassline motif
+[31m[1mError[22m: [parser] Found 14 error(s). First: Expected identifier at C:\Users\shout\AppData\Local\Temp\mf-test-1768669082865-t9m31a12y\main.mf:7:9[39m
+[36m [2m❯[22m V4Parser.error src/parser.ts:[2m1865:12[22m[39m
+    [90m1863| [39m    [35mthis[39m[33m.[39mpanicMode [33m=[39m [35mtrue[39m[33m;[39m
+    [90m1864| [39m    [35mconst[39m loc [33m=[39m [35mthis[39m[33m.[39mfilePath [33m?[39m [32m`[39m[36m${[39m[35mthis[39m[33m.[39mfilePath[36m}[39m[32m:[39m[36m${[39mposition[33m.[39mline[36m}[39m[32m:[39m[36m${[39mp…
+    [90m1865| [39m    [35mreturn[39m [35mnew[39m [33mError[39m([32m`[parser] [39m[36m${[39mmessage[36m}[39m[32m at [39m[36m${[39mloc[36m}[39m[32m`[39m)[33m;[39m
+    [90m   | [39m           [31m^[39m
+    [90m1866| [39m  }
+    [90m1867| [39m}
+[90m [2m❯[22m V4Parser.parseProgram src/parser.ts:[2m192:20[22m[39m
+[90m [2m❯[22m V4Compiler.loadModule src/compiler.ts:[2m102:28[22m[39m
+[90m [2m❯[22m V4Compiler.compile src/compiler.ts:[2m41:25[22m[39m
+[90m [2m❯[22m Module.compileToIR src/__tests__/helpers/testUtils.ts:[2m103:21[22m[39m
+[90m [2m❯[22m src/__tests__/stdlib.test.ts:[2m642:16[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m26 passed[39m[22m[90m (29)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m1052 passed[39m[22m[90m (1057)[39m
+[2m   Start at [22m 01:58:01
+[2m   Duration [22m 4.61s[2m (transform 4.39s, setup 1ms, collect 10.07s, tests 5.44s, environment 8ms, prepare 6.17s)[22m
+
+
+[1m[7m[31m FAIL [39m[27m[22m[31m Tests failed. Watching for file changes...[39m
+       [2mpress [22m[1mh[22m[2m to show help[22m[2m, [22m[2mpress [22m[1mq[22m[2m to quit[22m

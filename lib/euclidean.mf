@@ -1,4 +1,4 @@
-// std:euclidean (v5.3)
+// std:euclidean (v7.0)
 // Euclidean rhythms and related algorithmic rhythm generators
 // Based on Godfried Toussaint's research on Euclidean rhythms
 
@@ -13,7 +13,7 @@
 export fn euclidean(k, n) {
   if (k >= n) {
     let result = [];
-    for (_ in 0..(n - 1)) {
+    for (_ in 0 .. (n - 1)) {
       result[result.length] = 1;
     }
     return result;
@@ -21,7 +21,7 @@ export fn euclidean(k, n) {
 
   if (k == 0) {
     let result = [];
-    for (_ in 0..(n - 1)) {
+    for (_ in 0 .. (n - 1)) {
       result[result.length] = 0;
     }
     return result;
@@ -29,7 +29,7 @@ export fn euclidean(k, n) {
 
   // Bjorklund's algorithm
   let pattern = [];
-  for (i in 0..(n - 1)) {
+  for (i in 0 .. (n - 1)) {
     if (i < k) {
       pattern[i] = [1];
     } else {
@@ -45,7 +45,7 @@ export fn euclidean(k, n) {
       pairs = divisor;
     }
 
-    for (i in 0..(pairs - 1)) {
+    for (i in 0 .. (pairs - 1)) {
       let combined = [];
       for (x in pattern[i]) {
         combined[combined.length] = x;
@@ -58,12 +58,12 @@ export fn euclidean(k, n) {
 
     // Add remaining
     if (k > divisor) {
-      for (i in pairs..(k - divisor - 1 + pairs)) {
+      for (i in pairs .. (k - divisor - 1 + pairs)) {
         newPattern[newPattern.length] = pattern[i];
       }
     } else {
       let remaining = divisor - k;
-      for (i in 0..(remaining - 1)) {
+      for (i in 0 .. (remaining - 1)) {
         newPattern[newPattern.length] = pattern[k + i];
       }
     }
@@ -103,7 +103,7 @@ export fn rotate(pattern, offset) {
   }
 
   let result = [];
-  for (i in 0..(n - 1)) {
+  for (i in 0 .. (n - 1)) {
     result[i] = pattern[(i + off) % n];
   }
   return result;
@@ -112,7 +112,7 @@ export fn rotate(pattern, offset) {
 // Find all rotations of a pattern
 export fn allRotations(pattern) {
   let rotations = [];
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     rotations[i] = rotate(pattern, i);
   }
   return rotations;
@@ -187,7 +187,7 @@ export fn getIOIs(pattern) {
   let iois = [];
   let lastOnset = -1;
 
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     if (pattern[i] == 1) {
       if (lastOnset >= 0) {
         iois[iois.length] = i - lastOnset;
@@ -199,7 +199,7 @@ export fn getIOIs(pattern) {
   // Wrap around for cyclic pattern
   if (lastOnset >= 0) {
     let firstOnset = -1;
-    for (i in 0..(pattern.length - 1)) {
+    for (i in 0 .. (pattern.length - 1)) {
       if (pattern[i] == 1) {
         firstOnset = i;
         break;
@@ -222,7 +222,7 @@ export fn isMaximallyEven(pattern) {
   // Check all rotations
   for (rotation in allRotations(expected)) {
     let match = true;
-    for (i in 0..(n - 1)) {
+    for (i in 0 .. (n - 1)) {
       if (pattern[i] != rotation[i]) {
         match = false;
         break;
@@ -281,7 +281,7 @@ export fn invert(pattern) {
 // Reverse pattern
 export fn reverse(pattern) {
   let result = [];
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     result[i] = pattern[pattern.length - 1 - i];
   }
   return result;
@@ -291,7 +291,7 @@ export fn reverse(pattern) {
 export fn stretch(pattern, factor) {
   let result = [];
   for (x in pattern) {
-    for (_ in 0..(factor - 1)) {
+    for (_ in 0 .. (factor - 1)) {
       result[result.length] = x;
     }
   }
@@ -301,7 +301,7 @@ export fn stretch(pattern, factor) {
 // Compress pattern (take every nth)
 export fn compress(pattern, factor) {
   let result = [];
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     if (i % factor == 0) {
       result[result.length] = pattern[i];
     }
@@ -329,7 +329,7 @@ export fn interleave(p1, p2) {
     maxLen = p2.length;
   }
 
-  for (i in 0..(maxLen - 1)) {
+  for (i in 0 .. (maxLen - 1)) {
     if (i < p1.length) {
       result[result.length] = p1[i];
     }
@@ -348,7 +348,7 @@ export fn patternAnd(p1, p2) {
   }
 
   let result = [];
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     if (p1[i] == 1 && p2[i] == 1) {
       result[i] = 1;
     } else {
@@ -366,7 +366,7 @@ export fn patternOr(p1, p2) {
   }
 
   let result = [];
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     if (p1[i] == 1 || p2[i] == 1) {
       result[i] = 1;
     } else {
@@ -384,7 +384,7 @@ export fn patternXor(p1, p2) {
   }
 
   let result = [];
-  for (i in 0..(len - 1)) {
+  for (i in 0 .. (len - 1)) {
     if ((p1[i] == 1 && p2[i] == 0) || (p1[i] == 0 && p2[i] == 1)) {
       result[i] = 1;
     } else {
@@ -443,7 +443,7 @@ export fn toDurations(pattern, baseDuration) {
   let durations = [];
   let currentDur = 0;
 
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     currentDur = currentDur + baseDuration;
     if (pattern[i] == 1) {
       if (durations.length > 0 || i == 0) {
@@ -468,7 +468,7 @@ export fn toOnsetTimes(pattern, baseDuration) {
   let times = [];
   let time = 0 / 1;
 
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     if (pattern[i] == 1) {
       times[times.length] = time;
     }
@@ -504,7 +504,7 @@ export fn addSwing(pattern, swingAmount, seed) {
   }
 
   let offsets = [];
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     if (pattern[i] == 1) {
       // Even positions get positive swing, odd get negative
       if (i % 2 == 0) {
@@ -526,7 +526,7 @@ export fn humanize(pattern, maxOffset, seed) {
   }
 
   let offsets = [];
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     if (pattern[i] == 1) {
       rng = (rng * 1103515245 + 12345) % 2147483648;
       const normalized = (rng / 2147483648) * 2 - 1;  // -1 to 1
@@ -576,7 +576,7 @@ export fn findBestEuclidean(pattern) {
   // Try all rotations
   for (rotation in allRotations(euclidean(k, n))) {
     let score = 0;
-    for (i in 0..(n - 1)) {
+    for (i in 0 .. (n - 1)) {
       if (pattern[i] == rotation[i]) {
         score = score + 1;
       }
@@ -603,7 +603,7 @@ export fn areRotationallyEquivalent(p1, p2) {
 
   for (rotation in allRotations(p1)) {
     let match = true;
-    for (i in 0..(p2.length - 1)) {
+    for (i in 0 .. (p2.length - 1)) {
       if (rotation[i] != p2[i]) {
         match = false;
         break;
@@ -637,7 +637,7 @@ export fn toString(pattern) {
 // Parse from string
 export fn fromString(str) {
   let result = [];
-  for (i in 0..(str.length - 1)) {
+  for (i in 0 .. (str.length - 1)) {
     const ch = str[i];
     if (ch == "x" || ch == "X" || ch == "1") {
       result[result.length] = 1;
@@ -651,7 +651,7 @@ export fn fromString(str) {
 // Convert to binary number representation
 export fn toBinary(pattern) {
   let result = 0;
-  for (i in 0..(pattern.length - 1)) {
+  for (i in 0 .. (pattern.length - 1)) {
     if (pattern[i] == 1) {
       result = result + (2 ** (pattern.length - 1 - i));
     }

@@ -1,4 +1,4 @@
-// std:raga (v5.5)
+// std:raga (v7.0)
 // Indian classical music (Hindustani and Carnatic)
 // Ragas, talas, gamakas, and melodic phrases
 
@@ -408,14 +408,14 @@ export fn generatePhrase(raga, startNote, direction, length) {
 
   // Find starting position in scale
   let scaleIdx = 0;
-  for (i in 0..(scale.length - 1)) {
+  for (i in 0 .. (scale.length - 1)) {
     if (scale[i] == startNote) {
       scaleIdx = i;
       break;
     }
   }
 
-  for (_ in 0..(length - 1)) {
+  for (_ in 0 .. (length - 1)) {
     phrase[phrase.length] = scale[scaleIdx];
 
     if (direction == "up") {

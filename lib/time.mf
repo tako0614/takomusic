@@ -1,4 +1,4 @@
-// std:time (v4)
+// std:time (v7.0)
 
 export fn barBeat(bar, beat) {
   return { kind: "posref", bar: bar, beat: beat };
@@ -54,10 +54,10 @@ fn resolvePosRef(ref, meterMap) {
   let currentPos = 0 / 1;
   let idx = 0;
   const bars = ref.bar - 1;
-  for (step in 0..(bars - 1)) {
+  for (step in 0 .. (bars - 1)) {
     const barLen = current.numerator / current.denominator;
     currentPos = currentPos + barLen;
-    for (scan in 0..(meterMap.length - 1)) {
+    for (scan in 0 .. (meterMap.length - 1)) {
       if (idx + 1 < meterMap.length && meterMap[idx + 1].at == currentPos) {
         idx = idx + 1;
         current = meterMap[idx];

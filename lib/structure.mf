@@ -1,4 +1,4 @@
-// std:structure (v5)
+// std:structure (v7.0)
 // Musical form, sections, and repeat structures
 
 import * as core from "std:core";
@@ -193,7 +193,7 @@ export fn repeatSection(c, count) {
   };
 
   // Copy events
-  for (i in 0..(count - 1)) {
+  for (i in 0 .. (count - 1)) {
     const offset = len * i;
     for (ev in c.events) {
       events[events.length] = core.shiftEvent(ev, offset);

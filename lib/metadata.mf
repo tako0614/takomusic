@@ -1,4 +1,4 @@
-// std:metadata (v5)
+// std:metadata (v7.0)
 // Metadata: copyright, credits, part extraction, publishing info
 
 import * as core from "std:core";
@@ -202,7 +202,7 @@ export fn extractParts(score, trackNames) {
   }
 
   let partNames = "";
-  for (i in 0..(trackNames.length - 1)) {
+  for (i in 0 .. (trackNames.length - 1)) {
     if (i > 0) {
       partNames = partNames + ", ";
     }

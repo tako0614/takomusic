@@ -100,6 +100,7 @@ export class V4Compiler {
     const tokens = lexer.tokenize();
     const parser = new V4Parser(tokens, absolutePath);
     const program = parser.parseProgram();
+    this.diagnostics.push(...parser.getDiagnostics());
     typeCheckProgram(program, this.diagnostics, absolutePath);
 
     const module: Module = {
