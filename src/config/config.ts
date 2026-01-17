@@ -93,7 +93,7 @@ export function validateConfig(configPath: string): ConfigValidationResult {
     }
 
     if (parsed.project) {
-      const validProjectKeys = ['entry', 'dist', 'out', 'default_profile', 'name', 'version'];
+      const validProjectKeys = ['entry', 'dist', 'out', 'default_profile'];
       for (const key of Object.keys(parsed.project)) {
         if (!validProjectKeys.includes(key)) {
           warnings.push(`Unknown project key: "${key}". Valid keys are: ${validProjectKeys.join(', ')}`);

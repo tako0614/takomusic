@@ -13,6 +13,8 @@ import { typeCheckProgram } from '../typecheck.js';
 import { normalizeScore } from '../normalize.js';
 import { coerceScore } from '../value-codec.js';
 import { VirtualFileSystem, STDLIB_MODULES } from './virtualFs.js';
+import { registerBuiltins } from '../builtins.js';
+import { validateScoreIRBrowser } from '../schema/validatorBrowser.js';
 import type { Token } from '../token.js';
 import type { Program, ImportDecl, ImportSpec } from '../ast.js';
 import type { Diagnostic } from '../diagnostics.js';
@@ -92,6 +94,19 @@ export class BrowserCompiler {
       const ir = normalizeScore(score, this.diagnostics);
       ir.tako.generator = 'takomusic-browser';
       ir.tako.sourceHash = this.computeSourceHash();
+
+      try {
+        const schemaErrors = validateScoreIRBrowser(ir);
+        for (const message of schemaErrors) {
+          this.diagnostics.push({ severity: 'error', message, filePath: module.path });
+        }
+      } catch (err) {
+        this.diagnostics.push({
+          severity: 'error',
+          message: `IR schema validation failed: ${(err as Error).message}`,
+          filePath: module.path,
+        });
+      }
 
       const hasErrors = this.diagnostics.some((d) => d.severity === 'error');
 
@@ -206,6 +221,7 @@ export class BrowserCompiler {
 
     const evaluator = new V4Evaluator(this.diagnostics, module.path);
     const scope = new Scope();
+    registerBuiltins(scope);
     const exports = new Map<string, RuntimeValue>();
 
     for (const importDecl of module.program.imports) {

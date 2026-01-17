@@ -224,7 +224,8 @@ export type ClipEventValue =
   | AutomationEventValue
   | MarkerEventValue
   | GraceNoteEventValue
-  | GlissandoEventValue;
+  | GlissandoEventValue
+  | PedalEventValue;
 
 export interface NoteEventValue {
   type: 'note';
@@ -316,6 +317,15 @@ export interface GlissandoEventValue {
   toPitch: Pitch;
   style: 'continuous' | 'discrete';
   velocity?: number;
+  ext?: Record<string, unknown>;
+}
+
+export interface PedalEventValue {
+  type: 'pedal';
+  start: PosValue;
+  end?: PosValue;
+  pedal: 'sustain' | 'sostenuto' | 'una_corda';
+  action: 'down' | 'up' | 'change';
   ext?: Record<string, unknown>;
 }
 
